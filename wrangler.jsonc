@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "idk",
+  "compatibility_date": "2025-04-24",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "workers_dev": true,
+  "route": {
+    "pattern": "api.example.com/*", // <- replace with your API domain
+    "zone_name": "example.com" // <- replace with your domain
+  },
+  "kv_namespaces": [
+    {
+      "binding": "IDK_CACHE",
+      "id": "<IDK_CACHE_ID>" // <- replace with your KV namespace ID
+    }
+  ],
+  "vars": {
+    "CLICKHOUSE_URL": "<CLICKHOUSE_URL>", // <- replace with your ClickHouse URL
+    "CLICKHOUSE_USER": "<CLICKHOUSE_USER>", // <- replace with your ClickHouse user
+    "CLICKHOUSE_DB": "<CLICKHOUSE_DB>" // <- replace with your ClickHouse database
+  }
+}

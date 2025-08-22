@@ -1,0 +1,74 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/openai/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the OpenAI AI provider directory (`lib/server/ai-providers/openai/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official OpenAI API documentation at: https://platform.openai.com/docs/api-reference
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new features
+- Review OpenAI's changelog: https://platform.openai.com/docs/changelog
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official OpenAI API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows OpenAI's documented error responses (400, 401, 429, 500, 503)
+- Implement proper handling for OpenAI's error codes and messages
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with OpenAI's official schemas
+- Validate authentication mechanisms (Bearer token with API key)
+- Ensure rate limiting and retry logic follows OpenAI's guidelines (exponential backoff)
+- Implement proper timeout handling for long-running requests
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow OpenAI's usage policies and content filtering guidelines
+- Validate all user inputs before sending to the API
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full OpenAI API surface:
+  - Chat Completions (including function calling)
+  - Completions (legacy)
+  - Embeddings
+  - Fine-tuning
+  - Images (DALL-E)
+  - Audio (Whisper, TTS)
+  - Moderations
+  - Assistants API (if applicable)
+- Verify streaming implementation matches OpenAI's Server-Sent Events specification
+- Check support for latest models (GPT-4, GPT-3.5-turbo variants)
+
+### 6. Validate Configuration
+- Ensure model names match OpenAI's current model naming conventions
+- Check default values align with OpenAI's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability checks
+
+## Provider-Specific Considerations
+- **Models**: Keep updated with latest GPT-4, GPT-3.5-turbo, and embedding models
+- **Function Calling**: Ensure proper tool/function call formatting and response handling
+- **Streaming**: Implement Server-Sent Events with proper event parsing
+- **Token Counting**: Use tiktoken or similar for accurate token estimation
+- **Organization/Project Headers**: Support org-* and project-* headers if needed
+
+## Before Making Changes to OpenAI Provider
+- Consult https://platform.openai.com/docs/api-reference for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/openai/`
+- Test with OpenAI's playground or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+
+## Files to Review
+- All files under `lib/server/ai-providers/openai/`
+- Related type definitions in `lib/shared/types/`
+- OpenAI-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+
+**Note:** This rule ensures the OpenAI provider implementation stays current with the official API specification, follows security best practices, and maintains consistency with OpenAI's documented patterns.

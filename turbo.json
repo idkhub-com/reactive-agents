@@ -1,0 +1,59 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "tasks": {
+    "lint": {},
+    "lint:fix": {
+      "cache": false
+    },
+    "format": {},
+    "format:fix": {
+      "cache": false
+    },
+    "check": {},
+    "check:fix": {
+      "cache": false
+    },
+    "typecheck": {},
+
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "cf-build": {
+      "dependsOn": ["^cf-build"],
+      "outputs": [
+        "dist/**",
+        ".open-next/**",
+        "!.open-next/cache/**",
+        "wrangler.jsonc"
+      ]
+    },
+    "preview": {
+      "dependsOn": ["cf-build", "^preview"],
+      "outputs": [
+        "dist/**",
+        ".open-next/**",
+        "!.open-next/cache/**",
+        "wrangler.jsonc"
+      ],
+      "cache": true
+    },
+    "deploy": {
+      "dependsOn": ["cf-build", "^deploy"],
+      "inputs": ["wrangler.jsonc"],
+      "cache": true
+    },
+    "check-types": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    },
+    "cf-typegen": {
+      "cache": false
+    }
+  }
+}

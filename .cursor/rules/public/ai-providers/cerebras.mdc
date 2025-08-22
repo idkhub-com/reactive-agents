@@ -1,0 +1,78 @@
+---
+description: Comprehensive guide for implementing and maintaining Cerebras provider integration with their ultra-fast inference platform and security best practices.
+globs: lib/server/ai-providers/cerebras/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Cerebras AI provider directory (`lib/server/ai-providers/cerebras/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Cerebras API documentation at: https://docs.cerebras.ai/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review Cerebras's ultra-fast inference capabilities and specifications
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Cerebras API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Cerebras's documented error responses (400, 401, 403, 429, 500)
+- Implement proper handling for Cerebras-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Cerebras's official schemas
+- Validate authentication mechanisms (Authorization header with Bearer token)
+- Ensure rate limiting and retry logic follows Cerebras's guidelines
+- Implement proper timeout handling optimized for ultra-fast responses
+- Handle Cerebras's high-throughput inference patterns correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow Cerebras's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Cerebras API surface:
+  - Chat Completions API
+  - Completions API
+  - Streaming responses
+  - Function calling capabilities (if supported)
+  - Batch processing (if available)
+- Verify streaming implementation matches Cerebras's Server-Sent Events specification
+- Check support for latest models in Cerebras's catalog
+
+### 6. Validate Configuration
+- Ensure model names match Cerebras's current model catalog
+- Check default values align with Cerebras's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and capability checks
+- Handle Cerebras-specific parameters correctly
+- Optimize for ultra-fast inference speeds
+
+## Provider-Specific Considerations
+- **Ultra-Fast Inference**: Leverage Cerebras's industry-leading inference speeds
+- **High Throughput**: Optimize for Cerebras's high-throughput capabilities
+- **Model Selection**: Understand different model capabilities and performance characteristics
+- **Streaming Optimization**: Take advantage of Cerebras's ultra-fast streaming responses
+- **Cost Efficiency**: Consider the performance benefits vs. cost trade-offs
+- **Latency Optimization**: Implement patterns that maximize Cerebras's speed advantages
+
+## Before Making Changes to Cerebras Provider
+- Consult https://docs.cerebras.ai/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/cerebras/`
+- Test with Cerebras's platform or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review Cerebras's performance benchmarks and optimization recommendations
+
+## Files to Review
+- All files under `lib/server/ai-providers/cerebras/`
+- Related type definitions in `lib/shared/types/`
+- Cerebras-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- High-performance inference and streaming implementations
+
+**Note:** This rule ensures the Cerebras provider implementation stays current with the official API specification, follows security best practices, and properly leverages Cerebras's ultra-fast inference capabilities.

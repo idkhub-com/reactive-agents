@@ -1,0 +1,46 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/deepseek/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the DeepSeek AI provider directory (`lib/server/ai-providers/deepseek/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official DeepSeek API documentation at: https://platform.deepseek.com/api-docs/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes or deprecations
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official DeepSeek API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows DeepSeek's documented error responses
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with DeepSeek's official schemas
+- Validate authentication mechanisms (API key handling, headers)
+- Ensure rate limiting and retry logic follows DeepSeek's guidelines
+
+### 4. Check for Missing Features
+- Compare implemented functionality against the full DeepSeek API surface
+- Identify any missing endpoints or parameters that should be supported
+- Verify streaming implementation matches DeepSeek's streaming specification
+
+### 5. Validate Configuration
+- Ensure model names, parameters, and limits match DeepSeek's current offerings
+- Check default values align with DeepSeek's documented defaults
+- Validate any provider-specific configurations
+
+## Before Making Changes to DeepSeek Provider
+- Consult https://platform.deepseek.com/api-docs/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/deepseek/`
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+
+## Files to Review
+- All files under `lib/server/ai-providers/deepseek/`
+- Related type definitions in `lib/shared/types/ai-provider/`
+- Any DeepSeek-specific configurations or constants
+
+**Note:** This rule ensures the DeepSeek provider implementation stays current with the official API specification and maintains consistency with DeepSeek's documented best practices.

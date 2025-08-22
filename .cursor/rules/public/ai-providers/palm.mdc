@@ -1,0 +1,46 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/palm/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Palm AI provider directory (`lib/server/ai-providers/palm/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Google Palm API documentation at: https://developers.generativeai.google/api/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes or deprecations
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Palm API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Palm's documented error responses
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Palm's official schemas
+- Validate authentication mechanisms (API key handling, headers)
+- Ensure rate limiting and retry logic follows Palm's guidelines
+
+### 4. Check for Missing Features
+- Compare implemented functionality against the full Palm API surface
+- Identify any missing endpoints or parameters that should be supported
+- Verify streaming implementation matches Palm's streaming specification
+
+### 5. Validate Configuration
+- Ensure model names, parameters, and limits match Palm's current offerings
+- Check default values align with Palm's documented defaults
+- Validate any provider-specific configurations
+
+## Before Making Changes to Palm Provider
+- Consult https://developers.generativeai.google/api/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/palm/`
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+
+## Files to Review
+- All files under `lib/server/ai-providers/palm/`
+- Related type definitions in `lib/shared/types/ai-provider/`
+- Any Palm-specific configurations or constants
+
+**Note:** This rule ensures the Palm provider implementation stays current with the official API specification and maintains consistency with Palm's documented best practices.

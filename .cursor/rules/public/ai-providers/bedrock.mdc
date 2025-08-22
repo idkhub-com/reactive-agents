@@ -1,0 +1,85 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/bedrock/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the AWS Bedrock provider directory (`lib/server/ai-providers/bedrock/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official AWS Bedrock documentation at: https://docs.aws.amazon.com/bedrock/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review AWS Bedrock's multi-model capabilities and regional availability
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official AWS Bedrock API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows AWS Bedrock's documented error responses
+- Implement proper handling for AWS-specific error codes and retry policies
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with AWS Bedrock's official schemas
+- Validate authentication mechanisms (AWS SigV4, IAM roles, access keys)
+- Ensure rate limiting and retry logic follows AWS best practices (exponential backoff)
+- Implement proper timeout handling and connection management
+- Handle AWS regions and endpoint configurations correctly
+
+### 4. Security Best Practices
+- Never log or expose AWS credentials in plaintext
+- Use AWS IAM roles and policies for secure access control
+- Implement proper input validation and sanitization
+- Follow AWS security best practices and compliance requirements
+- Use AWS STS for temporary credentials when possible
+- Validate all user inputs before sending to the API
+- Implement proper VPC and network security configurations
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full AWS Bedrock API surface:
+  - Claude models (Anthropic)
+  - Titan models (Amazon)
+  - Jurassic models (AI21 Labs)
+  - Command models (Cohere)
+  - Llama models (Meta)
+  - Embedding models
+  - Image generation models
+  - Streaming responses
+  - Model customization and fine-tuning
+- Verify streaming implementation matches AWS Bedrock's specification
+- Check support for all available foundation models
+
+### 6. Validate Configuration
+- Ensure model IDs match AWS Bedrock's current catalog
+- Check default values align with AWS Bedrock's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and regional support checks
+- Handle AWS-specific parameters correctly (region, endpoint, credentials)
+- Support model versioning and updates
+
+## Provider-Specific Considerations
+- **Multi-Model Support**: Handle different model providers (Anthropic, AI21, Cohere, etc.)
+- **AWS Integration**: Leverage AWS IAM, CloudWatch, and other AWS services
+- **Regional Availability**: Handle model availability across different AWS regions
+- **Model Selection**: Understand capabilities of different foundation models
+- **Cost Management**: Implement cost tracking and optimization strategies
+- **Compliance**: Ensure compliance with AWS security and privacy standards
+- **Monitoring**: Integrate with AWS CloudWatch for observability
+
+## Before Making Changes to AWS Bedrock Provider
+- Consult https://docs.aws.amazon.com/bedrock/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/bedrock/`
+- Test with AWS Console or AWS CLI
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Verify model availability and regional constraints
+
+## Files to Review
+- All files under `lib/server/ai-providers/bedrock/`
+- Related type definitions in `lib/shared/types/`
+- AWS Bedrock-specific configurations, constants, and model definitions
+- AWS authentication and credential handling utilities
+- Multi-model support and routing implementations
+- Regional configuration and availability management
+
+**Note:** This rule ensures the AWS Bedrock provider implementation stays current with the official API specification, follows AWS security best practices, and properly handles the diverse foundation model ecosystem available through Bedrock.

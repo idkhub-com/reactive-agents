@@ -1,0 +1,10 @@
+{
+  "snapshot": "POPULATED_FROM_SETTINGS",
+  "install": "pnpm install",
+  "terminals": [
+    {
+      "name": "Run Next.js",
+      "command": "pnpm dev"
+    }
+  ]
+}

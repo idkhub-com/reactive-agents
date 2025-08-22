@@ -1,0 +1,81 @@
+---
+description: 
+globs: lib/server/ai-providers/dashscope/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the DashScope AI provider directory (`lib/server/ai-providers/dashscope/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official DashScope API documentation at: https://help.aliyun.com/zh/dashscope/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review DashScope's model capabilities and regional availability
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official DashScope API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows DashScope's documented error responses
+- Implement proper handling for DashScope-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with DashScope's official schemas
+- Validate authentication mechanisms (API key in headers)
+- Ensure rate limiting and retry logic follows DashScope's guidelines
+- Implement proper timeout handling and connection management
+- Handle DashScope's specific request/response formats correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow DashScope's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+- Handle Chinese regulatory compliance requirements
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full DashScope API surface:
+  - Text generation (Qwen models)
+  - Chat completions
+  - Image generation (if available)
+  - Embeddings
+  - Multimodal capabilities
+  - Fine-tuning (if supported)
+  - Streaming responses
+- Verify streaming implementation matches DashScope's specification
+- Check support for latest Qwen and other models in their catalog
+
+### 6. Validate Configuration
+- Ensure model names match DashScope's current model catalog
+- Check default values align with DashScope's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and capability checks
+- Handle DashScope-specific parameters correctly
+- Support regional endpoints and configurations
+
+## Provider-Specific Considerations
+- **Qwen Models**: Keep updated with latest Qwen model versions and capabilities
+- **Regional Compliance**: Handle Chinese data protection and content regulations
+- **Multilingual Support**: Optimize for Chinese and multilingual model capabilities
+- **Alibaba Cloud Integration**: Leverage integration with broader Alibaba Cloud ecosystem
+- **Rate Limiting**: Implement proper handling of DashScope's rate limiting policies
+- **Regional Availability**: Handle model availability across different regions
+
+## Before Making Changes to DashScope Provider
+- Consult https://help.aliyun.com/zh/dashscope/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/dashscope/`
+- Test with DashScope's platform or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review DashScope's model catalog and regional availability
+
+## Files to Review
+- All files under `lib/server/ai-providers/dashscope/`
+- Related type definitions in `lib/shared/types/`
+- DashScope-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- Multilingual and regional handling implementations
+
+**Note:** This rule ensures the DashScope provider implementation stays current with the official API specification, follows security best practices, and properly handles Alibaba Cloud's AI platform features including Qwen models and regional compliance requirements.

@@ -1,0 +1,80 @@
+---
+description: 
+globs: lib/server/ai-providers/fireworks-ai/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Fireworks AI provider directory (`lib/server/ai-providers/fireworks-ai/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Fireworks AI API documentation at: https://docs.fireworks.ai/api-reference
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model additions
+- Review Fireworks AI's model catalog and performance specifications
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Fireworks AI API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Fireworks AI's documented error responses (400, 401, 403, 429, 500, 503)
+- Implement proper handling for Fireworks AI-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Fireworks AI's official schemas
+- Validate authentication mechanisms (Authorization header with Bearer token)
+- Ensure rate limiting and retry logic follows Fireworks AI's guidelines
+- Implement proper timeout handling and connection management
+- Handle Fireworks AI's high-speed inference patterns correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow Fireworks AI's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Fireworks AI API surface:
+  - Chat Completions API
+  - Completions API
+  - Embeddings API
+  - Image generation (if supported)
+  - Function calling capabilities
+  - Streaming responses
+  - Batch processing (if available)
+- Verify streaming implementation matches Fireworks AI's Server-Sent Events specification
+- Check support for latest open-source models in their catalog
+
+### 6. Validate Configuration
+- Ensure model names match Fireworks AI's current model catalog
+- Check default values align with Fireworks AI's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and capability checks
+- Handle Fireworks AI-specific parameters correctly
+
+## Provider-Specific Considerations
+- **Open Source Models**: Keep updated with latest open-source models (Llama, Mistral, CodeLlama, etc.)
+- **High Performance**: Leverage Fireworks AI's optimized inference for fast response times
+- **Model Selection**: Understand different model capabilities and use cases
+- **Function Calling**: Implement proper tool/function call formatting when supported
+- **Streaming**: Optimize for Fireworks AI's fast streaming capabilities
+- **Cost Efficiency**: Consider model selection based on performance vs. cost trade-offs
+- **Model Updates**: Stay current with model versions and updates in their catalog
+
+## Before Making Changes to Fireworks AI Provider
+- Consult https://docs.fireworks.ai/api-reference for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/fireworks-ai/`
+- Test with Fireworks AI's playground or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review Fireworks AI's model catalog for latest additions
+
+## Files to Review
+- All files under `lib/server/ai-providers/fireworks-ai/`
+- Related type definitions in `lib/shared/types/`
+- Fireworks AI-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- Streaming and high-performance inference implementations
+
+**Note:** This rule ensures the Fireworks AI provider implementation stays current with the official API specification, follows security best practices, and properly leverages Fireworks AI's fast inference capabilities and extensive open-source model catalog.

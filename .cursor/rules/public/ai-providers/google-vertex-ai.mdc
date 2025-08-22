@@ -1,0 +1,84 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/google-vertex-ai/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Google Vertex AI provider directory (`lib/server/ai-providers/google-vertex-ai/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Google Vertex AI documentation at: https://cloud.google.com/vertex-ai/docs/reference/rest
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review Google Cloud's AI/ML product updates and announcements
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Vertex AI API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Google Cloud's documented error responses
+- Implement proper handling for GCP-specific error codes and retry policies
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Vertex AI's official schemas
+- Validate authentication mechanisms (service account keys, ADC, OAuth2, workload identity)
+- Ensure rate limiting and retry logic follows Google Cloud's guidelines (exponential backoff with jitter)
+- Implement proper timeout handling and connection management
+- Handle GCP project IDs, regions, and resource names correctly
+
+### 4. Security Best Practices
+- Never log or expose service account keys or credentials in plaintext
+- Use Google Cloud ADC (Application Default Credentials) when possible
+- Implement proper input validation and sanitization
+- Follow Google Cloud's security best practices and IAM policies
+- Use workload identity for GKE deployments
+- Validate all user inputs before sending to the API
+- Implement proper resource naming and project isolation
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Vertex AI API surface:
+  - Generative AI (Gemini models)
+  - Prediction API (custom models)
+  - Batch prediction
+  - Model management and deployment
+  - Embeddings and vector search
+  - Multimodal capabilities (text, image, video)
+  - Grounding and RAG features
+- Verify streaming implementation matches Vertex AI's streaming specification
+- Check support for latest Gemini models and their capabilities
+
+### 6. Validate Configuration
+- Ensure model names match Vertex AI's current model naming conventions
+- Check default values align with Vertex AI's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper project ID, region, and endpoint configuration
+- Handle model versioning and deployment names correctly
+- Support both global and regional endpoints
+
+## Provider-Specific Considerations
+- **Authentication**: Prioritize ADC over service account keys for better security
+- **Models**: Keep updated with latest Gemini Pro, Gemini Flash, and embedding models
+- **Multimodal**: Support text, image, video, and audio inputs for Gemini models
+- **Grounding**: Implement web search grounding and vertex AI search integration
+- **Streaming**: Handle Server-Sent Events with proper chunk parsing
+- **Regions**: Support multiple regions and handle region-specific model availability
+- **Quotas**: Implement proper quota management and error handling
+- **Cost Management**: Consider using prediction endpoints vs. chat endpoints appropriately
+
+## Before Making Changes to Google Vertex AI Provider
+- Consult https://cloud.google.com/vertex-ai/docs/reference/rest for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/google-vertex-ai/`
+- Test with Google Cloud Console or gcloud CLI
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Verify regional availability of features and models
+
+## Files to Review
+- All files under `lib/server/ai-providers/google-vertex-ai/`
+- Related type definitions in `lib/shared/types/`
+- Google Vertex AI-specific configurations, constants, and model definitions
+- Authentication and credential handling utilities
+- Project ID and region configuration management
+- Multimodal input handling implementations
+
+**Note:** This rule ensures the Google Vertex AI provider implementation stays current with the official API specification, follows GCP security best practices, and properly handles Vertex AI's unique features like multimodal capabilities and grounding.

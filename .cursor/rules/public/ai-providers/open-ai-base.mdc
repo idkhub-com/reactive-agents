@@ -1,0 +1,79 @@
+---
+description: Comprehensive guide for implementing and maintaining the OpenAI Base provider which serves as a foundation for OpenAI-compatible API implementations.
+globs: lib/server/ai-providers/open-ai-base/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the OpenAI Base provider directory (`lib/server/ai-providers/open-ai-base/`), you MUST:
+
+### 1. Check OpenAI Compatibility Standards
+- Always reference the official OpenAI API documentation at: https://platform.openai.com/docs/api-reference
+- Ensure the base implementation follows OpenAI's standard request/response patterns
+- Verify compatibility with OpenAI-compatible providers (LocalAI, Ollama, vLLM, etc.)
+- Check for any changes in OpenAI's API schema that need to be reflected in the base
+
+### 2. Validate Base Implementation Patterns
+- Ensure all base methods and interfaces match OpenAI's API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling provides a consistent base for OpenAI-compatible providers
+- Implement proper handling for standard OpenAI error responses (400, 401, 429, 500, 503)
+
+### 3. Review Extensibility Patterns
+- Confirm the base class is properly designed for inheritance and extension
+- Validate that authentication mechanisms can be easily customized by child providers
+- Ensure rate limiting and retry logic can be overridden by specific implementations
+- Implement proper abstraction for different authentication patterns
+- Handle base configuration that can be extended by child providers
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext in base implementations
+- Provide secure patterns for credential management that child classes can follow
+- Implement proper input validation and sanitization in base methods
+- Establish security guidelines that all OpenAI-compatible providers should follow
+- Validate all user inputs at the base level before processing
+
+### 5. Check for Missing Base Features
+- Compare base functionality against the full OpenAI API surface:
+  - Chat Completions API structure
+  - Completions API structure (legacy)
+  - Embeddings API structure
+  - Function calling base patterns
+  - Streaming response base handling
+  - Error handling patterns
+- Verify streaming implementation provides proper base for Server-Sent Events
+- Check support for standard OpenAI request/response formats
+
+### 6. Validate Base Configuration
+- Ensure base configuration supports common OpenAI parameters
+- Check that default values can be properly inherited and overridden
+- Validate token limits and context window handling in base implementation
+- Implement proper model availability checking patterns
+- Handle common OpenAI-compatible parameters consistently
+
+## Provider-Specific Considerations
+- **Base Class Design**: Maintain clean inheritance patterns for OpenAI-compatible providers
+- **Authentication Abstraction**: Provide flexible authentication patterns
+- **Request/Response Handling**: Ensure consistent OpenAI-compatible formatting
+- **Error Handling**: Standardize error handling across all OpenAI-compatible providers
+- **Streaming Support**: Provide solid base for streaming implementations
+- **Type Safety**: Maintain strong TypeScript types that child classes can extend
+- **Configuration Management**: Enable easy configuration override in child classes
+
+## Before Making Changes to OpenAI Base Provider
+- Consult https://platform.openai.com/docs/api-reference for the latest OpenAI specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/open-ai-base/`
+- Review how changes will affect child providers (openai, azure-openai, etc.)
+- Ensure changes maintain backward compatibility with existing child implementations
+- Update base type definitions to match any API schema changes
+- Test with multiple OpenAI-compatible providers
+
+## Files to Review
+- All files under `lib/server/ai-providers/open-ai-base/`
+- Child provider implementations that extend this base
+- Related type definitions in `lib/shared/types/`
+- Base configurations, constants, and interface definitions
+- Authentication and error handling base utilities
+- Streaming and request handling base implementations
+
+**Note:** This rule ensures the OpenAI Base provider implementation maintains compatibility with OpenAI's API specification, provides clean extensibility patterns, and serves as a solid foundation for all OpenAI-compatible provider implementations.

@@ -1,0 +1,80 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/groq/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Groq AI provider directory (`lib/server/ai-providers/groq/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Groq API documentation at: https://console.groq.com/docs/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review Groq's ultra-fast inference capabilities and specifications
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Groq API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Groq's documented error responses (400, 401, 403, 429, 500, 503)
+- Implement proper handling for Groq-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Groq's official schemas
+- Validate authentication mechanisms (Authorization header with Bearer token)
+- Ensure rate limiting and retry logic follows Groq's guidelines
+- Implement proper timeout handling optimized for ultra-fast responses
+- Handle Groq's high-speed inference patterns correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow Groq's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Groq API surface:
+  - Chat Completions API
+  - Completions API (if available)
+  - Function calling capabilities
+  - Streaming responses
+  - JSON mode and structured outputs
+- Verify streaming implementation matches Groq's Server-Sent Events specification
+- Check support for latest models in Groq's catalog (Llama, Mixtral, Gemma, etc.)
+
+### 6. Validate Configuration
+- Ensure model names match Groq's current model catalog
+- Check default values align with Groq's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and capability checks
+- Handle Groq-specific parameters correctly
+- Optimize for ultra-fast inference speeds
+
+## Provider-Specific Considerations
+- **Ultra-Fast Inference**: Leverage Groq's industry-leading inference speeds (>500 tokens/sec)
+- **Low Latency**: Optimize for Groq's minimal latency characteristics
+- **Model Selection**: Keep updated with Groq's curated high-performance model catalog
+- **Function Calling**: Implement proper tool/function call formatting when supported
+- **Streaming Optimization**: Take advantage of Groq's ultra-fast streaming responses
+- **JSON Mode**: Support structured JSON outputs when available
+- **Rate Limits**: Handle Groq's specific rate limiting policies efficiently
+
+## Before Making Changes to Groq Provider
+- Consult https://console.groq.com/docs/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/groq/`
+- Test with Groq's playground or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review Groq's performance benchmarks and optimization recommendations
+
+## Files to Review
+- All files under `lib/server/ai-providers/groq/`
+- Related type definitions in `lib/shared/types/`
+- Groq-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- High-performance inference and streaming implementations
+- Function calling and structured output handling
+
+**Note:** This rule ensures the Groq provider implementation stays current with the official API specification, follows security best practices, and properly leverages Groq's ultra-fast inference capabilities for optimal performance.

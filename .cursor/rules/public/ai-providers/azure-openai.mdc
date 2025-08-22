@@ -1,0 +1,85 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/azure-openai/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Azure OpenAI provider directory (`lib/server/ai-providers/azure-openai/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Azure OpenAI documentation at: https://docs.microsoft.com/en-us/azure/ai-services/openai/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new deployment features
+- Review Azure OpenAI API version compatibility and changelog
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Azure OpenAI API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Azure OpenAI's documented error responses (400, 401, 403, 429, 500)
+- Implement proper handling for Azure-specific error codes and retry policies
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Azure OpenAI's official schemas
+- Validate authentication mechanisms (API key, Azure AD/Entra ID integration, managed identity)
+- Ensure rate limiting and retry logic follows Azure OpenAI's guidelines (respect retry-after headers)
+- Implement proper timeout handling and connection management
+- Handle Azure deployment names and API versions correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys or Azure credentials in plaintext
+- Use Azure Key Vault for secure credential storage
+- Implement proper input validation and sanitization
+- Follow Azure security best practices and compliance requirements
+- Use managed identity when running on Azure resources
+- Validate all user inputs before sending to the API
+- Implement proper RBAC and access controls
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Azure OpenAI API surface:
+  - Chat Completions (with Azure-specific parameters)
+  - Completions (legacy)
+  - Embeddings
+  - DALL-E image generation
+  - Whisper speech-to-text
+  - Text-to-speech
+  - Fine-tuning (when available)
+  - Content filtering and moderation
+- Verify streaming implementation matches Azure OpenAI's Server-Sent Events specification
+- Check support for latest models available in Azure deployments
+
+### 6. Validate Configuration
+- Ensure deployment names match Azure OpenAI resource configurations
+- Check default values align with Azure OpenAI's documented defaults
+- Validate API versions and their compatibility with features
+- Implement proper resource endpoint configuration (resource-name.openai.azure.com)
+- Handle region-specific deployments and availability
+- Support both global and regional Azure endpoints
+
+## Provider-Specific Considerations
+- **Deployments**: Use Azure deployment names instead of model names
+- **API Versions**: Handle API versioning correctly (api-version parameter)
+- **Content Filtering**: Implement Azure's built-in content filtering and safety features
+- **Authentication**: Support both API keys and Azure AD authentication
+- **Managed Identity**: Integrate with Azure managed identity for secure access
+- **Monitoring**: Leverage Azure Monitor and Application Insights for observability
+- **Compliance**: Consider Azure compliance features (private endpoints, VNets)
+- **Regional Availability**: Handle model availability across different Azure regions
+
+## Before Making Changes to Azure OpenAI Provider
+- Consult https://docs.microsoft.com/en-us/azure/ai-services/openai/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/azure-openai/`
+- Test with Azure OpenAI Studio or Azure CLI
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Verify deployment availability and regional constraints
+
+## Files to Review
+- All files under `lib/server/ai-providers/azure-openai/`
+- Related type definitions in `lib/shared/types/`
+- Azure OpenAI-specific configurations, constants, and deployment definitions
+- Authentication and credential handling utilities
+- API version and endpoint configuration management
+- Content filtering and moderation implementations
+
+**Note:** This rule ensures the Azure OpenAI provider implementation stays current with the official Azure API specification, follows Azure security best practices, and properly handles Azure-specific features like deployments, content filtering, and enterprise authentication.

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "log-001",
+    "function_name": "chat_complete",
+    "ai_provider_request_log": {
+      "request_body": {
+        "messages": [
+          { "role": "user", "content": "What's the weather like in New York?" }
+        ],
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "location": { "type": "string" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "response_body": {
+        "choices": [
+          {
+            "message": {
+              "content": "Let me check the weather for you.",
+              "tool_calls": [
+                {
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"location\": \"New York\"}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "log-002",
+    "function_name": "chat_complete",
+    "ai_provider_request_log": {
+      "request_body": {
+        "messages": [{ "role": "user", "content": "Calculate 2 + 2 for me" }],
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "calculator",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "expression": { "type": "string" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "response_body": {
+        "choices": [
+          {
+            "message": {
+              "content": "I'll calculate that for you.",
+              "tool_calls": [
+                {
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"location\": \"New York\"}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "log-003",
+    "function_name": "chat_complete",
+    "ai_provider_request_log": {
+      "request_body": {
+        "messages": [{ "role": "user", "content": "Just say hello" }]
+      },
+      "response_body": {
+        "choices": [
+          {
+            "message": {
+              "content": "Hello! How can I help you today?"
+            }
+          }
+        ]
+      }
+    }
+  }
+]

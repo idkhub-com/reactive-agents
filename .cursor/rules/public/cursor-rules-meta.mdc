@@ -1,0 +1,96 @@
+---
+description: 
+globs: .cursor/rules/**/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with cursor rules in the `.cursor/rules/` directory, you MUST:
+
+### 1. Required Frontmatter Structure
+- **ALWAYS** include YAML frontmatter at the top of every `.mdc` cursor rule file
+- The frontmatter MUST include these required fields:
+  ```yaml
+  ---
+  description: [Clear description of what this rule does]
+  globs: [Glob pattern matching files this rule applies to]
+  alwaysApply: [true/false - whether to apply automatically]
+  ---
+  ```
+
+### 2. Frontmatter Guidelines
+- **description**: Write a clear, concise description of the rule's purpose
+- **globs**: Use specific glob patterns that match the relevant files/directories
+- **alwaysApply**: 
+  - Set to `false` for provider-specific rules (only applies when working in that directory)
+  - Set to `true` for meta rules or rules that should always be active
+- Ensure proper YAML syntax with no syntax errors
+
+### 3. Provider Rule Frontmatter Examples
+For AI provider rules, use this pattern:
+```yaml
+---
+description: Comprehensive guide for implementing and maintaining [Provider Name] provider integration with security best practices and current API standards.
+globs: lib/server/ai-providers/[provider-name]/*
+alwaysApply: false
+---
+```
+
+### 4. Rule Content Structure
+After the frontmatter, structure the rule content with:
+- Clear section headings (##, ###)
+- Specific instructions for the AI agent
+- Provider-specific considerations when applicable
+- Security best practices
+- Documentation references
+- File review guidance
+
+### 5. File Naming Convention
+- Use `.mdc` extension for cursor rule files
+- Use kebab-case for filenames
+- For provider rules: `[provider-name].mdc`
+- For meta rules: descriptive names like `cursor-rules-meta.mdc`
+
+### 6. Validation Checklist
+Before saving any cursor rule, verify:
+- [ ] YAML frontmatter is present and valid
+- [ ] All required frontmatter fields are included
+- [ ] Glob patterns are accurate and specific
+- [ ] Content is well-structured and actionable
+- [ ] No syntax errors in YAML or Markdown
+
+## Common Frontmatter Patterns
+
+### Provider Rules
+```yaml
+---
+description: Comprehensive guide for implementing and maintaining [Provider] provider integration with security best practices and current API standards.
+globs: lib/server/ai-providers/[provider]/*
+alwaysApply: false
+---
+```
+
+### General Development Rules
+```yaml
+---
+description: [Specific guidance for development practices]
+globs: [relevant file patterns]
+alwaysApply: false
+---
+```
+
+### Meta Rules (like this one)
+```yaml
+---
+description: Meta rule for [specific purpose]
+globs: [broad patterns or specific directories]
+alwaysApply: true
+---
+```
+
+## Files to Review When Creating/Modifying Rules
+- Existing cursor rules for consistency
+- File structure to ensure accurate glob patterns
+- Related code files to understand the context
+
+**Critical Note:** Never create or modify a cursor rule file without proper YAML frontmatter. The frontmatter is required for Cursor to properly apply the rules. Missing or malformed frontmatter will cause the rule to be ignored.

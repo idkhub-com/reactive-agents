@@ -1,0 +1,80 @@
+---
+description: 
+globs: lib/server/ai-providers/cortex/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Cortex AI provider directory (`lib/server/ai-providers/cortex/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Cortex documentation at: https://docs.cortex.so/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model support
+- Review Cortex's local deployment capabilities and specifications
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Cortex API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Cortex's documented error responses
+- Implement proper handling for Cortex-specific error codes and connection issues
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Cortex's official schemas
+- Validate authentication mechanisms (local API key or no authentication for local deployments)
+- Ensure proper connection handling for local deployments
+- Implement proper timeout handling and connection management
+- Handle Cortex's specific request/response formats correctly
+
+### 4. Security Best Practices
+- Handle local deployment security considerations appropriately
+- Use secure connection patterns when connecting to local Cortex instances
+- Implement proper input validation and sanitization
+- Follow Cortex's security guidelines for local deployments
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Cortex API surface:
+  - Chat Completions API
+  - Completions API
+  - Embeddings API
+  - Model management and deployment
+  - Local model loading and unloading
+  - Hardware optimization features
+  - Streaming responses
+- Verify streaming implementation matches Cortex's specification
+- Check support for locally deployed models and their management
+
+### 6. Validate Configuration
+- Ensure model names match Cortex's supported models
+- Check default values align with Cortex's documented defaults
+- Validate local deployment configuration (host, port, paths)
+- Implement proper model availability and status checking
+- Handle Cortex-specific deployment parameters correctly
+
+## Provider-Specific Considerations
+- **Local Deployment**: Focus on local AI model deployment and management
+- **Hardware Optimization**: Leverage Cortex's hardware optimization features
+- **Model Management**: Implement proper model loading/unloading lifecycle management
+- **Resource Monitoring**: Monitor local resource usage and model performance
+- **Configuration Flexibility**: Support various local deployment configurations
+- **Connection Resilience**: Handle local connection issues and model availability
+- **Performance Optimization**: Optimize for local inference performance
+
+## Before Making Changes to Cortex Provider
+- Consult https://docs.cortex.so/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/cortex/`
+- Test with local Cortex deployment or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review Cortex's local deployment and model management capabilities
+
+## Files to Review
+- All files under `lib/server/ai-providers/cortex/`
+- Related type definitions in `lib/shared/types/`
+- Cortex-specific configurations, constants, and model definitions
+- Local connection and deployment management utilities
+- Model lifecycle and resource management implementations
+
+**Note:** This rule ensures the Cortex provider implementation stays current with the official API specification, follows security best practices, and properly handles local AI deployment, model management, and hardware optimization features.

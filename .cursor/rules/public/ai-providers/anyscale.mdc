@@ -1,0 +1,78 @@
+---
+description: 
+globs: lib/server/ai-providers/anyscale/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Anyscale AI provider directory (`lib/server/ai-providers/anyscale/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Anyscale API documentation at: https://docs.anyscale.com/endpoints/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model additions
+- Review Anyscale's model catalog and hosting capabilities
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Anyscale API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Anyscale's documented error responses (400, 401, 403, 429, 500)
+- Implement proper handling for Anyscale-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Anyscale's official schemas
+- Validate authentication mechanisms (Authorization header with Bearer token)
+- Ensure rate limiting and retry logic follows Anyscale's guidelines
+- Implement proper timeout handling and connection management
+- Handle Anyscale's specific request/response formats correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow Anyscale's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Anyscale API surface:
+  - Chat Completions API
+  - Completions API
+  - Embeddings API
+  - Function calling capabilities
+  - Streaming responses
+  - Custom model deployment (if applicable)
+- Verify streaming implementation matches Anyscale's Server-Sent Events specification
+- Check support for latest open-source models in their catalog
+
+### 6. Validate Configuration
+- Ensure model names match Anyscale's current model catalog
+- Check default values align with Anyscale's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and capability checks
+- Handle Anyscale-specific parameters correctly
+
+## Provider-Specific Considerations
+- **Open Source Models**: Keep updated with latest open-source models (Llama, Mistral, etc.)
+- **Model Hosting**: Understand Anyscale's model hosting and deployment capabilities
+- **Ray Integration**: Leverage Anyscale's Ray-based infrastructure advantages
+- **Scalability**: Optimize for Anyscale's horizontal scaling capabilities
+- **Cost Efficiency**: Consider model selection and usage patterns for cost optimization
+- **Model Versions**: Stay current with model versions and updates in their catalog
+
+## Before Making Changes to Anyscale Provider
+- Consult https://docs.anyscale.com/endpoints/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/anyscale/`
+- Test with Anyscale's platform or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review Anyscale's model catalog for latest additions
+
+## Files to Review
+- All files under `lib/server/ai-providers/anyscale/`
+- Related type definitions in `lib/shared/types/`
+- Anyscale-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- Streaming and model deployment implementations
+
+**Note:** This rule ensures the Anyscale provider implementation stays current with the official API specification, follows security best practices, and properly leverages Anyscale's open-source model hosting and Ray-based infrastructure capabilities.

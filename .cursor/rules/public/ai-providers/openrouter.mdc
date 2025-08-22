@@ -1,0 +1,46 @@
+---
+description: 
+globs: lib/server/ai-providers/openrouter/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the OpenRouter AI provider directory (`lib/server/ai-providers/openrouter/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official OpenRouter API documentation at: https://openrouter.ai/docs/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes or deprecations
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official OpenRouter API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows OpenRouter's documented error responses
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with OpenRouter's official schemas
+- Validate authentication mechanisms (API key handling, headers)
+- Ensure rate limiting and retry logic follows OpenRouter's guidelines
+
+### 4. Check for Missing Features
+- Compare implemented functionality against the full OpenRouter API surface
+- Identify any missing endpoints or parameters that should be supported
+- Verify streaming implementation matches OpenRouter's streaming specification
+
+### 5. Validate Configuration
+- Ensure model names, parameters, and limits match OpenRouter's current offerings
+- Check default values align with OpenRouter's documented defaults
+- Validate any provider-specific configurations (model routing, provider selection)
+
+## Before Making Changes to OpenRouter Provider
+- Consult https://openrouter.ai/docs/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/openrouter/`
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+
+## Files to Review
+- All files under `lib/server/ai-providers/openrouter/`
+- Related type definitions in `lib/shared/types/ai-provider/`
+- Any OpenRouter-specific configurations or constants
+
+**Note:** This rule ensures the OpenRouter provider implementation stays current with the official API specification and maintains consistency with OpenRouter's documented best practices.

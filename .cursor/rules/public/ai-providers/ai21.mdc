@@ -1,0 +1,80 @@
+---
+description: Comprehensive guide for implementing and maintaining AI21 Labs provider integration with their specific API features, security best practices, and current standards.
+globs: lib/server/ai-providers/ai21/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the AI21 AI provider directory (`lib/server/ai-providers/ai21/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official AI21 API documentation at: https://docs.ai21.com/reference
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review AI21's model capabilities and limitations
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official AI21 API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows AI21's documented error responses (400, 401, 422, 429, 500)
+- Implement proper handling for AI21-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with AI21's official schemas
+- Validate authentication mechanisms (Authorization header with Bearer token)
+- Ensure rate limiting and retry logic follows AI21's guidelines
+- Implement proper timeout handling and connection management
+- Handle AI21's specific request/response formats correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization
+- Follow AI21's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full AI21 API surface:
+  - Complete API (text completion)
+  - Chat API (conversational interface)
+  - Summarization API
+  - Paraphrase API
+  - Grammar Correction API
+  - Segmentation API
+  - Embeddings API
+  - Custom model fine-tuning (if available)
+- Verify streaming implementation if supported by AI21
+- Check support for latest Jurassic models and their capabilities
+
+### 6. Validate Configuration
+- Ensure model names match AI21's current model naming conventions (jurassic-2-*)
+- Check default values align with AI21's documented defaults
+- Validate token limits and context windows for each model
+- Implement proper model availability and capability checks
+- Handle AI21-specific parameters correctly (temperature, topP, etc.)
+
+## Provider-Specific Considerations
+- **Models**: Keep updated with Jurassic-2 family models and their specific capabilities
+- **Task-Specific APIs**: Leverage AI21's specialized APIs for summarization, paraphrase, etc.
+- **Token Handling**: Understand AI21's tokenization and counting methodology
+- **Response Format**: Handle AI21's specific response structure and completion formats
+- **Rate Limits**: Implement proper handling of AI21's rate limiting policies
+- **Model Selection**: Choose appropriate models for different use cases (Ultra, Mid, Light)
+
+## Before Making Changes to AI21 Provider
+- Consult https://docs.ai21.com/reference for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/ai21/`
+- Test with AI21's playground or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review AI21's model capabilities and recommended use cases
+
+## Files to Review
+- All files under `lib/server/ai-providers/ai21/`
+- Related type definitions in `lib/shared/types/`
+- AI21-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- Task-specific API implementations (summarization, paraphrase, etc.)
+
+**Note:** This rule ensures the AI21 provider implementation stays current with the official API specification, follows security best practices, and properly leverages AI21's specialized capabilities and task-specific APIs.

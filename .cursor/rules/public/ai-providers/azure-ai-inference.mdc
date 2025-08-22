@@ -1,0 +1,46 @@
+---
+description: This rule encourages the AI to check the AI provider's AI implementation.
+globs: lib/server/ai-providers/azure-ai-inference/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Azure AI Inference provider directory (`lib/server/ai-providers/azure-ai-inference/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Azure AI Inference documentation at: https://docs.microsoft.com/en-us/azure/ai-services/inference/
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes or deprecations
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Azure AI Inference API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Azure AI Inference's documented error responses
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Azure AI Inference's official schemas
+- Validate authentication mechanisms (API key handling, headers, Azure AD integration)
+- Ensure rate limiting and retry logic follows Azure AI Inference's guidelines
+
+### 4. Check for Missing Features
+- Compare implemented functionality against the full Azure AI Inference API surface
+- Identify any missing endpoints or parameters that should be supported
+- Verify streaming implementation matches Azure AI Inference's streaming specification
+
+### 5. Validate Configuration
+- Ensure model names, parameters, and limits match Azure AI Inference's current offerings
+- Check default values align with Azure AI Inference's documented defaults
+- Validate any provider-specific configurations
+
+## Before Making Changes to Azure AI Inference Provider
+- Consult https://docs.microsoft.com/en-us/azure/ai-services/inference/ for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/azure-ai-inference/`
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+
+## Files to Review
+- All files under `lib/server/ai-providers/azure-ai-inference/`
+- Related type definitions in `lib/shared/types/ai-provider/`
+- Any Azure AI Inference-specific configurations or constants
+
+**Note:** This rule ensures the Azure AI Inference provider implementation stays current with the official API specification and maintains consistency with Azure AI Inference's documented best practices.

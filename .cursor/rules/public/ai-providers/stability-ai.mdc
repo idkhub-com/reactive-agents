@@ -1,0 +1,83 @@
+---
+description: 
+globs: lib/server/ai-providers/stability-ai/*
+alwaysApply: false
+---
+## Instructions for AI Agent
+
+When working with the Stability AI provider directory (`lib/server/ai-providers/stability-ai/`), you MUST:
+
+### 1. Check Official Documentation First
+- Always reference the official Stability AI API documentation at: https://platform.stability.ai/docs/api-reference
+- Verify current API endpoints, parameters, and response formats
+- Check for any recent API changes, deprecations, or new model releases
+- Review Stability AI's model capabilities and image generation features
+
+### 2. Validate API Endpoint Coverage
+- Ensure all implemented endpoints match the official Stability AI API specification
+- Verify HTTP methods, request/response schemas, and parameter requirements
+- Check that error handling follows Stability AI's documented error responses (400, 401, 403, 429, 500)
+- Implement proper handling for Stability AI-specific error codes and rate limiting
+
+### 3. Review Implementation Patterns
+- Confirm request/response type definitions align with Stability AI's official schemas
+- Validate authentication mechanisms (Authorization header with Bearer token)
+- Ensure rate limiting and retry logic follows Stability AI's guidelines
+- Implement proper timeout handling for potentially long image generation requests
+- Handle Stability AI's specific request/response formats correctly
+
+### 4. Security Best Practices
+- Never log or expose API keys in plaintext
+- Use environment variables or secure storage for API key management
+- Implement proper input validation and sanitization for prompts and parameters
+- Follow Stability AI's usage policies and content guidelines
+- Validate all user inputs before sending to the API
+- Implement proper error handling to avoid exposing sensitive information
+- Handle generated images securely (temporary storage, proper cleanup)
+
+### 5. Check for Missing Features
+- Compare implemented functionality against the full Stability AI API surface:
+  - Text-to-Image generation
+  - Image-to-Image transformation
+  - Image upscaling/super-resolution
+  - Image inpainting and outpainting
+  - Video generation (if available)
+  - 3D generation (if available)
+  - Multi-prompting and controlnets
+- Verify proper handling of different image formats and sizes
+- Check support for latest Stable Diffusion models (SDXL, SD3, etc.)
+
+### 6. Validate Configuration
+- Ensure model names match Stability AI's current model catalog
+- Check default values align with Stability AI's documented defaults
+- Validate image dimensions, aspect ratios, and generation parameters
+- Implement proper model availability and capability checks
+- Handle Stability AI-specific parameters correctly (cfg_scale, steps, sampler, etc.)
+
+## Provider-Specific Considerations
+- **Image Generation**: Focus on text-to-image and image-to-image capabilities
+- **Model Selection**: Keep updated with latest Stable Diffusion models and their capabilities
+- **Parameter Tuning**: Understand and properly handle generation parameters (guidance, steps, etc.)
+- **Image Formats**: Support multiple output formats (PNG, JPEG, WebP)
+- **Aspect Ratios**: Handle different aspect ratios and image dimensions properly
+- **Prompt Engineering**: Understand Stability AI's prompt formatting and best practices
+- **Safety Filters**: Implement content filtering and safety measures
+- **Cost Management**: Consider generation costs and optimize parameters accordingly
+
+## Before Making Changes to Stability AI Provider
+- Consult https://platform.stability.ai/docs/api-reference for the latest specification
+- Cross-reference with existing implementation in `lib/server/ai-providers/stability-ai/`
+- Test with Stability AI's platform or official examples
+- Ensure changes maintain backward compatibility where possible
+- Update type definitions to match any API schema changes
+- Review Stability AI's model catalog and generation capabilities
+
+## Files to Review
+- All files under `lib/server/ai-providers/stability-ai/`
+- Related type definitions in `lib/shared/types/`
+- Stability AI-specific configurations, constants, and model definitions
+- Authentication and error handling utilities
+- Image processing and generation implementations
+- File handling and storage utilities for generated images
+
+**Note:** This rule ensures the Stability AI provider implementation stays current with the official API specification, follows security best practices, and properly handles image generation workflows and model-specific parameters.
