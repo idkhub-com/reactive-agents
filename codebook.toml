@@ -1,7 +1,16 @@
 words = [
+    "amzn",
+    "arn",
+    "entra",
+    "fim",
     "gpt",
+    "huggingface",
     "idk",
+    "kms",
     "llm",
+    "openai",
+    "sagemaker",
+    "supabase",
     "vitest",
     "zod",
 ]

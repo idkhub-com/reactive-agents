@@ -268,7 +268,7 @@ describe('Dataset Shared Types', () => {
       "id"
     ],
     "path": [],
-    "message": "Unrecognized key(s) in object: 'id'"
+    "message": "Unrecognized key: \\"id\\""
   }
 ]`,
       );

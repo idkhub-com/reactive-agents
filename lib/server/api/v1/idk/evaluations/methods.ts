@@ -16,8 +16,7 @@ import {
   EvaluationMethodRequest,
 } from '@shared/types/idkhub/evaluations/evaluations';
 import { Hono } from 'hono';
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { toJSONSchema, z } from 'zod';
 
 // Registry of all available evaluation connectors - automatically discovers attached connectors
 const evaluationConnectors: Record<
@@ -74,7 +73,7 @@ export const methodsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        method: z.nativeEnum(EvaluationMethodName),
+        method: z.enum(EvaluationMethodName),
       }),
     ),
     (c) => {
@@ -103,7 +102,7 @@ export const methodsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        method: z.nativeEnum(EvaluationMethodName),
+        method: z.enum(EvaluationMethodName),
       }),
     ),
     (c) => {
@@ -119,10 +118,7 @@ export const methodsRouter = new Hono<AppEnv>()
         }
 
         // Convert Zod schema to JSON schema for client consumption
-        const jsonSchema = zodToJsonSchema(schema, {
-          target: 'jsonSchema7',
-          $refStrategy: 'none',
-        });
+        const jsonSchema = toJSONSchema(schema);
 
         return c.json(jsonSchema, 200);
       } catch (error) {

@@ -37,7 +37,7 @@ export const skillsRouter = new Hono<AppEnv>()
   })
   .patch(
     '/:skillId',
-    zValidator('param', z.object({ skillId: z.string().uuid() })),
+    zValidator('param', z.object({ skillId: z.uuid() })),
     zValidator('json', SkillUpdateParams),
     async (c) => {
       try {
@@ -56,7 +56,7 @@ export const skillsRouter = new Hono<AppEnv>()
   )
   .delete(
     '/:skillId',
-    zValidator('param', z.object({ skillId: z.string().uuid() })),
+    zValidator('param', z.object({ skillId: z.uuid() })),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');

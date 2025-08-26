@@ -14,17 +14,17 @@ export const LogResponseBodyError = z.object({
 export type LogResponseBodyError = z.infer<typeof LogResponseBodyError>;
 
 export const AIProviderRequestLog = z.object({
-  provider: z.nativeEnum(AIProvider),
-  function_name: z.nativeEnum(FunctionName),
-  method: z.nativeEnum(HttpMethod),
+  provider: z.enum(AIProvider),
+  function_name: z.enum(FunctionName),
+  method: z.enum(HttpMethod),
   request_url: z.string(),
   status: z.number(),
   request_body: z.record(z.string(), z.unknown()),
   response_body: z.record(z.string(), z.unknown()),
   raw_request_body: z.string(),
   raw_response_body: z.string(),
-  cache_mode: z.nativeEnum(CacheMode),
-  cache_status: z.nativeEnum(CacheStatus),
+  cache_mode: z.enum(CacheMode),
+  cache_status: z.enum(CacheStatus),
 });
 
 export type AIProviderRequestLog = z.infer<typeof AIProviderRequestLog>;
@@ -38,19 +38,19 @@ export const HookLog = z.object({
   start_time: z.number(),
   end_time: z.number(),
   duration: z.number(),
-  cache_status: z.nativeEnum(CacheStatus),
+  cache_status: z.enum(CacheStatus),
 });
 
 export type HookLog = z.infer<typeof HookLog>;
 
 export const IdkRequestLog = z.object({
   // Base info
-  id: z.string().uuid(),
-  agent_id: z.string().uuid(),
-  skill_id: z.string().uuid(),
-  method: z.nativeEnum(HttpMethod),
+  id: z.uuid(),
+  agent_id: z.uuid(),
+  skill_id: z.uuid(),
+  method: z.enum(HttpMethod),
   endpoint: z.string(),
-  function_name: z.nativeEnum(FunctionName),
+  function_name: z.enum(FunctionName),
   status: z.number(),
   start_time: z.number(),
   end_time: z.number(),
@@ -58,7 +58,7 @@ export const IdkRequestLog = z.object({
   base_idk_config: z.record(z.string(), z.unknown()),
 
   // Maybe redundant. Used for indexing.
-  ai_provider: z.nativeEnum(AIProvider),
+  ai_provider: z.enum(AIProvider),
   model: z.string(),
 
   // Main data
@@ -67,7 +67,7 @@ export const IdkRequestLog = z.object({
   metadata: z.record(z.string(), z.unknown()),
 
   // Cache info
-  cache_status: z.nativeEnum(CacheStatus),
+  cache_status: z.enum(CacheStatus),
 
   // Tracing info
   trace_id: z.string().nullable().default(null),

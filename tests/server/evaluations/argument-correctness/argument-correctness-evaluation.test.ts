@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockDataPoints = [
   {
     id: 'dp-1',
-    dataset_id: 'test-dataset-id',
+    dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
     request_body: { input: 'Find user by email' },
     response_body: { result: 'User found: alice@example.com' },
     metadata: {
@@ -21,19 +21,19 @@ const mockDataPoints = [
           input: { sql: 'SELECT * FROM users WHERE email = ?' },
         },
       ]),
-      agent_id: 'test-agent-id',
+      agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
     },
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   },
   {
     id: 'dp-2',
-    dataset_id: 'test-dataset-id',
+    dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
     request_body: { input: 'Send a welcome email' },
     ground_truth: 'Email sent',
     metadata: {
       tools: '[]',
-      agent_id: 'test-agent-id',
+      agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
     },
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -43,9 +43,9 @@ const mockDataPoints = [
 const mockUserDataStorageConnector = {
   getDataPoints: vi.fn().mockResolvedValue(mockDataPoints),
   createEvaluationRun: vi.fn().mockResolvedValue({
-    id: 'test-run-id',
-    dataset_id: 'test-dataset-id',
-    agent_id: 'test-agent-id',
+    id: 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
+    dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
+    agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
     evaluation_method: 'argument_correctness',
     name: 'Test Evaluation Run',
     description: 'Test description',
@@ -57,9 +57,9 @@ const mockUserDataStorageConnector = {
   }),
   getEvaluationRuns: vi.fn().mockImplementation((queryParams) => {
     const evaluationRun = {
-      id: queryParams.id || 'test-run-id',
-      dataset_id: 'test-dataset-id',
-      agent_id: 'test-agent-id',
+      id: queryParams.id || 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
+      dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
+      agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
       evaluation_method: 'argument_correctness',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -95,9 +95,9 @@ const mockUserDataStorageConnector = {
   } as EvaluationOutput),
   updateEvaluationRun: vi.fn().mockImplementation((updateData) => {
     const baseRun = {
-      id: 'test-run-id',
-      dataset_id: 'test-dataset-id',
-      agent_id: 'test-agent-id',
+      id: 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
+      dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
+      agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
       evaluation_method: 'argument_correctness',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -125,7 +125,9 @@ const mockUserDataStorageConnector = {
     };
     return Promise.resolve(baseRun);
   }),
-  getAgents: vi.fn().mockResolvedValue([{ id: 'test-agent-id' }]),
+  getAgents: vi
+    .fn()
+    .mockResolvedValue([{ id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd' }]),
 };
 
 describe('Argument Correctness Evaluation', () => {
@@ -158,7 +160,7 @@ describe('Argument Correctness Evaluation', () => {
       { timeout: 30000 },
       async () => {
         const input: DatasetQueryParams = {
-          id: 'test-dataset-id',
+          id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
           limit: 5,
         };
 
@@ -167,7 +169,7 @@ describe('Argument Correctness Evaluation', () => {
           model: 'gpt-4o',
           async_mode: false,
           batch_size: 5,
-          agent_id: 'test-agent-id',
+          agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
         };
 
         const results = await evaluateArgumentCorrectness(
@@ -190,7 +192,7 @@ describe('Argument Correctness Evaluation', () => {
 
     it('should handle strict mode correctly', { timeout: 30000 }, async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
         limit: 5,
       };
 
@@ -200,7 +202,7 @@ describe('Argument Correctness Evaluation', () => {
         strict_mode: true,
         async_mode: false,
         batch_size: 5,
-        agent_id: 'test-agent-id',
+        agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
       };
 
       const results = await evaluateArgumentCorrectness(
@@ -218,7 +220,7 @@ describe('Argument Correctness Evaluation', () => {
 
     it('should handle verbose mode correctly', { timeout: 30000 }, async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
         limit: 5,
       };
 
@@ -228,7 +230,7 @@ describe('Argument Correctness Evaluation', () => {
         verbose_mode: true,
         async_mode: false,
         batch_size: 5,
-        agent_id: 'test-agent-id',
+        agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
       };
 
       const results = await evaluateArgumentCorrectness(
@@ -245,14 +247,14 @@ describe('Argument Correctness Evaluation', () => {
 
     it('should handle missing user data storage connector', async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
         limit: 5,
       };
 
       const params: ArgumentCorrectnessEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        agent_id: 'test-agent-id',
+        agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
       };
 
       await expect(
@@ -273,7 +275,7 @@ describe('Argument Correctness Evaluation', () => {
       { timeout: 30000 },
       async () => {
         const input: DatasetQueryParams = {
-          id: 'test-dataset-id',
+          id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
           limit: 5,
         };
 
@@ -282,7 +284,7 @@ describe('Argument Correctness Evaluation', () => {
           model: 'gpt-4o-mini',
           temperature: 0.2,
           max_tokens: 1500,
-          agent_id: 'test-agent-id',
+          agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
         };
 
         const results = await evaluateArgumentCorrectness(

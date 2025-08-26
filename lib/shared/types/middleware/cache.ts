@@ -7,7 +7,7 @@ export enum CacheMode {
 }
 
 export const CacheSettings = z.object({
-  mode: z.nativeEnum(CacheMode),
+  mode: z.enum(CacheMode),
   max_age: z.number().default(604800).optional(),
 });
 

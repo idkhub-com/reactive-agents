@@ -93,7 +93,7 @@ export const FineTuningJob = z.object({
   /** The compiled results file ID(s) for the fine-tuning job. You can retrieve the results with the Files API. */
   result_files: z.array(z.string()).optional(),
   /** The current status of the fine-tuning job. */
-  status: z.nativeEnum(FineTuningJobStatus),
+  status: z.enum(FineTuningJobStatus),
   /** The total number of billable tokens processed by this fine-tuning job. The value will be null if the fine-tuning job is still running. */
   trained_tokens: z.number().nullable().optional(),
   /** The file ID used for training. You can retrieve the training data with the Files API. */

@@ -17,7 +17,7 @@ export const RetrySettings = z.object({
   /** The maximum number of retry attempts. */
   attempts: z.number(),
   /** The HTTP status codes on which to retry. */
-  on_status_codes: z.array(z.number()).default(RETRY_STATUS_CODES),
+  on_status_codes: z.array(z.number()).default(RETRY_STATUS_CODES).optional(),
   /** Whether to use the provider's retry wait. */
   use_retry_after_header: z.boolean().optional(),
 });
@@ -39,9 +39,9 @@ export const IdkTarget = z.object({
   retry: RetrySettings.default({ attempts: 0 }),
 
   // Provider Details
-  provider: z.nativeEnum(AIProvider),
+  provider: z.enum(AIProvider),
   // model: z.string(), // TODO: Make use of this field
-  inner_provider: z.nativeEnum(AIProvider).optional(),
+  inner_provider: z.enum(AIProvider).optional(),
   api_key: z
     .string()
     .optional()
@@ -85,7 +85,7 @@ export const IdkTarget = z.object({
   // Cortex specific
   snowflake_account: z.string().optional(),
 
-  // Fireworks finetune required fields
+  // Fireworks fine-tune required fields
   fireworks_account_id: z.string().optional(),
 
   // Google specific
@@ -135,7 +135,7 @@ export enum StrategyModes {
 }
 
 export const Strategy = z.object({
-  mode: z.nativeEnum(StrategyModes).describe('The strategy mode to use'),
+  mode: z.enum(StrategyModes).describe('The strategy mode to use'),
   on_status_codes: z.array(z.number()).optional(),
   conditions: z
     .array(

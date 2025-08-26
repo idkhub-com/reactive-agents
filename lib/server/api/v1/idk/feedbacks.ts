@@ -38,7 +38,7 @@ export const feedbacksRouter = new Hono<AppEnv>()
   // Delete feedback
   .delete(
     '/:feedbackId',
-    zValidator('param', z.object({ feedbackId: z.string().uuid() })),
+    zValidator('param', z.object({ feedbackId: z.uuid() })),
     async (c) => {
       try {
         const { feedbackId } = c.req.valid('param');

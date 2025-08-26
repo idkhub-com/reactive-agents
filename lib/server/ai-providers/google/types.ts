@@ -51,7 +51,7 @@ export const GoogleResponseCandidateContentPart = z.object({
   functionCall: z
     .object({
       name: z.string(),
-      args: z.record(z.unknown()),
+      args: z.record(z.string(), z.unknown()),
     })
     .optional(),
 });
@@ -174,7 +174,7 @@ export interface GoogleEmbedResponse {
 }
 
 export const GoogleSearchTool = z.object({
-  googleSearch: z.record(z.unknown()),
+  googleSearch: z.record(z.string(), z.unknown()),
 });
 export type GoogleSearchTool = z.infer<typeof GoogleSearchTool>;
 
@@ -372,7 +372,7 @@ export type GoogleMessagePart =
   | GoogleFileDataMessagePart
   | { text: string };
 export const GoogleMessage = z.object({
-  role: z.nativeEnum(GoogleMessageRole),
+  role: z.enum(GoogleMessageRole),
   parts: z.array(z.unknown()), // You may want to replace z.unknown() with a more specific schema for GoogleMessagePart if available
 });
 export type GoogleMessage = z.infer<typeof GoogleMessage>;
@@ -385,7 +385,7 @@ export enum GoogleToolChoiceType {
 
 export const GoogleToolConfig = z.object({
   function_calling_config: z.object({
-    mode: z.nativeEnum(GoogleToolChoiceType).optional(),
+    mode: z.enum(GoogleToolChoiceType).optional(),
     allowed_function_names: z.array(z.string()).optional(),
   }),
 });
@@ -404,7 +404,7 @@ export enum TaskType {
 }
 
 export const GoogleEmbedParams = CreateEmbeddingsRequestBody.extend({
-  task_type: z.union([z.nativeEnum(TaskType), z.string()]),
+  task_type: z.union([z.enum(TaskType), z.string()]),
   parameters: z
     .object({
       outputDimensionality: z.number(),

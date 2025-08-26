@@ -1,6 +1,8 @@
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention/knowledge-retention';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
+import type { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type z from 'zod';
 
 describe('Knowledge Retention Evaluation', () => {
   beforeEach(() => {
@@ -50,8 +52,15 @@ describe('Knowledge Retention Evaluation', () => {
   });
 
   it('should validate max_tokens as positive integer', () => {
-    const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
-
+    const schema =
+      knowledgeRetentionEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          KnowledgeRetentionEvaluationParameters,
+          KnowledgeRetentionEvaluationParameters
+        >
+      >;
     // Test valid max_tokens values
     expect(schema.safeParse({ max_tokens: 1 }).success).toBe(true);
     expect(schema.safeParse({ max_tokens: 1000 }).success).toBe(true);
@@ -63,7 +72,15 @@ describe('Knowledge Retention Evaluation', () => {
   });
 
   it('should accept empty parameters object', () => {
-    const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
+    const schema =
+      knowledgeRetentionEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          KnowledgeRetentionEvaluationParameters,
+          KnowledgeRetentionEvaluationParameters
+        >
+      >;
 
     const result = schema.safeParse({});
     expect(result.success).toBe(true);

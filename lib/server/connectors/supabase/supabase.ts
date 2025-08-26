@@ -76,7 +76,7 @@ const checkEnvironmentVariables = (): void => {
   }
 };
 
-const selectFromSupabase = async <T extends z.ZodTypeAny>(
+const selectFromSupabase = async <T extends z.ZodType>(
   table: string,
   queryParams: Record<string, string | undefined>,
   schema: T,
@@ -118,8 +118,8 @@ ${await response.text()}`,
 };
 
 const insertIntoSupabase = async <
-  InputSchema extends z.ZodTypeAny,
-  OutputSchema extends z.ZodTypeAny | null,
+  InputSchema extends z.ZodType,
+  OutputSchema extends z.ZodType | null,
 >(
   table: string,
   data: z.infer<InputSchema>,
@@ -127,7 +127,7 @@ const insertIntoSupabase = async <
   upsert = false,
 ): Promise<
   // If schema is not provided, return void
-  OutputSchema extends z.ZodTypeAny ? z.infer<OutputSchema> : void
+  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
 > => {
   checkEnvironmentVariables();
 
@@ -166,20 +166,22 @@ ${await response.text()}`,
   }
 
   if (!schema) {
-    return undefined as OutputSchema extends z.ZodTypeAny ? never : undefined;
+    return undefined as OutputSchema extends z.ZodType ? never : undefined;
   }
 
   const rawInsertedData = await response.json();
   try {
-    return schema.parse(rawInsertedData);
+    return schema.parse(rawInsertedData) as OutputSchema extends z.ZodType
+      ? never
+      : undefined;
   } catch (error) {
     throw new Error(`Failed to parse data from Supabase: ${error}`);
   }
 };
 
 const updateInSupabase = async <
-  InputSchema extends z.ZodTypeAny,
-  OutputSchema extends z.ZodTypeAny,
+  InputSchema extends z.ZodType,
+  OutputSchema extends z.ZodType,
 >(
   table: string,
   id: string,
@@ -187,7 +189,7 @@ const updateInSupabase = async <
   schema: OutputSchema | null,
 ): Promise<
   // If schema is not provided, return void
-  OutputSchema extends z.ZodTypeAny ? z.infer<OutputSchema> : void
+  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
 > => {
   checkEnvironmentVariables();
 
@@ -217,9 +219,11 @@ ${await response.text()}`,
   const rawUpdatedData = await response.json();
   try {
     if (!schema) {
-      return undefined as OutputSchema extends z.ZodTypeAny ? never : undefined;
+      return undefined as OutputSchema extends z.ZodType ? never : undefined;
     }
-    return schema.parse(rawUpdatedData);
+    return schema.parse(rawUpdatedData) as OutputSchema extends z.ZodType
+      ? never
+      : undefined;
   } catch (error) {
     throw new Error(`Failed to parse data from Supabase: ${error}`);
   }
@@ -705,9 +709,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       { dataset_id: `eq.${id}` },
       z.array(
         z.object({
-          dataset_id: z.string().uuid(),
-          data_point_id: z.string().uuid(),
-          created_at: z.string().datetime({ offset: true }),
+          dataset_id: z.uuid(),
+          data_point_id: z.uuid(),
+          created_at: z.iso.datetime({ offset: true }),
         }),
       ),
     );

@@ -67,7 +67,9 @@ describe('Agents API Status Codes', () => {
 
   describe('GET /', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockAgents = [{ id: '1', name: 'test-agent' }];
+      const mockAgents = [
+        { id: 'a3b4c5d6-e7f8-4012-8345-67890abcdef02', name: 'test-agent' },
+      ];
       mockUserDataStorageConnector.getAgents.mockResolvedValue(mockAgents);
 
       const res = await client.index.$get({
@@ -97,14 +99,14 @@ describe('Agents API Status Codes', () => {
   describe('PATCH /:agentId', () => {
     it('should return 200 on successful update', async () => {
       const mockAgent = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-agent',
         description: 'updated description',
       };
       mockUserDataStorageConnector.updateAgent.mockResolvedValue(mockAgent);
 
       const res = await client[':agentId'].$patch({
-        param: { agentId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { agentId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { description: 'updated description' },
       });
 
@@ -119,7 +121,7 @@ describe('Agents API Status Codes', () => {
       );
 
       const res = await client[':agentId'].$patch({
-        param: { agentId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { agentId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { description: 'updated description' },
       });
 
@@ -144,7 +146,7 @@ describe('Agents API Status Codes', () => {
       mockUserDataStorageConnector.deleteAgent.mockResolvedValue(undefined);
 
       const res = await client[':agentId'].$delete({
-        param: { agentId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { agentId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(204);
@@ -157,7 +159,7 @@ describe('Agents API Status Codes', () => {
       );
 
       const res = await client[':agentId'].$delete({
-        param: { agentId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { agentId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(500);
@@ -177,18 +179,20 @@ describe('Agents API Status Codes', () => {
 
   describe('GET /:agentId/skills', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockSkills = [{ id: '1', name: 'test-skill' }];
+      const mockSkills = [
+        { id: 'b4c5d6e7-f8a9-4123-8456-7890abcdef023', name: 'test-skill' },
+      ];
       mockUserDataStorageConnector.getSkills.mockResolvedValue(mockSkills);
 
       const res = await client[':agentId'].skills.$get({
-        param: { agentId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { agentId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual(mockSkills);
       expect(mockUserDataStorageConnector.getSkills).toHaveBeenCalledWith({
-        agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
       });
     });
 
@@ -198,7 +202,7 @@ describe('Agents API Status Codes', () => {
       );
 
       const res = await client[':agentId'].skills.$get({
-        param: { agentId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { agentId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(500);

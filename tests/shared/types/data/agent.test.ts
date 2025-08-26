@@ -176,7 +176,7 @@ describe('Agent Data Transforms and Validation', () => {
       "id"
     ],
     "path": [],
-    "message": "Unrecognized key(s) in object: 'id'"
+    "message": "Unrecognized key: \\"id\\""
   }
 ]`,
       );

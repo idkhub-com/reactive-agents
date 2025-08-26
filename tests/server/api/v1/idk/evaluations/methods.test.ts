@@ -6,16 +6,20 @@ import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock zodToJsonSchema to prevent schema conversion issues
-vi.mock('zod-to-json-schema', () => ({
-  zodToJsonSchema: vi.fn(() => ({
-    type: 'object',
-    properties: {
-      threshold: { type: 'number', default: 0.5 },
-      model: { type: 'string', default: 'gpt-4o' },
-    },
-    required: ['threshold'],
-  })),
-}));
+vi.mock('zod', async () => {
+  const actual = await vi.importActual('zod');
+  return {
+    ...actual,
+    toJSONSchema: vi.fn(() => ({
+      type: 'object' as const,
+      properties: {
+        threshold: { type: 'number' as const, default: 0.5 },
+        model: { type: 'string' as const, default: 'gpt-4o' },
+      },
+      required: ['threshold'],
+    })),
+  };
+});
 
 // Mock the evaluation connectors to prevent actual evaluation execution
 vi.mock('@server/connectors/evaluations', () => {
@@ -334,26 +338,6 @@ describe('Evaluation Methods API', () => {
       });
 
       expect(res.status).toBe(400); // Zod validation error
-    });
-
-    it('should return 500 on schema conversion error', async () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        // biome-ignore lint/suspicious/noEmptyBlockStatements: Intentionally empty mock implementation for testing
-        .mockImplementation(() => {});
-
-      // This test verifies error handling - we'll skip the dynamic import approach
-      // and just verify that 500 errors are handled properly when they occur
-      // The actual error path is covered by the integration testing
-
-      consoleSpy.mockRestore();
-
-      // Just verify the endpoint works normally for now
-      const res = await client[':method'].schema.$get({
-        param: { method: EvaluationMethodName.TASK_COMPLETION },
-      });
-
-      expect(res.status).toBe(200);
     });
   });
 

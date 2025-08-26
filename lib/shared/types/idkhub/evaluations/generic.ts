@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const GenericEvaluationResultSchema = z.object({
   score: z.number().min(0).max(1),
   reasoning: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type GenericEvaluationResult<T = Record<string, unknown>> = z.infer<
@@ -20,7 +20,7 @@ export type GenericEvaluationResult<T = Record<string, unknown>> = z.infer<
  */
 export const GenericEvaluationInputSchema = z.object({
   text: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type GenericEvaluationInput<T = Record<string, unknown>> = z.infer<

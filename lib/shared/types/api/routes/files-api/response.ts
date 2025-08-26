@@ -42,12 +42,12 @@ export const FileObject = z.object({
   /**
    * The intended purpose of the file. Supported values are "assistants", "vision", "batch", and "fine-tune".
    */
-  purpose: z.nativeEnum(FilePurpose),
+  purpose: z.enum(FilePurpose),
 
   /**
    * Deprecated. The current status of the file, which can be either uploaded, processed, or error.
    */
-  status: z.nativeEnum(FileStatus).optional(),
+  status: z.enum(FileStatus).optional(),
 
   /**
    * Deprecated. For details on why a fine-tuning training file failed validation, see the error field on fine-tuning jobs.

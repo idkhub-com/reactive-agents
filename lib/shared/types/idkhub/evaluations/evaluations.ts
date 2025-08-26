@@ -18,7 +18,7 @@ export enum EvaluationMethodName {
 }
 
 export const EvaluationMethodDetails = z.object({
-  method: z.nativeEnum(EvaluationMethodName),
+  method: z.enum(EvaluationMethodName),
   name: z.string(),
   description: z.string(),
 });
@@ -37,9 +37,9 @@ export type EvaluationMethodParameters = z.infer<
   typeof EvaluationMethodParameters
 >;
 export const EvaluationMethodRequest = z.object({
-  agent_id: z.string().uuid(),
-  dataset_id: z.string().uuid(),
-  evaluation_method: z.nativeEnum(EvaluationMethodName),
+  agent_id: z.uuid(),
+  dataset_id: z.uuid(),
+  evaluation_method: z.enum(EvaluationMethodName),
   parameters: EvaluationMethodParameters,
   name: z.string().optional(),
   description: z.string().optional(),

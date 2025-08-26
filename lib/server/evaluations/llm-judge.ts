@@ -373,6 +373,10 @@ async function callIDKHubOpenAIResponsesAPI(
 
     clearTimeout(timeoutId);
 
+    if (!response) {
+      throw new Error('OpenAI Responses API error: No response received');
+    }
+
     if (!response.ok) {
       const error_text = await response.text();
       throw new Error(

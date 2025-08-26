@@ -105,7 +105,7 @@ export const StructuredOutput = z.object({
   /**
    * The role of the message sender (typically "assistant" for model responses)
    */
-  role: z.nativeEnum(ChatCompletionMessageRole),
+  role: z.enum(ChatCompletionMessageRole),
   /**
    * Status of the output generation (e.g., "in_progress", "completed", "incomplete")
    */
@@ -146,7 +146,7 @@ export const ResponseFormatTextConfig = z.object({
   /**
    * The JSON schema for the response format, described as a JSON Schema object.
    */
-  schema: z.record(z.unknown()),
+  schema: z.record(z.string(), z.unknown()),
   /**
    * Whether to enable strict schema adherence when generating the output.
    * If set to true, the model will always follow the exact schema defined in the schema field.
@@ -291,7 +291,7 @@ export const StructuredOutputWithRefusal = z.object({
   /**
    * The role of the message sender (typically "assistant" for model responses)
    */
-  role: z.nativeEnum(ChatCompletionMessageRole),
+  role: z.enum(ChatCompletionMessageRole),
   /**
    * Status of the output generation (e.g., "in_progress", "completed", "incomplete")
    */
@@ -429,7 +429,7 @@ export const ResponsesResponseBody = z.object({
         .object({
           name: z.string(),
           description: z.string().nullable().optional(),
-          parameters: z.record(z.unknown()).nullable().optional(),
+          parameters: z.record(z.string(), z.unknown()).nullable().optional(),
           strict: z.boolean().nullable().optional(),
         })
         .nullable()

@@ -93,7 +93,7 @@ export type ChatCompletionContentBlockChunk = z.infer<
  */
 export const ChatCompletionMessage = z.object({
   /** The role of the message sender. It can be 'system', 'user', 'assistant', or 'function'. */
-  role: z.nativeEnum(ChatCompletionMessageRole),
+  role: z.enum(ChatCompletionMessageRole),
   /** The content of the message. */
   content: z
     .union([z.string(), z.array(ChatCompletionContentType)])

@@ -10,24 +10,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockDataPoints = [
   {
     id: 'dp-1',
-    dataset_id: 'test-dataset-id',
+    dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
     request_body: { input: 'Test input 1' },
     ground_truth: 'Expected output 1',
     metadata: {
       tools: '[]',
-      agent_id: 'test-agent-id',
+      agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
     },
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   },
   {
     id: 'dp-2',
-    dataset_id: 'test-dataset-id',
+    dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
     request_body: { input: 'Test input 2' },
     ground_truth: 'Expected output 2',
     metadata: {
       tools: '[]',
-      agent_id: 'test-agent-id',
+      agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
     },
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -37,9 +37,9 @@ const mockDataPoints = [
 const mockUserDataStorageConnector = {
   getDataPoints: vi.fn().mockResolvedValue(mockDataPoints),
   createEvaluationRun: vi.fn().mockResolvedValue({
-    id: 'test-run-id',
-    dataset_id: 'test-dataset-id',
-    agent_id: 'test-agent-id',
+    id: 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
+    dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
+    agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
     evaluation_method: 'task_completion',
     name: 'Test Evaluation Run',
     description: 'Test description',
@@ -52,9 +52,9 @@ const mockUserDataStorageConnector = {
   getEvaluationRuns: vi.fn().mockImplementation((queryParams) => {
     // Return the evaluation run that matches the query
     const evaluationRun = {
-      id: queryParams.id || 'test-run-id',
-      dataset_id: 'test-dataset-id',
-      agent_id: 'test-agent-id',
+      id: queryParams.id || 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
+      dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
+      agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
       evaluation_method: 'task_completion',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -91,9 +91,9 @@ const mockUserDataStorageConnector = {
   updateEvaluationRun: vi.fn().mockImplementation((updateData) => {
     // Return different results based on the update data
     const baseRun = {
-      id: 'test-run-id',
-      dataset_id: 'test-dataset-id',
-      agent_id: 'test-agent-id',
+      id: 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
+      dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
+      agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
       evaluation_method: 'task_completion',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -121,7 +121,9 @@ const mockUserDataStorageConnector = {
     };
     return Promise.resolve(baseRun);
   }),
-  getAgents: vi.fn().mockResolvedValue([{ id: 'test-agent-id' }]),
+  getAgents: vi
+    .fn()
+    .mockResolvedValue([{ id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123' }]),
 };
 
 describe('Task Completion Evaluation', () => {
@@ -154,7 +156,7 @@ describe('Task Completion Evaluation', () => {
       { timeout: 30000 },
       async () => {
         const input: DatasetQueryParams = {
-          id: 'test-dataset-id',
+          id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
           limit: 5,
         };
 
@@ -163,7 +165,7 @@ describe('Task Completion Evaluation', () => {
           model: 'gpt-4o',
           async_mode: false, // Disable async for simpler testing
           batch_size: 5,
-          agent_id: 'test-agent-id',
+          agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
         };
 
         const results = await evaluateTaskCompletion(
@@ -185,7 +187,7 @@ describe('Task Completion Evaluation', () => {
 
         // Verify that data points were fetched
         expect(mockUserDataStorageConnector.getDataPoints).toHaveBeenCalledWith(
-          'test-dataset-id',
+          'd4e5f6a7-b8c9-4123-9567-890abcdef012',
           { limit: 5, offset: 0 },
         );
       },
@@ -193,7 +195,7 @@ describe('Task Completion Evaluation', () => {
 
     it('should handle strict mode correctly', { timeout: 30000 }, async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
         limit: 5,
       };
 
@@ -203,7 +205,7 @@ describe('Task Completion Evaluation', () => {
         strict_mode: true, // Enable strict mode
         async_mode: false, // Disable async for simpler testing
         batch_size: 5,
-        agent_id: 'test-agent-id',
+        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
       };
 
       const results = await evaluateTaskCompletion(
@@ -222,7 +224,7 @@ describe('Task Completion Evaluation', () => {
 
     it('should handle verbose mode correctly', { timeout: 30000 }, async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
         limit: 5,
       };
 
@@ -232,7 +234,7 @@ describe('Task Completion Evaluation', () => {
         verbose_mode: true, // Enable verbose mode
         async_mode: false, // Disable async for simpler testing
         batch_size: 5,
-        agent_id: 'test-agent-id',
+        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
       };
 
       const results = await evaluateTaskCompletion(
@@ -250,7 +252,7 @@ describe('Task Completion Evaluation', () => {
 
     it('should handle custom task parameter', { timeout: 30000 }, async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
         limit: 5,
       };
 
@@ -260,7 +262,7 @@ describe('Task Completion Evaluation', () => {
         task: 'Custom task description', // Custom task
         async_mode: false, // Disable async for simpler testing
         batch_size: 5,
-        agent_id: 'test-agent-id',
+        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
       };
 
       const results = await evaluateTaskCompletion(
@@ -278,14 +280,14 @@ describe('Task Completion Evaluation', () => {
 
     it('should handle missing user data storage connector', async () => {
       const input: DatasetQueryParams = {
-        id: 'test-dataset-id',
+        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
         limit: 5,
       };
 
       const params: TaskCompletionEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        agent_id: 'test-agent-id',
+        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
       };
 
       await expect(
@@ -306,7 +308,7 @@ describe('Task Completion Evaluation', () => {
       { timeout: 30000 },
       async () => {
         const input: DatasetQueryParams = {
-          id: 'test-dataset-id',
+          id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
           limit: 5,
         };
 
@@ -315,7 +317,7 @@ describe('Task Completion Evaluation', () => {
           model: 'gpt-4o-mini',
           temperature: 0.2,
           max_tokens: 1500,
-          agent_id: 'test-agent-id',
+          agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
         };
 
         const results = await evaluateTaskCompletion(

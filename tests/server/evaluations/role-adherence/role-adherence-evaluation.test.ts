@@ -14,12 +14,12 @@ global.fetch = mockFetch;
 const mockDataPoints = [
   {
     id: 'dp-1',
-    dataset_id: 'test-dataset-id',
+    dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
     request_body: { input: 'Test input 1' },
     ground_truth: 'Assistant output 1',
     metadata: {
       tools: '[]',
-      agent_id: 'test-agent-id',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
       role_definition: 'You are a helpful assistant.',
       instructions: 'Be concise.',
       assistant_output: 'Output 1',
@@ -29,12 +29,12 @@ const mockDataPoints = [
   },
   {
     id: 'dp-2',
-    dataset_id: 'test-dataset-id',
+    dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
     request_body: { input: 'Test input 2' },
     ground_truth: 'Assistant output 2',
     metadata: {
       tools: '[]',
-      agent_id: 'test-agent-id',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
       role_definition: 'You are a helpful assistant.',
       assistant_output: 'Output 2',
     },
@@ -46,9 +46,9 @@ const mockDataPoints = [
 const mockUserDataStorageConnector = {
   getDataPoints: vi.fn().mockResolvedValue(mockDataPoints),
   createEvaluationRun: vi.fn().mockResolvedValue({
-    id: 'test-run-id',
-    dataset_id: 'test-dataset-id',
-    agent_id: 'test-agent-id',
+    id: 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
+    dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
+    agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
     evaluation_method: 'role_adherence',
     name: 'Test Evaluation Run',
     description: 'Test description',
@@ -60,9 +60,9 @@ const mockUserDataStorageConnector = {
   }),
   getEvaluationRuns: vi.fn().mockImplementation((queryParams) => {
     const evaluationRun = {
-      id: queryParams.id || 'test-run-id',
-      dataset_id: 'test-dataset-id',
-      agent_id: 'test-agent-id',
+      id: queryParams.id || 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
+      dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
       evaluation_method: 'role_adherence',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -98,9 +98,9 @@ const mockUserDataStorageConnector = {
   } as EvaluationOutput),
   updateEvaluationRun: vi.fn().mockImplementation((updateData) => {
     const baseRun = {
-      id: 'test-run-id',
-      dataset_id: 'test-dataset-id',
-      agent_id: 'test-agent-id',
+      id: 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
+      dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
       evaluation_method: 'role_adherence',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -128,7 +128,9 @@ const mockUserDataStorageConnector = {
     };
     return Promise.resolve(baseRun);
   }),
-  getAgents: vi.fn().mockResolvedValue([{ id: 'test-agent-id' }]),
+  getAgents: vi
+    .fn()
+    .mockResolvedValue([{ id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0' }]),
 };
 
 describe('Role Adherence Evaluation (Dataset)', () => {
@@ -163,7 +165,7 @@ describe('Role Adherence Evaluation (Dataset)', () => {
 
   it('should successfully evaluate a dataset', async () => {
     const input: DatasetQueryParams = {
-      id: 'test-dataset-id',
+      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       limit: 5,
     };
 
@@ -172,7 +174,7 @@ describe('Role Adherence Evaluation (Dataset)', () => {
       model: 'gpt-4o',
       async_mode: false,
       batch_size: 5,
-      agent_id: 'test-agent-id',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
     } as RoleAdherenceEvaluationParameters;
 
     const results = await evaluateRoleAdherenceDataset(
@@ -190,14 +192,14 @@ describe('Role Adherence Evaluation (Dataset)', () => {
     expect(results.averageResult).toHaveProperty('evaluation_run_id');
 
     expect(mockUserDataStorageConnector.getDataPoints).toHaveBeenCalledWith(
-      'test-dataset-id',
+      'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       { limit: 5, offset: 0 },
     );
   });
 
   it('should handle strict mode correctly', async () => {
     const input: DatasetQueryParams = {
-      id: 'test-dataset-id',
+      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       limit: 5,
     };
 
@@ -207,7 +209,7 @@ describe('Role Adherence Evaluation (Dataset)', () => {
       strict_mode: true,
       async_mode: false,
       batch_size: 5,
-      agent_id: 'test-agent-id',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
     } as RoleAdherenceEvaluationParameters;
 
     const results = await evaluateRoleAdherenceDataset(
@@ -223,14 +225,14 @@ describe('Role Adherence Evaluation (Dataset)', () => {
 
   it('should handle missing user data storage connector', async () => {
     const input: DatasetQueryParams = {
-      id: 'test-dataset-id',
+      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       limit: 5,
     };
 
     const params: RoleAdherenceEvaluationParameters = {
       threshold: 0.5,
       model: 'gpt-4o',
-      agent_id: 'test-agent-id',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
     } as RoleAdherenceEvaluationParameters;
 
     await expect(
@@ -246,7 +248,7 @@ describe('Role Adherence Evaluation (Dataset)', () => {
 
   it('should create internal LLM judge with correct parameters', async () => {
     const input: DatasetQueryParams = {
-      id: 'test-dataset-id',
+      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       limit: 5,
     };
 
@@ -255,7 +257,7 @@ describe('Role Adherence Evaluation (Dataset)', () => {
       model: 'gpt-4o-mini',
       temperature: 0.2,
       max_tokens: 1500,
-      agent_id: 'test-agent-id',
+      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
       async_mode: false,
     } as RoleAdherenceEvaluationParameters;
 

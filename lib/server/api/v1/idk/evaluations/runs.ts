@@ -32,7 +32,7 @@ export const runsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        runId: z.string().uuid(),
+        runId: z.uuid(),
       }),
     ),
     async (c) => {
@@ -72,7 +72,7 @@ export const runsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        evaluationRunId: z.string().uuid(),
+        evaluationRunId: z.uuid(),
       }),
     ),
     zValidator('json', EvaluationRunUpdateParams),
@@ -101,7 +101,7 @@ export const runsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        evaluationRunId: z.string().uuid(),
+        evaluationRunId: z.uuid(),
       }),
     ),
     async (c) => {
@@ -123,7 +123,7 @@ export const runsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        evaluationRunId: z.string().uuid(),
+        evaluationRunId: z.uuid(),
       }),
     ),
     zValidator('query', DataPointOutputQueryParams.optional()),

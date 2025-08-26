@@ -66,7 +66,9 @@ describe('Evaluation Runs API Status Codes', () => {
 
   describe('GET /', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockRuns = [{ id: '1', name: 'test-run' }];
+      const mockRuns = [
+        { id: 'f8a9b0c1-d2e3-4567-8890-123456789def', name: 'test-run' },
+      ];
       mockConnector.getEvaluationRuns.mockResolvedValue(mockRuns);
 
       const res = await client.index.$get({
@@ -79,7 +81,9 @@ describe('Evaluation Runs API Status Codes', () => {
     });
 
     it('should return 200 with empty query', async () => {
-      const mockRuns = [{ id: '1', name: 'test-run' }];
+      const mockRuns = [
+        { id: 'f8a9b0c1-d2e3-4567-8890-123456789def', name: 'test-run' },
+      ];
       mockConnector.getEvaluationRuns.mockResolvedValue(mockRuns);
 
       const res = await client.index.$get({
@@ -122,14 +126,14 @@ describe('Evaluation Runs API Status Codes', () => {
       mockConnector.getEvaluationRuns.mockResolvedValue([mockRun]);
 
       const res = await client[':runId'].$get({
-        param: { runId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { runId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual(mockRun);
       expect(mockConnector.getEvaluationRuns).toHaveBeenCalledWith({
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
       });
     });
 
@@ -137,7 +141,7 @@ describe('Evaluation Runs API Status Codes', () => {
       mockConnector.getEvaluationRuns.mockResolvedValue([]);
 
       const res = await client[':runId'].$get({
-        param: { runId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { runId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(404);
@@ -149,7 +153,7 @@ describe('Evaluation Runs API Status Codes', () => {
       mockConnector.getEvaluationRuns.mockRejectedValue(new Error('DB error'));
 
       const res = await client[':runId'].$get({
-        param: { runId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { runId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(500);
@@ -169,14 +173,17 @@ describe('Evaluation Runs API Status Codes', () => {
 
   describe('POST /', () => {
     it('should return 201 on successful creation', async () => {
-      const mockRun = { id: '1', name: 'new-run' };
+      const mockRun = {
+        id: 'a9b0c1d2-e3f4-4678-8901-23456789def0',
+        name: 'new-run',
+      };
       mockConnector.createEvaluationRun.mockResolvedValue(mockRun);
 
       const res = await client.index.$post({
         json: {
           name: 'new-run',
-          dataset_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
           metadata: {},
         },
@@ -195,8 +202,8 @@ describe('Evaluation Runs API Status Codes', () => {
       const res = await client.index.$post({
         json: {
           name: 'new-run',
-          dataset_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
           metadata: {},
         },
@@ -211,13 +218,13 @@ describe('Evaluation Runs API Status Codes', () => {
   describe('PATCH /:evaluationRunId', () => {
     it('should return 200 on successful update', async () => {
       const mockRun = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'updated-run',
       };
       mockConnector.updateEvaluationRun.mockResolvedValue(mockRun);
 
       const res = await client[':evaluationRunId'].$patch({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { name: 'updated-run' },
       });
 
@@ -232,7 +239,7 @@ describe('Evaluation Runs API Status Codes', () => {
       );
 
       const res = await client[':evaluationRunId'].$patch({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { name: 'updated-run' },
       });
 
@@ -257,7 +264,7 @@ describe('Evaluation Runs API Status Codes', () => {
       mockConnector.deleteEvaluationRun.mockResolvedValue(undefined);
 
       const res = await client[':evaluationRunId'].$delete({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(204);
@@ -270,7 +277,7 @@ describe('Evaluation Runs API Status Codes', () => {
       );
 
       const res = await client[':evaluationRunId'].$delete({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(500);
@@ -303,7 +310,7 @@ describe('Evaluation Runs API Status Codes', () => {
       mockConnector.getDataPointOutputs.mockResolvedValue(mockDataPoints);
 
       const res = await client[':evaluationRunId']['data-point-outputs'].$get({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: { limit: '10', offset: '0' },
       });
 
@@ -311,7 +318,7 @@ describe('Evaluation Runs API Status Codes', () => {
       const data = await res.json();
       expect(data).toEqual(mockDataPoints);
       expect(mockConnector.getDataPointOutputs).toHaveBeenCalledWith(
-        'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        'c13d1678-150a-466b-804f-ecc82de3680e',
         { limit: 10, offset: 0 },
       );
     });
@@ -330,7 +337,7 @@ describe('Evaluation Runs API Status Codes', () => {
       mockConnector.getDataPointOutputs.mockResolvedValue(mockDataPoints);
 
       const res = await client[':evaluationRunId']['data-point-outputs'].$get({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {
           score_min: '0.8',
           score_max: '0.9',
@@ -342,7 +349,7 @@ describe('Evaluation Runs API Status Codes', () => {
       const data = await res.json();
       expect(data).toEqual(mockDataPoints);
       expect(mockConnector.getDataPointOutputs).toHaveBeenCalledWith(
-        'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        'c13d1678-150a-466b-804f-ecc82de3680e',
         {
           score_min: 0.8,
           score_max: 0.9,
@@ -357,7 +364,7 @@ describe('Evaluation Runs API Status Codes', () => {
       );
 
       const res = await client[':evaluationRunId']['data-point-outputs'].$get({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: { limit: '10' },
       });
 
@@ -378,7 +385,7 @@ describe('Evaluation Runs API Status Codes', () => {
 
     it('should validate query parameters', async () => {
       const res = await client[':evaluationRunId']['data-point-outputs'].$get({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {
           limit: '-5', // negative limit should fail validation
           offset: '-1', // negative offset should fail validation
@@ -391,7 +398,7 @@ describe('Evaluation Runs API Status Codes', () => {
 
     it('should validate limit is positive', async () => {
       const res = await client[':evaluationRunId']['data-point-outputs'].$get({
-        param: { evaluationRunId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {
           limit: '0', // should fail because limit must be positive
         },

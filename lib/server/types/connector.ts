@@ -170,5 +170,5 @@ export interface EvaluationMethodConnector {
     request: EvaluationMethodRequest,
     userDataStorageConnector: UserDataStorageConnector,
   ) => Promise<EvaluationRun>;
-  getParameterSchema: z.ZodSchema;
+  getParameterSchema: z.ZodType;
 }

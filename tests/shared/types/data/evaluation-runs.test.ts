@@ -202,7 +202,7 @@ describe('EvaluationRunUpdateParams schema', () => {
       "id"
     ],
     "path": [],
-    "message": "Unrecognized key(s) in object: 'id'"
+    "message": "Unrecognized key: \\"id\\""
   }
 ]`,
     );

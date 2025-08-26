@@ -135,23 +135,4 @@ describe('Supabase Dataset Connector Types', () => {
       }
     });
   });
-
-  describe('Type exports', () => {
-    it('should export correct types', () => {
-      // Test that the types are properly exported and can be used
-      const bridgeRecord: typeof DatasetDataPointBridge._type = {
-        dataset_id: '123e4567-e89b-12d3-a456-426614174000',
-        data_point_id: '987fcdeb-51a2-43d1-9f12-345678901234',
-        created_at: '2023-12-01T10:00:00.000Z',
-      };
-
-      const createParams: typeof DatasetDataPointBridgeCreateParams._type = {
-        dataset_id: '123e4567-e89b-12d3-a456-426614174000',
-        data_point_id: '987fcdeb-51a2-43d1-9f12-345678901234',
-      };
-
-      expect(bridgeRecord).toBeDefined();
-      expect(createParams).toBeDefined();
-    });
-  });
 });

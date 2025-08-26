@@ -4,25 +4,25 @@ import { z } from 'zod';
 // Define Zod schemas for validation
 export const ImprovedResponse = z
   .object({
-    id: z.string().uuid(),
-    agent_id: z.string().uuid(),
-    skill_id: z.string().uuid(),
-    log_id: z.string().uuid(),
-    original_response_body: z.record(z.unknown()),
-    improved_response_body: z.record(z.unknown()),
-    created_at: z.string().datetime({ offset: true }),
-    updated_at: z.string().datetime({ offset: true }),
+    id: z.uuid(),
+    agent_id: z.uuid(),
+    skill_id: z.uuid(),
+    log_id: z.uuid(),
+    original_response_body: z.record(z.string(), z.unknown()),
+    improved_response_body: z.record(z.string(), z.unknown()),
+    created_at: z.iso.datetime({ offset: true }),
+    updated_at: z.iso.datetime({ offset: true }),
   })
   .strict();
 
 // Input schema for creating an improved response
 export const ImprovedResponseCreateParams = z
   .object({
-    agent_id: z.string().uuid(),
-    skill_id: z.string().uuid(),
-    log_id: z.string().uuid(),
-    original_response_body: z.record(z.unknown()),
-    improved_response_body: z.record(z.unknown()),
+    agent_id: z.uuid(),
+    skill_id: z.uuid(),
+    log_id: z.uuid(),
+    original_response_body: z.record(z.string(), z.unknown()),
+    improved_response_body: z.record(z.string(), z.unknown()),
   })
   .strict()
   .transform((data) => {
@@ -38,10 +38,10 @@ export const ImprovedResponseCreateParams = z
 // Query parameters schema for the combined GET endpoint
 export const ImprovedResponseQueryParams = z
   .object({
-    id: z.string().uuid().optional(),
-    agent_id: z.string().uuid().optional(),
-    skill_id: z.string().uuid().optional(),
-    log_id: z.string().uuid().optional(),
+    id: z.uuid().optional(),
+    agent_id: z.uuid().optional(),
+    skill_id: z.uuid().optional(),
+    log_id: z.uuid().optional(),
     limit: z.coerce.number().int().positive().optional(),
     offset: z.coerce.number().int().min(0).optional(),
   })
@@ -50,7 +50,7 @@ export const ImprovedResponseQueryParams = z
 // Input schema for updating an improved response
 export const ImprovedResponseUpdateParams = z
   .object({
-    improved_response_body: z.record(z.unknown()).optional(),
+    improved_response_body: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .refine(
@@ -65,7 +65,7 @@ export const ImprovedResponseUpdateParams = z
 // Query params for DELETE operations
 export const ImprovedResponseIdQueryParams = z
   .object({
-    id: z.string().uuid(),
+    id: z.uuid(),
   })
   .strict();
 

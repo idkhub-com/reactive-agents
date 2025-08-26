@@ -69,7 +69,7 @@ describe('Agents Client API', () => {
     it('should return agents on successful response', async () => {
       const mockAgents: Agent[] = [
         {
-          id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-agent',
           description: 'A test agent',
           metadata: {},
@@ -124,7 +124,7 @@ describe('Agents Client API', () => {
       mockGet.mockResolvedValue(mockResponse);
 
       const params: AgentQueryParams = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-agent',
         limit: 10,
         offset: 5,
@@ -134,7 +134,7 @@ describe('Agents Client API', () => {
 
       expect(mockGet).toHaveBeenCalledWith({
         query: {
-          id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-agent',
           limit: '10',
           offset: '5',
@@ -146,7 +146,7 @@ describe('Agents Client API', () => {
   describe('updateAgent', () => {
     it('should return updated agent on successful response', async () => {
       const mockAgent: Agent = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'updated-agent',
         description: 'Updated description',
         metadata: {},
@@ -161,7 +161,7 @@ describe('Agents Client API', () => {
 
       mockPatch.mockResolvedValue(mockResponse);
 
-      const agentId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const agentId = 'c13d1678-150a-466b-804f-ecc82de3680e';
       const params: AgentUpdateParams = { description: 'Updated description' };
 
       const result = await agentsAPI.updateAgent(agentId, params);
@@ -181,7 +181,7 @@ describe('Agents Client API', () => {
 
       mockPatch.mockResolvedValue(mockResponse);
 
-      const agentId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const agentId = 'c13d1678-150a-466b-804f-ecc82de3680e';
       const params: AgentUpdateParams = { description: 'Updated description' };
 
       await expect(agentsAPI.updateAgent(agentId, params)).rejects.toThrow(
@@ -191,7 +191,7 @@ describe('Agents Client API', () => {
 
     it('should handle metadata updates', async () => {
       const mockAgent: Agent = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-agent',
         description: 'Test agent',
         metadata: { key: 'value' },
@@ -206,7 +206,7 @@ describe('Agents Client API', () => {
 
       mockPatch.mockResolvedValue(mockResponse);
 
-      const agentId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const agentId = 'c13d1678-150a-466b-804f-ecc82de3680e';
       const params: AgentUpdateParams = {
         description: 'Test agent',
         metadata: { key: 'value' },
@@ -231,7 +231,7 @@ describe('Agents Client API', () => {
 
       mockDelete.mockResolvedValue(mockResponse);
 
-      const agentId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const agentId = 'c13d1678-150a-466b-804f-ecc82de3680e';
 
       await expect(agentsAPI.deleteAgent(agentId)).resolves.toBeUndefined();
 
@@ -248,7 +248,7 @@ describe('Agents Client API', () => {
 
       mockDelete.mockResolvedValue(mockResponse);
 
-      const agentId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const agentId = 'c13d1678-150a-466b-804f-ecc82de3680e';
 
       await expect(agentsAPI.deleteAgent(agentId)).rejects.toThrow(
         'Failed to delete agent',
@@ -278,7 +278,7 @@ describe('Agents Client API', () => {
 
       mockDelete.mockResolvedValue(mockResponse);
 
-      const nonExistentAgentId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const nonExistentAgentId = 'c13d1678-150a-466b-804f-ecc82de3680e';
 
       await expect(agentsAPI.deleteAgent(nonExistentAgentId)).rejects.toThrow(
         'Failed to delete agent',

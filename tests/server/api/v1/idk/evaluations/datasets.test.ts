@@ -70,7 +70,9 @@ describe('Datasets API Status Codes', () => {
 
   describe('GET /', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockDatasets = [{ id: '1', name: 'test' }];
+      const mockDatasets = [
+        { id: 'c5d6e7f8-a9b0-4234-9567-890abcdef034', name: 'test' },
+      ];
       mockUserDataStorageConnector.getDatasets.mockResolvedValue(mockDatasets);
 
       const res = await client.index.$get({
@@ -99,13 +101,16 @@ describe('Datasets API Status Codes', () => {
 
   describe('POST /', () => {
     it('should return 201 on successful creation', async () => {
-      const mockDataset = { id: '1', name: 'new dataset' };
+      const mockDataset = {
+        id: 'd6e7f8a9-b0c1-4345-9678-90abcdef0345',
+        name: 'new dataset',
+      };
       mockUserDataStorageConnector.createDataset.mockResolvedValue(mockDataset);
 
       const res = await client.index.$post({
         json: {
           name: 'new dataset',
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           metadata: {},
         },
       });
@@ -123,7 +128,7 @@ describe('Datasets API Status Codes', () => {
       const res = await client.index.$post({
         json: {
           name: 'new dataset',
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           metadata: {},
         },
       });
@@ -140,7 +145,7 @@ describe('Datasets API Status Codes', () => {
       mockUserDataStorageConnector.updateDataset.mockResolvedValue(mockDataset);
 
       const res = await client[':datasetId'].$patch({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { name: 'updated dataset' },
       });
 
@@ -155,7 +160,7 @@ describe('Datasets API Status Codes', () => {
       );
 
       const res = await client[':datasetId'].$patch({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { name: 'updated dataset' },
       });
 
@@ -170,7 +175,7 @@ describe('Datasets API Status Codes', () => {
       mockUserDataStorageConnector.deleteDataset.mockResolvedValue(undefined);
 
       const res = await client[':datasetId'].$delete({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(204);
@@ -183,7 +188,7 @@ describe('Datasets API Status Codes', () => {
       );
 
       const res = await client[':datasetId'].$delete({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(500);
@@ -194,13 +199,19 @@ describe('Datasets API Status Codes', () => {
 
   describe('GET /:datasetId/data-points', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockDataPoints = [{ id: '1', method: 'GET', endpoint: '/test' }];
+      const mockDataPoints = [
+        {
+          id: 'e7f8a9b0-c1d2-4456-9789-0abcdef03456',
+          method: 'GET',
+          endpoint: '/test',
+        },
+      ];
       mockUserDataStorageConnector.getDataPoints.mockResolvedValue(
         mockDataPoints,
       );
 
       const res = await client[':datasetId']['data-points'].$get({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {},
       });
 
@@ -215,7 +226,7 @@ describe('Datasets API Status Codes', () => {
       );
 
       const res = await client[':datasetId']['data-points'].$get({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {},
       });
 
@@ -227,13 +238,19 @@ describe('Datasets API Status Codes', () => {
 
   describe('POST /:datasetId/data-points', () => {
     it('should return 201 on successful creation', async () => {
-      const mockDataPoints = [{ id: '1', method: 'GET', endpoint: '/test' }];
+      const mockDataPoints = [
+        {
+          id: 'e7f8a9b0-c1d2-4456-9789-0abcdef03456',
+          method: 'GET',
+          endpoint: '/test',
+        },
+      ];
       mockUserDataStorageConnector.createDataPoints.mockResolvedValue(
         mockDataPoints,
       );
 
       const res = await client[':datasetId']['data-points'].$post({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: [
           {
             endpoint: '/test',
@@ -257,7 +274,7 @@ describe('Datasets API Status Codes', () => {
       );
 
       const res = await client[':datasetId']['data-points'].$post({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: [
           {
             endpoint: '/test',
@@ -283,8 +300,8 @@ describe('Datasets API Status Codes', () => {
       );
 
       const res = await client[':datasetId']['data-points'].$delete({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
-        query: { dataPointIds: ['a1b2c3d4-e5f6-7890-1234-567890abcdef'] },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
+        query: { dataPointIds: ['c13d1678-150a-466b-804f-ecc82de3680e'] },
       });
 
       if (res.status !== 204) {
@@ -301,8 +318,8 @@ describe('Datasets API Status Codes', () => {
       );
 
       const res = await client[':datasetId']['data-points'].$delete({
-        param: { datasetId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
-        query: { dataPointIds: ['a1b2c3d4-e5f6-7890-1234-567890abcdef'] },
+        param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
+        query: { dataPointIds: ['c13d1678-150a-466b-804f-ecc82de3680e'] },
       });
 
       expect(res.status).toBe(500);

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ConversationCompletenessEvaluationParameters = z
   .object({
-    threshold: z.number().min(0).max(1).default(0.5).optional(),
+    threshold: z.number().min(0).max(1).optional(),
     model: z.string().optional(),
     temperature: z.number().min(0).max(2).optional(),
     max_tokens: z.number().int().positive().optional(),
@@ -14,8 +14,8 @@ export const ConversationCompletenessEvaluationParameters = z
     batch_size: z.number().int().positive().optional(),
     limit: z.number().int().positive().optional(),
     offset: z.number().int().min(0).optional(),
-    agent_id: z.string().uuid().optional(),
-    dataset_id: z.string().uuid().optional(),
+    agent_id: z.uuid().optional(),
+    dataset_id: z.uuid().optional(),
   })
   .strict();
 

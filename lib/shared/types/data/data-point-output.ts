@@ -1,19 +1,19 @@
 import { z } from 'zod';
 
 export const DataPointOutput = z.object({
-  id: z.string().uuid(),
-  data_point_id: z.string().uuid(),
-  output: z.record(z.unknown()),
+  id: z.uuid(),
+  data_point_id: z.uuid(),
+  output: z.record(z.string(), z.unknown()),
   score: z.number().nullable().optional(),
-  metadata: z.record(z.unknown()),
-  created_at: z.string().datetime({ offset: true }),
+  metadata: z.record(z.string(), z.unknown()),
+  created_at: z.iso.datetime({ offset: true }),
 });
 export type DataPointOutput = z.infer<typeof DataPointOutput>;
 
 export const DataPointOutputQueryParams = z
   .object({
-    ids: z.string().uuid().array().optional(),
-    data_point_ids: z.string().uuid().array().optional(),
+    ids: z.uuid().array().optional(),
+    data_point_ids: z.uuid().array().optional(),
     score_min: z.coerce.number().optional(),
     score_max: z.coerce.number().optional(),
     limit: z.coerce.number().int().positive().optional(),
@@ -27,10 +27,10 @@ export type DataPointOutputQueryParams = z.infer<
 
 export const DataPointOutputCreateParams = z
   .object({
-    data_point_id: z.string().uuid(),
-    output: z.record(z.unknown()),
+    data_point_id: z.uuid(),
+    output: z.record(z.string(), z.unknown()),
     score: z.number().nullable().optional(),
-    metadata: z.record(z.unknown()).default({}),
+    metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 
