@@ -47,6 +47,12 @@ pnpm install
 pnpm dev
 ```
 
+### 5️⃣ Run Examples
+Run any of the examples in the `examples` directory with the following command:
+
+```sh
+pnpm tsx ./path/to/example.ts
+```
 ---
 
 ## 🔑 Default Password
