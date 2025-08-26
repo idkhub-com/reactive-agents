@@ -18,7 +18,7 @@ export type LLMJudgeConfig = z.infer<typeof LLMJudgeConfigSchema>;
 export const LLMJudgeResultSchema = z.object({
   score: z.number().min(0).max(1),
   reasoning: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type LLMJudgeResult = z.infer<typeof LLMJudgeResultSchema>;

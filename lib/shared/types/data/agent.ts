@@ -1,18 +1,18 @@
 import { z } from 'zod';
 
 export const Agent = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1),
   description: z.string().nullable().optional(),
-  metadata: z.record(z.unknown()),
-  created_at: z.string().datetime({ offset: true }),
-  updated_at: z.string().datetime({ offset: true }),
+  metadata: z.record(z.string(), z.unknown()),
+  created_at: z.iso.datetime({ offset: true }),
+  updated_at: z.iso.datetime({ offset: true }),
 });
 export type Agent = z.infer<typeof Agent>;
 
 export const AgentQueryParams = z
   .object({
-    id: z.string().uuid().optional(),
+    id: z.uuid().optional(),
     name: z.string().min(1).optional(),
     limit: z.coerce.number().int().positive().optional(),
     offset: z.coerce.number().int().min(0).optional(),
@@ -25,7 +25,7 @@ export const AgentCreateParams = z
   .object({
     name: z.string().min(1),
     description: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).default({}),
+    metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 
@@ -34,7 +34,7 @@ export type AgentCreateParams = z.infer<typeof AgentCreateParams>;
 export const AgentUpdateParams = z
   .object({
     description: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .refine(

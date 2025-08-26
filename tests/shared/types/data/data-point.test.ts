@@ -174,7 +174,7 @@ describe('DataPoint Shared Types', () => {
 
       expect(() => {
         DataPointQueryParams.parse(invalidParams);
-      }).toThrow('Invalid uuid');
+      }).toThrow('Invalid UUID');
     });
 
     it('should reject empty hash', () => {
@@ -184,7 +184,7 @@ describe('DataPoint Shared Types', () => {
 
       expect(() => {
         DataPointQueryParams.parse(paramsWithEmptyHash);
-      }).toThrow('String must contain at least 1 character(s)');
+      }).toThrow('Too small: expected string to have >=1 characters');
     });
 
     it('should reject empty endpoint', () => {
@@ -194,7 +194,7 @@ describe('DataPoint Shared Types', () => {
 
       expect(() => {
         DataPointQueryParams.parse(paramsWithEmptyEndpoint);
-      }).toThrow('String must contain at least 1 character(s)');
+      }).toThrow('Too small: expected string to have >=1 characters');
     });
 
     it('should reject empty function_name', () => {
@@ -204,7 +204,7 @@ describe('DataPoint Shared Types', () => {
 
       expect(() => {
         DataPointQueryParams.parse(paramsWithEmptyFunctionName);
-      }).toThrow('String must contain at least 1 character(s)');
+      }).toThrow('Too small: expected string to have >=1 characters');
     });
 
     it('should reject negative limit', () => {
@@ -214,7 +214,7 @@ describe('DataPoint Shared Types', () => {
 
       expect(() => {
         DataPointQueryParams.parse(paramsWithNegativeLimit);
-      }).toThrow('Number must be greater than 0');
+      }).toThrow('Too small: expected number to be >0');
     });
 
     it('should reject negative offset', () => {
@@ -224,7 +224,7 @@ describe('DataPoint Shared Types', () => {
 
       expect(() => {
         DataPointQueryParams.parse(paramsWithNegativeOffset);
-      }).toThrow('Number must be greater than or equal to 0');
+      }).toThrow('Too small: expected number to be >=0');
     });
   });
 

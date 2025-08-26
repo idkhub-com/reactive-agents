@@ -4,12 +4,12 @@ import { z } from 'zod';
 // Main Feedback schema
 export const Feedback = z
   .object({
-    id: z.string().uuid(),
-    log_id: z.string().uuid(),
+    id: z.uuid(),
+    log_id: z.uuid(),
     score: z.number().min(0).max(1),
     feedback: z.string().optional(),
-    created_at: z.string().datetime({ offset: true }),
-    updated_at: z.string().datetime({ offset: true }),
+    created_at: z.iso.datetime({ offset: true }),
+    updated_at: z.iso.datetime({ offset: true }),
   })
   .strict();
 
@@ -19,7 +19,7 @@ export type Feedback = z.infer<typeof Feedback>;
 export const FeedbackCreateParams = z
   .object({
     id: z.undefined().transform(() => uuidv4()),
-    log_id: z.string().uuid(),
+    log_id: z.uuid(),
     score: z.number().min(0).max(1),
     feedback: z.string().optional(),
     created_at: z.undefined().transform(() => new Date().toISOString()),
@@ -32,8 +32,8 @@ export type FeedbackCreateParams = z.infer<typeof FeedbackCreateParams>;
 // Query parameters schema
 export const FeedbackQueryParams = z
   .object({
-    id: z.string().uuid().optional(),
-    log_id: z.string().uuid().optional(),
+    id: z.uuid().optional(),
+    log_id: z.uuid().optional(),
     limit: z.coerce.number().int().positive().optional(),
     offset: z.coerce.number().int().min(0).optional(),
   })

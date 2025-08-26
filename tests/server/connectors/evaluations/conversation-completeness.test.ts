@@ -1,6 +1,8 @@
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness/conversation-completeness';
+import type { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import { describe, expect, it } from 'vitest';
+import type z from 'zod';
 
 describe('Conversation Completeness Evaluation', () => {
   it('should have correct connector configuration', () => {
@@ -15,14 +17,28 @@ describe('Conversation Completeness Evaluation', () => {
 
   it('should have parameter schema', () => {
     const schema =
-      conversationCompletenessEvaluationConnector.getParameterSchema;
+      conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          ConversationCompletenessEvaluationParameters,
+          ConversationCompletenessEvaluationParameters
+        >
+      >;
     expect(schema).toBeDefined();
     expect(typeof schema.safeParse).toBe('function');
   });
 
   it('should validate parameters correctly', () => {
     const schema =
-      conversationCompletenessEvaluationConnector.getParameterSchema;
+      conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          ConversationCompletenessEvaluationParameters,
+          ConversationCompletenessEvaluationParameters
+        >
+      >;
     const validParams = {
       threshold: 0.7,
       model: 'gpt-4o-mini',
@@ -64,7 +80,14 @@ describe('Conversation Completeness Evaluation', () => {
 
   it('should use default threshold when not provided', () => {
     const schema =
-      conversationCompletenessEvaluationConnector.getParameterSchema;
+      conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          ConversationCompletenessEvaluationParameters,
+          ConversationCompletenessEvaluationParameters
+        >
+      >;
     const paramsWithoutThreshold = {
       model: 'gpt-4o-mini',
       temperature: 0.1,
@@ -93,7 +116,14 @@ describe('Conversation Completeness Evaluation', () => {
 
   it('should accept optional parameters', () => {
     const schema =
-      conversationCompletenessEvaluationConnector.getParameterSchema;
+      conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          ConversationCompletenessEvaluationParameters,
+          ConversationCompletenessEvaluationParameters
+        >
+      >;
     const minimalParams = {
       threshold: 0.6,
     };
@@ -187,7 +217,14 @@ describe('Conversation Completeness Evaluation', () => {
 
   it('should handle boolean parameters correctly', () => {
     const schema =
-      conversationCompletenessEvaluationConnector.getParameterSchema;
+      conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          ConversationCompletenessEvaluationParameters,
+          ConversationCompletenessEvaluationParameters
+        >
+      >;
     const booleanParams = {
       include_reason: true,
       strict_mode: false,

@@ -114,7 +114,7 @@ describe('LLM Judge', () => {
   });
 
   it('should handle API errors gracefully', async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
@@ -127,14 +127,15 @@ describe('LLM Judge', () => {
 
     expect(result.score).toBe(0.5);
     expect(result.reasoning).toBe(
-      'Evaluation failed - OpenAI API error (retried 1/3 times)',
+      'Evaluation failed - OpenAI API error (retried 2/3 times)',
     );
     expect(result.metadata).toEqual({
       fallback: true,
       errorType: 'api_error',
-      errorDetails: "Cannot read properties of undefined (reading 'ok')",
+      errorDetails:
+        'OpenAI Responses API error: 500 Internal Server Error - API Error',
       retryInfo: {
-        retryCount: 1,
+        retryCount: 2,
         maxRetries: 3,
       },
     });

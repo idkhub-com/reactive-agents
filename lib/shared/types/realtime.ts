@@ -76,7 +76,7 @@ export type RealtimeAIProviderOptions = z.infer<
 >;
 
 export const RealtimeSessionOptions = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   providerOptions: RealtimeAIProviderOptions,
   requestHeaders: z.record(z.string(), z.string()),
   requestParams: z.record(z.string(), z.string()),
@@ -95,7 +95,7 @@ export enum RealtimeEventTypes {
 
 export const RealtimeEvent = z
   .object({
-    type: z.nativeEnum(RealtimeEventTypes),
+    type: z.enum(RealtimeEventTypes),
     session: RealtimeSession,
     item: RealtimeConversationItem,
     response: RealtimeResponse,

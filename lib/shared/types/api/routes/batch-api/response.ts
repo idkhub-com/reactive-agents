@@ -87,7 +87,7 @@ export const Batch = z.object({
   /** The time frame within which the batch should be processed. */
   completion_window: z.string().nullable().optional(),
   /** The current status of the batch. */
-  status: z.nativeEnum(BatchStatus),
+  status: z.enum(BatchStatus),
   /** The ID of the file containing the outputs of successfully executed requests. */
   output_file_id: z.string().nullable().optional(),
   /** The ID of the file containing the outputs of requests with errors. */

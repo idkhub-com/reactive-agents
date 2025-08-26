@@ -1,4 +1,3 @@
-import { FunctionName } from '@shared/types/api/request';
 import z from 'zod';
 
 export const POWERED_BY = 'portkey';
@@ -85,12 +84,6 @@ export enum ContentTypeName {
   HTML = 'text/html',
   GENERIC_IMAGE_PATTERN = 'image/',
 }
-
-export const MultipartFormDataEndpoints: FunctionName[] = [
-  FunctionName.CREATE_TRANSCRIPTION,
-  FunctionName.CREATE_TRANSLATION,
-  FunctionName.UPLOAD_FILE,
-];
 
 export const FileExtensionName = z.enum([
   'mp4',

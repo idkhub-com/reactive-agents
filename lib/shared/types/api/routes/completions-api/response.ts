@@ -54,7 +54,7 @@ export enum CompletionFinishReason {
  */
 export const CompletionChoice = z.object({
   /** The reason the model stopped generating tokens. */
-  finish_reason: z.nativeEnum(CompletionFinishReason).nullable(),
+  finish_reason: z.enum(CompletionFinishReason).nullable(),
   /** The index of the choice in the list of choices. */
   index: z.number(),
   /** Log probability information for the choice. */

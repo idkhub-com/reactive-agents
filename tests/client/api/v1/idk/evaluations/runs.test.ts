@@ -53,12 +53,12 @@ describe('Evaluation Runs API functions', () => {
     it('should return an array of evaluation runs', async () => {
       const runs = [
         {
-          id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-run-1',
           description: 'Test evaluation run 1',
           status: EvaluationRunStatus.PENDING,
-          agent_id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
-          dataset_id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
+          agent_id: '296c3860-e34a-4591-a380-031058fff06b',
+          dataset_id: 'c5d97b31-566b-47d1-a370-2999bc16f6af',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
           metadata: {},
           results: {},
@@ -66,12 +66,12 @@ describe('Evaluation Runs API functions', () => {
           updated_at: new Date().toISOString(),
         },
         {
-          id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
+          id: '296c3860-e34a-4591-a380-031058fff06b',
           name: 'test-run-2',
           description: 'Test evaluation run 2',
           status: EvaluationRunStatus.COMPLETED,
-          agent_id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
-          dataset_id: 'd4e5f6a7-b8c9-0123-4567-890abcdef012',
+          agent_id: 'c5d97b31-566b-47d1-a370-2999bc16f6af',
+          dataset_id: '359cf706-4b73-491f-9494-e45369a02a6f',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
           metadata: {},
           results: {},
@@ -141,12 +141,12 @@ describe('Evaluation Runs API functions', () => {
   describe('getEvaluationRun', () => {
     it('should return a single evaluation run', async () => {
       const run = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-run',
         description: 'Test evaluation run',
         status: EvaluationRunStatus.PENDING,
-        agent_id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
-        dataset_id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
+        agent_id: '296c3860-e34a-4591-a380-031058fff06b',
+        dataset_id: 'c5d97b31-566b-47d1-a370-2999bc16f6af',
         evaluation_method: EvaluationMethodName.TASK_COMPLETION,
         metadata: {},
         results: {},
@@ -160,13 +160,13 @@ describe('Evaluation Runs API functions', () => {
       );
 
       const result = await runsApi.getEvaluationRun(
-        'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        'c13d1678-150a-466b-804f-ecc82de3680e',
       );
 
       expect(
         mockClient.v1.idk.evaluations.runs[':runId'].$get,
       ).toHaveBeenCalledWith({
-        param: { runId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { runId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
       expect(result).toEqual(EvaluationRun.parse(run));
     });
@@ -177,9 +177,9 @@ describe('Evaluation Runs API functions', () => {
         ok: false,
       } as unknown as Response);
 
-      await expect(runsApi.getEvaluationRun('test-id')).rejects.toThrow(
-        'Failed to get evaluation run',
-      );
+      await expect(
+        runsApi.getEvaluationRun('a1b2c3d4-e5f6-1890-a234-567890abcdef'),
+      ).rejects.toThrow('Failed to get evaluation run');
     });
   });
 
@@ -188,13 +188,13 @@ describe('Evaluation Runs API functions', () => {
       const createParams: EvaluationRunCreateParams = {
         name: 'new-run',
         description: 'New evaluation run',
-        agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-        dataset_id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
+        agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+        dataset_id: '296c3860-e34a-4591-a380-031058fff06b',
         evaluation_method: EvaluationMethodName.TASK_COMPLETION,
         metadata: {},
       };
       const createdRun = {
-        id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
+        id: 'c5d97b31-566b-47d1-a370-2999bc16f6af',
         ...createParams,
         status: EvaluationRunStatus.PENDING,
         results: {},
@@ -224,8 +224,8 @@ describe('Evaluation Runs API functions', () => {
       await expect(
         runsApi.createEvaluationRun({
           name: 'new-run',
-          agent_id: 'agent-id',
-          dataset_id: 'dataset-id',
+          agent_id: 'a1b2c3d4-e5f6-1890-a234-567890abcdef',
+          dataset_id: 'b2c3d4e5-f6a7-1901-b345-67890abcdef0',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
           metadata: {},
         }),
@@ -235,7 +235,7 @@ describe('Evaluation Runs API functions', () => {
 
   describe('updateEvaluationRun', () => {
     it('should update and return an evaluation run', async () => {
-      const runId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const runId = '6e86f455-eb2a-44f1-8287-3c20fef205b1';
       const updateParams: EvaluationRunUpdateParams = {
         name: 'updated-run',
         status: EvaluationRunStatus.COMPLETED,
@@ -245,8 +245,8 @@ describe('Evaluation Runs API functions', () => {
         name: 'updated-run',
         description: 'Test evaluation run',
         status: EvaluationRunStatus.COMPLETED,
-        agent_id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
-        dataset_id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
+        agent_id: '3864aa3b-72e6-441b-a845-b92887573a30',
+        dataset_id: '2a87adf8-1a27-4abf-8c25-f3c1d8cebce4',
         evaluation_method: EvaluationMethodName.TASK_COMPLETION,
         metadata: {},
         results: {},
@@ -279,14 +279,16 @@ describe('Evaluation Runs API functions', () => {
       } as unknown as Response);
 
       await expect(
-        runsApi.updateEvaluationRun('test-id', { name: 'updated' }),
+        runsApi.updateEvaluationRun('a1b2c3d4-e5f6-1890-a234-567890abcdef', {
+          name: 'updated',
+        }),
       ).rejects.toThrow('Failed to update evaluation run');
     });
   });
 
   describe('deleteEvaluationRun', () => {
     it('should delete an evaluation run', async () => {
-      const runId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const runId = 'c13d1678-150a-466b-804f-ecc82de3680e';
 
       mockClient.v1.idk.evaluations.runs[
         ':evaluationRunId'
@@ -309,9 +311,9 @@ describe('Evaluation Runs API functions', () => {
         ok: false,
       } as unknown as Response);
 
-      await expect(runsApi.deleteEvaluationRun('test-id')).rejects.toThrow(
-        'Failed to delete evaluation run',
-      );
+      await expect(
+        runsApi.deleteEvaluationRun('a1b2c3d4-e5f6-1890-a234-567890abcdef'),
+      ).rejects.toThrow('Failed to delete evaluation run');
     });
   });
 });

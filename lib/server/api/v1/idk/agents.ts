@@ -37,7 +37,7 @@ export const agentsRouter = new Hono<AppEnv>()
   })
   .patch(
     '/:agentId',
-    zValidator('param', z.object({ agentId: z.string().uuid() })),
+    zValidator('param', z.object({ agentId: z.uuid() })),
     zValidator('json', AgentUpdateParams),
     async (c) => {
       try {
@@ -56,7 +56,7 @@ export const agentsRouter = new Hono<AppEnv>()
   )
   .delete(
     '/:agentId',
-    zValidator('param', z.object({ agentId: z.string().uuid() })),
+    zValidator('param', z.object({ agentId: z.uuid() })),
     async (c) => {
       try {
         const { agentId } = c.req.valid('param');
@@ -76,7 +76,7 @@ export const agentsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        agentId: z.string().uuid(),
+        agentId: z.uuid(),
       }),
     ),
     async (c) => {

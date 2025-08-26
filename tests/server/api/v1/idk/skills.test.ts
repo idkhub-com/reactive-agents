@@ -68,8 +68,8 @@ describe('Skills API Status Codes', () => {
   describe('POST /', () => {
     it('should return 201 on successful creation', async () => {
       const mockSkill = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-        agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+        agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-skill',
         description: 'Test skill description',
         metadata: { test: true },
@@ -80,7 +80,7 @@ describe('Skills API Status Codes', () => {
 
       const res = await client.index.$post({
         json: {
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-skill',
           description: 'Test skill description',
           metadata: { test: true },
@@ -99,7 +99,7 @@ describe('Skills API Status Codes', () => {
 
       const res = await client.index.$post({
         json: {
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-skill',
           metadata: {},
         },
@@ -128,8 +128,8 @@ describe('Skills API Status Codes', () => {
     it('should return 200 on successful fetch', async () => {
       const mockSkills = [
         {
-          id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-skill',
           description: 'Test skill description',
           metadata: { test: true },
@@ -141,7 +141,7 @@ describe('Skills API Status Codes', () => {
 
       const res = await client.index.$get({
         query: {
-          agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           limit: '10',
           offset: '0',
         },
@@ -170,8 +170,8 @@ describe('Skills API Status Codes', () => {
   describe('PATCH /:skillId', () => {
     it('should return 200 on successful update', async () => {
       const mockSkill = {
-        id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-        agent_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+        id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+        agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-skill',
         description: 'updated description',
         metadata: { test: true },
@@ -181,7 +181,7 @@ describe('Skills API Status Codes', () => {
       mockUserDataStorageConnector.updateSkill.mockResolvedValue(mockSkill);
 
       const res = await client[':skillId'].$patch({
-        param: { skillId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { skillId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { description: 'updated description' },
       });
 
@@ -196,7 +196,7 @@ describe('Skills API Status Codes', () => {
       );
 
       const res = await client[':skillId'].$patch({
-        param: { skillId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { skillId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         json: { description: 'updated description' },
       });
 
@@ -221,7 +221,7 @@ describe('Skills API Status Codes', () => {
       mockUserDataStorageConnector.deleteSkill.mockResolvedValue(undefined);
 
       const res = await client[':skillId'].$delete({
-        param: { skillId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { skillId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(204);
@@ -234,7 +234,7 @@ describe('Skills API Status Codes', () => {
       );
 
       const res = await client[':skillId'].$delete({
-        param: { skillId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' },
+        param: { skillId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
       });
 
       expect(res.status).toBe(500);

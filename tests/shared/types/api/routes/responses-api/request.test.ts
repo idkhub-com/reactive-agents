@@ -212,7 +212,7 @@ describe('Responses API Request Types', () => {
         instructions: 'Be thorough and detailed',
         max_output_tokens: 2000,
         metadata: {
-          user_id: '12345',
+          user_id: 'b0c1d2e3-f4a5-4789-9012-3456789abcde',
           session_id: 'sess_789',
           priority: 1,
           experimental: true,
@@ -249,7 +249,9 @@ describe('Responses API Request Types', () => {
       const parsed = ResponsesRequestBody.parse(fullRequest);
       expect(parsed.background).toBe(true);
       expect(parsed.temperature).toBe(0.7);
-      expect(parsed.metadata?.user_id).toBe('12345');
+      expect(parsed.metadata?.user_id).toBe(
+        'b0c1d2e3-f4a5-4789-9012-3456789abcde',
+      );
     });
 
     it('should validate reasoning effort options', () => {

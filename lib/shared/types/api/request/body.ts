@@ -125,18 +125,19 @@ const BaseRequestData = z.object({
   /** The route pattern of the request. */
   route_pattern: z.instanceof(RegExp),
   /** The method of the request. */
-  method: z.nativeEnum(HttpMethod),
+  method: z.enum(HttpMethod),
   /** The URL of the request. */
   url: z.string(),
   /** The function name of the request. */
-  functionName: z.nativeEnum(FunctionName),
+  functionName: z.enum(FunctionName),
   /** The headers of the request. */
-  requestHeaders: z.record(z.string()),
+  requestHeaders: z.record(z.string(), z.string()),
   /** The request body of the request. */
   requestBody: IdkRequestBody,
   /** The schema of the request body. */
   requestSchema: z.custom<z.ZodSchema<unknown>>(
-    (val) => val && typeof val.safeParse === 'function',
+    (val) =>
+      val && typeof (val as z.ZodSchema<unknown>).safeParse === 'function',
   ),
   /** Whether the request is a stream. */
   stream: z.boolean().optional(),
@@ -147,7 +148,8 @@ const BaseRequestData = z.object({
    * If response schema validation fails, we automatically retry with the error response schema.
    */
   responseSchema: z.custom<z.ZodSchema<unknown>>(
-    (val) => val && typeof val.safeParse === 'function',
+    (val) =>
+      val && typeof (val as z.ZodSchema<unknown>).safeParse === 'function',
   ),
 });
 

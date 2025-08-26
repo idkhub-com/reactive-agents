@@ -1,21 +1,21 @@
 import { z } from 'zod';
 
 export const Tool = z.object({
-  id: z.string().uuid(),
-  agent_id: z.string().uuid(),
+  id: z.uuid(),
+  agent_id: z.uuid(),
   hash: z.string().min(1),
   type: z.string().min(1),
   name: z.string().min(1),
-  raw_data: z.record(z.unknown()),
-  created_at: z.string().datetime({ offset: true }),
-  updated_at: z.string().datetime({ offset: true }),
+  raw_data: z.record(z.string(), z.unknown()),
+  created_at: z.iso.datetime({ offset: true }),
+  updated_at: z.iso.datetime({ offset: true }),
 });
 export type Tool = z.infer<typeof Tool>;
 
 export const ToolQueryParams = z
   .object({
-    id: z.string().uuid().optional(),
-    agent_id: z.string().uuid().optional(),
+    id: z.uuid().optional(),
+    agent_id: z.uuid().optional(),
     hash: z.string().min(1).optional(),
     type: z.string().min(1).optional(),
     name: z.string().min(1).optional(),
@@ -28,11 +28,11 @@ export type ToolQueryParams = z.infer<typeof ToolQueryParams>;
 
 export const ToolCreateParams = z
   .object({
-    agent_id: z.string().uuid(),
+    agent_id: z.uuid(),
     hash: z.string().min(1),
     type: z.string().min(1),
     name: z.string().min(1),
-    raw_data: z.record(z.unknown()),
+    raw_data: z.record(z.string(), z.unknown()),
   })
   .strict();
 

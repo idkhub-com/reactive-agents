@@ -54,8 +54,8 @@ describe('Dataset API functions', () => {
     it('should return an array of datasets', async () => {
       const datasets = [
         {
-          id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-          agent_id: 'f1e2d3c4-b5a6-9870-4321-fedcba098765',
+          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
           name: 'test1',
           description: 'test desc',
           metadata: {},
@@ -63,8 +63,8 @@ describe('Dataset API functions', () => {
           updated_at: new Date().toISOString(),
         },
         {
-          id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
-          agent_id: 'f1e2d3c4-b5a6-9870-4321-fedcba098765',
+          id: '296c3860-e34a-4591-a380-031058fff06b',
+          agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
           name: 'test2',
           description: 'test desc',
           metadata: {},
@@ -107,12 +107,12 @@ describe('Dataset API functions', () => {
     it('should create and return a dataset', async () => {
       const datasetCreateParams: DatasetCreateParams = {
         name: 'new',
-        agent_id: 'f1e2d3c4-b5a6-9870-4321-fedcba098765',
+        agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
         description: 'new desc',
         metadata: {},
       };
       const createdDataset = {
-        id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
+        id: 'c5d97b31-566b-47d1-a370-2999bc16f6af',
         ...datasetCreateParams,
         metadata: {},
         created_at: new Date().toISOString(),
@@ -143,7 +143,7 @@ describe('Dataset API functions', () => {
       await expect(
         datasetsApi.createDataset({
           name: 'new',
-          agent_id: 'f1e2d3c4-b5a6-9870-4321-fedcba098765',
+          agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
           metadata: {},
         }),
       ).rejects.toThrow('Failed to create dataset');
@@ -152,11 +152,11 @@ describe('Dataset API functions', () => {
 
   describe('updateDataset', () => {
     it('should update and return a dataset', async () => {
-      const datasetId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const datasetId = 'c13d1678-150a-466b-804f-ecc82de3680e';
       const updatedFields = { name: 'updated' };
       const updatedDataset = {
         id: datasetId,
-        agent_id: 'f1e2d3c4-b5a6-9870-4321-fedcba098765',
+        agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
         name: 'updated',
         description: 'test desc',
         metadata: {},
@@ -196,7 +196,7 @@ describe('Dataset API functions', () => {
 
   describe('deleteDataset', () => {
     it('should delete a dataset', async () => {
-      const datasetId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const datasetId = 'c13d1678-150a-466b-804f-ecc82de3680e';
 
       mockClient.v1.idk.evaluations.datasets[
         ':datasetId'
@@ -227,7 +227,7 @@ describe('Dataset API functions', () => {
 
   describe('getDatasetDataPoints', () => {
     it('should return dataset with data points', async () => {
-      const datasetId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+      const datasetId = 'c13d1678-150a-466b-804f-ecc82de3680e';
       const dataPoints: unknown[] = [];
       mockJson.mockResolvedValue(dataPoints);
 
@@ -285,7 +285,7 @@ describe('Dataset API functions', () => {
       ];
       const createdDataPoints = [
         {
-          id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           endpoint: 'endpoint1',
           metadata: {},
           function_name: 'function_name1',

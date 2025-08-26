@@ -44,7 +44,7 @@ export const datasetsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        datasetId: z.string().uuid(),
+        datasetId: z.uuid(),
       }),
     ),
     zValidator('json', DatasetUpdateParams),
@@ -70,7 +70,7 @@ export const datasetsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        datasetId: z.string().uuid(),
+        datasetId: z.uuid(),
       }),
     ),
     async (c) => {
@@ -92,7 +92,7 @@ export const datasetsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        datasetId: z.string().uuid(),
+        datasetId: z.uuid(),
       }),
     ),
     zValidator('query', DataPointQueryParams),
@@ -118,7 +118,7 @@ export const datasetsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        datasetId: z.string().uuid(),
+        datasetId: z.uuid(),
       }),
     ),
     zValidator('json', z.array(DataPointCreateParams)),
@@ -145,7 +145,7 @@ export const datasetsRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        datasetId: z.string().uuid(),
+        datasetId: z.uuid(),
       }),
     ),
     zValidator(
@@ -154,7 +154,7 @@ export const datasetsRouter = new Hono<AppEnv>()
         dataPointIds: z
           .union([z.string(), z.array(z.string())])
           .transform((val) => (Array.isArray(val) ? val : [val]))
-          .pipe(z.array(z.string().uuid())),
+          .pipe(z.array(z.uuid())),
       }),
     ),
     async (c) => {

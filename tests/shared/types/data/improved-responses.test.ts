@@ -246,7 +246,7 @@ describe('Improved Response Data Transforms and Validation', () => {
       "id"
     ],
     "path": [],
-    "message": "Unrecognized key(s) in object: 'id'"
+    "message": "Unrecognized key: \\"id\\""
   }
 ]`,
       );

@@ -2,23 +2,23 @@ import { HttpMethod } from '@server/types/http';
 import { z } from 'zod';
 
 export const DataPoint = z.object({
-  id: z.string().uuid(),
-  method: z.nativeEnum(HttpMethod),
+  id: z.uuid(),
+  method: z.enum(HttpMethod),
   endpoint: z.string().min(1),
   function_name: z.string().min(1),
-  request_body: z.record(z.unknown()),
-  ground_truth: z.record(z.unknown()).nullable().optional(),
+  request_body: z.record(z.string(), z.unknown()),
+  ground_truth: z.record(z.string(), z.unknown()).nullable().optional(),
   is_golden: z.boolean(),
-  metadata: z.record(z.unknown()),
-  created_at: z.string().datetime({ offset: true }),
+  metadata: z.record(z.string(), z.unknown()),
+  created_at: z.iso.datetime({ offset: true }),
 });
 export type DataPoint = z.infer<typeof DataPoint>;
 
 export const DataPointQueryParams = z
   .object({
-    ids: z.array(z.string().uuid()).optional(),
+    ids: z.array(z.uuid()).optional(),
     hashes: z.array(z.string().min(1)).optional(),
-    method: z.nativeEnum(HttpMethod).optional(),
+    method: z.enum(HttpMethod).optional(),
     endpoint: z.string().min(1).optional(),
     function_name: z.string().min(1).optional(),
     is_golden: z.boolean().optional(),
@@ -31,13 +31,13 @@ export type DataPointQueryParams = z.infer<typeof DataPointQueryParams>;
 
 export const DataPointCreateParams = z
   .object({
-    method: z.nativeEnum(HttpMethod),
+    method: z.enum(HttpMethod),
     endpoint: z.string().min(1),
     function_name: z.string().min(1),
-    request_body: z.record(z.unknown()),
-    ground_truth: z.record(z.unknown()).nullable().optional(),
+    request_body: z.record(z.string(), z.unknown()),
+    ground_truth: z.record(z.string(), z.unknown()).nullable().optional(),
     is_golden: z.boolean(),
-    metadata: z.record(z.unknown()).default({}),
+    metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 
@@ -45,9 +45,9 @@ export type DataPointCreateParams = z.infer<typeof DataPointCreateParams>;
 
 export const DataPointUpdateParams = z
   .object({
-    ground_truth: z.record(z.unknown()).nullable().optional(),
+    ground_truth: z.record(z.string(), z.unknown()).nullable().optional(),
     is_golden: z.boolean().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .refine(

@@ -1,20 +1,20 @@
 import { z } from 'zod';
 
 export const Dataset = z.object({
-  id: z.string().uuid(),
-  agent_id: z.string().uuid(),
+  id: z.uuid(),
+  agent_id: z.uuid(),
   name: z.string().min(1),
   description: z.string().nullable().optional(),
-  metadata: z.record(z.unknown()),
-  created_at: z.string().datetime({ offset: true }),
-  updated_at: z.string().datetime({ offset: true }),
+  metadata: z.record(z.string(), z.unknown()),
+  created_at: z.iso.datetime({ offset: true }),
+  updated_at: z.iso.datetime({ offset: true }),
 });
 export type Dataset = z.infer<typeof Dataset>;
 
 export const DatasetQueryParams = z
   .object({
-    id: z.string().uuid().optional(),
-    agent_id: z.string().uuid().optional(),
+    id: z.uuid().optional(),
+    agent_id: z.uuid().optional(),
     name: z.string().min(1).optional(),
     limit: z.coerce.number().int().positive().optional(),
     offset: z.coerce.number().int().min(0).optional(),
@@ -26,9 +26,9 @@ export type DatasetQueryParams = z.infer<typeof DatasetQueryParams>;
 export const DatasetCreateParams = z
   .object({
     name: z.string().min(1),
-    agent_id: z.string().uuid(),
+    agent_id: z.uuid(),
     description: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).default({}),
+    metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 
@@ -38,7 +38,7 @@ export const DatasetUpdateParams = z
   .object({
     name: z.string().min(1).optional(),
     description: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .refine(

@@ -47,7 +47,7 @@ export const improvedResponsesRouter = new Hono<AppEnv>()
     zValidator(
       'param',
       z.object({
-        improvedResponseId: z.string().uuid(),
+        improvedResponseId: z.uuid(),
       }),
     ),
     zValidator('json', ImprovedResponseUpdateParams),
@@ -72,7 +72,7 @@ export const improvedResponsesRouter = new Hono<AppEnv>()
   // DELETE an improved response
   .delete(
     '/:improvedResponseId',
-    zValidator('param', z.object({ improvedResponseId: z.string().uuid() })),
+    zValidator('param', z.object({ improvedResponseId: z.uuid() })),
     async (c) => {
       try {
         const { improvedResponseId } = c.req.valid('param');

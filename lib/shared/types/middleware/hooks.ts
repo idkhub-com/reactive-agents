@@ -12,7 +12,7 @@ export enum HookType {
 }
 
 export const HookHttpProviderConfig = z.object({
-  method: z.nativeEnum(HttpMethod),
+  method: z.enum(HttpMethod),
   url: z.string(),
 });
 
@@ -20,7 +20,7 @@ export type HookHttpProviderConfig = z.infer<typeof HookHttpProviderConfig>;
 
 export const HookLLMProviderConfig = z.object({
   model: z.string(),
-  provider: z.nativeEnum(AIProvider),
+  provider: z.enum(AIProvider),
   body: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -37,11 +37,11 @@ export enum HookProvider {
 
 export const Hook = z.object({
   id: z.string(),
-  type: z.nativeEnum(HookType),
-  hook_provider: z.nativeEnum(HookProvider),
+  type: z.enum(HookType),
+  hook_provider: z.enum(HookProvider),
   config: z.union([HookHttpProviderConfig, HookLLMProviderConfig]),
   await: z.boolean().optional().default(true),
-  cache_mode: z.nativeEnum(CacheMode).default(CacheMode.DISABLED),
+  cache_mode: z.enum(CacheMode).default(CacheMode.DISABLED),
 });
 
 export type Hook = z.infer<typeof Hook>;
