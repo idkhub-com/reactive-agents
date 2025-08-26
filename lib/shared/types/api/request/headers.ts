@@ -39,7 +39,14 @@ export const IdkTarget = z.object({
   retry: RetrySettings.default({ attempts: 0 }),
 
   // Provider Details
-  provider: z.enum(AIProvider),
+  provider: z.enum(AIProvider, {
+    error: (err) => {
+      if (err.input === undefined) {
+        return 'Provider is required';
+      }
+      return `Invalid provider: ${err.input}`;
+    },
+  }),
   // model: z.string(), // TODO: Make use of this field
   inner_provider: z.enum(AIProvider).optional(),
   api_key: z
@@ -151,8 +158,8 @@ export const Strategy = z.object({
 export type Strategy = z.infer<typeof Strategy>;
 
 export const BaseIdkConfig = z.object({
-  agent_name: z.string(), // TODO: We need to create this agent if it doesn't exist before making the request to the AI provider
-  skill_name: z.string(), // TODO: We need to create this skill if it doesn't exist before making the request to the AI provider
+  agent_name: z.string({ error: 'Agent name is required' }),
+  skill_name: z.string({ error: 'Skill name is required' }),
   override_params: IdkRequestBody.optional(),
   request_timeout: z.number().optional(),
   forward_headers: z.array(z.string()).optional(),

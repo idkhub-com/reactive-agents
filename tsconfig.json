@@ -32,7 +32,8 @@
     "next.config.ts",
     ".next/types/**/*.ts",
     ".open-next/types/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "examples/**/*.ts"
   ],
   "exclude": ["node_modules", ".next", "dist", "turbo", ".open-next"]
 }

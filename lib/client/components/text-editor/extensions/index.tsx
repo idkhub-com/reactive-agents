@@ -3,12 +3,10 @@ import { type Extension, InputRule, type Mark } from '@tiptap/core';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
 import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
-import { Link } from '@tiptap/extension-link';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { TextStyle } from '@tiptap/extension-text-style';
-import { Underline } from '@tiptap/extension-underline';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
 
@@ -84,13 +82,6 @@ export const defaultExtensions = (): (Extension | Node | Mark)[] => [
       class: 'mt-4 mb-6 border-t border-stone-300',
     },
   }),
-  Link.configure({
-    HTMLAttributes: {
-      class:
-        'text-stone-400 underline underline-offset-[3px] hover:text-stone-600 transition-colors cursor-pointer',
-    },
-  }),
-  Underline,
   TextStyle,
   Color,
   Highlight.configure({

@@ -8,7 +8,6 @@ import {
   GoogleMessageRole,
   type GoogleResponseCandidate,
   type GoogleTool,
-  GoogleToolChoiceType,
   type GoogleToolConfig,
 } from '@server/ai-providers/google/types';
 import {
@@ -24,8 +23,8 @@ import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type {
   ChatCompletionChoice,
   ChatCompletionChoiceLogprobs,
-  ChatCompletionFinishReason,
   ChatCompletionRequestBody,
+  ChatCompletionResponseBody,
   ChatCompletionTokenLogprob,
   ChatCompletionUsage,
 } from '@shared/types/api/routes/chat-completions-api';
@@ -37,10 +36,10 @@ import {
 } from '@shared/types/api/routes/shared/messages';
 import type {
   ChatCompletionToolCall,
-  ChatCompletionToolChoice,
   ChatCompletionToolFunction,
 } from '@shared/types/api/routes/shared/tools';
 import { AIProvider } from '@shared/types/constants';
+import { v4 as uuidv4 } from 'uuid';
 import { buildGoogleSearchRetrievalTool } from '../google-vertex-ai/chat-complete';
 import {
   derefer,
@@ -48,6 +47,11 @@ import {
   recursivelyDeleteUnsupportedParameters,
   transformVertexLogprobs,
 } from '../google-vertex-ai/utils';
+import {
+  FinishReasonsGeminiToIdk,
+  RoleIdkToGemini,
+  transformToolChoiceIdkToGemini,
+} from './utils';
 
 const googleTransformGenerationConfig = (
   idkRequestBody: ChatCompletionRequestBody,
@@ -68,29 +72,44 @@ const googleTransformGenerationConfig = (
   if (idkRequestBody.stop) {
     generationConfig.stopSequences = idkRequestBody.stop;
   }
-  if (idkRequestBody?.response_format?.type === 'json_object') {
-    generationConfig.responseMimeType = 'application/json';
-  }
   if (idkRequestBody.logprobs) {
     generationConfig.responseLogprobs = idkRequestBody.logprobs;
   }
   if (idkRequestBody.top_logprobs) {
     generationConfig.logprobs = idkRequestBody.top_logprobs; // range 1-5, openai supports 1-20
   }
-  if (idkRequestBody?.response_format?.type === 'json_schema') {
-    generationConfig.responseMimeType = 'application/json';
-    recursivelyDeleteUnsupportedParameters(
-      idkRequestBody?.response_format?.json_schema?.schema,
-    );
-    let schema =
-      idkRequestBody?.response_format?.json_schema?.schema ??
-      idkRequestBody?.response_format?.json_schema;
-    if (Object.keys(schema).includes('$defs')) {
-      schema = derefer(schema);
-      delete schema.$defs;
+
+  // Handle structured output (response_format)
+  if (idkRequestBody?.response_format) {
+    const responseFormat = idkRequestBody.response_format;
+
+    if (responseFormat.type === 'json_object') {
+      // Simple JSON object format - just set MIME type
+      generationConfig.responseMimeType = 'application/json';
+    } else if (responseFormat.type === 'json_schema') {
+      // Structured output with schema validation
+      generationConfig.responseMimeType = 'application/json';
+
+      // Extract the schema from json_schema property
+      let schema =
+        responseFormat.json_schema?.schema ?? responseFormat.json_schema;
+
+      if (schema && typeof schema === 'object') {
+        // Clean up unsupported parameters for Google AI
+        recursivelyDeleteUnsupportedParameters(schema);
+
+        // Handle $defs by dereferencing them
+        if ('$defs' in schema && schema.$defs) {
+          schema = derefer(schema);
+          delete schema.$defs;
+        }
+
+        // Set the schema for Google's structured output
+        generationConfig.responseSchema = schema;
+      }
     }
-    generationConfig.responseSchema = schema;
   }
+
   if (idkRequestBody?.thinking) {
     const thinkingConfig: Record<string, unknown> = {};
     thinkingConfig.include_thoughts = true;
@@ -110,50 +129,13 @@ export const SYSTEM_INSTRUCTION_DISABLED_MODELS = [
   'gemini-pro-vision',
 ];
 
-export const transformOpenAIRoleToGoogleRole = (
-  role: ChatCompletionMessageRole,
-): GoogleMessageRole => {
-  switch (role) {
-    case ChatCompletionMessageRole.ASSISTANT:
-      return GoogleMessageRole.MODEL;
-    case ChatCompletionMessageRole.DEVELOPER:
-      return GoogleMessageRole.SYSTEM;
-    case ChatCompletionMessageRole.SYSTEM:
-      return GoogleMessageRole.SYSTEM;
-    case ChatCompletionMessageRole.TOOL:
-      return GoogleMessageRole.FUNCTION;
-    case ChatCompletionMessageRole.FUNCTION:
-      return GoogleMessageRole.FUNCTION;
-    case ChatCompletionMessageRole.USER:
-      return GoogleMessageRole.USER;
-  }
-};
-
-export const transformToolChoiceForGemini = (
-  tool_choice: ChatCompletionToolChoice,
-): GoogleToolChoiceType | undefined => {
-  if (typeof tool_choice === 'object' && tool_choice.type === 'function')
-    return GoogleToolChoiceType.ANY;
-  if (typeof tool_choice === 'string') {
-    switch (tool_choice) {
-      case 'auto':
-        return GoogleToolChoiceType.AUTO;
-      case 'none':
-        return GoogleToolChoiceType.NONE;
-      case 'required':
-        return GoogleToolChoiceType.ANY;
-    }
-  }
-  return undefined;
-};
-
 // TODOS: this configuration does not enforce the maximum token limit for the input parameter. If you want to enforce this, you might need to add a custom validation function or a max property to the ParameterConfig interface, and then use it in the input configuration. However, this might be complex because the token count is not a simple length check, but depends on the specific tokenization method used by the model.
 
 export const googleChatCompleteConfig: AIProviderFunctionConfig = {
   model: {
     param: 'model',
     required: true,
-    default: 'gemini-1.5-pro',
+    default: 'gemini-2.5-flash',
   },
   messages: [
     {
@@ -166,7 +148,7 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
         const messages: GoogleMessage[] = [];
 
         idkRequestBody.messages?.forEach((message: ChatCompletionMessage) => {
-          // From gemini-1.5 onwards, systemInstruction is supported
+          // From gemini-1.5 onward, systemInstruction is supported
           // Skipping system message and sending it in systemInstruction for gemini 1.5 models
           if (
             ChatCompletionSystemMessageRoles.includes(message.role) &&
@@ -176,7 +158,7 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
           )
             return;
 
-          const role = transformOpenAIRoleToGoogleRole(message.role);
+          const role = RoleIdkToGemini[message.role];
           const parts: (
             | GoogleFunctionCallMessagePart
             | GoogleFunctionResponseMessagePart
@@ -421,7 +403,7 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
         }
         const toolConfig: GoogleToolConfig = {
           function_calling_config: {
-            mode: transformToolChoiceForGemini(idkRequestBody.tool_choice),
+            mode: transformToolChoiceIdkToGemini(idkRequestBody.tool_choice),
           },
         };
         if (allowedFunctionNames.length > 0) {
@@ -492,12 +474,12 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
   if ('candidates' in aiProviderResponseBody) {
     const googleResponse =
       aiProviderResponseBody as unknown as GoogleGenerateContentResponse;
-    return {
-      id: `portkey-${crypto.randomUUID()}`,
+
+    const responseBody: ChatCompletionResponseBody = {
+      id: `idk-${uuidv4()}`,
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
       model: googleResponse.modelVersion,
-      provider: 'google',
       choices:
         googleResponse.candidates?.map((generation, idx) => {
           // transform tool calls and content by iterating over the content parts
@@ -506,7 +488,7 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
           for (const part of generation.content?.parts ?? []) {
             if (part.functionCall) {
               toolCalls.push({
-                id: `portkey-${crypto.randomUUID()}`,
+                id: `idk-${uuidv4()}`,
                 type: 'function',
                 function: {
                   name: part.functionCall.name,
@@ -542,7 +524,8 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
             logprobs,
             index: generation.index ?? idx,
             finish_reason:
-              generation.finishReason as ChatCompletionFinishReason,
+              FinishReasonsGeminiToIdk[generation.finishReason] ??
+              FinishReasonsGeminiToIdk.STOP,
             ...(!strictOpenAiCompliance && generation.groundingMetadata
               ? { groundingMetadata: generation.groundingMetadata }
               : {}),
@@ -555,6 +538,7 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
         total_tokens: googleResponse.usageMetadata.totalTokenCount,
       },
     };
+    return responseBody;
   }
 
   return generateInvalidProviderResponseError(
@@ -595,7 +579,7 @@ export const googleChatCompleteStreamChunkTransform: ResponseChunkStreamTransfor
       };
     }
 
-    return `data: ${JSON.stringify({
+    const transformedChunk = `data: ${JSON.stringify({
       id: fallbackId,
       object: 'chat.completion.chunk',
       created: Math.floor(Date.now() / 1000),
@@ -641,7 +625,7 @@ export const googleChatCompleteStreamChunkTransform: ResponseChunkStreamTransfor
                 if (part.functionCall) {
                   return {
                     index: idx,
-                    id: `portkey-${crypto.randomUUID()}`,
+                    id: `idk-${uuidv4()}`,
                     type: 'function',
                     function: {
                       name: part.functionCall.name,
@@ -666,4 +650,5 @@ export const googleChatCompleteStreamChunkTransform: ResponseChunkStreamTransfor
         usage: usageMetadata,
       }),
     })}\n\n`;
+    return transformedChunk;
   };

@@ -107,11 +107,6 @@ async function processLogs({
     return;
   }
 
-  if (!('user' in aiProviderLog.request_body)) {
-    console.error('No user found in request body');
-    return;
-  }
-
   const log: IdkRequestLog = {
     id: uuidv4(),
     agent_id: agent.id,

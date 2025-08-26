@@ -57,6 +57,17 @@ idk
 
 ---
 
+## 📝 AI Providers Status
+
+| AI Provider     | Chat Completion | Chat Completion (Stream) | Completion | Completion (Stream) |
+| --------------- | --------------- | ------------------------ | ---------- | ------------------- |
+| OpenAI          | ✅              | ⬛                       | ✅         | ⬛                  |
+| Gemini (Google) | ✅              | ⬛                       | 🔴         | 🔴                  |
+
+- ✅: Supported
+- ⬛: Not yet implemented
+- 🔴: Not supported by the provider
+
 ## 📚 Learn More
 - [Supabase Documentation](https://supabase.com/docs)
 - [Biome Documentation](https://biomejs.dev/docs/)

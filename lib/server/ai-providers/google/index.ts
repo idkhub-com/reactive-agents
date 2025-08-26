@@ -11,6 +11,7 @@ import { googleEmbedConfig, googleEmbedResponseTransform } from './embed';
 export const googleConfig: AIProviderConfig = {
   api: googleAPIConfig,
   [FunctionName.CHAT_COMPLETE]: googleChatCompleteConfig,
+  [FunctionName.STREAM_CHAT_COMPLETE]: googleChatCompleteConfig,
   [FunctionName.EMBED]: googleEmbedConfig,
   responseTransforms: {
     [FunctionName.CHAT_COMPLETE]: googleChatCompleteResponseTransform,
