@@ -48,7 +48,36 @@ pnpm dev
 ```
 
 ### 5️⃣ Run Examples
-Run any of the examples in the `examples` directory with the following command:
+
+#### Multi-Agent Workflows
+```sh
+export OPENAI_API_KEY="your-api-key" && pnpm exec tsx examples/multi-agent-workflows/multi-agent-workflow.ts
+```
+
+#### Auction Agent (Complete AI Agent)
+A production-ready AI agent for monitoring Copart car auctions with full autonomous capabilities:
+
+```sh
+# Setup (first time)
+pnpm auction-agent:setup
+
+# Run the agent
+pnpm auction-agent
+
+# Development mode
+pnpm auction-agent:dev
+
+# Scheduler management
+pnpm auction-agent:scheduler
+
+# Chat-like interactive mode (NEW!)
+pnpm auction-agent:chat
+```
+
+See `examples/auction-agent/README.md` for complete documentation.
+
+#### Other Examples
+Run any other examples in the `examples` directory:
 
 ```sh
 pnpm tsx ./path/to/example.ts
