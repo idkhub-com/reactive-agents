@@ -1,0 +1,53 @@
+{
+  "name": "copart-auction-agent",
+  "version": "1.0.0",
+  "description": "AI-powered agent for monitoring Copart car auctions",
+  "main": "copart.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx copart.ts",
+    "dev": "tsx --watch copart.ts",
+    "build": "tsc",
+    "test": "IDK_INTERACTIVE=false tsx copart.ts",
+    "test:ai": "IDK_INTERACTIVE=false tsx copart.ts",
+    "test:persistence": "IDK_INTERACTIVE=false IDK_ENABLE_PERSISTENCE=true tsx copart.ts",
+    "test:full": "IDK_INTERACTIVE=false IDK_ENABLE_PERSISTENCE=true IDK_ENRICH_VIN=true tsx copart.ts",
+    "verify": "npm run build && npm run test",
+    "setup": "pnpm install && echo 'Setup complete! Run: pnpm start'",
+    "scheduler": "tsx scheduler/cli.ts",
+    "schedule:dev": "tsx --watch scheduler/cli.ts"
+  },
+  "keywords": [
+    "auction",
+    "copart",
+    "ai",
+    "car",
+    "monitoring",
+    "automotive",
+    "typescript"
+  ],
+  "author": "IDKHub Team",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.0",
+    "better-sqlite3": "^12.2.0",
+    "dotenv": "^17.2.1",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.5",
+    "pino": "^9.9.0",
+    "prompts": "^2.4.2",
+    "sqlite3": "^5.1.7",
+    "tsx": "^4.7.0",
+    "twilio": "^5.8.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "playwright": "^1.54.2",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "searchCriteria": {
+    "makes": ["Toyota", "Honda", "Ford"],
+    "models": [],
+    "yearRange": {
+      "min": 2015,
+      "max": 2023
+    },
+    "maxMileage": 100000,
+    "maxDamage": "minor",
+    "maxPrice": 25000,
+    "locations": ["Los Angeles", "Miami", "New York"],
+    "keywords": []
+  },
+  "vehicles": [
+    {
+      "id": "1",
+      "title": "2018 Toyota Camry SE",
+      "year": 2018,
+      "make": "Toyota",
+      "model": "Camry",
+      "vin": "4T1B11HK5JU123456",
+      "mileage": 45000,
+      "damage": "minor",
+      "currentBid": 12000,
+      "estimatedValue": 18000,
+      "auctionEndTime": "2025-08-13T03:21:19.722Z",
+      "location": "Los Angeles, CA",
+      "images": ["https://example.com/camry1.jpg"],
+      "description": "Clean title, minor front end damage, runs great",
+      "lotNumber": "L123456",
+      "saleStatus": "active"
+    },
+    {
+      "id": "2",
+      "title": "2015 Honda Civic EX",
+      "year": 2015,
+      "make": "Honda",
+      "model": "Civic",
+      "vin": "2HGFB2F54FH123456",
+      "mileage": 78000,
+      "damage": "none",
+      "currentBid": 9500,
+      "estimatedValue": 14000,
+      "auctionEndTime": "2025-08-14T03:21:19.724Z",
+      "location": "Miami, FL",
+      "images": ["https://example.com/civic1.jpg"],
+      "description": "Clean title, no damage, excellent condition",
+      "lotNumber": "L123457",
+      "saleStatus": "upcoming"
+    }
+  ],
+  "analysis": [
+    {
+      "vehicle": {
+        "id": "1",
+        "title": "2018 Toyota Camry SE",
+        "year": 2018,
+        "make": "Toyota",
+        "model": "Camry",
+        "vin": "4T1B11HK5JU123456",
+        "mileage": 45000,
+        "damage": "minor",
+        "currentBid": 12000,
+        "estimatedValue": 18000,
+        "auctionEndTime": "2025-08-13T03:21:19.722Z",
+        "location": "Los Angeles, CA",
+        "images": ["https://example.com/camry1.jpg"],
+        "description": "Clean title, minor front end damage, runs great",
+        "lotNumber": "L123456",
+        "saleStatus": "active"
+      },
+      "score": 100,
+      "reasoning": "Basic analysis: Good value",
+      "marketComparison": {
+        "averagePrice": 18000,
+        "priceDifference": 6000,
+        "marketTrend": "below"
+      },
+      "riskAssessment": {
+        "level": "medium",
+        "factors": ["Damage: minor"]
+      },
+      "recommendation": "buy"
+    },
+    {
+      "vehicle": {
+        "id": "2",
+        "title": "2015 Honda Civic EX",
+        "year": 2015,
+        "make": "Honda",
+        "model": "Civic",
+        "vin": "2HGFB2F54FH123456",
+        "mileage": 78000,
+        "damage": "none",
+        "currentBid": 9500,
+        "estimatedValue": 14000,
+        "auctionEndTime": "2025-08-14T03:21:19.724Z",
+        "location": "Miami, FL",
+        "images": ["https://example.com/civic1.jpg"],
+        "description": "Clean title, no damage, excellent condition",
+        "lotNumber": "L123457",
+        "saleStatus": "upcoming"
+      },
+      "score": 100,
+      "reasoning": "Basic analysis: Good value",
+      "marketComparison": {
+        "averagePrice": 14000,
+        "priceDifference": 4500,
+        "marketTrend": "below"
+      },
+      "riskAssessment": {
+        "level": "low",
+        "factors": ["No damage"]
+      },
+      "recommendation": "buy"
+    }
+  ],
+  "timestamp": "2025-08-12T03:21:19.754Z"
+}
