@@ -66,6 +66,7 @@ export function produceIdkRequestData(
         responseBody,
         requestSchema: config.requestSchema,
         responseSchema: config.responseSchema,
+        stream: config.stream,
       };
 
       const idkRequestData = IdkRequestData.parse(rawIdkRequestData);

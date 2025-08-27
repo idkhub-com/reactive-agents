@@ -114,6 +114,33 @@ export interface GoogleGenerateContentResponse {
   };
 }
 
+// Request interfaces for structured output
+export interface GoogleGenerationConfig {
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  maxOutputTokens?: number;
+  stopSequences?: string[];
+  responseMimeType?: string;
+  responseSchema?: Record<string, unknown>;
+  responseLogprobs?: boolean;
+  logprobs?: number;
+  thinking_config?: {
+    include_thoughts: boolean;
+    thinking_budget?: number;
+  };
+}
+
+export interface GoogleStructuredOutputRequest {
+  model: string;
+  contents: GoogleMessage[];
+  systemInstruction?: GoogleMessage;
+  generationConfig?: GoogleGenerationConfig;
+  tools?: GoogleTool[];
+  tool_config?: GoogleToolConfig;
+  safetySettings?: unknown[];
+}
+
 export const TextEmbedInstance = z.object({
   task_type: z.string(),
   content: z.string(),

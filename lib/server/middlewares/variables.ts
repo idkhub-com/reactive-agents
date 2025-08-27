@@ -6,6 +6,7 @@ import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 import type { MiddlewareHandler } from 'hono';
 import type { Factory } from 'hono/factory';
+import z from 'zod';
 
 /**
  * Middleware to set common variables in the context
@@ -24,11 +25,15 @@ export const commonVariablesMiddleware = (
         }
         const rawConfig = JSON.parse(configString);
 
-        const idkConfig = IdkConfig.safeParse(rawConfig);
+        const idkConfig = IdkConfig.safeParse(rawConfig, {
+          error: (error) => `Invalid IDK config as ${error.message}`,
+        });
         if (idkConfig.error) {
+          const prettyError = z.prettifyError(idkConfig.error);
+
           return c.json(
             {
-              error: 'Invalid IDK config',
+              error: `--Invalid IDK config--\n ${prettyError}`,
               details: idkConfig.error.message,
             },
             422,

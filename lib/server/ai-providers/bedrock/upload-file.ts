@@ -192,7 +192,7 @@ class AwsMultipartUploadHandler {
     const response = await fetch(partUrl.toString(), {
       method,
       headers: headers as HeadersInit,
-      body: partData,
+      body: partData as BodyInit,
     });
 
     if (!response.ok) {

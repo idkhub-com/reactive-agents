@@ -14,6 +14,8 @@ export const TextViewer = ({
   readOnly?: boolean;
   className?: string;
 }): ReactElement | null => {
+  console.log('content', content);
+
   const editor = useEditor({
     extensions: [...defaultExtensions()],
     editorProps: {

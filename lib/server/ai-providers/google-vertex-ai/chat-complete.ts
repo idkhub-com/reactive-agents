@@ -50,11 +50,11 @@ import type {
   ChatCompletionToolFunction,
 } from '@shared/types/api/routes/shared/tools';
 import { AIProvider } from '@shared/types/constants';
+import { SYSTEM_INSTRUCTION_DISABLED_MODELS } from '../google/chat-complete';
 import {
-  SYSTEM_INSTRUCTION_DISABLED_MODELS,
-  transformOpenAIRoleToGoogleRole,
-  transformToolChoiceForGemini,
-} from '../google/chat-complete';
+  RoleIdkToGemini,
+  transformToolChoiceIdkToGemini,
+} from '../google/utils';
 import { vertexTransformGenerationConfig } from './transform-generation-config';
 import {
   getMimeType,
@@ -104,7 +104,7 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
           )
             return;
 
-          const role = transformOpenAIRoleToGoogleRole(message.role);
+          const role = RoleIdkToGemini[message.role];
           const parts: GoogleMessagePart[] = [];
 
           if (message.role === 'assistant' && message.tool_calls) {
@@ -366,7 +366,7 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
         }
         const toolConfig: GoogleToolConfig = {
           function_calling_config: {
-            mode: transformToolChoiceForGemini(idkRequestBody.tool_choice),
+            mode: transformToolChoiceIdkToGemini(idkRequestBody.tool_choice),
           },
         };
         if (allowedFunctionNames.length > 0) {
