@@ -2,6 +2,11 @@ import OpenAI from 'openai';
 import 'dotenv/config';
 import logger from '@shared/console-logging';
 
+if (!process.env.GEMINI_API_KEY) {
+  logger.error('GEMINI_API_KEY environment variable is required');
+  process.exit(1);
+}
+
 const client = new OpenAI({
   // This is the API key to IDKHub
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
