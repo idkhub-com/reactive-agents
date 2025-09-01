@@ -32,9 +32,6 @@ export const azureAIInferenceAPI: InternalProviderAPIConfig = {
 
     const headers: Record<string, string> = {
       'extra-parameters': azure_extra_params ?? 'drop',
-      // ...(azure_deployment_name && {
-      //   'azureml-model-deployment': azure_deployment_name,
-      // }),
     };
     if (azure_ad_token) {
       headers.Authorization = `Bearer ${azure_ad_token?.replace('Bearer ', '')}`;
