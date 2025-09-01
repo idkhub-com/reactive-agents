@@ -6,7 +6,7 @@ export enum AIProvider {
   OPENAI = 'openai',
   COHERE = 'cohere',
   AZURE_OPENAI = 'azure-openai',
-  AZURE_AI = 'azure-ai',
+  AZURE_AI = 'azure-ai-foundry',
   ANTHROPIC = 'anthropic',
   ANYSCALE = 'anyscale',
   PALM = 'palm',

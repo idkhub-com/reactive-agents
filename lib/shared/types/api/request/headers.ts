@@ -2,6 +2,7 @@ import { IdkRequestBody } from '@shared/types/api/request/body';
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
 import { CacheMode, CacheSettings } from '@shared/types/middleware/cache';
 import { Hook } from '@shared/types/middleware/hooks';
+import { removeEndingPath, removeTrailingSlash } from '@shared/utils/url';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 
@@ -23,6 +24,20 @@ export const RetrySettings = z.object({
 });
 
 export type RetrySettings = z.infer<typeof RetrySettings>;
+
+export const AzureOpenAIConfig = z.object({
+  url: z
+    .url({ error: '`url` is required' })
+    .transform(removeTrailingSlash)
+    .transform(removeEndingPath),
+});
+
+export const AzureAIFoundryConfig = z.object({
+  url: z
+    .url({ error: '`url` is required' })
+    .transform(removeTrailingSlash)
+    .transform(removeEndingPath),
+});
 
 export const IdkTarget = z.object({
   // Target Details
@@ -73,13 +88,13 @@ export const IdkTarget = z.object({
   aws_server_side_encryption_kms_key_id: z.string().optional(),
 
   // Azure OpenAI specific
-  azure_model_name: z.string().optional(),
-  azure_deployment_name: z.string().optional(),
-  azure_deployment_id: z.string().optional(),
-  azure_resource_name: z.string().optional(),
-  azure_api_version: z.string().optional(),
+  azure_openai_config: AzureOpenAIConfig.optional(),
+
+  // Azure AI Foundry specific
+  azure_ai_foundry_config: AzureAIFoundryConfig.optional(),
+
+  // Azure Other
   azure_extra_params: z.string().optional(),
-  azure_foundry_url: z.string().optional(),
   azure_auth_mode: z.string().optional(),
   azure_managed_client_id: z.string().optional(),
   azure_entra_client_id: z.string().optional(),
@@ -87,7 +102,6 @@ export const IdkTarget = z.object({
   azure_entra_tenant_id: z.string().optional(),
   azure_ad_auth: z.string().optional(),
   azure_ad_token: z.string().optional(),
-  azure_url_to_fetch: z.string().optional(),
 
   // Cortex specific
   snowflake_account: z.string().optional(),

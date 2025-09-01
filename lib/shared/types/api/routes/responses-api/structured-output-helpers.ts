@@ -2,9 +2,8 @@ import { z } from 'zod';
 import type {
   ArticleSummary,
   MathReasoning,
-  ResponseTextConfig,
-  StructuredOutputWithRefusal,
-  StructuredReasoningOutput,
+  ResponsesAPIOutputWithRefusal,
+  ResponsesAPIReasoningOutput,
 } from './response';
 
 /**
@@ -45,35 +44,11 @@ export function createJsonSchemaFormat(
 }
 
 /**
- * Creates a ResponseTextConfig for structured JSON outputs
- * @param name - The name of the response format
- * @param schema - The JSON schema object
- * @param description - Optional description
- * @param strict - Whether to enable strict mode (default: true)
- */
-export function createStructuredTextConfig(
-  name: string,
-  schema: Record<string, unknown>,
-  description?: string,
-  strict = true,
-): ResponseTextConfig {
-  return {
-    format: {
-      name,
-      schema,
-      type: 'json_schema',
-      strict,
-      ...(description && { description }),
-    },
-  };
-}
-
-/**
  * Validates if a response contains a refusal and handles it appropriately
  * @param response - The structured output response
  * @returns Object indicating if refusal was found and the message
  */
-export function checkForRefusal(response: StructuredOutputWithRefusal): {
+export function checkForRefusal(response: ResponsesAPIOutputWithRefusal): {
   hasRefusal: boolean;
   refusalMessage?: string;
   content?: unknown[];
@@ -355,7 +330,7 @@ export const StructuredOutputTypeGuards = {
     }
   },
 
-  isReasoningOutput: (data: unknown): data is StructuredReasoningOutput => {
+  isReasoningOutput: (data: unknown): data is ResponsesAPIReasoningOutput => {
     return (
       data !== null &&
       typeof data === 'object' &&

@@ -6,7 +6,17 @@ import {
   type ResponsesRequestData,
   type StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
-import type { ResponsesTool } from '@shared/types/api/routes/responses-api';
+import type {
+  CodeInterpreter,
+  ComputerTool,
+  CustomTool,
+  FileSearchTool,
+  FunctionTool,
+  ImageGeneration,
+  LocalShell,
+  Mcp,
+  WebSearchTool,
+} from '@shared/types/api/routes/responses-api/request';
 import type { ChatCompletionTool } from '@shared/types/api/routes/shared/tools';
 import type { ToolCreateParams } from '@shared/types/data/tool';
 import type { Next } from 'hono';
@@ -14,6 +24,17 @@ import { getRuntimeKey } from 'hono/adapter';
 import { createMiddleware } from 'hono/factory';
 
 import stableStringify from 'json-stable-stringify';
+
+type ResponsesTool =
+  | FunctionTool
+  | FileSearchTool
+  | WebSearchTool
+  | ComputerTool
+  | Mcp
+  | CodeInterpreter
+  | ImageGeneration
+  | LocalShell
+  | CustomTool;
 
 async function produceToolCache(
   completionTool: ChatCompletionTool | ResponsesTool,
@@ -66,7 +87,7 @@ async function captureTool(
     | ResponsesRequestData,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<void> {
-  let completionTools: ChatCompletionTool[] | ResponsesTool[] = [];
+  let completionTools: (ChatCompletionTool | ResponsesTool)[] = [];
 
   if (
     idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
@@ -82,11 +103,39 @@ async function captureTool(
   await Promise.all(
     completionTools.map(async (completionTool) => {
       const hash = await produceToolCache(completionTool);
+
+      // Extract name based on tool type
+      let toolName = '';
+      if (completionTool.type === 'function') {
+        if ('name' in completionTool) {
+          // New ResponsesTool FunctionTool format
+          toolName = completionTool.name as string;
+        } else if (
+          'function' in completionTool &&
+          completionTool.function?.name
+        ) {
+          // Legacy ChatCompletionTool format
+          toolName = (completionTool as ChatCompletionTool).function.name;
+        }
+      } else if (
+        completionTool.type === 'mcp' &&
+        'server_label' in completionTool
+      ) {
+        // MCP tools use server_label
+        toolName = (completionTool as Mcp).server_label;
+      } else if (completionTool.type === 'custom' && 'name' in completionTool) {
+        // Custom tools have name
+        toolName = (completionTool as CustomTool).name;
+      } else {
+        // For other tool types, use the type as name
+        toolName = completionTool.type;
+      }
+
       const tool: ToolCreateParams = {
         agent_id,
         hash,
         type: completionTool.type,
-        name: completionTool.function?.name || '',
+        name: toolName,
         raw_data: completionTool,
       };
 

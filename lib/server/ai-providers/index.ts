@@ -4,7 +4,7 @@ import { anyscaleConfig } from '@server/ai-providers/anyscale';
 import {
   azureAIInferenceConfig,
   githubModelAPiConfig,
-} from '@server/ai-providers/azure-ai-inference';
+} from '@server/ai-providers/azure-ai-foundry';
 import { azureOpenAIConfig } from '@server/ai-providers/azure-openai';
 import { bedrockConfig } from '@server/ai-providers/bedrock';
 import { cerebrasProviderAPIConfig } from '@server/ai-providers/cerebras';
