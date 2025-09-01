@@ -27,7 +27,7 @@ export const providerConfigs: {
   [AIProvider.AI21]: aI21Config,
   [AIProvider.ANTHROPIC]: anthropicConfig,
   [AIProvider.ANYSCALE]: anyscaleConfig,
-  [AIProvider.AZURE_AI]: azureAIInferenceConfig,
+  [AIProvider.AZURE_AI_FOUNDRY]: azureAIInferenceConfig,
   [AIProvider.AZURE_OPENAI]: azureOpenAIConfig,
   [AIProvider.BEDROCK]: bedrockConfig,
   [AIProvider.CEREBRAS]: cerebrasProviderAPIConfig,
