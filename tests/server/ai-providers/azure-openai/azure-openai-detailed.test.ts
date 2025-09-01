@@ -316,41 +316,21 @@ describe('Azure OpenAI AI Provider Tests', () => {
           mockResponse as unknown as Response,
         );
 
-        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-          // Suppress console logs during testing
-        });
-
-        const token = await getAccessTokenFromEntraId(
-          'tenant-id',
-          'client-id',
-          'client-secret',
+        await expect(() =>
+          getAccessTokenFromEntraId('tenant-id', 'client-id', 'client-secret'),
+        ).rejects.toThrow(
+          'Error getting access token from Entra ID: Error: Error from Entra Authentication failed',
         );
-
-        expect(token).toBeUndefined();
-        expect(consoleSpy).toHaveBeenCalledWith({
-          message: 'Error from Entra Authentication failed',
-        });
-
-        consoleSpy.mockRestore();
       });
 
       it('should handle network errors', async () => {
         vi.mocked(global.fetch).mockRejectedValue(new Error('Network error'));
 
-        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-          // Suppress console logs during testing
-        });
-
-        const token = await getAccessTokenFromEntraId(
-          'tenant-id',
-          'client-id',
-          'client-secret',
+        await expect(() =>
+          getAccessTokenFromEntraId('tenant-id', 'client-id', 'client-secret'),
+        ).rejects.toThrow(
+          'Error getting access token from Entra ID: Error: Network error',
         );
-
-        expect(token).toBeUndefined();
-        expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
-
-        consoleSpy.mockRestore();
       });
     });
 
@@ -414,20 +394,11 @@ describe('Azure OpenAI AI Provider Tests', () => {
           mockResponse as unknown as Response,
         );
 
-        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-          // Suppress console logs during testing
-        });
-
-        const token = await getAzureManagedIdentityToken(
-          'https://cognitiveservices.azure.com/',
+        await expect(() =>
+          getAzureManagedIdentityToken('https://cognitiveservices.azure.com/'),
+        ).rejects.toThrow(
+          'Error getting access token from Managed Identity: Error: Error from Managed Managed identity failed',
         );
-
-        expect(token).toBeUndefined();
-        expect(consoleSpy).toHaveBeenCalledWith({
-          message: 'Error from Managed Managed identity failed',
-        });
-
-        consoleSpy.mockRestore();
       });
     });
   });
