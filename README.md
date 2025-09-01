@@ -65,10 +65,29 @@ idk
 
 ## 📝 AI Providers Status
 
-| AI Provider     | Chat Completion | Chat Completion (Stream) | Completion | Completion (Stream) |
-| --------------- | --------------- | ------------------------ | ---------- | ------------------- |
-| OpenAI          | ✅              | ⬛                       | ✅         | ⬛                  |
-| Gemini (Google) | ✅              | ⬛                       | 🔴         | 🔴                  |
+### Chat Completion API
+
+***Streaming mode not yet implemented***
+
+| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers |
+| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- |
+| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛            |
+| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛            |
+| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛            |
+| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛            |
+| XAI              | ✅       | ✅         | ✅          | ⬛                | ⬛            |
+
+### Responses API
+
+***Streaming mode not yet implemented***
+
+| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers |
+| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- |
+| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ✅            |
+| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ✅            |
+| OpenAI           | ✅       | ✅         | ✅          | ✅                | ✅            |
+| Gemini (Google)  | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
+| XAI              | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
 
 - ✅: Supported
 - ⬛: Not yet implemented
