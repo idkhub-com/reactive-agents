@@ -75,7 +75,7 @@ idk
 | Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛            |
 | OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛            |
 | Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛            |
-| XAI              | ✅       | ✅         | ✅          | ⬛                | ⬛            |
+| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛            |
 
 ### Responses API
 

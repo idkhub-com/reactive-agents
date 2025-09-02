@@ -22,5 +22,6 @@ words = [
     "tiptap",
     "vitest",
     "workerd",
+    "xai",
     "zod",
 ]
