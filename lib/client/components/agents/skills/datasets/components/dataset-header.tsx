@@ -20,7 +20,7 @@ import { z } from 'zod';
 const updateDatasetSchema = z.object({
   name: z.string().min(1, 'Dataset name is required'),
   description: z.string().optional(),
-  realtime_size: z.number().min(0).optional(),
+  realtime_size: z.number().min(1).optional(),
 });
 
 type UpdateDatasetFormData = z.infer<typeof updateDatasetSchema>;
