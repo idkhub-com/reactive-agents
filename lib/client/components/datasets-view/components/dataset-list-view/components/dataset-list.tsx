@@ -152,8 +152,8 @@ export function DatasetList({
             <AlertDialogTitle>Delete Dataset</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{datasetToDelete?.name}"? This
-              action cannot be undone. All data points in this dataset will also
-              be deleted.
+              action cannot be undone. All logs in this dataset will also be
+              deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

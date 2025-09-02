@@ -56,8 +56,8 @@ Uses **connector pattern** for data access:
 
 Core data models:
 - `Agent` - AI agent configurations
-- `Dataset`/`DataPoint` - Training/evaluation data with many-to-many relationships
-- `EvaluationRun`/`DataPointOutput` - Model evaluation system
+- `Dataset`/`Log` - Training/evaluation data with many-to-many relationships
+- `EvaluationRun`/`LogOutput` - Model evaluation system
 - `Feedback`/`ImprovedResponse` - User feedback loop
 
 ### Testing Patterns

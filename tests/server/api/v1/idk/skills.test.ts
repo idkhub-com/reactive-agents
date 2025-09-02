@@ -34,20 +34,22 @@ const mockUserDataStorageConnector = {
   createDataset: vi.fn(),
   updateDataset: vi.fn(),
   deleteDataset: vi.fn(),
-  // Data point methods
-  getDataPoints: vi.fn(),
-  createDataPoints: vi.fn(),
-  updateDataPoint: vi.fn(),
-  deleteDataPoints: vi.fn(),
+  // Log methods (required by interface)
+  getLogs: vi.fn(),
+  deleteLog: vi.fn(),
+  // Dataset-Log Bridge methods (required by interface)
+  getDatasetLogs: vi.fn(),
+  addLogsToDataset: vi.fn(),
+  removeLogsFromDataset: vi.fn(),
   // Evaluation run methods
   getEvaluationRuns: vi.fn(),
   createEvaluationRun: vi.fn(),
   updateEvaluationRun: vi.fn(),
   deleteEvaluationRun: vi.fn(),
-  // Data point output methods
-  getDataPointOutputs: vi.fn(),
-  createDataPointOutput: vi.fn(),
-  deleteDataPointOutput: vi.fn(),
+  // Log Output methods (required by interface)
+  getLogOutputs: vi.fn(),
+  createLogOutput: vi.fn(),
+  deleteLogOutput: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector

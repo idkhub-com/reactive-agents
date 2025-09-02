@@ -3,17 +3,17 @@ import type { ArgumentCorrectnessAverageResult } from '@server/connectors/evalua
 import type { ToolUsage } from '@server/connectors/evaluations/types/tool_usage';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
-import type {
-  DataPointOutput as EvaluationOutput,
-  DataPointOutputCreateParams as EvaluationOutputCreateParams,
-} from '@shared/types/data/data-point-output';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
   EvaluationRunStatus,
 } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
+import type {
+  LogOutput as EvaluationOutput,
+  LogOutputCreateParams as EvaluationOutputCreateParams,
+} from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,8 +35,8 @@ function buildPromptForToolArgs(
   return { systemPrompt: tpl.systemPrompt, userPrompt: tpl.userPrompt };
 }
 
-async function evaluateSingleDataPoint(
-  data_point: DataPoint,
+async function evaluateSingleLog(
+  log: Log,
   params: ArgumentCorrectnessEvaluationParameters,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
@@ -46,17 +46,33 @@ async function evaluateSingleDataPoint(
   const verbose_logs: string[] = [];
 
   try {
-    const rawInput = params.input || data_point.request_body?.input || '';
+    const rawInput =
+      params.input ||
+      (
+        (log.ai_provider_request_log as Record<string, unknown>)
+          ?.request_body as Record<string, unknown>
+      )?.input ||
+      '';
     const input =
       typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
 
     let actual_output: string;
     if (typeof params.actual_output === 'string') {
       actual_output = params.actual_output;
-    } else if (typeof data_point.ground_truth === 'string') {
-      actual_output = data_point.ground_truth;
-    } else if (data_point.ground_truth !== undefined) {
-      actual_output = JSON.stringify(data_point.ground_truth);
+    } else if (log.ai_provider_request_log?.response_body) {
+      if (typeof log.ai_provider_request_log.response_body === 'string') {
+        actual_output = log.ai_provider_request_log.response_body;
+      } else {
+        actual_output = JSON.stringify(
+          log.ai_provider_request_log.response_body,
+        );
+      }
+    } else if (log.metadata?.ground_truth) {
+      if (typeof log.metadata.ground_truth === 'string') {
+        actual_output = log.metadata.ground_truth;
+      } else {
+        actual_output = JSON.stringify(log.metadata.ground_truth);
+      }
     } else {
       actual_output = '';
     }
@@ -64,17 +80,14 @@ async function evaluateSingleDataPoint(
     let tools_called: ToolUsage[] = [];
     if (params.tools_called && Array.isArray(params.tools_called)) {
       tools_called = params.tools_called as ToolUsage[];
-    } else if (
-      data_point.metadata &&
-      typeof data_point.metadata.tools === 'string'
-    ) {
+    } else if (log.metadata && typeof log.metadata.tools === 'string') {
       try {
-        tools_called = JSON.parse(data_point.metadata.tools) as ToolUsage[];
+        tools_called = JSON.parse(log.metadata.tools) as ToolUsage[];
       } catch {
         tools_called = [];
       }
-    } else if (data_point.metadata && data_point.metadata.tools !== undefined) {
-      const t = data_point.metadata.tools;
+    } else if (log.metadata && log.metadata.tools !== undefined) {
+      const t = log.metadata.tools;
       if (Array.isArray(t)) tools_called = t as ToolUsage[];
       else if (typeof t === 'object' && t !== null)
         tools_called = [t as ToolUsage];
@@ -121,7 +134,7 @@ async function evaluateSingleDataPoint(
 
     const execution_time = Date.now() - start_time;
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         score: final_score,
         passed,
@@ -148,7 +161,7 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    const storedOutput = await userDataStorageConnector.createDataPointOutput(
+    const storedOutput = await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -156,7 +169,7 @@ async function evaluateSingleDataPoint(
   } catch (error) {
     const execution_time = Date.now() - start_time;
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         error: true,
         error_message: error instanceof Error ? error.message : 'Unknown error',
@@ -175,7 +188,7 @@ async function evaluateSingleDataPoint(
         evaluation_run_id,
       },
     };
-    const storedOutput = await userDataStorageConnector.createDataPointOutput(
+    const storedOutput = await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -183,21 +196,21 @@ async function evaluateSingleDataPoint(
   }
 }
 
-async function processDataPointsInBatches(
-  data_points: DataPoint[],
+async function processLogsInBatches(
+  logs: Log[],
   params: ArgumentCorrectnessEvaluationParameters,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationOutput[]> {
   const batch_size = params.batch_size || 10;
   const results: EvaluationOutput[] = [];
-  for (let i = 0; i < data_points.length; i += batch_size) {
-    const batch = data_points.slice(i, i + batch_size);
+  for (let i = 0; i < logs.length; i += batch_size) {
+    const batch = logs.slice(i, i + batch_size);
     if (params.async_mode !== false) {
       const batch_results = await Promise.all(
-        batch.map((data_point) =>
-          evaluateSingleDataPoint(
-            data_point,
+        batch.map((log) =>
+          evaluateSingleLog(
+            log,
             params,
             evaluation_run_id,
             userDataStorageConnector,
@@ -206,9 +219,9 @@ async function processDataPointsInBatches(
       );
       results.push(...batch_results);
     } else {
-      for (const data_point of batch) {
-        const result = await evaluateSingleDataPoint(
-          data_point,
+      for (const log of batch) {
+        const result = await evaluateSingleLog(
+          log,
           params,
           evaluation_run_id,
           userDataStorageConnector,
@@ -276,16 +289,13 @@ export async function evaluateArgumentCorrectness(
   }
 
   try {
-    const data_points = await user_data_storage_connector.getDataPoints(
-      input.id,
-      {
-        limit: input.limit || 10,
-        offset: input.offset || 0,
-      },
-    );
+    const logs = await user_data_storage_connector.getDatasetLogs(input.id, {
+      limit: input.limit || 10,
+      offset: input.offset || 0,
+    });
 
-    const evaluationOutputs = await processDataPointsInBatches(
-      data_points,
+    const evaluationOutputs = await processLogsInBatches(
+      logs,
       params,
       evaluation_run_id,
       user_data_storage_connector,
@@ -304,7 +314,7 @@ export async function evaluateArgumentCorrectness(
     await user_data_storage_connector.updateEvaluationRun(evaluation_run_id, {
       status: 'completed' as EvaluationRunStatus,
       results: {
-        total_data_points: data_points.length,
+        total_logs: logs.length,
         passed_count,
         failed_count,
         average_score,
@@ -313,7 +323,7 @@ export async function evaluateArgumentCorrectness(
       },
       metadata: {
         ...evaluationRun.metadata,
-        total_data_points: data_points.length,
+        total_logs: logs.length,
         passed_count,
         failed_count,
         average_score,
@@ -332,7 +342,7 @@ export async function evaluateArgumentCorrectness(
 
     const averageResult: ArgumentCorrectnessAverageResult = {
       average_score,
-      total_data_points: data_points.length,
+      total_logs: logs.length,
       passed_count,
       failed_count,
       threshold_used,

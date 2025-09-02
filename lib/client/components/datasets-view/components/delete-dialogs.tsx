@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@client/components/ui/alert-dialog';
-import type { DataPoint, Dataset } from '@shared/types/data';
+import type { Dataset, Log } from '@shared/types/data';
 import { AlertTriangle } from 'lucide-react';
 
 interface DeleteDialogsProps {
@@ -19,11 +19,11 @@ interface DeleteDialogsProps {
   onDeleteDatasetCancel: () => void;
   onDeleteDatasetConfirm: () => void;
 
-  // Data point deletion
-  dataPointToDelete: DataPoint | null;
-  deleteDataPointOpen: boolean;
-  onDeleteDataPointCancel: () => void;
-  onDeleteDataPointConfirm: () => void;
+  // Log deletion
+  logToDelete?: Log | null;
+  deleteLogOpen?: boolean;
+  onDeleteLogCancel?: () => void;
+  onDeleteLogConfirm?: () => void;
 }
 
 export function DeleteDialogs({
@@ -31,10 +31,10 @@ export function DeleteDialogs({
   deleteDatasetOpen,
   onDeleteDatasetCancel,
   onDeleteDatasetConfirm,
-  dataPointToDelete,
-  deleteDataPointOpen,
-  onDeleteDataPointCancel,
-  onDeleteDataPointConfirm,
+  logToDelete,
+  deleteLogOpen,
+  onDeleteLogCancel,
+  onDeleteLogConfirm,
 }: DeleteDialogsProps): React.ReactElement {
   return (
     <>
@@ -52,7 +52,7 @@ export function DeleteDialogs({
             <AlertDialogDescription>
               Are you sure you want to delete "{dataset?.name}"? This action
               cannot be undone and will permanently remove the dataset and all
-              its data points.
+              its logs.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -69,35 +69,34 @@ export function DeleteDialogs({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Data Point Delete Dialog */}
-      <AlertDialog
-        open={deleteDataPointOpen}
-        onOpenChange={onDeleteDataPointCancel}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Delete Data Point
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this data point for "
-              {dataPointToDelete?.endpoint}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={onDeleteDataPointCancel}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onDeleteDataPointConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Data Point
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Log Delete Dialog */}
+      {deleteLogOpen && (
+        <AlertDialog open={deleteLogOpen} onOpenChange={onDeleteLogCancel}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Delete Log
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this log for "
+                {logToDelete?.endpoint}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={onDeleteLogCancel}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onDeleteLogConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Log
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

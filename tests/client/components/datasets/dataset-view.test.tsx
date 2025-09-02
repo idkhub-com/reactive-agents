@@ -1,7 +1,10 @@
 import * as datasetsApi from '@client/api/v1/idk/evaluations/datasets';
 import { DatasetView } from '@client/components/datasets-view/dataset-view';
 import { HttpMethod } from '@server/types/http';
-import type { DataPoint, Dataset } from '@shared/types/data';
+import { FunctionName } from '@shared/types/api/request';
+import { AIProvider } from '@shared/types/constants';
+import type { Dataset, Log } from '@shared/types/data';
+import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -42,27 +45,22 @@ vi.mock('@client/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 
-// Mock the DataPointsList component
-vi.mock('@client/components/datasets/components/data-points-list', () => ({
-  DataPointsList: ({ dataPoints }: { dataPoints: DataPoint[] }) => (
-    <div data-testid="data-points-list">
-      {dataPoints.map((dp) => (
-        <div key={dp.id}>{dp.function_name}</div>
+// Mock the LogsList component
+vi.mock('@client/components/datasets-view/components/logs-list', () => ({
+  LogsList: ({ logs }: { logs: Log[] }) => (
+    <div data-testid="logs-list">
+      {logs.map((log) => (
+        <div key={log.id}>{log.function_name}</div>
       ))}
     </div>
   ),
 }));
 
-// Mock the AddDataPointsDialog component
-vi.mock(
-  '@client/components/datasets-view/components/add-data-points-dialog',
-  () => ({
-    AddDataPointsDialog: ({ open }: { open: boolean }) =>
-      open ? (
-        <div data-testid="add-data-points-dialog">Add Data Points Dialog</div>
-      ) : null,
-  }),
-);
+// Mock the AddLogsDialog component
+vi.mock('@client/components/datasets-view/components/add-logs-dialog', () => ({
+  AddLogsDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="add-logs-dialog">Add Logs Dialog</div> : null,
+}));
 
 const mockDataset: Dataset = {
   id: 'test-dataset-id',
@@ -74,21 +72,45 @@ const mockDataset: Dataset = {
   updated_at: '2023-01-02T00:00:00Z',
 };
 
-const mockDataPoints: DataPoint[] = [
+const mockLogs: Log[] = [
   {
-    id: 'dp-1',
+    id: 'log-1',
+    agent_id: 'agent-1',
+    skill_id: 'skill-1',
     method: HttpMethod.POST,
     endpoint: '/api/test',
-    function_name: 'test_function',
-    request_body: { test: 'data' },
-    ground_truth: {
+    function_name: FunctionName.CHAT_COMPLETE,
+    status: 200,
+    start_time: Date.now() - 1000000,
+    end_time: Date.now() - 900000,
+    duration: 100,
+    base_idk_config: {},
+    ai_provider: AIProvider.OPENAI,
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: AIProvider.OPENAI,
+      function_name: FunctionName.CHAT_COMPLETE,
+      request_url: '/api/test',
+      method: HttpMethod.POST,
       status: 200,
+      request_body: { test: 'data' },
       response_body: { result: 'success' },
-      duration: 100,
+      raw_request_body: JSON.stringify({ test: 'data' }),
+      raw_response_body: JSON.stringify({ result: 'success' }),
+      cache_mode: CacheMode.SIMPLE,
+      cache_status: CacheStatus.MISS,
     },
-    is_golden: false,
+    hook_logs: [],
     metadata: { log_id: 'log-1' },
-    created_at: '2023-01-01T00:00:00Z',
+    cache_status: CacheStatus.MISS,
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
   },
 ];
 
@@ -113,9 +135,7 @@ describe('DatasetView', () => {
     mockUseDatasets.datasets = [mockDataset];
     mockUseDatasets.selectedDataset = null;
     mockUseDatasets.isLoading = false;
-    vi.mocked(datasetsApi.getDatasetDataPoints).mockResolvedValue(
-      mockDataPoints,
-    );
+    vi.mocked(datasetsApi.getDatasetLogs).mockResolvedValue(mockLogs);
   });
 
   afterEach(() => {
@@ -165,13 +185,13 @@ describe('DatasetView', () => {
     });
   });
 
-  it('loads data points when component mounts', async () => {
+  it('loads logs when component mounts', async () => {
     renderDatasetView('test-dataset-id');
 
     await waitFor(() => {
-      expect(datasetsApi.getDatasetDataPoints).toHaveBeenCalledWith(
+      expect(datasetsApi.getDatasetLogs).toHaveBeenCalledWith(
         'test-dataset-id',
-        {},
+        { limit: 50, offset: 0 },
       );
     });
   });
@@ -305,18 +325,18 @@ describe('DatasetView', () => {
   });
 
   describe('Search functionality', () => {
-    it('filters data points based on search query', async () => {
+    it('filters logs based on search query', async () => {
       renderDatasetView('test-dataset-id');
 
       await waitFor(() => {
         expect(screen.getByText('Test Dataset')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search data points...');
+      const searchInput = screen.getByPlaceholderText('Search logs...');
       fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
 
       await waitFor(() => {
-        expect(screen.getByText('No data points found')).toBeInTheDocument();
+        expect(screen.getByText('No logs found')).toBeInTheDocument();
       });
     });
 
@@ -327,7 +347,7 @@ describe('DatasetView', () => {
         expect(screen.getByText('Test Dataset')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search data points...');
+      const searchInput = screen.getByPlaceholderText('Search logs...');
       fireEvent.change(searchInput, { target: { value: 'test search' } });
 
       expect(searchInput).toHaveValue('test search');
@@ -341,8 +361,8 @@ describe('DatasetView', () => {
     });
   });
 
-  describe('Add Data Points functionality', () => {
-    it('opens add data points dialog when button is clicked', async () => {
+  describe('Add Logs functionality', () => {
+    it('opens add logs dialog when button is clicked', async () => {
       renderDatasetView('test-dataset-id');
 
       await waitFor(() => {
@@ -350,14 +370,12 @@ describe('DatasetView', () => {
       });
 
       const addButton = screen.getByRole('button', {
-        name: /add data points/i,
+        name: /add logs/i,
       });
       fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(
-          screen.getByTestId('add-data-points-dialog'),
-        ).toBeInTheDocument();
+        expect(screen.getByTestId('add-logs-dialog')).toBeInTheDocument();
       });
     });
   });

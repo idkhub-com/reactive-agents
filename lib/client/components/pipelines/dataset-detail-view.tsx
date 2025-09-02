@@ -9,27 +9,27 @@ import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useToast } from '@client/hooks/use-toast';
 import { useDatasets } from '@client/providers/datasets';
 import { useNavigation } from '@client/providers/navigation';
-import type { DataPoint, DatasetUpdateParams } from '@shared/types/data';
+import type { DatasetUpdateParams, Log } from '@shared/types/data';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AddDataPointsDialog } from '../datasets-view/components/add-data-points-dialog';
-import { DataPointsSection } from '../datasets-view/components/data-points-section';
+import { AddLogsDialog } from '../datasets-view/components/add-logs-dialog';
 import { DatasetHeader } from '../datasets-view/components/dataset-header';
 import { DeleteDialogs } from '../datasets-view/components/delete-dialogs';
+import { LogsSection } from '../datasets-view/components/logs-section';
 
 export function DatasetDetailView(): ReactElement {
   const { navigationState } = useNavigation();
   const smartBack = useSmartBack();
   const {
     datasets,
-    dataPoints,
-    dataPointsLoading,
-    loadDataPoints,
-    refetchDataPoints,
+    logs,
+    logsLoading,
+    loadLogs,
+    refetchLogs,
     updateDataset,
     deleteDataset,
-    deleteDataPoints,
+    deleteLogs,
     isLoading: datasetsLoading,
     setSelectedDataset,
   } = useDatasets();
@@ -46,16 +46,12 @@ export function DatasetDetailView(): ReactElement {
   const datasetError =
     dataset === null && datasetId ? new Error('Dataset not found') : null;
 
-  // Load data points when dataset is available
+  // Load logs when dataset is available
   useEffect(() => {
     if (datasetId) {
-      loadDataPoints(datasetId, {});
+      loadLogs(datasetId, { limit: 50, offset: 0 });
     }
-  }, [datasetId, loadDataPoints]);
-
-  const handleRefetchDataPoints = useCallback(() => {
-    refetchDataPoints();
-  }, [refetchDataPoints]);
+  }, [datasetId, loadLogs]);
 
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -63,14 +59,11 @@ export function DatasetDetailView(): ReactElement {
   // UI state
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [addDataPointsOpen, setAddDataPointsOpen] = useState(false);
+  const [addLogsOpen, setAddLogsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [deleteDataPointDialogOpen, setDeleteDataPointDialogOpen] =
-    useState(false);
-  const [dataPointToDelete, setDataPointToDelete] = useState<DataPoint | null>(
-    null,
-  );
+  const [deleteLogDialogOpen, setDeleteLogDialogOpen] = useState(false);
+  const [logToDelete, setLogToDelete] = useState<Log | null>(null);
 
   // Cleanup AbortController on unmount
   useEffect(() => {
@@ -93,21 +86,21 @@ export function DatasetDetailView(): ReactElement {
     }
   }, [dataset, setSelectedDataset]);
 
-  const filteredDataPoints = useMemo(() => {
-    if (!dataPoints) return undefined;
+  const filteredLogs = useMemo(() => {
+    if (!logs) return undefined;
 
-    return dataPoints.filter(
-      (dp) =>
+    return logs.filter(
+      (log) =>
         !debouncedSearchQuery ||
-        dp.endpoint
-          .toLowerCase()
+        log.endpoint
+          ?.toLowerCase()
           .includes(debouncedSearchQuery.toLowerCase()) ||
-        dp.function_name
-          .toLowerCase()
+        log.function_name
+          ?.toLowerCase()
           .includes(debouncedSearchQuery.toLowerCase()) ||
-        dp.method.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
+        log.method?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
     );
-  }, [dataPoints, debouncedSearchQuery]);
+  }, [logs, debouncedSearchQuery]);
 
   const handleSaveDataset = useCallback(
     async (data: DatasetUpdateParams) => {
@@ -191,32 +184,32 @@ export function DatasetDetailView(): ReactElement {
     navigationState.selectedSkill,
   ]);
 
-  const handleDeleteDataPoint = useCallback(async () => {
-    if (!dataPointToDelete || !datasetId) return;
+  const handleDeleteLog = useCallback(async () => {
+    if (!logToDelete || !datasetId) return;
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
     try {
-      await deleteDataPoints(datasetId, [dataPointToDelete.id]);
+      await deleteLogs(datasetId, [logToDelete.id]);
 
       if (abortController.signal.aborted) return;
 
       toast({
-        title: 'Data point deleted',
-        description: 'Data point has been successfully deleted.',
+        title: 'Log deleted',
+        description: 'Log has been successfully deleted.',
       });
 
-      setDeleteDataPointDialogOpen(false);
-      setDataPointToDelete(null);
-      handleRefetchDataPoints();
+      setDeleteLogDialogOpen(false);
+      setLogToDelete(null);
+      refetchLogs();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
 
-      console.error('Failed to delete data point:', error);
+      console.error('Failed to delete log:', error);
       toast({
         variant: 'destructive',
-        title: 'Error deleting data point',
+        title: 'Error deleting log',
         description: 'Please try again later',
       });
     } finally {
@@ -224,13 +217,7 @@ export function DatasetDetailView(): ReactElement {
         abortControllerRef.current = null;
       }
     }
-  }, [
-    dataPointToDelete,
-    datasetId,
-    deleteDataPoints,
-    toast,
-    handleRefetchDataPoints,
-  ]);
+  }, [logToDelete, datasetId, deleteLogs, toast, refetchLogs]);
 
   const handleBack = useCallback(() => {
     if (navigationState.selectedAgent && navigationState.selectedSkill) {
@@ -245,9 +232,9 @@ export function DatasetDetailView(): ReactElement {
     setSearchQuery('');
   }, []);
 
-  const handleOpenDeleteDataPoint = useCallback((dataPoint: DataPoint) => {
-    setDataPointToDelete(dataPoint);
-    setDeleteDataPointDialogOpen(true);
+  const handleOpenDeleteLog = useCallback((log: Log) => {
+    setLogToDelete(log);
+    setDeleteLogDialogOpen(true);
   }, []);
 
   // Loading state
@@ -312,23 +299,23 @@ export function DatasetDetailView(): ReactElement {
             onDelete={() => setDeleteDialogOpen(true)}
           />
 
-          <DataPointsSection
-            dataPoints={dataPoints}
-            filteredDataPoints={filteredDataPoints}
-            isLoading={dataPointsLoading}
+          <LogsSection
+            logs={logs}
+            filteredLogs={filteredLogs}
+            isLoading={logsLoading}
             searchQuery={searchQuery}
             datasetId={datasetId!}
             onSearchChange={setSearchQuery}
-            onAddDataPoints={() => setAddDataPointsOpen(true)}
+            onAddLogs={() => setAddLogsOpen(true)}
             onReset={handleReset}
-            onDeleteDataPoint={handleOpenDeleteDataPoint}
+            onDeleteLog={handleOpenDeleteLog}
           />
 
-          <AddDataPointsDialog
-            open={addDataPointsOpen}
-            onOpenChange={setAddDataPointsOpen}
+          <AddLogsDialog
+            open={addLogsOpen}
+            onOpenChange={setAddLogsOpen}
             datasetId={datasetId!}
-            existingDataPoints={dataPoints}
+            existingLogs={logs}
           />
 
           <DeleteDialogs
@@ -337,13 +324,13 @@ export function DatasetDetailView(): ReactElement {
             onDeleteDataset={() => setDeleteDialogOpen(true)}
             onDeleteDatasetCancel={() => setDeleteDialogOpen(false)}
             onDeleteDatasetConfirm={handleDeleteDataset}
-            dataPointToDelete={dataPointToDelete}
-            deleteDataPointOpen={deleteDataPointDialogOpen}
-            onDeleteDataPointCancel={() => {
-              setDeleteDataPointDialogOpen(false);
-              setDataPointToDelete(null);
+            logToDelete={logToDelete}
+            deleteLogOpen={deleteLogDialogOpen}
+            onDeleteLogCancel={() => {
+              setDeleteLogDialogOpen(false);
+              setLogToDelete(null);
             }}
-            onDeleteDataPointConfirm={handleDeleteDataPoint}
+            onDeleteLogConfirm={handleDeleteLog}
           />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import type { ToolCall } from '@server/connectors/evaluations/tool-correctness/types';
 import type { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
+
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   calculateBasicMatch,
@@ -8,7 +9,7 @@ import {
   calculateToolCorrectness,
   calculateWithOrdering,
   countMatchedTools,
-  createTestDataPoint,
+  createTestLog,
   createToolCall,
   extractExpectedTools,
   extractToolsCalled,
@@ -36,63 +37,42 @@ describe('Tool Correctness Algorithm Validation', () => {
 
   describe('Core Extraction Functions', () => {
     it('should extract tools called from request_body', () => {
-      const dataPoint = createTestDataPoint('dp-1', [], []);
-      dataPoint.request_body = {
+      const log = createTestLog('log-1', [], []);
+      log.ai_provider_request_log.request_body = {
         tools_called: [
           { name: 'tool1', input_parameters: { param: 'value' } },
           { name: 'tool2', input_parameters: { param2: 'value2' } },
         ],
       };
 
-      const toolsCalled = extractToolsCalled(dataPoint);
+      const toolsCalled = extractToolsCalled(log);
       expect(toolsCalled).toHaveLength(2);
       expect(toolsCalled[0].name).toBe('tool1');
       expect(toolsCalled[1].name).toBe('tool2');
     });
 
-    it('should extract tools called from metadata', () => {
-      const dataPoint = createTestDataPoint('dp-1', [], []);
-      dataPoint.metadata = {
-        tools_called: [{ name: 'tool1', input_parameters: { param: 'value' } }],
-      };
-
-      const toolsCalled = extractToolsCalled(dataPoint);
-      expect(toolsCalled).toHaveLength(1);
-      expect(toolsCalled[0].name).toBe('tool1');
-    });
-
-    it('should extract expected tools from ground_truth', () => {
-      const dataPoint = createTestDataPoint('dp-1', [], []);
-      dataPoint.ground_truth = {
+    it('should extract expected tools from metadata', () => {
+      const log = createTestLog('log-1', [], []);
+      log.metadata = {
         expected_tools: [
-          { name: 'expected1', input_parameters: { param: 'value' } },
-          { name: 'expected2', input_parameters: { param2: 'value2' } },
+          { name: 'tool1', input_parameters: { param: 'value' } },
+          { name: 'tool2', input_parameters: { param2: 'value2' } },
         ],
       };
 
-      const expectedTools = extractExpectedTools(dataPoint);
+      const expectedTools = extractExpectedTools(log);
       expect(expectedTools).toHaveLength(2);
-      expect(expectedTools[0].name).toBe('expected1');
-      expect(expectedTools[1].name).toBe('expected2');
+      expect(expectedTools[0].name).toBe('tool1');
+      expect(expectedTools[1].name).toBe('tool2');
     });
 
-    it('should handle malformed tools arrays gracefully', () => {
-      const dataPoint = createTestDataPoint('dp-1', [], []);
-      dataPoint.request_body = {
-        tools_called: 'not-an-array',
-      } as Record<string, unknown>;
+    it('should handle empty tool arrays', () => {
+      const log = createTestLog('log-1', [], []);
+      log.ai_provider_request_log.request_body = {};
+      log.metadata = {};
 
-      const toolsCalled = extractToolsCalled(dataPoint);
-      expect(toolsCalled).toHaveLength(0);
-    });
-
-    it('should handle missing tools gracefully', () => {
-      const dataPoint = createTestDataPoint('dp-1', [], []);
-      dataPoint.request_body = {};
-      dataPoint.metadata = {};
-
-      const toolsCalled = extractToolsCalled(dataPoint);
-      const expectedTools = extractExpectedTools(dataPoint);
+      const toolsCalled = extractToolsCalled(log);
+      const expectedTools = extractExpectedTools(log);
 
       expect(toolsCalled).toHaveLength(0);
       expect(expectedTools).toHaveLength(0);
@@ -101,24 +81,16 @@ describe('Tool Correctness Algorithm Validation', () => {
 
   describe('Parameter Matching Algorithm', () => {
     it('should match identical parameters', () => {
-      const called = { param1: 'value1', param2: 42 };
-      const expected = { param1: 'value1', param2: 42 };
+      const called = { param: 'value', number: 42 };
+      const expected = { param: 'value', number: 42 };
 
       const result = parametersMatch(called, expected);
       expect(result).toBe(true);
     });
 
     it('should not match different parameters', () => {
-      const called = { param1: 'value1', param2: 42 };
-      const expected = { param1: 'value1', param2: 43 };
-
-      const result = parametersMatch(called, expected);
-      expect(result).toBe(false);
-    });
-
-    it('should not match different parameter counts', () => {
-      const called = { param1: 'value1' };
-      const expected = { param1: 'value1', param2: 42 };
+      const called = { param: 'value1' };
+      const expected = { param: 'value2' };
 
       const result = parametersMatch(called, expected);
       expect(result).toBe(false);

@@ -1,7 +1,7 @@
 import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
 import type { ToolCall } from '@server/connectors/evaluations/tool-correctness/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
+import type { Log } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -67,7 +67,7 @@ describe('ToolCorrectnessEvaluationConnector', () => {
       const expectedTools = [createToolCall('WebSearch')];
 
       // Since the calculation logic is private, we'll test the public evaluate method
-      // This test would need to be updated to use actual data points
+      // This test would need to be updated to use actual logs
       expect(toolsCalled.length).toBe(expectedTools.length);
       expect(toolsCalled[0].name).toBe(expectedTools[0].name);
     });
@@ -209,14 +209,14 @@ describe('ToolCorrectnessEvaluationConnector', () => {
   });
 
   describe('Input Validation', () => {
-    it('should handle malformed data points in extraction functions gracefully', () => {
+    it('should handle malformed logs in extraction functions gracefully', () => {
       // Test extractToolsCalled with invalid data
-      const invalidDataPoint = null as unknown as DataPoint;
+      const invalidLog = null as unknown as Log;
 
       // This should not crash and should return empty array
       // Note: We can't directly test private functions, but we validate the behavior
       // through public interface testing in integration tests
-      expect(invalidDataPoint).toBe(null);
+      expect(invalidLog).toBe(null);
     });
 
     it('should validate parameter schema correctly', () => {

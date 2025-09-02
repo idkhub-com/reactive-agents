@@ -1,13 +1,12 @@
 import { API_URL } from '@client/constants';
 import type { IdkRoute } from '@server/api/v1';
 import {
-  DataPoint,
-  type DataPointCreateParams,
-  type DataPointQueryParams,
   Dataset,
   type DatasetCreateParams,
   type DatasetQueryParams,
   type DatasetUpdateParams,
+  Log,
+  type LogsQueryParams,
 } from '@shared/types/data';
 import { hc } from 'hono/client';
 
@@ -81,47 +80,53 @@ export async function deleteDataset(id: string): Promise<void> {
   }
 }
 
-export async function getDatasetDataPoints(
+export async function getDatasetLogs(
   datasetId: string,
-  queryParams: DataPointQueryParams,
-): Promise<DataPoint[]> {
-  const response = await client.v1.idk.evaluations.datasets[':datasetId'][
-    'data-points'
-  ].$get({
+  queryParams: LogsQueryParams,
+): Promise<Log[]> {
+  const response = await client.v1.idk.evaluations.datasets[
+    ':datasetId'
+  ].logs.$get({
     param: {
       datasetId,
     },
     query: {
-      ids: queryParams.ids,
-      method: queryParams.method?.toString(),
-      endpoint: queryParams.endpoint?.toString(),
-      function_name: queryParams.function_name?.toString(),
-      is_golden: queryParams.is_golden?.toString(),
+      id: queryParams.id,
+      agent_id: queryParams.agent_id,
+      skill_id: queryParams.skill_id,
+      app_id: queryParams.app_id,
+      after: queryParams.after?.toString(),
+      before: queryParams.before?.toString(),
+      method: queryParams.method,
+      endpoint: queryParams.endpoint,
+      function_name: queryParams.function_name,
+      status: queryParams.status?.toString(),
+      cache_status: queryParams.cache_status,
       limit: queryParams.limit?.toString(),
       offset: queryParams.offset?.toString(),
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to get dataset');
+    throw new Error('Failed to get dataset logs');
   }
 
-  return DataPoint.array().parse(await response.json());
+  return Log.array().parse(await response.json());
 }
 
-export async function addDataPoints(
+export async function addDatasetLogs(
   datasetId: string,
-  dataPointCreateParams: DataPointCreateParams[],
+  logIds: string[],
   options?: { signal?: AbortSignal },
-): Promise<DataPoint[]> {
-  const response = await client.v1.idk.evaluations.datasets[':datasetId'][
-    'data-points'
-  ].$post(
+): Promise<void> {
+  const response = await client.v1.idk.evaluations.datasets[
+    ':datasetId'
+  ].logs.$post(
     {
       param: {
         datasetId,
       },
-      json: dataPointCreateParams,
+      json: { logIds },
     },
     {
       init: options?.signal ? { signal: options.signal } : undefined,
@@ -129,28 +134,26 @@ export async function addDataPoints(
   );
 
   if (!response.ok) {
-    throw new Error('Failed to add data points');
+    throw new Error('Failed to add logs to dataset');
   }
-
-  return DataPoint.array().parse(await response.json());
 }
 
-export async function deleteDataPoints(
+export async function deleteDatasetLogs(
   datasetId: string,
-  dataPointIds: string[],
+  logIds: string[],
 ): Promise<void> {
-  const response = await client.v1.idk.evaluations.datasets[':datasetId'][
-    'data-points'
-  ].$delete({
+  const response = await client.v1.idk.evaluations.datasets[
+    ':datasetId'
+  ].logs.$delete({
     param: {
       datasetId,
     },
     query: {
-      dataPointIds,
+      logIds,
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to delete data points');
+    throw new Error('Failed to delete logs from dataset');
   }
 }

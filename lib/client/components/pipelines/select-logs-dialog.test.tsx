@@ -14,7 +14,7 @@ import {
   type MockedFunction,
   vi,
 } from 'vitest';
-import { SelectDataPointsDialog } from './select-data-points-dialog';
+import { SelectLogsDialog } from './select-logs-dialog';
 
 // Mock the logs provider
 vi.mock('@client/providers/logs', () => ({
@@ -192,7 +192,7 @@ const mockLogs: IdkRequestLog[] = [
 const defaultProps = {
   open: true,
   onOpenChange: vi.fn(),
-  onSelectDataPoints: vi.fn(),
+  onSelectLogs: vi.fn(),
   alreadySelectedLogs: [],
 };
 
@@ -200,12 +200,12 @@ const renderDialog = (props = {}) => {
   const mergedProps = { ...defaultProps, ...props };
   return render(
     <ErrorBoundary>
-      <SelectDataPointsDialog {...mergedProps} />
+      <SelectLogsDialog {...mergedProps} />
     </ErrorBoundary>,
   );
 };
 
-describe('SelectDataPointsDialog', () => {
+describe('SelectLogsDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseLogs.mockReturnValue({
@@ -235,11 +235,9 @@ describe('SelectDataPointsDialog', () => {
     renderDialog();
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Select Data Points')).toBeInTheDocument();
+    expect(screen.getByText('Select Logs')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'Choose request logs to include as data points in your dataset',
-      ),
+      screen.getByText('Choose request logs to include in your dataset'),
     ).toBeInTheDocument();
   });
 
@@ -282,7 +280,7 @@ describe('SelectDataPointsDialog', () => {
     fireEvent.click(firstCheckbox);
 
     expect(firstCheckbox).toBeChecked();
-    expect(screen.getByText('Add 1 Data Point')).toBeInTheDocument();
+    expect(screen.getByText('Add 1 Log')).toBeInTheDocument();
   });
 
   it('allows selecting all logs', () => {
@@ -292,7 +290,7 @@ describe('SelectDataPointsDialog', () => {
     fireEvent.click(selectAllButton);
 
     // Should have selected all 3 logs
-    expect(screen.getByText('Add 3 Data Points')).toBeInTheDocument();
+    expect(screen.getByText('Add 3 Logs')).toBeInTheDocument();
   });
 
   it('allows resetting selection', () => {
@@ -302,7 +300,7 @@ describe('SelectDataPointsDialog', () => {
     const firstCheckbox = screen.getAllByRole('checkbox')[0];
     fireEvent.click(firstCheckbox);
 
-    expect(screen.getByText('Add 1 Data Point')).toBeInTheDocument();
+    expect(screen.getByText('Add 1 Log')).toBeInTheDocument();
 
     // Then reset
     const resetButton = screen.getByText(/reset/i);
@@ -338,21 +336,21 @@ describe('SelectDataPointsDialog', () => {
     expect(screen.getByText('/v1/models')).toBeInTheDocument();
   });
 
-  it('calls onSelectDataPoints when adding selected logs', () => {
-    const onSelectDataPoints = vi.fn();
-    renderDialog({ onSelectDataPoints });
+  it('calls onSelectLogs when adding selected logs', () => {
+    const onSelectLogs = vi.fn();
+    renderDialog({ onSelectLogs });
 
     // Select a log
     const firstCheckbox = screen.getAllByRole('checkbox')[0];
     fireEvent.click(firstCheckbox);
 
     // Click add button
-    const addButton = screen.getByText('Add 1 Data Point');
+    const addButton = screen.getByText('Add 1 Log');
     fireEvent.click(addButton);
 
     // Should be called with the selected log (we can't be sure which specific log it is)
-    expect(onSelectDataPoints).toHaveBeenCalledTimes(1);
-    const calledWith = onSelectDataPoints.mock.calls[0][0];
+    expect(onSelectLogs).toHaveBeenCalledTimes(1);
+    const calledWith = onSelectLogs.mock.calls[0][0];
     expect(calledWith).toHaveLength(1);
     expect(calledWith[0]).toHaveProperty('id');
   });
@@ -370,7 +368,7 @@ describe('SelectDataPointsDialog', () => {
   it('disables add button when no logs selected', () => {
     renderDialog();
 
-    const addButton = screen.getByText('Add 0 Data Points');
+    const addButton = screen.getByText('Add 0 Logs');
     expect(addButton).toBeDisabled();
   });
 

@@ -1,8 +1,8 @@
-import { AddDataPointsDialog } from '@client/components/datasets-view/components/add-data-points-dialog';
+import { AddLogsDialog } from '@client/components/datasets-view/components/add-logs-dialog';
 import { HttpMethod } from '@server/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
-import type { DataPoint } from '@shared/types/data';
+import type { Log } from '@shared/types/data';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the providers
 const mockUseDatasets = {
-  addDataPoints: vi.fn(),
+  addLogs: vi.fn(),
 };
 
 const mockUseLogs = {
@@ -130,37 +130,61 @@ const mockLogs: IdkRequestLog[] = [
   },
 ];
 
-const existingDataPoints: DataPoint[] = [
+const existingLogs: Log[] = [
   {
-    id: 'dp-1',
+    id: 'log-1',
+    agent_id: 'agent-1',
+    skill_id: 'skill-1',
     method: HttpMethod.POST,
     endpoint: '/api/test',
-    function_name: 'test_function',
-    request_body: { test: 'data' },
-    ground_truth: {
+    function_name: FunctionName.CHAT_COMPLETE,
+    status: 200,
+    start_time: Date.now() - 1000000,
+    end_time: Date.now() - 900000,
+    duration: 100,
+    base_idk_config: {},
+    ai_provider: AIProvider.OPENAI,
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: AIProvider.OPENAI,
+      function_name: FunctionName.CHAT_COMPLETE,
+      request_url: '/api/test',
+      method: HttpMethod.POST,
       status: 200,
+      request_body: { test: 'data' },
       response_body: { result: 'success' },
-      duration: 100,
+      raw_request_body: JSON.stringify({ test: 'data' }),
+      raw_response_body: JSON.stringify({ result: 'success' }),
+      cache_mode: CacheMode.SIMPLE,
+      cache_status: CacheStatus.MISS,
     },
-    is_golden: false,
-    metadata: { log_id: 'log-1' },
-    created_at: '2023-01-01T00:00:00Z',
+    hook_logs: [],
+    metadata: {},
+    cache_status: CacheStatus.MISS,
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
   },
 ];
 
-const renderAddDataPointsDialog = (
+const renderAddLogsDialog = (
   props: {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     datasetId?: string;
-    existingDataPoints?: DataPoint[];
+    existingLogs?: Log[];
   } = {},
 ) => {
   const {
     open = true,
     onOpenChange = vi.fn(),
     datasetId = 'test-dataset-id',
-    existingDataPoints: existing = [],
+    existingLogs: existing = [],
   } = props;
 
   const queryClient = new QueryClient({
@@ -172,17 +196,17 @@ const renderAddDataPointsDialog = (
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AddDataPointsDialog
+      <AddLogsDialog
         open={open}
         onOpenChange={onOpenChange}
         datasetId={datasetId}
-        existingDataPoints={existing}
+        existingLogs={existing}
       />
     </QueryClientProvider>,
   );
 };
 
-describe('AddDataPointsDialog', () => {
+describe('AddLogsDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset the mock logs data before each test
@@ -190,7 +214,7 @@ describe('AddDataPointsDialog', () => {
     mockUseLogs.isLoading = false;
     mockUseLogs.error = null;
     // Reset mock functions
-    mockUseDatasets.addDataPoints.mockReset();
+    mockUseDatasets.addLogs.mockReset();
     mockToast.mockReset();
   });
 
@@ -200,37 +224,37 @@ describe('AddDataPointsDialog', () => {
 
   describe('Basic rendering', () => {
     it('renders dialog when open is true', () => {
-      renderAddDataPointsDialog({ open: true });
+      renderAddLogsDialog({ open: true });
 
-      expect(screen.getByText('Add Data Points')).toBeInTheDocument();
+      expect(screen.getByText('Add Logs')).toBeInTheDocument();
       expect(
-        screen.getByText(/Select logs to convert into data points/),
+        screen.getByText(/Select logs to convert into logs for this dataset/),
       ).toBeInTheDocument();
     });
 
     it('does not render dialog when open is false', () => {
-      renderAddDataPointsDialog({ open: false });
+      renderAddLogsDialog({ open: false });
 
-      expect(screen.queryByText('Add Data Points')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add Logs')).not.toBeInTheDocument();
     });
 
     it('shows error state when logs fail to load', () => {
       mockUseLogs.error = new Error('Failed to load logs');
       mockUseLogs.logs = [];
 
-      renderAddDataPointsDialog();
+      renderAddLogsDialog();
 
       expect(screen.getByText('Error loading logs')).toBeInTheDocument();
     });
   });
 
   describe('Log filtering', () => {
-    it('filters out logs that are already data points', async () => {
-      renderAddDataPointsDialog({ existingDataPoints });
+    it('filters out logs that are already in the dataset', async () => {
+      renderAddLogsDialog({ existingLogs });
 
       // Wait for the component to render
       await waitFor(() => {
-        // Should only show log-2 (retrieve_file), not log-1 (chat_complete) which is already a data point
+        // Should only show log-2 (retrieve_file), not log-1 (chat_complete) which is already in the dataset
         const functionText = screen.queryAllByText('Function: retrieve_file');
         expect(functionText.length).toBeGreaterThan(0);
       });
@@ -241,8 +265,8 @@ describe('AddDataPointsDialog', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('shows all logs when no existing data points', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+    it('shows all logs when no existing logs', async () => {
+      renderAddLogsDialog({ existingLogs: [] });
 
       await waitFor(() => {
         expect(screen.getByText('Function: chat_complete')).toBeInTheDocument();
@@ -253,7 +277,7 @@ describe('AddDataPointsDialog', () => {
     it('shows empty state when no logs available', () => {
       mockUseLogs.logs = [];
 
-      renderAddDataPointsDialog();
+      renderAddLogsDialog();
 
       expect(screen.getByText('No logs found')).toBeInTheDocument();
     });
@@ -261,7 +285,7 @@ describe('AddDataPointsDialog', () => {
 
   describe('Search functionality', () => {
     it('filters logs based on search query', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       // Both logs should be visible initially
       await waitFor(() => {
@@ -282,7 +306,7 @@ describe('AddDataPointsDialog', () => {
     });
 
     it('shows empty state when search has no results', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       const searchInput = screen.getByPlaceholderText('Search logs...');
       fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
@@ -298,7 +322,7 @@ describe('AddDataPointsDialog', () => {
 
   describe('Advanced filtering', () => {
     it('shows advanced filters when toggle is clicked', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       const filtersToggle = screen.getByRole('button', {
         name: /advanced filters/i,
@@ -313,7 +337,7 @@ describe('AddDataPointsDialog', () => {
     });
 
     it('filters by HTTP method', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       // Open advanced filters
       const filtersToggle = screen.getByRole('button', {
@@ -338,7 +362,7 @@ describe('AddDataPointsDialog', () => {
     });
 
     it('filters by endpoint', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       // Open advanced filters
       const filtersToggle = screen.getByRole('button', {
@@ -361,7 +385,7 @@ describe('AddDataPointsDialog', () => {
 
   describe('Log selection', () => {
     it('allows selecting individual logs', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       await waitFor(() => {
         expect(screen.getByText('Function: chat_complete')).toBeInTheDocument();
@@ -376,15 +400,13 @@ describe('AddDataPointsDialog', () => {
 
         await waitFor(() => {
           expect(screen.getByText('1 log selected')).toBeInTheDocument();
-          expect(
-            screen.getByText('Will create 1 data point'),
-          ).toBeInTheDocument();
+          expect(screen.getByText('Will create 1 log')).toBeInTheDocument();
         });
       }
     });
 
     it('supports select all functionality', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       const selectAllButton = screen.getByRole('button', {
         name: /select all/i,
@@ -393,16 +415,14 @@ describe('AddDataPointsDialog', () => {
 
       await waitFor(() => {
         expect(screen.getByText('2 logs selected')).toBeInTheDocument();
-        expect(
-          screen.getByText('Will create 2 data points'),
-        ).toBeInTheDocument();
+        expect(screen.getByText('Will create 2 logs')).toBeInTheDocument();
       });
     });
   });
 
   describe('Reset functionality', () => {
     it('resets search and selection when reset button is clicked', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       // First select all logs (without any search filter)
       const selectAllButton = screen.getByRole('button', {
@@ -445,18 +465,18 @@ describe('AddDataPointsDialog', () => {
     });
   });
 
-  describe('Adding data points', () => {
+  describe('Adding logs', () => {
     it('disables add button when no logs are selected', () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       const addButton = screen.getByRole('button', {
-        name: /add 0 data points/i,
+        name: /add 0 logs/i,
       });
       expect(addButton).toBeDisabled();
     });
 
     it('enables add button when logs are selected', async () => {
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       const selectAllButton = screen.getByRole('button', {
         name: /select all/i,
@@ -465,18 +485,18 @@ describe('AddDataPointsDialog', () => {
 
       await waitFor(() => {
         const addButton = screen.getByRole('button', {
-          name: /add 2 data points/i,
+          name: /add 2 logs/i,
         });
         expect(addButton).toBeEnabled();
       });
     });
 
-    it('calls addDataPoints when add button is clicked', async () => {
+    it('calls addLogs when add button is clicked', async () => {
       const mockOnOpenChange = vi.fn();
-      mockUseDatasets.addDataPoints.mockResolvedValue([]);
+      mockUseDatasets.addLogs.mockResolvedValue([]);
 
-      renderAddDataPointsDialog({
-        existingDataPoints: [],
+      renderAddLogsDialog({
+        existingLogs: [],
         onOpenChange: mockOnOpenChange,
       });
 
@@ -488,49 +508,14 @@ describe('AddDataPointsDialog', () => {
 
       // Click add
       const addButton = screen.getByRole('button', {
-        name: /add 2 data points/i,
+        name: /add 2 logs/i,
       });
       fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(mockUseDatasets.addDataPoints).toHaveBeenCalledWith(
+        expect(mockUseDatasets.addLogs).toHaveBeenCalledWith(
           'test-dataset-id',
-          [
-            {
-              method: HttpMethod.POST,
-              endpoint: '/api/test',
-              function_name: FunctionName.CHAT_COMPLETE,
-              request_body: { test: 'data' },
-              ground_truth: { result: 'success' },
-              is_golden: false,
-              metadata: {
-                log_id: 'log-1',
-                start_time: expect.any(Number),
-                end_time: expect.any(Number),
-                duration: 100,
-                status: 200,
-                ai_provider: 'openai',
-                model: 'gpt-4',
-              },
-            },
-            {
-              method: HttpMethod.GET,
-              endpoint: '/api/users',
-              function_name: FunctionName.RETRIEVE_FILE,
-              request_body: {},
-              ground_truth: { error: 'Not found' },
-              is_golden: false,
-              metadata: {
-                log_id: 'log-2',
-                start_time: expect.any(Number),
-                end_time: expect.any(Number),
-                duration: 50,
-                status: 404,
-                ai_provider: 'anthropic',
-                model: 'claude-3',
-              },
-            },
-          ],
+          ['log-1', 'log-2'],
           {
             signal: expect.any(AbortSignal),
           },
@@ -540,10 +525,10 @@ describe('AddDataPointsDialog', () => {
 
     it('shows success toast and closes dialog on successful add', async () => {
       const mockOnOpenChange = vi.fn();
-      mockUseDatasets.addDataPoints.mockResolvedValue([]);
+      mockUseDatasets.addLogs.mockResolvedValue([]);
 
-      renderAddDataPointsDialog({
-        existingDataPoints: [],
+      renderAddLogsDialog({
+        existingLogs: [],
         onOpenChange: mockOnOpenChange,
       });
 
@@ -555,24 +540,24 @@ describe('AddDataPointsDialog', () => {
 
       // Click add
       const addButton = screen.getByRole('button', {
-        name: /add 2 data points/i,
+        name: /add 2 logs/i,
       });
       fireEvent.click(addButton);
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Data points added',
-          description: 'Successfully added 2 data points to the dataset',
+          title: 'Logs added',
+          description: 'Successfully added 2 logs to the dataset',
         });
         expect(mockOnOpenChange).toHaveBeenCalledWith(false);
       });
     });
 
     it('shows error toast on failed add', async () => {
-      const addError = new Error('Failed to add data points');
-      mockUseDatasets.addDataPoints.mockRejectedValue(addError);
+      const addError = new Error('Failed to add logs');
+      mockUseDatasets.addLogs.mockRejectedValue(addError);
 
-      renderAddDataPointsDialog({ existingDataPoints: [] });
+      renderAddLogsDialog({ existingLogs: [] });
 
       // Select all logs
       const selectAllButton = screen.getByRole('button', {
@@ -582,14 +567,14 @@ describe('AddDataPointsDialog', () => {
 
       // Click add
       const addButton = screen.getByRole('button', {
-        name: /add 2 data points/i,
+        name: /add 2 logs/i,
       });
       fireEvent.click(addButton);
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'destructive',
-          title: 'Error adding data points',
+          title: 'Error adding logs',
           description: 'Please try again later',
         });
       });
@@ -600,7 +585,7 @@ describe('AddDataPointsDialog', () => {
     it('calls onOpenChange when cancel button is clicked', () => {
       const mockOnOpenChange = vi.fn();
 
-      renderAddDataPointsDialog({ onOpenChange: mockOnOpenChange });
+      renderAddLogsDialog({ onOpenChange: mockOnOpenChange });
 
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       fireEvent.click(cancelButton);

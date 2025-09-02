@@ -27,18 +27,14 @@ import { useToast } from '@client/hooks/use-toast';
 import { useDatasets } from '@client/providers/datasets';
 import { useNavigation } from '@client/providers/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type {
-  DataPointCreateParams,
-  Dataset,
-  DatasetCreateParams,
-} from '@shared/types/data';
+import type { Dataset, DatasetCreateParams } from '@shared/types/data';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { Check, Database, Eye, Home, Info, Plus } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { SelectDataPointsDialog } from './select-data-points-dialog';
+import { SelectLogsDialog } from './select-logs-dialog';
 
 const createDatasetSchema = z.object({
   name: z.string().min(1, 'Dataset name is required'),
@@ -57,7 +53,7 @@ type CreateDatasetFormData = z.infer<typeof createDatasetSchema>;
 // Step enum for the two-step process
 enum CreateDatasetStep {
   DATASET_INFO = 'dataset-info',
-  SELECT_DATA_POINTS = 'select-data-points',
+  SELECT_LOGS = 'select-logs',
 }
 
 export function CreateDatasetView(): ReactElement {
@@ -68,7 +64,7 @@ export function CreateDatasetView(): ReactElement {
     replaceToDatasets,
   } = useNavigation();
   const { toast } = useToast();
-  const { createDataset, addDataPoints, refetch } = useDatasets();
+  const { createDataset, addLogs, refetch } = useDatasets();
   const smartBack = useSmartBack();
 
   // Two-step flow state
@@ -77,11 +73,9 @@ export function CreateDatasetView(): ReactElement {
   );
   const [createdDataset, setCreatedDataset] = useState<Dataset | null>(null);
 
-  // Data points selection state
-  const [selectedDataPoints, setSelectedDataPoints] = useState<IdkRequestLog[]>(
-    [],
-  );
-  const [addDataPointsDialogOpen, setAddDataPointsDialogOpen] = useState(false);
+  // Logs selection state
+  const [selectedLogs, setSelectedLogs] = useState<IdkRequestLog[]>([]);
+  const [addLogsDialogOpen, setAddLogsDialogOpen] = useState(false);
 
   // Get the current name value for validation
   const [currentName, setCurrentName] = useState('');
@@ -143,7 +137,7 @@ export function CreateDatasetView(): ReactElement {
     }
 
     // Store form data and move to step 2 instead of creating immediately
-    setCurrentStep(CreateDatasetStep.SELECT_DATA_POINTS);
+    setCurrentStep(CreateDatasetStep.SELECT_LOGS);
   };
 
   const handleFinalCreate = useCallback(async () => {
@@ -160,34 +154,15 @@ export function CreateDatasetView(): ReactElement {
       // Create the dataset first
       const newDataset = await createDataset(createParams);
 
-      // If there are selected data points, add them to the dataset
-      if (selectedDataPoints.length > 0) {
-        const dataPointsToCreate: DataPointCreateParams[] =
-          selectedDataPoints.map((log) => ({
-            method: log.ai_provider_request_log.method,
-            endpoint: log.ai_provider_request_log.request_url,
-            function_name: log.function_name,
-            request_body: log.ai_provider_request_log?.request_body || {},
-            ground_truth: log.ai_provider_request_log?.response_body || null,
-            is_golden: false,
-            metadata: {
-              log_id: log.id,
-              status: log.status,
-              duration: log.duration,
-              start_time: log.start_time,
-              end_time: log.end_time,
-              ai_provider: log.ai_provider,
-              model: log.model,
-              ...(log.metadata || {}),
-            },
-          }));
-
-        await addDataPoints(newDataset.id, dataPointsToCreate);
+      // If there are selected logs, add them to the dataset
+      if (selectedLogs.length > 0) {
+        const logIds = selectedLogs.map((log) => log.id);
+        await addLogs(newDataset.id, logIds);
       }
 
       toast({
         title: 'Dataset created successfully',
-        description: `Dataset "${newDataset.name}" has been created with ${selectedDataPoints.length} data points.`,
+        description: `Dataset "${newDataset.name}" has been created with ${selectedLogs.length} logs.`,
       });
 
       // Refresh datasets list and redirect to datasets, replacing history
@@ -237,8 +212,8 @@ export function CreateDatasetView(): ReactElement {
     form,
     selectedAgent,
     createDataset,
-    addDataPoints,
-    selectedDataPoints,
+    addLogs,
+    selectedLogs,
     refetch,
     toast,
     currentName,
@@ -249,7 +224,7 @@ export function CreateDatasetView(): ReactElement {
   ]);
 
   const handleBack = useCallback(() => {
-    if (currentStep === CreateDatasetStep.SELECT_DATA_POINTS) {
+    if (currentStep === CreateDatasetStep.SELECT_LOGS) {
       // Go back to step 1 if in step 2
       setCurrentStep(CreateDatasetStep.DATASET_INFO);
       setCreatedDataset(null);
@@ -302,13 +277,13 @@ export function CreateDatasetView(): ReactElement {
     navigationState.selectedSkill,
   ]);
 
-  const handleAddDataPoints = useCallback(() => {
+  const handleAddLogs = useCallback(() => {
     if (
       createdDataset &&
       navigationState.selectedAgent &&
       navigationState.selectedSkill
     ) {
-      // Navigate to dataset detail view which has the add data points functionality
+      // Navigate to dataset detail view which has the add logs functionality
       navigateToDatasetDetail(
         navigationState.selectedAgent.name,
         navigationState.selectedSkill.name,
@@ -345,11 +320,11 @@ export function CreateDatasetView(): ReactElement {
     {
       id: CreateDatasetStep.DATASET_INFO,
       title: 'Dataset Info',
-      completed: currentStep === CreateDatasetStep.SELECT_DATA_POINTS,
+      completed: currentStep === CreateDatasetStep.SELECT_LOGS,
     },
     {
-      id: CreateDatasetStep.SELECT_DATA_POINTS,
-      title: 'Select Data Points',
+      id: CreateDatasetStep.SELECT_LOGS,
+      title: 'Select Logs',
       completed: false,
     },
   ];
@@ -559,15 +534,14 @@ export function CreateDatasetView(): ReactElement {
                       <h4 className="font-medium">About Datasets</h4>
                       <ul className="text-sm text-muted-foreground space-y-1">
                         <li>
-                          • Datasets organize evaluation data points for model
-                          testing
+                          • Datasets organize evaluation logs for model testing
                         </li>
                         <li>
-                          • Data points can be created from existing logs or
+                          • Logs can be imported from existing requests or added
                           manually
                         </li>
                         <li>
-                          • Each data point contains request/response pairs for
+                          • Each log contains request/response pairs for
                           evaluation
                         </li>
                         <li>
@@ -581,48 +555,46 @@ export function CreateDatasetView(): ReactElement {
             </>
           )}
 
-          {/* Step 2: Select Data Points */}
-          {currentStep === CreateDatasetStep.SELECT_DATA_POINTS && (
+          {/* Step 2: Select Logs */}
+          {currentStep === CreateDatasetStep.SELECT_LOGS && (
             <>
-              {/* Selected Data Points */}
+              {/* Selected Logs */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">
-                    Selected Data Points
-                  </CardTitle>
+                  <CardTitle className="text-lg">Selected Logs</CardTitle>
                   <CardDescription>
-                    Choose data points to include in your dataset
+                    Choose logs to include in your dataset
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {selectedDataPoints.length === 0 ? (
+                  {selectedLogs.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-muted-foreground mb-4">
-                        No data points selected yet
+                        No logs selected yet
                       </div>
-                      <Button onClick={() => setAddDataPointsDialogOpen(true)}>
+                      <Button onClick={() => setAddLogsDialogOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
-                        Add Data Points
+                        Add Logs
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <div className="text-sm text-muted-foreground">
-                          {selectedDataPoints.length} data point
-                          {selectedDataPoints.length !== 1 ? 's' : ''} selected
+                          {selectedLogs.length} log
+                          {selectedLogs.length !== 1 ? 's' : ''} selected
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setAddDataPointsDialogOpen(true)}
+                          onClick={() => setAddLogsDialogOpen(true)}
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           Add More
                         </Button>
                       </div>
                       <div className="max-h-60 overflow-y-auto border rounded p-4 space-y-2">
-                        {selectedDataPoints.map((log) => (
+                        {selectedLogs.map((log) => (
                           <div
                             key={log.id}
                             className="flex justify-between items-center p-2 border rounded text-sm"
@@ -639,7 +611,7 @@ export function CreateDatasetView(): ReactElement {
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                setSelectedDataPoints((prev) =>
+                                setSelectedLogs((prev) =>
                                   prev.filter((dp) => dp.id !== log.id),
                                 )
                               }
@@ -655,7 +627,7 @@ export function CreateDatasetView(): ReactElement {
                   <div className="flex gap-3 pt-4">
                     <Button
                       onClick={handleFinalCreate}
-                      disabled={isCreating || selectedDataPoints.length === 0}
+                      disabled={isCreating || selectedLogs.length === 0}
                       className="flex-1"
                     >
                       {isCreating ? (
@@ -693,11 +665,9 @@ export function CreateDatasetView(): ReactElement {
                         <li>
                           • Your dataset will be created and ready for use
                         </li>
+                        <li>• You can add logs from the datasets list</li>
                         <li>
-                          • You can add data points from the datasets list
-                        </li>
-                        <li>
-                          • Data points can be imported from logs or added
+                          • Logs can be imported from existing requests or added
                           manually
                         </li>
                         <li>
@@ -725,9 +695,9 @@ export function CreateDatasetView(): ReactElement {
                           and is ready for use.
                         </p>
                         <div className="flex gap-2 pt-2">
-                          <Button onClick={handleAddDataPoints} size="sm">
+                          <Button onClick={handleAddLogs} size="sm">
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Data Points
+                            Add Logs
                           </Button>
                           <Button
                             variant="outline"
@@ -756,14 +726,14 @@ export function CreateDatasetView(): ReactElement {
         </div>
       </div>
 
-      {/* Data Points Selection Dialog */}
-      <SelectDataPointsDialog
-        open={addDataPointsDialogOpen}
-        onOpenChange={setAddDataPointsDialogOpen}
-        onSelectDataPoints={(logs) => {
-          setSelectedDataPoints((prev) => [...prev, ...logs]);
+      {/* Logs Selection Dialog */}
+      <SelectLogsDialog
+        open={addLogsDialogOpen}
+        onOpenChange={setAddLogsDialogOpen}
+        onSelectLogs={(logs) => {
+          setSelectedLogs((prev) => [...prev, ...logs]);
         }}
-        alreadySelectedLogs={selectedDataPoints}
+        alreadySelectedLogs={selectedLogs}
       />
     </>
   );

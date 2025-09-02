@@ -2,24 +2,24 @@ import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/rol
 import type { RoleAdherenceAverageResult } from '@server/connectors/evaluations/types/role-adherence';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
-import type {
-  DataPointOutput as EvaluationOutput,
-  DataPointOutputCreateParams as EvaluationOutputCreateParams,
-} from '@shared/types/data/data-point-output';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
   EvaluationRunStatus,
 } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
+import type {
+  LogOutput as EvaluationOutput,
+  LogOutputCreateParams as EvaluationOutputCreateParams,
+} from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import type { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
 import { v4 as uuidv4 } from 'uuid';
 
 function pickRoleData(
-  data_point: DataPoint,
+  log: Log,
   params: RoleAdherenceEvaluationParameters,
 ): {
   role_definition: string;
@@ -27,24 +27,22 @@ function pickRoleData(
   instructions?: string;
 } {
   const role_definition =
-    params.role_definition ||
-    (data_point.metadata?.role_definition as string) ||
-    '';
+    params.role_definition || (log.metadata?.role_definition as string) || '';
   const assistant_output =
     params.assistant_output ||
-    (typeof data_point.ground_truth === 'string'
-      ? (data_point.ground_truth as string)
-      : data_point.ground_truth
-        ? JSON.stringify(data_point.ground_truth)
-        : (data_point.metadata?.assistant_output as string) || '') ||
+    (log.ai_provider_request_log?.response_body
+      ? typeof log.ai_provider_request_log.response_body === 'string'
+        ? log.ai_provider_request_log.response_body
+        : JSON.stringify(log.ai_provider_request_log.response_body)
+      : (log.metadata?.assistant_output as string) || '') ||
     '';
   const instructions =
-    params.instructions || (data_point.metadata?.instructions as string);
+    params.instructions || (log.metadata?.instructions as string);
   return { role_definition, assistant_output, instructions };
 }
 
-async function evaluateSingleDataPoint(
-  data_point: DataPoint,
+async function evaluateSingleLog(
+  log: Log,
   params: RoleAdherenceEvaluationParameters,
   evaluation_run_id: string,
   llm_judge: LLMJudge,
@@ -54,7 +52,7 @@ async function evaluateSingleDataPoint(
   const _evaluation_output_id = uuidv4();
   try {
     const { role_definition, assistant_output, instructions } = pickRoleData(
-      data_point,
+      log,
       params,
     );
 
@@ -82,7 +80,7 @@ async function evaluateSingleDataPoint(
     const execution_time = Date.now() - start_time;
 
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         score: final_score,
         passed,
@@ -106,7 +104,7 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    const stored = await userDataStorageConnector.createDataPointOutput(
+    const stored = await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -114,7 +112,7 @@ async function evaluateSingleDataPoint(
   } catch (error) {
     const execution_time = Date.now() - start_time;
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         error: true,
         error_message: error instanceof Error ? error.message : 'Unknown error',
@@ -133,7 +131,7 @@ async function evaluateSingleDataPoint(
         evaluation_run_id,
       },
     };
-    const stored = await userDataStorageConnector.createDataPointOutput(
+    const stored = await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -197,20 +195,20 @@ export async function evaluateRoleAdherenceDataset(
   });
 
   try {
-    const data_points = await userDataStorageConnector.getDataPoints(input.id, {
+    const logs = await userDataStorageConnector.getDatasetLogs(input.id, {
       limit: input.limit || 10,
       offset: input.offset || 0,
     });
 
     const results: EvaluationOutput[] = [];
     const batch_size = params.batch_size || 10;
-    for (let i = 0; i < data_points.length; i += batch_size) {
-      const batch = data_points.slice(i, i + batch_size);
+    for (let i = 0; i < logs.length; i += batch_size) {
+      const batch = logs.slice(i, i + batch_size);
       if (params.async_mode !== false) {
         const batchResults = await Promise.all(
-          batch.map((dp) =>
-            evaluateSingleDataPoint(
-              dp,
+          batch.map((log) =>
+            evaluateSingleLog(
+              log,
               params,
               evaluation_run_id,
               llm_judge,
@@ -220,9 +218,9 @@ export async function evaluateRoleAdherenceDataset(
         );
         results.push(...batchResults);
       } else {
-        for (const dp of batch) {
-          const r = await evaluateSingleDataPoint(
-            dp,
+        for (const log of batch) {
+          const r = await evaluateSingleLog(
+            log,
             params,
             evaluation_run_id,
             llm_judge,
@@ -244,7 +242,7 @@ export async function evaluateRoleAdherenceDataset(
     await userDataStorageConnector.updateEvaluationRun(evaluation_run_id, {
       status: 'completed' as EvaluationRunStatus,
       results: {
-        total_data_points: data_points.length,
+        total_logs: logs.length,
         passed_count,
         failed_count,
         average_score,
@@ -253,7 +251,7 @@ export async function evaluateRoleAdherenceDataset(
       },
       metadata: {
         ...evaluationRun.metadata,
-        total_data_points: data_points.length,
+        total_logs: logs.length,
         passed_count,
         failed_count,
         average_score,
@@ -272,7 +270,7 @@ export async function evaluateRoleAdherenceDataset(
 
     const averageResult: RoleAdherenceAverageResult = {
       average_score,
-      total_data_points: data_points.length,
+      total_logs: logs.length,
       passed_count,
       failed_count,
       threshold_used,

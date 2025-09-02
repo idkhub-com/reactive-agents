@@ -166,13 +166,13 @@ export function EvaluationRunsView(): ReactElement {
   ): { name: string; details: string } => {
     const dataset = datasets.find((d) => d.id === evaluation.dataset_id);
     const results = evaluation.results as Record<string, unknown>;
-    const totalDataPoints = results?.total_data_points as number;
+    const totalLogs = results?.total_logs as number;
 
     const name = dataset?.name || 'Unknown Dataset';
 
     let details = `ID: ${evaluation.dataset_id.slice(0, 8)}...`;
-    if (typeof totalDataPoints === 'number') {
-      details = `${totalDataPoints} data points • ${details}`;
+    if (typeof totalLogs === 'number') {
+      details = `${totalLogs} logs • ${details}`;
     }
 
     return { name, details };
@@ -192,11 +192,11 @@ export function EvaluationRunsView(): ReactElement {
     return evaluation.name || 'Unnamed Evaluation';
   };
 
-  // Helper function to get data points information
-  const _getDataPointsInfo = (evaluation: EvaluationRun): string => {
+  // Helper function to get logs information
+  const _getLogsInfo = (evaluation: EvaluationRun): string => {
     const results = evaluation.results as Record<string, unknown>;
-    const total = results?.total_data_points as number;
-    const evaluated = results?.evaluated_data_points as number;
+    const total = results?.total_logs as number;
+    const evaluated = results?.evaluated_logs as number;
 
     if (typeof total === 'number') {
       if (typeof evaluated === 'number' && evaluated !== total) {
@@ -214,7 +214,7 @@ export function EvaluationRunsView(): ReactElement {
     const results = evaluation.results as Record<string, unknown>;
     const passed = results?.passed_count as number;
     const _failed = results?.failed_count as number;
-    const total = results?.total_data_points as number;
+    const total = results?.total_logs as number;
 
     if (typeof passed === 'number' && typeof total === 'number' && total > 0) {
       const passRate = (passed / total) * 100;
@@ -271,9 +271,9 @@ export function EvaluationRunsView(): ReactElement {
     const completed = filteredEvaluations.filter(
       (e) => e.status === 'completed',
     );
-    const totalDataPoints = completed.reduce((sum, e) => {
+    const totalLogs = completed.reduce((sum, e) => {
       const results = e.results as Record<string, unknown>;
-      const total = results?.total_data_points as number;
+      const total = results?.total_logs as number;
       return sum + (typeof total === 'number' ? total : 0);
     }, 0);
 
@@ -290,7 +290,7 @@ export function EvaluationRunsView(): ReactElement {
     return {
       total: filteredEvaluations.length,
       completed: completed.length,
-      totalDataPoints,
+      totalLogs,
       averageScore: averageScore * 100,
     };
   };
@@ -326,12 +326,12 @@ export function EvaluationRunsView(): ReactElement {
   const getCompactDatasetInfo = (evaluation: EvaluationRun): string => {
     const dataset = datasets.find((d) => d.id === evaluation.dataset_id);
     const results = evaluation.results as Record<string, unknown>;
-    const totalDataPoints = results?.total_data_points as number;
+    const totalLogs = results?.total_logs as number;
 
     const datasetName = dataset?.name || 'Unknown Dataset';
 
-    if (typeof totalDataPoints === 'number') {
-      return `${datasetName} (${totalDataPoints.toLocaleString()} pts)`;
+    if (typeof totalLogs === 'number') {
+      return `${datasetName} (${totalLogs.toLocaleString()} logs)`;
     }
     return datasetName;
   };
@@ -462,8 +462,7 @@ export function EvaluationRunsView(): ReactElement {
                         <>
                           <span>• {stats.completed} completed</span>
                           <span>
-                            • {stats.totalDataPoints.toLocaleString()} data
-                            points evaluated
+                            • {stats.totalLogs.toLocaleString()} logs evaluated
                           </span>
                           {stats.averageScore > 0 && (
                             <span
@@ -622,7 +621,7 @@ export function EvaluationRunsView(): ReactElement {
                                 <DatabaseIcon className="h-3 w-3 text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                Dataset name and data points
+                                Dataset name and logs
                               </TooltipContent>
                             </Tooltip>
                             <span className="text-sm font-medium">

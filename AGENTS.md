@@ -22,7 +22,7 @@
 - Language: TypeScript, React 19, Next.js 15.
 - Formatting via Biome: 2-space indent, LF, single quotes, semicolons, import organize.
   - Auto-fix: `pnpm check:fix` or `pnpm format:fix`.
-- Files: kebab-case for filenames (e.g., `add-data-points-dialog.tsx`).
+- Files: kebab-case for filenames (e.g., `add-logs-dialog.tsx`).
 - Components: PascalCase exports; colocate simple hooks/utils with feature or place in `lib/*`.
 - Paths: prefer `@client`, `@server`, `@shared` over long relatives.
 

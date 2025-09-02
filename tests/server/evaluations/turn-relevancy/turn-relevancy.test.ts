@@ -99,7 +99,7 @@ describe('Turn Relevancy Evaluator', () => {
     });
 
     const result = await evaluateTurnRelevancy({
-      conversation_history: 'Let’s discuss project timeline.',
+      conversation_history: "Let's discuss project timeline.",
       current_turn: 'The next milestone is scheduled for Friday.',
     });
 

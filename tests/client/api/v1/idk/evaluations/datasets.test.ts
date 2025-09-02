@@ -1,9 +1,4 @@
-import { HttpMethod } from '@server/types/http';
-import {
-  type DataPointCreateParams,
-  Dataset,
-  type DatasetCreateParams,
-} from '@shared/types/data';
+import { Dataset, type DatasetCreateParams } from '@shared/types/data';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockJson = vi.fn();
@@ -23,7 +18,7 @@ const mockClient = {
           ':datasetId': {
             $patch: vi.fn(),
             $delete: vi.fn(),
-            'data-points': {
+            logs: {
               $get: vi.fn(),
               $post: vi.fn(),
               $delete: vi.fn(),
@@ -225,21 +220,20 @@ describe('Dataset API functions', () => {
     });
   });
 
-  describe('getDatasetDataPoints', () => {
-    it('should return dataset with data points', async () => {
+  describe('getDatasetLogs', () => {
+    it('should return dataset with logs', async () => {
       const datasetId = 'c13d1678-150a-466b-804f-ecc82de3680e';
-      const dataPoints: unknown[] = [];
-      mockJson.mockResolvedValue(dataPoints);
+      const logs: unknown[] = [];
+      mockJson.mockResolvedValue(logs);
 
-      mockClient.v1.idk.evaluations.datasets[':datasetId'][
-        'data-points'
-      ].$get.mockResolvedValue(mockResponse as unknown as Response);
+      mockClient.v1.idk.evaluations.datasets[
+        ':datasetId'
+      ].logs.$get.mockResolvedValue(mockResponse as unknown as Response);
 
-      const result = await datasetsApi.getDatasetDataPoints(datasetId, {});
+      const result = await datasetsApi.getDatasetLogs(datasetId, {});
 
       expect(
-        mockClient.v1.idk.evaluations.datasets[':datasetId']['data-points']
-          .$get,
+        mockClient.v1.idk.evaluations.datasets[':datasetId'].logs.$get,
       ).toHaveBeenCalledWith({
         param: { datasetId },
         query: {
@@ -248,73 +242,45 @@ describe('Dataset API functions', () => {
           method: undefined,
           endpoint: undefined,
           function_name: undefined,
-          is_golden: undefined,
+          status: undefined,
           limit: undefined,
           offset: undefined,
         },
       });
-      expect(result).toEqual(dataPoints);
+      expect(result).toEqual(logs);
     });
 
     it('should throw an error if the request fails', async () => {
-      mockClient.v1.idk.evaluations.datasets[':datasetId'][
-        'data-points'
-      ].$get.mockResolvedValue({
+      mockClient.v1.idk.evaluations.datasets[
+        ':datasetId'
+      ].logs.$get.mockResolvedValue({
         ...mockResponse,
         ok: false,
       } as unknown as Response);
 
-      await expect(datasetsApi.getDatasetDataPoints('1', {})).rejects.toThrow(
+      await expect(datasetsApi.getDatasetLogs('1', {})).rejects.toThrow(
         'Failed to get dataset',
       );
     });
   });
 
-  describe('addDataPoints', () => {
-    it('should add data points to a dataset', async () => {
+  describe('addDatasetLogs', () => {
+    it('should add logs to a dataset', async () => {
       const datasetId = '1';
-      const dataPointsCreateParams: DataPointCreateParams[] = [
-        {
-          endpoint: 'endpoint1',
-          metadata: {},
-          function_name: 'function_name1',
-          method: HttpMethod.POST,
-          is_golden: false,
-          request_body: { key: 'value' },
-        },
-      ];
-      const createdDataPoints = [
-        {
-          id: 'c13d1678-150a-466b-804f-ecc82de3680e',
-          endpoint: 'endpoint1',
-          metadata: {},
-          function_name: 'function_name1',
-          method: HttpMethod.POST,
-          is_golden: false,
-          request_body: { key: 'value' },
-          created_at: new Date().toISOString(),
-        },
-      ];
-      mockJson.mockResolvedValue(createdDataPoints);
+      const logIds = ['log1', 'log2'];
 
-      mockClient.v1.idk.evaluations.datasets[':datasetId'][
-        'data-points'
-      ].$post.mockResolvedValue(mockResponse as unknown as Response);
+      mockClient.v1.idk.evaluations.datasets[
+        ':datasetId'
+      ].logs.$post.mockResolvedValue(mockResponse as unknown as Response);
 
-      const result = await datasetsApi.addDataPoints(
-        datasetId,
-        dataPointsCreateParams,
-      );
-
-      expect(result).toEqual(createdDataPoints);
+      await datasetsApi.addDatasetLogs(datasetId, logIds);
 
       expect(
-        mockClient.v1.idk.evaluations.datasets[':datasetId']['data-points']
-          .$post,
+        mockClient.v1.idk.evaluations.datasets[':datasetId'].logs.$post,
       ).toHaveBeenCalledWith(
         {
           param: { datasetId },
-          json: dataPointsCreateParams,
+          json: { logIds: logIds },
         },
         {
           init: undefined,
@@ -323,50 +289,49 @@ describe('Dataset API functions', () => {
     });
 
     it('should throw an error if the request fails', async () => {
-      mockClient.v1.idk.evaluations.datasets[':datasetId'][
-        'data-points'
-      ].$post.mockResolvedValue({
+      mockClient.v1.idk.evaluations.datasets[
+        ':datasetId'
+      ].logs.$post.mockResolvedValue({
         ...mockResponse,
         ok: false,
       } as unknown as Response);
 
-      await expect(datasetsApi.addDataPoints('1', [])).rejects.toThrow(
-        'Failed to add data points',
+      await expect(datasetsApi.addDatasetLogs('1', ['log1'])).rejects.toThrow(
+        'Failed to add logs',
       );
     });
   });
 
-  describe('deleteDataPoints', () => {
-    it('should delete data points from a dataset', async () => {
+  describe('deleteDatasetLogs', () => {
+    it('should delete logs from a dataset', async () => {
       const datasetId = '1';
-      const dataPointIds = ['dp1', 'dp2'];
+      const logIds = ['log1', 'log2'];
 
-      mockClient.v1.idk.evaluations.datasets[':datasetId'][
-        'data-points'
-      ].$delete.mockResolvedValue(mockResponse as unknown as Response);
+      mockClient.v1.idk.evaluations.datasets[
+        ':datasetId'
+      ].logs.$delete.mockResolvedValue(mockResponse as unknown as Response);
 
-      await datasetsApi.deleteDataPoints(datasetId, dataPointIds);
+      await datasetsApi.deleteDatasetLogs(datasetId, logIds);
 
       expect(
-        mockClient.v1.idk.evaluations.datasets[':datasetId']['data-points']
-          .$delete,
+        mockClient.v1.idk.evaluations.datasets[':datasetId'].logs.$delete,
       ).toHaveBeenCalledWith({
         param: { datasetId },
-        query: { dataPointIds },
+        query: { logIds },
       });
     });
 
     it('should throw an error if the request fails', async () => {
-      mockClient.v1.idk.evaluations.datasets[':datasetId'][
-        'data-points'
-      ].$delete.mockResolvedValue({
+      mockClient.v1.idk.evaluations.datasets[
+        ':datasetId'
+      ].logs.$delete.mockResolvedValue({
         ...mockResponse,
         ok: false,
       } as unknown as Response);
 
-      await expect(datasetsApi.deleteDataPoints('1', ['dp1'])).rejects.toThrow(
-        'Failed to delete data points',
-      );
+      await expect(
+        datasetsApi.deleteDatasetLogs('1', ['log1']),
+      ).rejects.toThrow('Failed to delete logs');
     });
   });
 });

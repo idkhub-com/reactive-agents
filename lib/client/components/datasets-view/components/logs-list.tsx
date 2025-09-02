@@ -67,7 +67,7 @@ export function LogsList({
               <p className="text-sm text-muted-foreground">
                 {searchQuery
                   ? 'Try adjusting your search criteria'
-                  : 'No logs available to convert to data points'}
+                  : 'No logs available to convert to logs'}
               </p>
             </CardContent>
           </Card>

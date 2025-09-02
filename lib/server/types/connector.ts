@@ -4,17 +4,7 @@ import type {
   AgentQueryParams,
   AgentUpdateParams,
 } from '@shared/types/data/agent';
-import type {
-  DataPoint,
-  DataPointCreateParams,
-  DataPointQueryParams,
-  DataPointUpdateParams,
-} from '@shared/types/data/data-point';
-import type {
-  DataPointOutput,
-  DataPointOutputCreateParams,
-  DataPointOutputQueryParams,
-} from '@shared/types/data/data-point-output';
+
 import type {
   Dataset,
   DatasetCreateParams,
@@ -37,7 +27,12 @@ import type {
   ImprovedResponseQueryParams,
   ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
-import type { LogsQueryParams } from '@shared/types/data/log';
+import type { Log, LogsQueryParams } from '@shared/types/data/log';
+import type {
+  LogOutput,
+  LogOutputCreateParams,
+  LogOutputQueryParams,
+} from '@shared/types/data/log-output';
 import type {
   Skill,
   SkillCreateParams,
@@ -104,20 +99,20 @@ export interface UserDataStorageConnector {
   ): Promise<Dataset> | Dataset;
   deleteDataset(id: string): Promise<void> | void;
 
-  // Data Points
-  getDataPoints(
+  // Logs
+  getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
+  deleteLog(id: string): Promise<void> | void;
+
+  // Dataset-Log Bridge
+  getDatasetLogs(
     datasetId: string,
-    queryParams: DataPointQueryParams,
-  ): Promise<DataPoint[]> | DataPoint[];
-  createDataPoints(
+    queryParams: LogsQueryParams,
+  ): Promise<Log[]> | Log[];
+  addLogsToDataset(datasetId: string, logIds: string[]): Promise<void> | void;
+  removeLogsFromDataset(
     datasetId: string,
-    dataPoints: DataPointCreateParams[],
-  ): Promise<DataPoint[]> | DataPoint[];
-  updateDataPoint(
-    id: string,
-    update: DataPointUpdateParams,
-  ): Promise<DataPoint> | DataPoint;
-  deleteDataPoints(datasetId: string, ids: string[]): Promise<void> | void;
+    logIds: string[],
+  ): Promise<void> | void;
 
   getEvaluationRuns(
     queryParams: EvaluationRunQueryParams,
@@ -131,18 +126,16 @@ export interface UserDataStorageConnector {
   ): Promise<EvaluationRun> | EvaluationRun;
   deleteEvaluationRun(id: string): Promise<void> | void;
 
-  getDataPointOutputs(
+  // Log Outputs
+  getLogOutputs(
     evaluationRunId: string,
-    queryParams: DataPointOutputQueryParams,
-  ): Promise<DataPointOutput[]> | DataPointOutput[];
-  createDataPointOutput(
+    queryParams: LogOutputQueryParams,
+  ): Promise<LogOutput[]> | LogOutput[];
+  createLogOutput(
     evaluationRunId: string,
-    dataPointOutput: DataPointOutputCreateParams,
-  ): Promise<DataPointOutput> | DataPointOutput;
-  deleteDataPointOutput(
-    evaluationRunId: string,
-    id: string,
-  ): Promise<void> | void;
+    logOutput: LogOutputCreateParams,
+  ): Promise<LogOutput> | LogOutput;
+  deleteLogOutput(evaluationRunId: string, id: string): Promise<void> | void;
 }
 
 export interface LogsStorageConnector {

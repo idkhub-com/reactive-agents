@@ -5,16 +5,16 @@ import type {
 } from '@server/connectors/evaluations/types/conversation-completeness';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 
 /**
- * Evaluate conversation completeness for a single data point
+ * Evaluate conversation completeness for a single log
  */
 export async function evaluateConversationCompleteness(
-  dataPoint: DataPoint,
+  log: Log,
   params: ConversationCompletenessEvaluationParameters,
 ): Promise<ConversationCompletenessResult> {
   // Create LLM judge instance
@@ -25,41 +25,44 @@ export async function evaluateConversationCompleteness(
     timeout: params.timeout || 30000,
   });
 
-  // Extract context and response from data point
+  // Extract context and response from log
   let context = '';
   let response = '';
 
   // Try to extract context from various possible fields
-  if (typeof dataPoint.request_body?.context === 'string') {
-    context = dataPoint.request_body.context;
-  } else if (typeof dataPoint.request_body?.text === 'string') {
-    context = dataPoint.request_body.text;
-  } else if (typeof dataPoint.request_body?.prompt === 'string') {
-    context = dataPoint.request_body.prompt;
-  } else if (typeof dataPoint.request_body?.message === 'string') {
-    context = dataPoint.request_body.message;
+  const requestBody = (log.ai_provider_request_log as Record<string, unknown>)
+    ?.request_body as Record<string, unknown>;
+  if (typeof requestBody?.context === 'string') {
+    context = requestBody.context;
+  } else if (typeof requestBody?.text === 'string') {
+    context = requestBody.text;
+  } else if (typeof requestBody?.prompt === 'string') {
+    context = requestBody.prompt;
+  } else if (typeof requestBody?.message === 'string') {
+    context = requestBody.message;
   } else {
-    context = JSON.stringify(dataPoint.request_body);
+    context = JSON.stringify(requestBody);
   }
 
   // Try to extract response from various possible fields
-  if (typeof dataPoint.ground_truth?.text === 'string') {
-    response = dataPoint.ground_truth.text;
-  } else if (typeof dataPoint.ground_truth?.response === 'string') {
-    response = dataPoint.ground_truth.response;
-  } else if (typeof dataPoint.ground_truth?.output === 'string') {
-    response = dataPoint.ground_truth.output;
-  } else if (typeof dataPoint.ground_truth?.result === 'string') {
-    response = dataPoint.ground_truth.result;
-  } else if (typeof dataPoint.metadata?.response === 'string') {
-    response = dataPoint.metadata.response;
+  const groundTruth = log.metadata?.ground_truth as Record<string, unknown>;
+  if (typeof groundTruth?.text === 'string') {
+    response = groundTruth.text;
+  } else if (typeof groundTruth?.response === 'string') {
+    response = groundTruth.response;
+  } else if (typeof groundTruth?.output === 'string') {
+    response = groundTruth.output;
+  } else if (typeof groundTruth?.result === 'string') {
+    response = groundTruth.result;
+  } else if (typeof log.metadata?.response === 'string') {
+    response = log.metadata.response;
   } else {
-    response = JSON.stringify(dataPoint.ground_truth);
+    response = JSON.stringify(groundTruth);
   }
 
   // Validate that we have both context and response
   if (!context || !response) {
-    throw new Error('Missing context or response in data point');
+    throw new Error('Missing context or response in log');
   }
 
   // Create a simple evaluation prompt that won't trigger template-based evaluation
@@ -89,21 +92,21 @@ export async function evaluateConversationCompleteness(
 }
 
 /**
- * Evaluate conversation completeness for a batch of data points
+ * Evaluate conversation completeness for a batch of logs
  */
 export async function evaluateConversationCompletenessBatch(
-  dataPoints: DataPoint[],
+  logs: Log[],
   params: ConversationCompletenessEvaluationParameters,
 ): Promise<ConversationCompletenessResult[]> {
   const results: ConversationCompletenessResult[] = [];
 
-  for (const dataPoint of dataPoints) {
+  for (const log of logs) {
     try {
-      const result = await evaluateConversationCompleteness(dataPoint, params);
+      const result = await evaluateConversationCompleteness(log, params);
       results.push(result);
     } catch (error) {
       console.error(
-        `Error evaluating conversation completeness for data point ${dataPoint.id}:`,
+        `Error evaluating conversation completeness for log ${log.id}:`,
         error,
       );
       results.push({
@@ -151,35 +154,29 @@ export async function evaluateConversationCompletenessMain(
   });
 
   try {
-    // Get data points
-    const data_points = await userDataStorageConnector.getDataPoints(
-      input.id!,
-      {
-        limit: input.limit || 10,
-        offset: input.offset || 0,
-      },
-    );
+    // Get logs
+    const logs = await userDataStorageConnector.getDatasetLogs(input.id!, {
+      limit: input.limit || 10,
+      offset: input.offset || 0,
+    });
 
-    if (data_points.length === 0) {
-      throw new Error('No data points found for evaluation');
+    if (logs.length === 0) {
+      throw new Error('No logs found for evaluation');
     }
 
-    // Evaluate all data points
-    const results = await evaluateConversationCompletenessBatch(
-      data_points,
-      params,
-    );
+    // Evaluate all logs
+    const results = await evaluateConversationCompletenessBatch(logs, params);
 
     // Create evaluation outputs
     const evaluationOutputs = [];
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
-      const dataPoint = data_points[i];
+      const log = logs[i];
 
-      const output = await userDataStorageConnector.createDataPointOutput(
+      const output = await userDataStorageConnector.createLogOutput(
         evaluationRun.id,
         {
-          data_point_id: dataPoint.id,
+          log_id: log.id,
           score: result.score,
           output: {
             score: result.score,
@@ -200,8 +197,8 @@ export async function evaluateConversationCompletenessMain(
     // Calculate statistics
     const scores = results.map((r) => r.score);
     const threshold = params.threshold || 0.5;
-    const passedDataPoints = scores.filter((s) => s >= threshold).length;
-    const failedDataPoints = scores.length - passedDataPoints;
+    const passedLogs = scores.filter((s) => s >= threshold).length;
+    const failedLogs = scores.length - passedLogs;
 
     const averageScore =
       scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
@@ -210,9 +207,9 @@ export async function evaluateConversationCompletenessMain(
 
     const averageResult: ConversationCompletenessAverageResult = {
       average_score: averageScore,
-      total_data_points: data_points.length,
-      passed_count: passedDataPoints,
-      failed_count: failedDataPoints,
+      total_logs: logs.length,
+      passed_count: passedLogs,
+      failed_count: failedLogs,
       threshold_used: params.threshold || 0.5,
       evaluation_run_id: evaluationRun.id,
     };
@@ -221,9 +218,9 @@ export async function evaluateConversationCompletenessMain(
     await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: EvaluationRunStatus.COMPLETED,
       results: {
-        total_data_points: data_points.length,
-        passed_count: passedDataPoints,
-        failed_count: failedDataPoints,
+        total_logs: logs.length,
+        passed_count: passedLogs,
+        failed_count: failedLogs,
         average_score: averageScore,
         threshold_used: params.threshold || 0.5,
         evaluation_outputs: evaluationOutputs.map((output) => output.id),
@@ -232,9 +229,9 @@ export async function evaluateConversationCompletenessMain(
       },
       metadata: {
         ...evaluationRun.metadata,
-        total_data_points: data_points.length,
-        passed_count: passedDataPoints,
-        failed_count: failedDataPoints,
+        total_logs: logs.length,
+        passed_count: passedLogs,
+        failed_count: failedLogs,
         average_score: averageScore,
         threshold_used: params.threshold || 0.5,
         completed_at: new Date().toISOString(),

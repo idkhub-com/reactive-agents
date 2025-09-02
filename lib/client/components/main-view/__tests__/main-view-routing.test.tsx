@@ -273,9 +273,9 @@ describe('MainView Routing', () => {
     });
   });
 
-  describe('Nested Dataset Routes (DataPoint Navigation)', () => {
-    it('should render dataset view for nested datapoint route', () => {
-      mockLocation.hash = '#dataset:test-dataset-1/datapoint:test-datapoint-1';
+  describe('Nested Dataset Routes (Log Navigation)', () => {
+    it('should render dataset view for nested log route', () => {
+      mockLocation.hash = '#dataset:test-dataset-1/log:test-log-1';
 
       render(<MainView />);
 
@@ -285,7 +285,7 @@ describe('MainView Routing', () => {
     });
 
     it('should extract correct dataset ID from nested route', () => {
-      mockLocation.hash = '#dataset:complex-dataset-id-123/datapoint:dp-456';
+      mockLocation.hash = '#dataset:complex-dataset-id-123/log:log-456';
 
       render(<MainView />);
 
@@ -298,8 +298,8 @@ describe('MainView Routing', () => {
 
     it('should handle UUID dataset IDs in nested routes', () => {
       const datasetUuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-      const datapointUuid = 'b2c3d4e5-f6g7-8901-bcde-f23456789012';
-      mockLocation.hash = `#dataset:${datasetUuid}/datapoint:${datapointUuid}`;
+      const logUuid = 'b2c3d4e5-f6g7-8901-bcde-f23456789012';
+      mockLocation.hash = `#dataset:${datasetUuid}/log:${logUuid}`;
 
       render(<MainView />);
 
@@ -309,8 +309,8 @@ describe('MainView Routing', () => {
 
     it('should handle nested routes with special characters', () => {
       const datasetId = 'dataset-with-special_chars.123';
-      const datapointId = 'datapoint_with-special.chars_456';
-      mockLocation.hash = `#dataset:${datasetId}/datapoint:${datapointId}`;
+      const logId = 'log_with-special.chars_456';
+      mockLocation.hash = `#dataset:${datasetId}/log:${logId}`;
 
       render(<MainView />);
 
@@ -318,7 +318,7 @@ describe('MainView Routing', () => {
       expect(datasetView).toHaveAttribute('data-dataset-id', datasetId);
     });
 
-    it('should maintain dataset context during datapoint navigation', () => {
+    it('should maintain dataset context during log navigation', () => {
       render(<MainView />);
 
       const hashChangeHandler = mockAddEventListener.mock.calls.find(
@@ -339,8 +339,8 @@ describe('MainView Routing', () => {
           'test-dataset-1',
         );
 
-        // Navigate to datapoint within the same dataset
-        mockLocation.hash = '#dataset:test-dataset-1/datapoint:dp-1';
+        // Navigate to log within the same dataset
+        mockLocation.hash = '#dataset:test-dataset-1/log:log-1';
 
         act(() => {
           hashChangeHandler();
@@ -367,7 +367,7 @@ describe('MainView Routing', () => {
       'datasets',
       'create-dataset',
       'dataset:test-id',
-      'dataset:test-id/datapoint:dp-id',
+      'dataset:test-id/log:log-id',
     ];
 
     scrollingViews.forEach((hash) => {
@@ -471,7 +471,7 @@ describe('MainView Routing', () => {
 
     it('should use extracted dataset ID as key for nested routes', () => {
       const datasetId = 'nested-dataset-456';
-      mockLocation.hash = `#dataset:${datasetId}/datapoint:dp-123`;
+      mockLocation.hash = `#dataset:${datasetId}/log:log-123`;
 
       render(<MainView />);
 
@@ -547,7 +547,7 @@ describe('MainView Routing', () => {
           hashChangeHandler();
         });
 
-        mockLocation.hash = '#dataset:test-123/datapoint:dp-456';
+        mockLocation.hash = '#dataset:test-123/log:log-456';
         act(() => {
           hashChangeHandler();
         });

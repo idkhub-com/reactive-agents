@@ -218,7 +218,7 @@ export function DatasetsView(): ReactElement {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Data Points</TableHead>
+                    <TableHead>Logs</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Last Used</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -238,7 +238,7 @@ export function DatasetsView(): ReactElement {
                         {dataset.description || 'No description'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">0 points</Badge>
+                        <Badge variant="secondary">0 logs</Badge>
                       </TableCell>
                       <TableCell>
                         {format(new Date(dataset.created_at), 'MMM dd, yyyy')}

@@ -1,8 +1,12 @@
 import { evaluateArgumentCorrectness } from '@server/connectors/evaluations/argument-correctness/service/evaluate';
+
 import type { UserDataStorageConnector } from '@server/types/connector';
 import { HttpMethod } from '@server/types/http';
+import { FunctionName } from '@shared/types/api/request';
+import { AIProvider } from '@shared/types/constants';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the constants
@@ -18,23 +22,25 @@ global.fetch = mockFetch;
 
 // Mock the user data storage connector
 const mockUserDataStorageConnector = {
-  getDataPoints: vi.fn(),
+  getLogs: vi.fn(),
+  getDatasetLogs: vi.fn(),
   createEvaluationRun: vi.fn(),
-  createDataPointOutput: vi.fn(),
+  createLogOutput: vi.fn(),
   updateEvaluationRun: vi.fn(),
   getEvaluationRuns: vi.fn(),
   getAgents: vi.fn(),
 } as unknown as UserDataStorageConnector;
 
 // Type the mock functions properly
-const mockedGetDataPoints = vi.mocked(
-  mockUserDataStorageConnector.getDataPoints,
+const _mockedGetLogs = vi.mocked(mockUserDataStorageConnector.getLogs);
+const mockedGetDatasetLogs = vi.mocked(
+  mockUserDataStorageConnector.getDatasetLogs,
 );
 const mockedCreateEvaluationRun = vi.mocked(
   mockUserDataStorageConnector.createEvaluationRun,
 );
-const mockedCreateDataPointOutput = vi.mocked(
-  mockUserDataStorageConnector.createDataPointOutput,
+const mockedCreateLogOutput = vi.mocked(
+  mockUserDataStorageConnector.createLogOutput,
 );
 const mockedUpdateEvaluationRun = vi.mocked(
   mockUserDataStorageConnector.updateEvaluationRun,
@@ -50,7 +56,7 @@ describe('Argument Correctness Evaluator', () => {
   });
 
   describe('evaluateArgumentCorrectness', () => {
-    it('should evaluate argument correctness with DataPoint successfully', async () => {
+    it('should evaluate argument correctness with Log successfully', async () => {
       // Mock the LLM judge call
       const mockLLMResponse = {
         output: [
@@ -98,15 +104,37 @@ describe('Argument Correctness Evaluator', () => {
         updated_at: new Date().toISOString(),
       });
 
-      mockedGetDataPoints.mockResolvedValue([
+      mockedGetDatasetLogs.mockResolvedValue([
         {
-          id: 'dp-1',
+          id: 'log-1',
+          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: 'skill-123',
           method: HttpMethod.POST,
           endpoint: '/api/test',
-          function_name: 'test_function',
-          request_body: { input: 'Find user by email' },
-          ground_truth: { result: 'User found: alice@example.com' },
-          is_golden: false,
+          function_name: FunctionName.CHAT_COMPLETE,
+          status: 200,
+          start_time: Date.now(),
+          end_time: Date.now() + 1000,
+          duration: 1000,
+          base_idk_config: {},
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: AIProvider.OPENAI,
+            function_name: FunctionName.CHAT_COMPLETE,
+            request_url: '/api/test',
+            method: HttpMethod.POST,
+            status: 200,
+            request_body: { input: 'Find user by email' },
+            response_body: { result: 'User found: alice@example.com' },
+            raw_request_body: JSON.stringify({ input: 'Find user by email' }),
+            raw_response_body: JSON.stringify({
+              result: 'User found: alice@example.com',
+            }),
+            cache_mode: CacheMode.SIMPLE,
+            cache_status: CacheStatus.MISS,
+          },
+          hook_logs: [],
           metadata: {
             tools: JSON.stringify([
               {
@@ -115,15 +143,22 @@ describe('Argument Correctness Evaluator', () => {
                 success: true,
               },
             ]),
-            agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
           },
-          created_at: '2025-01-01T00:00:00Z',
+          cache_status: CacheStatus.MISS,
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
         },
       ]);
 
-      mockedCreateDataPointOutput.mockResolvedValue({
+      mockedCreateLogOutput.mockResolvedValue({
         id: 'test-output-id',
-        data_point_id: 'dp-1',
+        log_id: 'log-1',
         output: {},
         score: 0.9,
         metadata: {},
@@ -139,7 +174,7 @@ describe('Argument Correctness Evaluator', () => {
         description: 'Test description',
         status: EvaluationRunStatus.COMPLETED,
         results: {
-          total_data_points: 1,
+          total_logs: 1,
           passed_count: 1,
           failed_count: 0,
           average_score: 0.9,
@@ -162,7 +197,7 @@ describe('Argument Correctness Evaluator', () => {
           description: 'Test description',
           status: EvaluationRunStatus.COMPLETED,
           results: {
-            total_data_points: 1,
+            total_logs: 1,
             passed_count: 1,
             failed_count: 0,
             average_score: 0.9,
@@ -194,7 +229,7 @@ describe('Argument Correctness Evaluator', () => {
       );
 
       expect(result.averageResult.average_score).toBe(0.9);
-      expect(result.averageResult.total_data_points).toBe(1);
+      expect(result.averageResult.total_logs).toBe(1);
       expect(result.averageResult.passed_count).toBe(1);
       expect(result.averageResult.failed_count).toBe(0);
       expect(result.averageResult.threshold_used).toBe(0.5);
@@ -259,10 +294,39 @@ describe('Argument Correctness Evaluator', () => {
         updated_at: new Date().toISOString(),
       });
 
-      mockedGetDataPoints.mockResolvedValue([
+      mockedGetDatasetLogs.mockResolvedValue([
         {
-          id: 'dp-1',
-          request_body: { input: 'Find user and send email' },
+          id: 'log-1',
+          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: 'skill-123',
+          method: HttpMethod.POST,
+          endpoint: '/api/test',
+          function_name: FunctionName.CHAT_COMPLETE,
+          status: 200,
+          start_time: Date.now(),
+          end_time: Date.now() + 1000,
+          duration: 1000,
+          base_idk_config: {},
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: AIProvider.OPENAI,
+            function_name: FunctionName.CHAT_COMPLETE,
+            request_url: '/api/test',
+            method: HttpMethod.POST,
+            status: 200,
+            request_body: { input: 'Find user and send email' },
+            response_body: { result: 'User found and email sent' },
+            raw_request_body: JSON.stringify({
+              input: 'Find user and send email',
+            }),
+            raw_response_body: JSON.stringify({
+              result: 'User found and email sent',
+            }),
+            cache_mode: CacheMode.SIMPLE,
+            cache_status: CacheStatus.MISS,
+          },
+          hook_logs: [],
           metadata: {
             tools: JSON.stringify([
               {
@@ -276,19 +340,22 @@ describe('Argument Correctness Evaluator', () => {
                 success: false,
               },
             ]),
-            agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
           },
-          created_at: '2025-01-01T00:00:00Z',
-          method: HttpMethod.POST,
-          endpoint: '/api/test',
-          function_name: 'test_function',
-          is_golden: false,
+          cache_status: CacheStatus.MISS,
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
         },
       ]);
 
-      mockedCreateDataPointOutput.mockResolvedValue({
+      mockedCreateLogOutput.mockResolvedValue({
         id: 'test-output-id',
-        data_point_id: 'dp-1',
+        log_id: 'log-1',
         output: {},
         score: 0.8,
         metadata: {},
@@ -304,7 +371,7 @@ describe('Argument Correctness Evaluator', () => {
         description: 'Test description',
         status: EvaluationRunStatus.COMPLETED,
         results: {
-          total_data_points: 1,
+          total_logs: 1,
           passed_count: 1,
           failed_count: 0,
           average_score: 0.8,
@@ -327,7 +394,7 @@ describe('Argument Correctness Evaluator', () => {
           description: 'Test description',
           status: EvaluationRunStatus.COMPLETED,
           results: {
-            total_data_points: 1,
+            total_logs: 1,
             passed_count: 1,
             failed_count: 0,
             average_score: 0.8,
@@ -359,7 +426,7 @@ describe('Argument Correctness Evaluator', () => {
       );
 
       expect(result.averageResult.average_score).toBe(0.8);
-      expect(result.averageResult.total_data_points).toBe(1);
+      expect(result.averageResult.total_logs).toBe(1);
       expect(result.averageResult.passed_count).toBe(1);
       expect(result.averageResult.failed_count).toBe(0);
     });
@@ -410,15 +477,35 @@ describe('Argument Correctness Evaluator', () => {
         updated_at: new Date().toISOString(),
       });
 
-      mockedGetDataPoints.mockResolvedValue([
+      mockedGetDatasetLogs.mockResolvedValue([
         {
-          id: 'dp-1',
+          id: 'log-1',
+          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: 'skill-123',
           method: HttpMethod.POST,
           endpoint: '/api/test',
-          function_name: 'test_function',
-          request_body: { input: 'Find user by email' },
-          ground_truth: { result: 'User found' },
-          is_golden: false,
+          function_name: FunctionName.CHAT_COMPLETE,
+          status: 200,
+          start_time: Date.now(),
+          end_time: Date.now() + 1000,
+          duration: 1000,
+          base_idk_config: {},
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: AIProvider.OPENAI,
+            function_name: FunctionName.CHAT_COMPLETE,
+            request_url: '/api/test',
+            method: HttpMethod.POST,
+            status: 200,
+            request_body: { input: 'Find user by email' },
+            response_body: { result: 'User found' },
+            raw_request_body: JSON.stringify({ input: 'Find user by email' }),
+            raw_response_body: JSON.stringify({ result: 'User found' }),
+            cache_mode: CacheMode.SIMPLE,
+            cache_status: CacheStatus.MISS,
+          },
+          hook_logs: [],
           metadata: {
             tools: JSON.stringify([
               {
@@ -427,15 +514,22 @@ describe('Argument Correctness Evaluator', () => {
                 success: true,
               },
             ]),
-            agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
           },
-          created_at: '2025-01-01T00:00:00Z',
+          cache_status: CacheStatus.MISS,
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
         },
       ]);
 
-      mockedCreateDataPointOutput.mockResolvedValue({
+      mockedCreateLogOutput.mockResolvedValue({
         id: 'test-output-id',
-        data_point_id: 'dp-1',
+        log_id: 'log-1',
         output: {},
         score: 0.9,
         metadata: {},
@@ -451,7 +545,7 @@ describe('Argument Correctness Evaluator', () => {
         description: 'Test description',
         status: EvaluationRunStatus.COMPLETED,
         results: {
-          total_data_points: 1,
+          total_logs: 1,
           passed_count: 1,
           failed_count: 0,
           average_score: 0.9,
@@ -474,7 +568,7 @@ describe('Argument Correctness Evaluator', () => {
           description: 'Test description',
           status: EvaluationRunStatus.COMPLETED,
           results: {
-            total_data_points: 1,
+            total_logs: 1,
             passed_count: 1,
             failed_count: 0,
             average_score: 0.9,
@@ -527,15 +621,35 @@ describe('Argument Correctness Evaluator', () => {
         updated_at: new Date().toISOString(),
       });
 
-      mockedGetDataPoints.mockResolvedValue([
+      mockedGetDatasetLogs.mockResolvedValue([
         {
-          id: 'dp-1',
+          id: 'log-1',
+          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: 'skill-123',
           method: HttpMethod.POST,
           endpoint: '/api/test',
-          function_name: 'test_function',
-          request_body: { input: 'Find user by email' },
-          ground_truth: { result: 'User found' },
-          is_golden: false,
+          function_name: FunctionName.CHAT_COMPLETE,
+          status: 200,
+          start_time: Date.now(),
+          end_time: Date.now() + 1000,
+          duration: 1000,
+          base_idk_config: {},
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: AIProvider.OPENAI,
+            function_name: FunctionName.CHAT_COMPLETE,
+            request_url: '/api/test',
+            method: HttpMethod.POST,
+            status: 200,
+            request_body: { input: 'Find user by email' },
+            response_body: { result: 'User found' },
+            raw_request_body: JSON.stringify({ input: 'Find user by email' }),
+            raw_response_body: JSON.stringify({ result: 'User found' }),
+            cache_mode: CacheMode.SIMPLE,
+            cache_status: CacheStatus.MISS,
+          },
+          hook_logs: [],
           metadata: {
             tools: JSON.stringify([
               {
@@ -544,15 +658,22 @@ describe('Argument Correctness Evaluator', () => {
                 success: true,
               },
             ]),
-            agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
           },
-          created_at: '2025-01-01T00:00:00Z',
+          cache_status: CacheStatus.MISS,
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
         },
       ]);
 
-      mockedCreateDataPointOutput.mockResolvedValue({
+      mockedCreateLogOutput.mockResolvedValue({
         id: 'test-output-id',
-        data_point_id: 'dp-1',
+        log_id: 'log-1',
         output: {},
         score: 0.5, // Fallback score
         metadata: {
@@ -572,7 +693,7 @@ describe('Argument Correctness Evaluator', () => {
         description: 'Test description',
         status: EvaluationRunStatus.COMPLETED,
         results: {
-          total_data_points: 1,
+          total_logs: 1,
           passed_count: 1,
           failed_count: 0,
           average_score: 0.5,
@@ -595,7 +716,7 @@ describe('Argument Correctness Evaluator', () => {
           description: 'Test description',
           status: EvaluationRunStatus.COMPLETED,
           results: {
-            total_data_points: 1,
+            total_logs: 1,
             passed_count: 1,
             failed_count: 0,
             average_score: 0.5,
@@ -627,7 +748,7 @@ describe('Argument Correctness Evaluator', () => {
       );
 
       expect(result.averageResult.average_score).toBe(0.5); // Fallback score
-      expect(result.averageResult.total_data_points).toBe(1);
+      expect(result.averageResult.total_logs).toBe(1);
     });
   });
 });
