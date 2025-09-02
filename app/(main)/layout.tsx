@@ -21,6 +21,7 @@ function MainContent({ children }: { children: ReactNode }): ReactElement {
   if (
     pathname.startsWith('/agents/') &&
     pathname !== '/agents' &&
+    !pathname.includes('/agents/create') &&
     !pathname.includes('/skills/create')
   ) {
     return (
