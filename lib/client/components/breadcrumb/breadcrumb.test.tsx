@@ -27,7 +27,7 @@ interface MockParams {
 }
 
 let mockParams: MockParams = {};
-let mockPathname = '/pipelines';
+let mockPathname = '/agents';
 
 const mockRouter = {
   push: mockPush,
@@ -148,7 +148,7 @@ describe('BreadcrumbComponent', () => {
     vi.mocked(getSkills).mockResolvedValue([]);
     mockGetItem.mockReturnValue(null);
     mockParams = {};
-    mockPathname = '/pipelines';
+    mockPathname = '/agents';
   });
 
   it('renders initial breadcrumb with agent selector', () => {
@@ -158,7 +158,7 @@ describe('BreadcrumbComponent', () => {
 
   it('renders breadcrumb with selected agent', () => {
     mockParams = { agentName: 'Test%20Agent%201' };
-    mockPathname = '/pipelines/Test%20Agent%201';
+    mockPathname = '/agents/Test%20Agent%201';
 
     // The component renders successfully without crashing
     expect(() => renderWithProviders(<BreadcrumbComponent />)).not.toThrow();
@@ -170,7 +170,7 @@ describe('BreadcrumbComponent', () => {
       skillName: 'Test%20Skill%201',
       logId: 'log-123',
     };
-    mockPathname = '/pipelines/Test%20Agent%201/Test%20Skill%201/logs/log-123';
+    mockPathname = '/agents/Test%20Agent%201/Test%20Skill%201/logs/log-123';
 
     // The component renders successfully without crashing
     expect(() => renderWithProviders(<BreadcrumbComponent />)).not.toThrow();
@@ -178,7 +178,7 @@ describe('BreadcrumbComponent', () => {
 
   it('handles URL encoded agent names correctly', () => {
     mockParams = { agentName: 'Test%20Agent%20With%20Spaces' };
-    mockPathname = '/pipelines/Test%20Agent%20With%20Spaces';
+    mockPathname = '/agents/Test%20Agent%20With%20Spaces';
 
     // The component renders successfully without crashing
     expect(() => renderWithProviders(<BreadcrumbComponent />)).not.toThrow();

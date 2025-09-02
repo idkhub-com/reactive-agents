@@ -7,7 +7,7 @@ export default function HomePage(): null {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/pipelines');
+    router.replace('/agents');
   }, [router]);
 
   return null;

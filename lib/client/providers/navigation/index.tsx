@@ -56,10 +56,10 @@ export function NavigationProvider({
   const params = useParams();
 
   const [navigationState, setNavigationState] = useState<NavigationState>({
-    section: 'pipelines',
+    section: 'agents',
     currentView: 'skills-list',
     breadcrumbs: [
-      { label: 'Select Agent', path: '/pipelines', isAgentDropdown: true },
+      { label: 'Select Agent', path: '/agents', isAgentDropdown: true },
     ],
   });
 
@@ -74,7 +74,7 @@ export function NavigationProvider({
   const parseCurrentView = useCallback((): NavigationState['currentView'] => {
     const pathSegments = pathname.split('/').filter(Boolean);
 
-    if (pathSegments[0] !== 'pipelines') {
+    if (pathSegments[0] !== 'agents') {
       return 'skills-list';
     }
 
@@ -85,15 +85,15 @@ export function NavigationProvider({
     const datasetId = params.datasetId as string;
 
     // Determine view based on URL structure
-    if (pathSegments.length === 1) return 'skills-list'; // /pipelines
-    if (pathSegments.length === 2 && agentName) return 'skills-list'; // /pipelines/[agentName]
+    if (pathSegments.length === 1) return 'skills-list'; // /agents
+    if (pathSegments.length === 2 && agentName) return 'skills-list'; // /agents/[agentName]
     if (pathSegments.length === 3 && agentName && skillName)
-      return 'skill-dashboard'; // /pipelines/[agentName]/[skillName]
+      return 'skill-dashboard'; // /agents/[agentName]/[skillName]
 
     const subPath = pathSegments[3];
     if (subPath === 'logs') {
-      if (logId) return 'log-detail'; // /pipelines/[agentName]/[skillName]/logs/[logId]
-      return 'logs'; // /pipelines/[agentName]/[skillName]/logs
+      if (logId) return 'log-detail'; // /agents/[agentName]/[skillName]/logs/[logId]
+      return 'logs'; // /agents/[agentName]/[skillName]/logs
     }
     if (subPath === 'evaluations') {
       if (pathSegments[4] === 'create') return 'create-evaluation';
@@ -130,14 +130,14 @@ export function NavigationProvider({
         } catch {
           // no-op, fallback handled internally in storage-utils
         }
-        router.push(`/pipelines/${encodeAgentName(agent.name)}`);
+        router.push(`/agents/${encodeAgentName(agent.name)}`);
       } else {
         try {
           removeSelectedAgentName();
         } catch {
           // no-op
         }
-        router.push('/pipelines');
+        router.push('/agents');
       }
     },
     [router],
@@ -245,7 +245,7 @@ export function NavigationProvider({
           label: newState.selectedAgent
             ? `Agent: ${newState.selectedAgent.name}`
             : 'Select Agent',
-          path: '/pipelines',
+          path: '/agents',
           isAgentDropdown: true,
         },
       ];
@@ -253,14 +253,14 @@ export function NavigationProvider({
       if (newState.selectedAgent && newState.selectedSkill) {
         breadcrumbs.push({
           label: newState.selectedSkill.name,
-          path: `/pipelines/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}`,
+          path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}`,
           isSkillDropdown: true,
         });
 
         if (currentView === 'logs' || currentView === 'log-detail') {
           breadcrumbs.push({
             label: 'Logs',
-            path: `/pipelines/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/logs`,
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/logs`,
           });
         } else if (
           currentView === 'evaluations' ||
@@ -269,7 +269,7 @@ export function NavigationProvider({
         ) {
           breadcrumbs.push({
             label: 'Evaluations',
-            path: `/pipelines/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/evaluations`,
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/evaluations`,
           });
         } else if (
           currentView === 'datasets' ||
@@ -278,13 +278,13 @@ export function NavigationProvider({
         ) {
           breadcrumbs.push({
             label: 'Datasets',
-            path: `/pipelines/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/datasets`,
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/datasets`,
           });
         }
       } else if (newState.selectedAgent && currentView === 'skills-list') {
         breadcrumbs.push({
           label: 'Skills',
-          path: `/pipelines/${encodeAgentName(newState.selectedAgent.name)}`,
+          path: `/agents/${encodeAgentName(newState.selectedAgent.name)}`,
         });
       }
 

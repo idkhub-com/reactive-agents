@@ -230,7 +230,7 @@
       "id": "segmind",
       "name": "Segmind",
       "object": "provider",
-      "description": "Segmind focuses on simplifying the deployment of machine learning pipelines tailored towards specific business needs involving large language models. Their platform enables organizations to manage model lifecycles effectively while ensuring optimal performance metrics are achieved consistently.",
+      "description": "Segmind focuses on simplifying the deployment of machine learning /agents tailored towards specific business needs involving large language models. Their platform enables organizations to manage model lifecycles effectively while ensuring optimal performance metrics are achieved consistently.",
       "base_url": "https://api.segmind.com/v1"
     },
     {

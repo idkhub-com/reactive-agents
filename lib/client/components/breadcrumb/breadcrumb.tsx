@@ -71,7 +71,7 @@ function SkillDropdownBreadcrumb(): ReactElement {
     setDropdownOpen(false);
     if (selectedAgent) {
       router.push(
-        `/pipelines/${encodeURIComponent(selectedAgent.name)}/skills/create`,
+        `/agents/${encodeURIComponent(selectedAgent.name)}/skills/create`,
       );
     }
   };

@@ -89,7 +89,7 @@ export function NavMain({
   const handleAgentClick = React.useCallback(
     (agent: (typeof agents)[0]) => {
       setSelectedAgent(agent);
-      router.push(`/pipelines/${encodeURIComponent(agent.name)}`);
+      router.push(`/agents/${encodeURIComponent(agent.name)}`);
     },
     [setSelectedAgent, router],
   );
