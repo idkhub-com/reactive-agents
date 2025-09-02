@@ -63,10 +63,6 @@ export const xaiChatCompleteConfig: AIProviderFunctionConfig = {
     min: -2,
     max: 2,
   },
-  logit_bias: {
-    param: 'logit_bias',
-    // Note: xAI API documentation indicates this is UNSUPPORTED
-  },
   logprobs: {
     param: 'logprobs',
     default: false,

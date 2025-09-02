@@ -60,7 +60,5 @@ const response1 = await client
     },
   });
 
-const agentResponse = JSON.parse(
-  response1.choices[0]?.message?.content || '{}',
-);
+const agentResponse = JSON.parse(response1.choices[0].message.content || '{}');
 logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));
