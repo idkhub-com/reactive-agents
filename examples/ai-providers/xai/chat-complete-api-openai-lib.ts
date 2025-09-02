@@ -49,8 +49,8 @@ const response1 = await client
     ],
   });
 
-const agentResponse1 = response1.choices[0].message.content;
-logger.printWithHeader('Agent', agentResponse1 || '');
+const agentResponse1 = response1.choices[0].message.content || '';
+logger.printWithHeader('Agent', agentResponse1);
 
 const userMessage2 = 'What about in Rust?';
 logger.printWithHeader('User', userMessage2);
