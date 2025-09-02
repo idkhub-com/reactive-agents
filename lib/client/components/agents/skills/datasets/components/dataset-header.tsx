@@ -1,3 +1,4 @@
+import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import { Card, CardHeader } from '@client/components/ui/card';
 import {
@@ -19,6 +20,7 @@ import { z } from 'zod';
 const updateDatasetSchema = z.object({
   name: z.string().min(1, 'Dataset name is required'),
   description: z.string().optional(),
+  realtime_size: z.number().min(0).optional(),
 });
 
 type UpdateDatasetFormData = z.infer<typeof updateDatasetSchema>;
@@ -51,6 +53,7 @@ export function DatasetHeader({
     defaultValues: {
       name: dataset.name,
       description: dataset.description || '',
+      realtime_size: dataset.realtime_size,
     },
   });
 
@@ -59,6 +62,7 @@ export function DatasetHeader({
       form.reset({
         name: dataset.name,
         description: dataset.description || '',
+        realtime_size: dataset.realtime_size,
       });
     }
   }, [dataset, form]);
@@ -72,6 +76,7 @@ export function DatasetHeader({
     form.reset({
       name: dataset.name,
       description: dataset.description || '',
+      realtime_size: dataset.realtime_size,
     });
     onCancel();
   };
@@ -131,6 +136,29 @@ export function DatasetHeader({
                         </FormItem>
                       )}
                     />
+                    {dataset.is_realtime && (
+                      <FormField
+                        control={form.control}
+                        name="realtime_size"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="100"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                                className="w-32"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     <div className="flex items-center gap-2">
                       <Button type="submit" size="sm" disabled={isLoading}>
                         Save
@@ -148,9 +176,16 @@ export function DatasetHeader({
                 </Form>
               ) : (
                 <div>
-                  <h2 className="text-xl font-semibold truncate">
-                    {dataset.name}
-                  </h2>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-xl font-semibold truncate">
+                      {dataset.name}
+                    </h2>
+                    {dataset.is_realtime && (
+                      <Badge variant="secondary" className="text-xs">
+                        Realtime ({dataset.realtime_size})
+                      </Badge>
+                    )}
+                  </div>
                   {dataset.description && (
                     <p className="text-muted-foreground mt-1">
                       {dataset.description}

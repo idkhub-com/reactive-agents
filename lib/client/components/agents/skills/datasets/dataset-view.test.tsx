@@ -67,6 +67,8 @@ const mockDataset: Dataset = {
   agent_id: '1',
   name: 'Test Dataset',
   description: 'A test dataset for testing',
+  is_realtime: false,
+  realtime_size: 0,
   metadata: {},
   created_at: '2023-01-01T00:00:00Z',
   updated_at: '2023-01-02T00:00:00Z',
@@ -267,6 +269,7 @@ describe('DatasetView', () => {
           {
             name: 'Updated Dataset Name',
             description: 'A test dataset for testing',
+            realtime_size: 0,
           },
         );
       });

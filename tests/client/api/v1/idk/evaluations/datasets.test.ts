@@ -104,6 +104,8 @@ describe('Dataset API functions', () => {
         name: 'new',
         agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
         description: 'new desc',
+        is_realtime: false,
+        realtime_size: 0,
         metadata: {},
       };
       const createdDataset = {
@@ -139,6 +141,8 @@ describe('Dataset API functions', () => {
         datasetsApi.createDataset({
           name: 'new',
           agent_id: '144a7489-a61a-4a50-81ab-bb8884aabdb2',
+          is_realtime: false,
+          realtime_size: 0,
           metadata: {},
         }),
       ).rejects.toThrow('Failed to create dataset');
