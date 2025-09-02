@@ -1,41 +1,51 @@
 import {
+  CodeInterpreter,
+  ComputerTool,
+  CustomTool,
+  FileSearchTool,
+  FunctionTool,
   GetResponseRequestBody,
+  ImageGeneration,
   ListResponseInputItemsRequestBody,
   ListResponsesRequestBody,
+  LocalShell,
+  Mcp,
   ResponsesRequestBody,
-  ResponsesTool,
+  WebSearchTool,
 } from '@shared/types/api/routes/responses-api/request';
 import { describe, expect, it } from 'vitest';
 
 describe('Responses API Request Types', () => {
-  describe('ResponsesTool', () => {
+  describe('Tool Types', () => {
     it('should validate basic function tool', () => {
       const functionTool = {
         type: 'function',
-        function: {
-          name: 'get_weather',
-          description: 'Get current weather',
-          parameters: {
-            type: 'object',
-            properties: {
-              location: { type: 'string' },
-            },
+        name: 'get_weather',
+        description: 'Get current weather',
+        parameters: {
+          type: 'object',
+          properties: {
+            location: { type: 'string' },
           },
-          strict: true,
         },
+        strict: true,
       };
 
-      expect(() => ResponsesTool.parse(functionTool)).not.toThrow();
-      const parsed = ResponsesTool.parse(functionTool);
+      expect(() => FunctionTool.parse(functionTool)).not.toThrow();
+      const parsed = FunctionTool.parse(functionTool);
       expect(parsed.type).toBe('function');
-      expect(parsed.function?.name).toBe('get_weather');
+      expect(parsed.name).toBe('get_weather');
     });
 
     it('should validate file search tool', () => {
       const fileSearchTool = {
         type: 'file_search',
         vector_store_ids: ['vs_123', 'vs_456'],
-        filters: { file_type: 'pdf' },
+        filters: {
+          field: 'file_type',
+          operator: 'equals',
+          value: 'pdf',
+        },
         max_num_results: 10,
         ranking_options: {
           ranker: 'default-2024-11-15' as const,
@@ -43,28 +53,28 @@ describe('Responses API Request Types', () => {
         },
       };
 
-      expect(() => ResponsesTool.parse(fileSearchTool)).not.toThrow();
-      const parsed = ResponsesTool.parse(fileSearchTool);
+      expect(() => FileSearchTool.parse(fileSearchTool)).not.toThrow();
+      const parsed = FileSearchTool.parse(fileSearchTool);
       expect(parsed.vector_store_ids).toHaveLength(2);
       expect(parsed.max_num_results).toBe(10);
     });
 
     it('should validate computer tool', () => {
       const computerTool = {
-        type: 'computer',
+        type: 'computer_use_preview',
         display_height: 1080,
         display_width: 1920,
         environment: 'ubuntu' as const,
       };
 
-      expect(() => ResponsesTool.parse(computerTool)).not.toThrow();
-      const parsed = ResponsesTool.parse(computerTool);
+      expect(() => ComputerTool.parse(computerTool)).not.toThrow();
+      const parsed = ComputerTool.parse(computerTool);
       expect(parsed.environment).toBe('ubuntu');
     });
 
     it('should validate web search tool', () => {
       const webSearchTool = {
-        type: 'web_search',
+        type: 'web_search_preview',
         search_context_size: 'medium' as const,
         user_location: {
           type: 'approximate' as const,
@@ -75,8 +85,8 @@ describe('Responses API Request Types', () => {
         },
       };
 
-      expect(() => ResponsesTool.parse(webSearchTool)).not.toThrow();
-      const parsed = ResponsesTool.parse(webSearchTool);
+      expect(() => WebSearchTool.parse(webSearchTool)).not.toThrow();
+      const parsed = WebSearchTool.parse(webSearchTool);
       expect(parsed.search_context_size).toBe('medium');
       expect(parsed.user_location?.city).toBe('Boston');
     });
@@ -87,8 +97,8 @@ describe('Responses API Request Types', () => {
         partial_images: 3,
       };
 
-      expect(() => ResponsesTool.parse(imageGenTool)).not.toThrow();
-      const parsed = ResponsesTool.parse(imageGenTool);
+      expect(() => ImageGeneration.parse(imageGenTool)).not.toThrow();
+      const parsed = ImageGeneration.parse(imageGenTool);
       expect(parsed.partial_images).toBe(3);
     });
 
@@ -104,42 +114,63 @@ describe('Responses API Request Types', () => {
         },
       };
 
-      expect(() => ResponsesTool.parse(mcpTool)).not.toThrow();
-      const parsed = ResponsesTool.parse(mcpTool);
+      expect(() => Mcp.parse(mcpTool)).not.toThrow();
+      const parsed = Mcp.parse(mcpTool);
       expect(parsed.server_label).toBe('My MCP Server');
       expect(parsed.headers?.Authorization).toBe('Bearer token123');
     });
 
-    it('should handle tool with minimal required fields', () => {
+    it('should validate custom tool with minimal required fields', () => {
       const minimalTool = {
-        type: 'custom_tool',
+        type: 'custom',
+        name: 'my_custom_tool',
       };
 
-      expect(() => ResponsesTool.parse(minimalTool)).not.toThrow();
+      expect(() => CustomTool.parse(minimalTool)).not.toThrow();
+    });
+
+    it('should validate local shell tool', () => {
+      const localShellTool = {
+        type: 'local_shell',
+      };
+
+      expect(() => LocalShell.parse(localShellTool)).not.toThrow();
+    });
+
+    it('should validate code interpreter tool', () => {
+      const codeInterpreterTool = {
+        type: 'code_interpreter',
+        container: 'container_123',
+      };
+
+      expect(() => CodeInterpreter.parse(codeInterpreterTool)).not.toThrow();
     });
 
     it('should validate ranking options with auto ranker', () => {
       const tool = {
         type: 'file_search',
+        vector_store_ids: ['vs_123'],
         ranking_options: {
           ranker: 'auto' as const,
           score_threshold: 0.5,
         },
       };
 
-      expect(() => ResponsesTool.parse(tool)).not.toThrow();
+      expect(() => FileSearchTool.parse(tool)).not.toThrow();
     });
 
     it('should validate environment options for computer tool', () => {
-      const environments = ['mac', 'windows', 'ubuntu', 'browser'];
+      const environments = ['mac', 'windows', 'linux', 'ubuntu', 'browser'];
 
       environments.forEach((env) => {
         const tool = {
-          type: 'computer',
+          type: 'computer_use_preview',
+          display_height: 1080,
+          display_width: 1920,
           environment: env,
         };
 
-        expect(() => ResponsesTool.parse(tool)).not.toThrow();
+        expect(() => ComputerTool.parse(tool)).not.toThrow();
       });
     });
 
@@ -148,11 +179,11 @@ describe('Responses API Request Types', () => {
 
       sizes.forEach((size) => {
         const tool = {
-          type: 'web_search',
+          type: 'web_search_preview',
           search_context_size: size,
         };
 
-        expect(() => ResponsesTool.parse(tool)).not.toThrow();
+        expect(() => WebSearchTool.parse(tool)).not.toThrow();
       });
     });
 
@@ -162,10 +193,12 @@ describe('Responses API Request Types', () => {
       approvalOptions.forEach((option) => {
         const tool = {
           type: 'mcp',
+          server_label: 'Test Server',
+          server_url: 'https://test.example.com',
           require_approval: option,
         };
 
-        expect(() => ResponsesTool.parse(tool)).not.toThrow();
+        expect(() => Mcp.parse(tool)).not.toThrow();
       });
     });
   });
@@ -234,10 +267,10 @@ describe('Responses API Request Types', () => {
         tools: [
           {
             type: 'function',
-            function: {
-              name: 'analyze_data',
-              description: 'Analyze the provided data',
-            },
+            name: 'analyze_data',
+            description: 'Analyze the provided data',
+            parameters: null,
+            strict: null,
           },
         ],
         top_p: 0.9,
@@ -475,10 +508,10 @@ describe('Responses API Request Types', () => {
         tools: [
           {
             type: 'function',
-            function: {
-              name: 'analyze_data',
-              description: 'Analyze data',
-            },
+            name: 'analyze_data',
+            description: 'Analyze data',
+            parameters: null,
+            strict: null,
           },
           {
             type: 'file_search',
@@ -486,7 +519,7 @@ describe('Responses API Request Types', () => {
             max_num_results: 5,
           },
           {
-            type: 'computer',
+            type: 'computer_use_preview',
             display_height: 720,
             display_width: 1280,
             environment: 'mac' as const,
@@ -497,43 +530,6 @@ describe('Responses API Request Types', () => {
       expect(() => ResponsesRequestBody.parse(request)).not.toThrow();
       const parsed = ResponsesRequestBody.parse(request);
       expect(parsed.tools).toHaveLength(3);
-    });
-
-    it('should validate tool with all optional fields', () => {
-      const complexTool = {
-        type: 'file_search',
-        function: {
-          name: 'search_files',
-          description: 'Search through files',
-          parameters: { type: 'object' },
-          strict: false,
-        },
-        vector_store_ids: ['vs_1', 'vs_2'],
-        filters: { category: 'documents' },
-        max_num_results: 20,
-        ranking_options: {
-          ranker: 'default-2024-11-15' as const,
-          score_threshold: 0.7,
-        },
-        display_height: 1080,
-        display_width: 1920,
-        environment: 'browser' as const,
-        search_context_size: 'high' as const,
-        user_location: {
-          type: 'approximate' as const,
-          city: 'San Francisco',
-          country: 'US',
-        },
-        partial_images: 2,
-        server_label: 'Search Server',
-        server_url: 'https://search.example.com',
-        require_approval: 'never' as const,
-        headers: {
-          'API-Key': 'key123',
-        },
-      };
-
-      expect(() => ResponsesTool.parse(complexTool)).not.toThrow();
     });
 
     it('should handle empty tools array', () => {

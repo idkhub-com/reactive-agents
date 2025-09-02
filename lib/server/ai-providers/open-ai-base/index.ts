@@ -9,9 +9,9 @@ import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-c
 import type { ChatCompletionRequestBody } from '@shared/types/api/routes/chat-completions-api/request';
 import type { CompletionResponseBody } from '@shared/types/api/routes/completions-api';
 import type { CreateEmbeddingsResponseBody } from '@shared/types/api/routes/embeddings-api';
-import type {
-  DeleteResponseResponseBody,
-  GetResponseResponseBody,
+import {
+  type DeleteResponseResponseBody,
+  type GetResponseResponseBody,
   ResponsesResponseBody,
 } from '@shared/types/api/routes/responses-api';
 import type { ListResponsesResponseBody } from '@shared/types/api/routes/responses-api/response';
@@ -310,7 +310,6 @@ export const createModelResponseParams = (
   const baseParams: AIProviderFunctionConfig = {
     ...OpenAICreateModelResponseConfig,
   };
-
   excludeObjectKeys(exclude, baseParams);
 
   // Object.keys(defaultValues).forEach((key) => {
@@ -401,7 +400,7 @@ const completeResponseTransformer = (
 const chatCompleteResponseTransformer = (
   provider: AIProvider,
   customTransformer?: CustomTransformer<
-    ChatCompletionResponseBody,
+    Record<string, unknown>,
     ChatCompletionResponseBody | ErrorResponseBody
   >,
 ): ResponseTransformFunction => {
@@ -410,16 +409,14 @@ const chatCompleteResponseTransformer = (
     aiProviderResponseStatus,
   ) => {
     if (aiProviderResponseStatus !== 200 && 'error' in aiProviderResponseBody) {
+      if (customTransformer) {
+        return customTransformer(aiProviderResponseBody, true);
+      }
+
       const errorResponse = openAIErrorResponseTransform(
         aiProviderResponseBody as ErrorResponseBody,
         provider ?? AIProvider.OPENAI,
       ) as Record<string, unknown>;
-      if (customTransformer) {
-        return customTransformer(
-          aiProviderResponseBody as ErrorResponseBody,
-          true,
-        );
-      }
 
       return errorResponse as ErrorResponseBody;
     }
@@ -443,7 +440,7 @@ const chatCompleteResponseTransformer = (
 export const openAICreateModelResponseTransformer = (
   provider: AIProvider,
   customTransformer?: CustomTransformer<
-    ResponsesResponseBody,
+    Record<string, unknown>,
     ResponsesResponseBody | ErrorResponseBody
   >,
 ): ResponseTransformFunction => {
@@ -452,28 +449,32 @@ export const openAICreateModelResponseTransformer = (
     aiProviderResponseStatus,
   ) => {
     if (aiProviderResponseStatus !== 200 && 'error' in aiProviderResponseBody) {
+      if (customTransformer) {
+        return customTransformer(aiProviderResponseBody, true);
+      }
       const errorResponse = openAIErrorResponseTransform(
         aiProviderResponseBody as ErrorResponseBody,
         provider ?? AIProvider.OPENAI,
       );
-      if (customTransformer) {
-        return customTransformer(errorResponse, true);
-      }
 
       return errorResponse;
     }
 
     if (customTransformer) {
-      return customTransformer(
-        aiProviderResponseBody as unknown as ResponsesResponseBody,
+      return customTransformer(aiProviderResponseBody);
+    }
+
+    const parsedResponse = ResponsesResponseBody.safeParse(
+      aiProviderResponseBody,
+    );
+
+    if (!parsedResponse.success) {
+      throw new Error(
+        `IdkHub failed to parse response: ${parsedResponse.error.message}`,
       );
     }
 
-    Object.defineProperty(aiProviderResponseBody, 'provider', {
-      value: provider,
-      enumerable: true,
-    });
-    return aiProviderResponseBody as unknown as ResponsesResponseBody;
+    return parsedResponse.data;
   };
 
   return transformer;
@@ -482,7 +483,7 @@ export const openAICreateModelResponseTransformer = (
 export const openAIGetModelResponseTransformer = (
   provider: AIProvider,
   customTransformer?: CustomTransformer<
-    GetResponseResponseBody,
+    Record<string, unknown>,
     GetResponseResponseBody | ErrorResponseBody
   >,
 ): ResponseTransformFunction => {
@@ -491,13 +492,13 @@ export const openAIGetModelResponseTransformer = (
     aiProviderResponseStatus,
   ) => {
     if (aiProviderResponseStatus !== 200 && 'error' in aiProviderResponseBody) {
+      if (customTransformer) {
+        return customTransformer(aiProviderResponseBody, true);
+      }
       const errorResponse = openAIErrorResponseTransform(
         aiProviderResponseBody as ErrorResponseBody,
         provider ?? AIProvider.OPENAI,
       );
-      if (customTransformer) {
-        return customTransformer(errorResponse, true);
-      }
 
       return errorResponse;
     }
@@ -521,7 +522,7 @@ export const openAIGetModelResponseTransformer = (
 export const openAIDeleteModelResponseTransformer = (
   provider: AIProvider,
   customTransformer?: CustomTransformer<
-    DeleteResponseResponseBody,
+    Record<string, unknown>,
     DeleteResponseResponseBody | ErrorResponseBody
   >,
 ): ResponseTransformFunction => {
@@ -560,7 +561,7 @@ export const openAIDeleteModelResponseTransformer = (
 export const openAIListInputItemsResponseTransformer = (
   provider: AIProvider,
   customTransformer?: CustomTransformer<
-    ListResponsesResponseBody,
+    Record<string, unknown>,
     ListResponsesResponseBody | ErrorResponseBody
   >,
 ): ResponseTransformFunction => {
@@ -569,13 +570,13 @@ export const openAIListInputItemsResponseTransformer = (
     aiProviderResponseStatus,
   ) => {
     if (aiProviderResponseStatus !== 200 && 'error' in aiProviderResponseBody) {
+      if (customTransformer) {
+        return customTransformer(aiProviderResponseBody, true);
+      }
       const errorResponse = openAIErrorResponseTransform(
         aiProviderResponseBody as ErrorResponseBody,
         provider ?? AIProvider.OPENAI,
       );
-      if (customTransformer) {
-        return customTransformer(errorResponse, true);
-      }
 
       return errorResponse;
     }
@@ -610,16 +611,10 @@ export const responseTransformers = <
 >(
   provider: AIProvider,
   options: {
-    embed?:
-      | boolean
-      | CustomTransformer<CreateEmbeddingsResponseBody | ErrorResponseBody, T>;
-    complete?:
-      | boolean
-      | CustomTransformer<CompletionResponseBody | ErrorResponseBody, U>;
-    chatComplete?:
-      | boolean
-      | CustomTransformer<ChatCompletionResponseBody | ErrorResponseBody, V>;
-    createSpeech?: boolean | CustomTransformer<Response | ErrorResponseBody, W>;
+    embed?: boolean | CustomTransformer<Record<string, unknown>, T>;
+    complete?: boolean | CustomTransformer<Record<string, unknown>, U>;
+    chatComplete?: boolean | CustomTransformer<Record<string, unknown>, V>;
+    createSpeech?: boolean | CustomTransformer<Record<string, unknown>, W>;
   },
 ): {
   [key in FunctionName]?: ResponseTransformFunction;

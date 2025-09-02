@@ -95,7 +95,8 @@ export const ChatCompletionUsage = z.object({
       /** Cached tokens in the prompt. */
       cached_tokens: z.number().optional(),
     })
-    .optional(),
+    .optional()
+    .nullable(),
 });
 
 export type ChatCompletionUsage = z.infer<typeof ChatCompletionUsage>;

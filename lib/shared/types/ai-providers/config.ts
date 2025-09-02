@@ -6,7 +6,6 @@ import type {
 } from '@shared/types/api/request';
 import type { IdkTarget } from '@shared/types/api/request/headers';
 import type {
-  ErrorResponseBody,
   IdkResponseBody,
   ParameterConfig,
 } from '@shared/types/api/response/body';
@@ -65,10 +64,7 @@ export type RequestHandlerFunction = (params: {
   idkRequestData: IdkRequestData;
 }) => Promise<Response>;
 
-export type CustomTransformer<T, U> = (
-  response: T | ErrorResponseBody,
-  isError?: boolean,
-) => U;
+export type CustomTransformer<T, U> = (response: T, isError?: boolean) => U;
 
 export type FunctionNameToFunctionConfig = {
   [K in FunctionName]?: AIProviderFunctionConfig;

@@ -4,7 +4,7 @@ import { anyscaleConfig } from '@server/ai-providers/anyscale';
 import {
   azureAIInferenceConfig,
   githubModelAPiConfig,
-} from '@server/ai-providers/azure-ai-inference';
+} from '@server/ai-providers/azure-ai-foundry';
 import { azureOpenAIConfig } from '@server/ai-providers/azure-openai';
 import { bedrockConfig } from '@server/ai-providers/bedrock';
 import { cerebrasProviderAPIConfig } from '@server/ai-providers/cerebras';
@@ -27,7 +27,7 @@ export const providerConfigs: {
   [AIProvider.AI21]: aI21Config,
   [AIProvider.ANTHROPIC]: anthropicConfig,
   [AIProvider.ANYSCALE]: anyscaleConfig,
-  [AIProvider.AZURE_AI]: azureAIInferenceConfig,
+  [AIProvider.AZURE_AI_FOUNDRY]: azureAIInferenceConfig,
   [AIProvider.AZURE_OPENAI]: azureOpenAIConfig,
   [AIProvider.BEDROCK]: bedrockConfig,
   [AIProvider.CEREBRAS]: cerebrasProviderAPIConfig,

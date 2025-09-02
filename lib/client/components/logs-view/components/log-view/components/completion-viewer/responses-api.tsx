@@ -33,7 +33,7 @@ export function ResponsesAPIViewer({
 
   const reasoningOutput = useMemo((): string | undefined => {
     for (const output of idkResponseBody.output) {
-      if (output.type === 'reasoning') {
+      if (output.type === 'reasoning' && 'summary' in output) {
         // Handle reasoning output if it exists
         return output.summary.join('\n');
       }
@@ -43,7 +43,7 @@ export function ResponsesAPIViewer({
 
   const messageOutput = useMemo((): string => {
     for (const message of idkResponseBody.output) {
-      if (message.type === 'message') {
+      if (message.type === 'message' && 'role' in message) {
         if (message.role === ChatCompletionMessageRole.ASSISTANT) {
           // Check if this is a structured output with content
           if (
@@ -85,7 +85,8 @@ export function ResponsesAPIViewer({
         <div className="text-sm font-normal text-right">
           {
             PrettyChatCompletionMessageRole[
-              idkResponseBody.output[0].type === 'message'
+              idkResponseBody.output[0].type === 'message' &&
+              'role' in idkResponseBody.output[0]
                 ? idkResponseBody.output[0].role
                 : idkResponseBody.output[0].type === 'reasoning'
                   ? 'reasoning'

@@ -2,7 +2,6 @@ import type {
   AIProviderFunctionConfig,
   ResponseTransformFunction,
 } from '@shared/types/ai-providers/config';
-
 import {
   type ChatCompletionRequestBody,
   ChatCompletionResponseBody,

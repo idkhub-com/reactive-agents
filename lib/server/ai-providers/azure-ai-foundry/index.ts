@@ -22,13 +22,13 @@ export const azureAIInferenceConfig: AIProviderConfig = {
   [FunctionName.CHAT_COMPLETE]: azureAIInferenceChatCompleteConfig,
   responseTransforms: {
     [FunctionName.COMPLETE]: azureAIInferenceCompleteResponseTransform(
-      AIProvider.AZURE_AI,
+      AIProvider.AZURE_AI_FOUNDRY,
     ),
     [FunctionName.CHAT_COMPLETE]: azureAIInferenceChatCompleteResponseTransform(
-      AIProvider.AZURE_AI,
+      AIProvider.AZURE_AI_FOUNDRY,
     ),
     [FunctionName.EMBED]: azureAIInferenceEmbedResponseTransform(
-      AIProvider.AZURE_AI,
+      AIProvider.AZURE_AI_FOUNDRY,
     ),
   },
 };
