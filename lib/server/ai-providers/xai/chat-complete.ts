@@ -19,6 +19,7 @@ export const xaiChatCompleteConfig: AIProviderFunctionConfig = {
   max_tokens: {
     param: 'max_tokens',
     min: 0,
+    // Deprecated in favor of max_completion_tokens. Let xAI handle it.
   },
   max_completion_tokens: {
     param: 'max_completion_tokens',

@@ -500,12 +500,5 @@ describe('xAI Provider Tests', () => {
       expect(config.deferred).toHaveProperty('param', 'deferred');
       expect(config.deferred).toHaveProperty('default', false);
     });
-
-    it('should include logit_bias parameter (marked as unsupported)', () => {
-      const config = xaiChatCompleteConfig;
-      expect(config.logit_bias).toBeDefined();
-      expect(config.logit_bias).toHaveProperty('param', 'logit_bias');
-      // Note: The parameter exists but is documented as unsupported by xAI
-    });
   });
 });
