@@ -42,7 +42,12 @@ const createDatasetSchema = z
     name: z.string().min(1, 'Dataset name is required'),
     description: z.string().optional(),
     is_realtime: z.boolean(),
-    realtime_size: z.number().min(1),
+
+    realtime_size: z.union([
+      z.string().transform(val => val === '' ? 100 : Number(val)),
+      z.number()
+    ]).pipe(z.number().min(1)),
+
   })
   .refine(
     (data) => {
