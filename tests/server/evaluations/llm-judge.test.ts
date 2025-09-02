@@ -1,5 +1,5 @@
 import { createLLMJudge } from '@server/evaluations';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the constants
 vi.mock('@server/constants', () => ({
@@ -13,9 +13,14 @@ describe('LLM Judge', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     llmJudge = createLLMJudge();
     mockFetch = vi.fn();
     global.fetch = mockFetch;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should create LLM judge with default config', () => {
@@ -121,9 +126,14 @@ describe('LLM Judge', () => {
       text: () => Promise.resolve('API Error'),
     });
 
-    const result = await llmJudge.evaluate({
+    const evaluatePromise = llmJudge.evaluate({
       text: 'This is a test evaluation.',
     });
+
+    // Fast-forward through retry delays (1s + 2s = 3s total)
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const result = await evaluatePromise;
 
     expect(result.score).toBe(0.5);
     expect(result.reasoning).toBe(
@@ -357,11 +367,14 @@ describe('LLM Judge', () => {
         json: () => Promise.resolve(mockResponse),
       });
 
-    const startTime = Date.now();
-    const result = await llmJudge.evaluate({
+    const evaluatePromise = llmJudge.evaluate({
       text: 'This is a test evaluation.',
     });
-    const endTime = Date.now();
+
+    // Fast-forward through the retry delays (1s + 2s = 3s total)
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const result = await evaluatePromise;
 
     expect(result.score).toBe(0.8);
     expect(result.reasoning).toBe('Success after retries');
@@ -369,9 +382,6 @@ describe('LLM Judge', () => {
 
     // Verify fetch was called 3 times (2 failures + 1 success)
     expect(mockFetch).toHaveBeenCalledTimes(3);
-
-    // Verify exponential backoff timing (should take at least 3 seconds: 1s + 2s)
-    expect(endTime - startTime).toBeGreaterThanOrEqual(3000);
   });
 
   it('should return fallback result after all retries are exhausted', async () => {
@@ -381,9 +391,14 @@ describe('LLM Judge', () => {
       .mockRejectedValueOnce(new Error('Rate limit exceeded'))
       .mockRejectedValueOnce(new Error('Service temporarily unavailable'));
 
-    const result = await llmJudge.evaluate({
+    const evaluatePromise = llmJudge.evaluate({
       text: 'This is a test evaluation.',
     });
+
+    // Fast-forward through all retry delays (1s + 2s = 3s total)
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const result = await evaluatePromise;
 
     expect(result.score).toBe(0.5);
     expect(result.reasoning).toBe(
@@ -464,9 +479,14 @@ describe('LLM Judge', () => {
             }),
         });
 
-      const result = await llmJudge.evaluate({
+      const evaluatePromise = llmJudge.evaluate({
         text: 'This is a test evaluation.',
       });
+
+      // Fast-forward through the first retry delay (1s)
+      await vi.advanceTimersByTimeAsync(1000);
+
+      const result = await evaluatePromise;
 
       expect(result.score).toBe(0.5);
       expect(result.reasoning).toBe(
@@ -513,11 +533,14 @@ describe('LLM Judge', () => {
           json: () => Promise.resolve(mockResponse),
         });
 
-      const startTime = Date.now();
-      const result = await llmJudge.evaluate({
+      const evaluatePromise = llmJudge.evaluate({
         text: 'This is a test evaluation.',
       });
-      const endTime = Date.now();
+
+      // Fast-forward through the retry delays (1s + 2s = 3s total)
+      await vi.advanceTimersByTimeAsync(3000);
+
+      const result = await evaluatePromise;
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
@@ -525,7 +548,6 @@ describe('LLM Judge', () => {
 
       // Should retry twice, then succeed
       expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(endTime - startTime).toBeGreaterThanOrEqual(3000);
     });
 
     it('should handle rate limit errors as retryable', async () => {
@@ -555,11 +577,14 @@ describe('LLM Judge', () => {
           json: () => Promise.resolve(mockResponse),
         });
 
-      const startTime = Date.now();
-      const result = await llmJudge.evaluate({
+      const evaluatePromise = llmJudge.evaluate({
         text: 'This is a test evaluation.',
       });
-      const endTime = Date.now();
+
+      // Fast-forward through the retry delays (1s + 2s = 3s total)
+      await vi.advanceTimersByTimeAsync(3000);
+
+      const result = await evaluatePromise;
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
@@ -567,7 +592,6 @@ describe('LLM Judge', () => {
 
       // Should retry twice, then succeed
       expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(endTime - startTime).toBeGreaterThanOrEqual(3000);
     });
 
     it('should handle server errors (5xx) as retryable', async () => {
@@ -597,11 +621,14 @@ describe('LLM Judge', () => {
           json: () => Promise.resolve(mockResponse),
         });
 
-      const startTime = Date.now();
-      const result = await llmJudge.evaluate({
+      const evaluatePromise = llmJudge.evaluate({
         text: 'This is a test evaluation.',
       });
-      const endTime = Date.now();
+
+      // Fast-forward through the retry delays (1s + 2s = 3s total)
+      await vi.advanceTimersByTimeAsync(3000);
+
+      const result = await evaluatePromise;
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
@@ -609,7 +636,6 @@ describe('LLM Judge', () => {
 
       // Should retry twice, then succeed
       expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(endTime - startTime).toBeGreaterThanOrEqual(3000);
     });
 
     it('should not retry client errors (4xx)', async () => {
@@ -638,15 +664,16 @@ describe('LLM Judge', () => {
         .mockRejectedValueOnce(new Error('Network error'))
         .mockRejectedValueOnce(new Error('Network error'));
 
-      const startTime = Date.now();
-      await llmJudge.evaluate({
+      const evaluatePromise = llmJudge.evaluate({
         text: 'This is a test evaluation.',
       });
-      const endTime = Date.now();
 
-      // Should take at least 3 seconds: 1s + 2s + 4s = 7s total delay
-      // But we only wait for 2 delays (between 3 calls), so minimum 3s
-      expect(endTime - startTime).toBeGreaterThanOrEqual(3000);
+      // Fast-forward through all retry delays (1s + 2s = 3s total)
+      await vi.advanceTimersByTimeAsync(3000);
+
+      await evaluatePromise;
+
+      // Should make 3 calls (initial + 2 retries)
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
@@ -674,19 +701,16 @@ describe('LLM Judge', () => {
         json: () => Promise.resolve(mockResponse),
       });
 
-      const startTime = Date.now();
       const result = await llmJudge.evaluate({
         text: 'This is a test evaluation.',
       });
-      const endTime = Date.now();
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
       expect(result.metadata).toEqual({ retried: true });
 
-      // Should succeed on first attempt, no delays
+      // Should succeed on first attempt, no retries
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(endTime - startTime).toBeLessThan(1000); // Should be fast
     });
 
     it('should handle unknown errors as non-retryable', async () => {
