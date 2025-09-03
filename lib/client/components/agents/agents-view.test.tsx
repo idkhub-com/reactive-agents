@@ -32,7 +32,7 @@ vi.mock('@client/api/v1/idk/skills', () => ({
   getSkills: vi.fn(),
 }));
 
-// Mock all pipeline view components
+// Mock all agent view components
 vi.mock('./skills/skills-list-view', () => ({
   SkillsListView: () => <div data-testid="skills-list-view">Skills List</div>,
 }));

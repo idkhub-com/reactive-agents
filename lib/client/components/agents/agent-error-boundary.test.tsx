@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  PipelineErrorBoundary,
-  withPipelineErrorBoundary,
+  AgentErrorBoundary,
+  withAgentErrorBoundary,
 } from './agent-error-boundary';
 
 // Component that throws an error
@@ -19,7 +19,7 @@ const TestComponent: React.FC = () => {
   return <div>Test Component</div>;
 };
 
-describe('PipelineErrorBoundary', () => {
+describe('AgentErrorBoundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock console.error to avoid test output noise
@@ -30,9 +30,9 @@ describe('PipelineErrorBoundary', () => {
 
   it('renders children when there is no error', () => {
     render(
-      <PipelineErrorBoundary>
+      <AgentErrorBoundary>
         <ThrowError shouldThrow={false} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(
@@ -42,9 +42,9 @@ describe('PipelineErrorBoundary', () => {
 
   it('renders error UI when child component throws', () => {
     render(
-      <PipelineErrorBoundary sectionName="Test Section">
+      <AgentErrorBoundary sectionName="Test Section">
         <ThrowError shouldThrow={true} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(screen.getByText(/Error in Test Section/)).toBeInTheDocument();
@@ -63,9 +63,9 @@ describe('PipelineErrorBoundary', () => {
     };
 
     render(
-      <PipelineErrorBoundary sectionName="Test Section">
+      <AgentErrorBoundary sectionName="Test Section">
         <DynamicComponent />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(screen.getByText(/Error in Test Section/)).toBeInTheDocument();
@@ -92,9 +92,9 @@ describe('PipelineErrorBoundary', () => {
     );
 
     render(
-      <PipelineErrorBoundary fallback={customFallback}>
+      <AgentErrorBoundary fallback={customFallback}>
         <ThrowError shouldThrow={true} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(screen.getByText('Custom error: Test error')).toBeInTheDocument();
@@ -103,13 +103,13 @@ describe('PipelineErrorBoundary', () => {
 
   it('logs error to console', () => {
     render(
-      <PipelineErrorBoundary sectionName="Test Section">
+      <AgentErrorBoundary sectionName="Test Section">
         <ThrowError shouldThrow={true} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(console.error).toHaveBeenCalledWith(
-      'Pipeline section error:',
+      'Agent section error:',
       expect.objectContaining({
         section: 'Test Section',
         error: 'Error: Test error',
@@ -122,12 +122,12 @@ describe('PipelineErrorBoundary', () => {
     const performanceMark = vi.spyOn(performance, 'mark');
 
     render(
-      <PipelineErrorBoundary sectionName="Test Section">
+      <AgentErrorBoundary sectionName="Test Section">
         <ThrowError shouldThrow={true} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
-    expect(performanceMark).toHaveBeenCalledWith('pipeline-error-Test Section');
+    expect(performanceMark).toHaveBeenCalledWith('agent-error-Test Section');
   });
 
   it('shows error details in development mode', () => {
@@ -135,9 +135,9 @@ describe('PipelineErrorBoundary', () => {
     vi.stubEnv('NODE_ENV', 'development');
 
     render(
-      <PipelineErrorBoundary sectionName="Test Section">
+      <AgentErrorBoundary sectionName="Test Section">
         <ThrowError shouldThrow={true} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(
@@ -152,9 +152,9 @@ describe('PipelineErrorBoundary', () => {
     vi.stubEnv('NODE_ENV', 'production');
 
     render(
-      <PipelineErrorBoundary sectionName="Test Section">
+      <AgentErrorBoundary sectionName="Test Section">
         <ThrowError shouldThrow={true} />
-      </PipelineErrorBoundary>,
+      </AgentErrorBoundary>,
     );
 
     expect(
@@ -165,12 +165,9 @@ describe('PipelineErrorBoundary', () => {
   });
 });
 
-describe('withPipelineErrorBoundary HOC', () => {
+describe('withAgentErrorBoundary HOC', () => {
   it('wraps component with error boundary', () => {
-    const WrappedComponent = withPipelineErrorBoundary(
-      TestComponent,
-      'Test HOC',
-    );
+    const WrappedComponent = withAgentErrorBoundary(TestComponent, 'Test HOC');
 
     render(<WrappedComponent />);
 
@@ -182,10 +179,7 @@ describe('withPipelineErrorBoundary HOC', () => {
       throw new Error('HOC test error');
     };
 
-    const WrappedComponent = withPipelineErrorBoundary(
-      ErrorComponent,
-      'Test HOC',
-    );
+    const WrappedComponent = withAgentErrorBoundary(ErrorComponent, 'Test HOC');
 
     // Mock console.error to avoid test output noise
     vi.spyOn(console, 'error').mockImplementation(() => {

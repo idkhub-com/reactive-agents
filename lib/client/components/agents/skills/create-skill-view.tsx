@@ -100,7 +100,7 @@ export function CreateSkillView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Navigate back to agent's pipeline page
+      // Navigate back to agent's agent page
       if (agentName) {
         router.push(`/agents/${encodeURIComponent(agentName)}`);
       } else {

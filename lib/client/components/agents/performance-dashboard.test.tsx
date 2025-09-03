@@ -59,7 +59,7 @@ describe('PerformanceDashboard', () => {
       screen.getByText('Navigation Performance Dashboard'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Real-time performance metrics for pipeline navigation'),
+      screen.getByText('Real-time performance metrics for agent navigation'),
     ).toBeInTheDocument();
     expect(screen.getByText('Average Load Time')).toBeInTheDocument();
     expect(screen.getByText('183ms')).toBeInTheDocument();
@@ -136,7 +136,7 @@ describe('PerformanceDashboard', () => {
       screen.getByText('Navigation Performance Dashboard'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Real-time performance metrics for pipeline navigation'),
+      screen.getByText('Real-time performance metrics for agent navigation'),
     ).toBeInTheDocument();
   });
 
@@ -182,7 +182,7 @@ describe('PerformanceDashboard', () => {
       screen.getByText('Navigation Performance Dashboard'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Real-time performance metrics for pipeline navigation'),
+      screen.getByText('Real-time performance metrics for agent navigation'),
     ).toBeInTheDocument();
   });
 });

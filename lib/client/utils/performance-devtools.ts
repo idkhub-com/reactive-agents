@@ -30,7 +30,7 @@ interface PerformanceDevTools {
 export function setupPerformanceDevTools() {
   if (typeof window === 'undefined') return;
 
-  const METRICS_KEY = 'pipeline-navigation-metrics';
+  const METRICS_KEY = 'agent-navigation-metrics';
 
   const devTools: PerformanceDevTools = {
     // Get all stored metrics

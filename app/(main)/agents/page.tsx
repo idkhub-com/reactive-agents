@@ -41,7 +41,7 @@ export default function AgentsPage(): ReactElement {
       return;
     }
 
-    // If we have a selected agent, redirect to its pipeline page
+    // If we have a selected agent, redirect to its agent skill page
     if (selectedAgent) {
       console.log('✅ Redirecting to selected agent:', selectedAgent.name);
       setHasRedirected(true);

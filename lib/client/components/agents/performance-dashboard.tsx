@@ -102,7 +102,7 @@ export function PerformanceDashboard() {
                 Navigation Performance Dashboard
               </CardTitle>
               <CardDescription>
-                Real-time performance metrics for pipeline navigation
+                Real-time performance metrics for agent navigation
               </CardDescription>
             </div>
             <div className="flex gap-2">

@@ -4,7 +4,7 @@ import { useNavigationPerformance } from '@client/hooks/use-navigation-performan
 import { useNavigation } from '@client/providers/navigation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
-import { PipelineErrorBoundary } from './agent-error-boundary';
+import { AgentErrorBoundary } from './agent-error-boundary';
 import { SkillDashboardView, SkillsListView } from './skills';
 import { DatasetDetailsView } from './skills/datasets';
 import { CreateDatasetView } from './skills/datasets/create-dataset-view';
@@ -39,63 +39,63 @@ export function AgentsView(): ReactElement {
     switch (navigationState.currentView) {
       case 'skills-list':
         return (
-          <PipelineErrorBoundary sectionName="Skills List">
+          <AgentErrorBoundary sectionName="Skills List">
             <SkillsListView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'skill-dashboard':
         return (
-          <PipelineErrorBoundary sectionName="Skill Dashboard">
+          <AgentErrorBoundary sectionName="Skill Dashboard">
             <SkillDashboardView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'logs':
         return (
-          <PipelineErrorBoundary sectionName="Logs">
+          <AgentErrorBoundary sectionName="Logs">
             <LogsView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'log-detail':
         return (
-          <PipelineErrorBoundary sectionName="Log Detail">
+          <AgentErrorBoundary sectionName="Log Detail">
             <LogDetailsView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'evaluations':
         return (
-          <PipelineErrorBoundary sectionName="Evaluations">
+          <AgentErrorBoundary sectionName="Evaluations">
             <EvaluationRunsView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'evaluation-detail':
         return (
-          <PipelineErrorBoundary sectionName="Evaluation Detail">
+          <AgentErrorBoundary sectionName="Evaluation Detail">
             <EvaluationRunDetailsView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'datasets':
         return (
-          <PipelineErrorBoundary sectionName="Datasets">
+          <AgentErrorBoundary sectionName="Datasets">
             <DatasetsView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'dataset-detail':
         return (
-          <PipelineErrorBoundary sectionName="Dataset Detail">
+          <AgentErrorBoundary sectionName="Dataset Detail">
             <DatasetDetailsView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'create-evaluation':
         return (
-          <PipelineErrorBoundary sectionName="Create Evaluation">
+          <AgentErrorBoundary sectionName="Create Evaluation">
             <CreateEvaluationRunView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       case 'create-dataset':
         return (
-          <PipelineErrorBoundary sectionName="Create Dataset">
+          <AgentErrorBoundary sectionName="Create Dataset">
             <CreateDatasetView />
-          </PipelineErrorBoundary>
+          </AgentErrorBoundary>
         );
       default:
         return <div>Unknown view</div>;

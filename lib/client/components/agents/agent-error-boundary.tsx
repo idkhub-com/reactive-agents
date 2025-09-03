@@ -22,7 +22,7 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-export class PipelineErrorBoundary extends Component<Props, State> {
+export class AgentErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
@@ -34,7 +34,7 @@ export class PipelineErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to monitoring service
-    console.error('Pipeline section error:', {
+    console.error('Agent section error:', {
       section: this.props.sectionName,
       error: error.toString(),
       stack: errorInfo.componentStack,
@@ -43,7 +43,7 @@ export class PipelineErrorBoundary extends Component<Props, State> {
 
     // Track error metrics
     if (typeof window !== 'undefined' && window.performance) {
-      performance.mark(`pipeline-error-${this.props.sectionName || 'unknown'}`);
+      performance.mark(`agent-error-${this.props.sectionName || 'unknown'}`);
     }
 
     this.setState({ errorInfo });
@@ -66,7 +66,7 @@ export class PipelineErrorBoundary extends Component<Props, State> {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
-              Error in {this.props.sectionName || 'Pipeline Section'}
+              Error in {this.props.sectionName || 'Agent Section'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -104,14 +104,14 @@ export class PipelineErrorBoundary extends Component<Props, State> {
   }
 }
 
-// HOC for wrapping pipeline components with error boundary
-export function withPipelineErrorBoundary<P extends object>(
+// HOC for wrapping agent components with error boundary
+export function withAgentErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   sectionName: string,
 ) {
   return (props: P) => (
-    <PipelineErrorBoundary sectionName={sectionName}>
+    <AgentErrorBoundary sectionName={sectionName}>
       <Component {...props} />
-    </PipelineErrorBoundary>
+    </AgentErrorBoundary>
   );
 }

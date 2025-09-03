@@ -91,7 +91,7 @@ describe('useNavigationPerformance', () => {
     const { result } = renderHook(() => useNavigationPerformance());
 
     expect(mockLocalStorage.getItem).toHaveBeenCalledWith(
-      'pipeline-navigation-metrics',
+      'agent-navigation-metrics',
     );
     expect(result.current.metrics).toEqual(storedMetrics);
   });
@@ -152,7 +152,7 @@ describe('useNavigationPerformance', () => {
 
     expect(result.current.metrics).toEqual([]);
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(
-      'pipeline-navigation-metrics',
+      'agent-navigation-metrics',
     );
   });
 
