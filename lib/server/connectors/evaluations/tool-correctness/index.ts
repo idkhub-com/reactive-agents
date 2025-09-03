@@ -557,6 +557,10 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
   ): Promise<EvaluationRun> {
     const { agent_id, dataset_id, parameters } = request;
 
+    if (!dataset_id) {
+      throw new Error('dataset_id is required for tool correctness evaluation');
+    }
+
     // Parameters are now directly ToolCorrectnessEvaluationMethodDetails with defaults from schema
     const toolCorrectnessParams = parameters;
 
@@ -583,7 +587,7 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
       });
 
       // Get dataset logs
-      const logs = await userDataStorageConnector.getDatasetLogs(dataset_id, {
+      const logs = await userDataStorageConnector.getDatasetLogs(dataset_id!, {
         limit: 1000,
         offset: 0,
       });

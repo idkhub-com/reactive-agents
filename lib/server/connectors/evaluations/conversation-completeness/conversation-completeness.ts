@@ -53,7 +53,7 @@ async function runEvaluation(
 
   // Create dataset evaluation input
   const input: { id: string; limit?: number; offset?: number } = {
-    id: request.dataset_id,
+    id: request.dataset_id!,
     limit: typedParams.limit,
     offset: typedParams.offset,
   };

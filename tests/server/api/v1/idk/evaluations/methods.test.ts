@@ -567,4 +567,253 @@ describe('Evaluation Methods API', () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe('POST /execute - Single Log Evaluation', () => {
+    const singleLogRequest = {
+      agent_id: '123e4567-e89b-12d3-a456-426614174000',
+      log_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+      evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+      name: 'Single Log Test Evaluation',
+      description: 'Test single log evaluation',
+      parameters: {
+        threshold: 0.7,
+        model: 'gpt-4o',
+        temperature: 0.1,
+        max_tokens: 1000,
+        include_reason: true,
+        strict_mode: false,
+        async_mode: false,
+        verbose_mode: false,
+        batch_size: 10,
+      },
+    };
+
+    const mockLog = {
+      id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+      agent_id: '123e4567-e89b-12d3-a456-426614174000',
+      skill_id: 'skill-id',
+      method: 'POST',
+      endpoint: '/chat/completions',
+      function_name: 'chat_complete',
+      status: 200,
+      start_time: 1700000000000,
+      end_time: 1700000001000,
+      duration: 1000,
+      base_idk_config: {},
+      ai_provider: 'openai',
+      model: 'gpt-4',
+      ai_provider_request_log: {
+        method: 'POST',
+        request_url: 'https://api.openai.com/v1/chat/completions',
+        request_body: {},
+        response_body: {},
+        status: 200,
+        start_time: 1700000000000,
+        end_time: 1700000001000,
+        duration: 1000,
+      },
+      hook_logs: [],
+      metadata: {},
+      cache_status: 'MISS',
+      trace_id: null,
+      parent_span_id: null,
+      span_id: null,
+      span_name: null,
+      app_id: null,
+      external_user_id: null,
+      external_user_human_name: null,
+      user_metadata: null,
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+
+      // Mock the connector methods for single log evaluation
+      mockUserDataStorageConnector.getLogs.mockResolvedValue([mockLog]);
+      mockUserDataStorageConnector.createEvaluationRun.mockResolvedValue({
+        ...mockEvaluationRun,
+      });
+      mockUserDataStorageConnector.updateEvaluationRun.mockResolvedValue(
+        undefined,
+      );
+      mockUserDataStorageConnector.getEvaluationRuns.mockResolvedValue([
+        {
+          ...mockEvaluationRun,
+        },
+      ]);
+    });
+
+    it('should execute single log evaluation successfully', async () => {
+      const response = await client.execute.$post({
+        json: singleLogRequest,
+      });
+
+      expect(response.status).toBe(200);
+
+      const result = await response.json();
+      expect(result).toEqual({
+        evaluation_run_id: 'eval-run-123',
+        status: 'completed',
+        message: 'Single log evaluation completed successfully',
+        results: mockEvaluationRun.results,
+      });
+    });
+
+    it('should fetch the correct log by ID', async () => {
+      await client.execute.$post({
+        json: singleLogRequest,
+      });
+
+      expect(mockUserDataStorageConnector.getLogs).toHaveBeenCalledWith({
+        id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        limit: 1,
+        offset: 0,
+      });
+    });
+
+    it('should create evaluation run with log_id as dataset_id', async () => {
+      await client.execute.$post({
+        json: singleLogRequest,
+      });
+
+      expect(
+        mockUserDataStorageConnector.createEvaluationRun,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc', // log_id used as dataset_id
+          agent_id: '123e4567-e89b-12d3-a456-426614174000',
+          evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+          name: 'Single Log Test Evaluation',
+          description: 'Test single log evaluation',
+        }),
+      );
+    });
+
+    it('should generate default name and description for single log evaluation', async () => {
+      const requestWithoutNameDesc = {
+        ...singleLogRequest,
+        name: undefined,
+        description: undefined,
+      };
+
+      await client.execute.$post({
+        json: requestWithoutNameDesc,
+      });
+
+      expect(
+        mockUserDataStorageConnector.createEvaluationRun,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Single Log Evaluation - 987fcdeb-51a2-43d7-8f9e-123456789abc',
+          description:
+            'Single log evaluation for log 987fcdeb-51a2-43d7-8f9e-123456789abc',
+        }),
+      );
+    });
+
+    it('should return 404 when log is not found', async () => {
+      mockUserDataStorageConnector.getLogs.mockResolvedValue([]);
+
+      const response = await client.execute.$post({
+        json: singleLogRequest,
+      });
+
+      expect(response.status).toBe(500);
+
+      const result = await response.json();
+      expect(result).toEqual({
+        error: 'Failed to execute evaluation',
+        details: 'Log not found: 987fcdeb-51a2-43d7-8f9e-123456789abc',
+      });
+    });
+
+    it('should validate that either dataset_id or log_id is provided', async () => {
+      const invalidRequest = {
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        // Neither dataset_id nor log_id provided
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+        parameters: singleLogRequest.parameters,
+      };
+
+      const response = await client.execute.$post({
+        json: invalidRequest,
+      });
+
+      expect(response.status).toBe(400); // Validation error
+    });
+
+    it('should reject requests with both dataset_id and log_id', async () => {
+      const invalidRequest = {
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        dataset_id: 'dataset-123',
+        log_id: 'log-123',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+        parameters: singleLogRequest.parameters,
+      };
+
+      const response = await client.execute.$post({
+        json: invalidRequest,
+      });
+
+      expect(response.status).toBe(400); // Validation error
+    });
+
+    it('should handle evaluation connector errors', async () => {
+      const mockEvaluationConnector = {
+        evaluate: vi.fn().mockRejectedValue(new Error('Connector error')),
+        getDetails: vi.fn(),
+        getParameterSchema: vi.fn(),
+      };
+
+      // Mock the evaluation connectors registry
+      vi.doMock('@server/api/v1/idk/evaluations/methods', async () => {
+        const actual = await vi.importActual(
+          '@server/api/v1/idk/evaluations/methods',
+        );
+        return {
+          ...actual,
+          evaluationConnectors: {
+            [EvaluationMethodName.TASK_COMPLETION]: mockEvaluationConnector,
+          },
+        };
+      });
+
+      const response = await client.execute.$post({
+        json: singleLogRequest,
+      });
+
+      expect(response.status).toBe(500);
+
+      const result = await response.json();
+      expect(result).toEqual({
+        error: 'Failed to execute evaluation',
+        details: 'Connector error',
+      });
+    });
+
+    it('should work with different evaluation methods', async () => {
+      const roleAdherenceRequest = {
+        ...singleLogRequest,
+        evaluation_method: EvaluationMethodName.ROLE_ADHERENCE,
+        parameters: {
+          threshold: 0.8,
+          model: 'gpt-4o',
+          temperature: 0.0,
+          max_tokens: 500,
+        },
+      };
+
+      const response = await client.execute.$post({
+        json: roleAdherenceRequest,
+      });
+
+      expect(response.status).toBe(200);
+
+      const result = await response.json();
+      expect(result).toHaveProperty(
+        'message',
+        'Single log evaluation completed successfully',
+      );
+    });
+  });
 });

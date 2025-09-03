@@ -4,6 +4,7 @@ import type {
   EvaluationMethodDetails,
   EvaluationMethodName,
   EvaluationMethodRequest,
+  SingleLogEvaluationRequest,
 } from '@shared/types/idkhub/evaluations';
 import { hc } from 'hono/client';
 
@@ -81,6 +82,23 @@ export async function executeEvaluation(
 
   if (!response.ok) {
     throw new Error('Failed to execute evaluation');
+  }
+
+  return response.json() as Promise<EvaluationExecutionResponse>;
+}
+
+/**
+ * Execute a single log evaluation (uses the same /execute endpoint)
+ */
+export async function executeSingleLogEvaluation(
+  request: SingleLogEvaluationRequest,
+): Promise<EvaluationExecutionResponse> {
+  const response = await client.v1.idk.evaluations.methods.execute.$post({
+    json: request,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to execute single log evaluation');
   }
 
   return response.json() as Promise<EvaluationExecutionResponse>;

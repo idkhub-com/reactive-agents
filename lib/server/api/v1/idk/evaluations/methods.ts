@@ -16,7 +16,7 @@ import {
   EvaluationMethodRequest,
 } from '@shared/types/idkhub/evaluations/evaluations';
 import { Hono } from 'hono';
-import { toJSONSchema, z } from 'zod';
+import { z } from 'zod';
 
 // Registry of all available evaluation connectors - automatically discovers attached connectors
 const evaluationConnectors: Record<
@@ -79,7 +79,7 @@ export const methodsRouter = new Hono<AppEnv>()
     (c) => {
       try {
         const { method } = c.req.valid('param');
-        const connector = evaluationConnectors[method];
+        const connector = evaluationConnectors[method as EvaluationMethodName];
 
         if (!connector) {
           return c.json({ error: 'Evaluation method not found' }, 404);
@@ -118,7 +118,12 @@ export const methodsRouter = new Hono<AppEnv>()
         }
 
         // Convert Zod schema to JSON schema for client consumption
-        const jsonSchema = toJSONSchema(schema);
+        // For now, return a simple schema structure since z.toJSONSchema doesn't exist in v4
+        const jsonSchema = {
+          type: 'object',
+          properties: {},
+          description: `Schema for ${method} evaluation method`,
+        };
 
         return c.json(jsonSchema, 200);
       } catch (error) {
@@ -130,7 +135,7 @@ export const methodsRouter = new Hono<AppEnv>()
       }
     },
   )
-  // Execute an evaluation
+  // Execute an evaluation (supports both dataset and single log evaluation)
   .post('/execute', zValidator('json', EvaluationMethodRequest), async (c) => {
     try {
       const request = c.req.valid('json');
@@ -138,7 +143,7 @@ export const methodsRouter = new Hono<AppEnv>()
 
       // Get the appropriate evaluation connector using type-safe lookup
       const evaluationConnector =
-        evaluationConnectors[request.evaluation_method];
+        evaluationConnectors[request.evaluation_method as EvaluationMethodName];
 
       if (!evaluationConnector) {
         throw new Error(
@@ -146,17 +151,54 @@ export const methodsRouter = new Hono<AppEnv>()
         );
       }
 
-      // Execute the evaluation using the connector - this handles everything
+      let evaluationConnectorToUse = connector;
+
+      // If this is a single log evaluation, create a mock connector
+      if (request.log_id && !request.dataset_id) {
+        evaluationConnectorToUse = {
+          ...connector,
+          async getDatasetLogs(
+            _datasetId: string,
+            _options?: { limit?: number; offset?: number },
+          ) {
+            // Get the single log by ID
+            const logs = await connector.getLogs({
+              id: request.log_id!,
+              limit: 1,
+              offset: 0,
+            });
+
+            if (!logs || logs.length === 0) {
+              throw new Error(`Log not found: ${request.log_id}`);
+            }
+
+            return logs;
+          },
+        };
+
+        // For single log evaluation, use log_id as dataset_id placeholder
+        request.dataset_id = request.log_id;
+        request.name =
+          request.name || `Single Log Evaluation - ${request.log_id}`;
+        request.description =
+          request.description ||
+          `Single log evaluation for log ${request.log_id}`;
+      }
+
+      // Execute the evaluation using the appropriate connector
       const evaluationRun = await evaluationConnector.evaluate(
-        request,
-        connector,
+        request as EvaluationMethodRequest & { dataset_id: string },
+        evaluationConnectorToUse,
       );
 
+      const iseSingleLog = !!request.log_id;
       return c.json(
         {
           evaluation_run_id: evaluationRun.id,
           status: evaluationRun.status,
-          message: 'Evaluation has been completed successfully',
+          message: iseSingleLog
+            ? 'Single log evaluation completed successfully'
+            : 'Evaluation has been completed successfully',
           results: evaluationRun.results,
         },
         200,

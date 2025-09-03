@@ -1,8 +1,10 @@
 'use client';
 
+import { LogEvaluations } from '@client/components/agents/skills/logs/components/log-evaluations';
 import { CompletionViewer } from '@client/components/agents/skills/logs/components/log-view/components/completion-viewer';
 import { LogMap } from '@client/components/agents/skills/logs/components/log-view/components/log-map';
 import { MessagesView } from '@client/components/agents/skills/logs/components/log-view/components/messages-view';
+import { SingleLogEvaluation } from '@client/components/agents/skills/logs/components/single-log-evaluation';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -139,6 +141,9 @@ export function LogDetailsView(): ReactElement {
         onBack={handleBack}
       />
       <div className="p-6 space-y-6">
+        {/* Log Evaluations Card */}
+        <LogEvaluations log={selectedLog} />
+
         {/* Log Detail Card */}
         <Card className="flex flex-col h-[calc(100vh-200px)] overflow-hidden">
           <CardHeader className="flex flex-row justify-between items-center p-4 bg-card-header border-b">
@@ -155,6 +160,9 @@ export function LogDetailsView(): ReactElement {
                 </>
               )}
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <SingleLogEvaluation log={selectedLog} />
+            </div>
           </CardHeader>
           <CardContent className="flex flex-row p-0 h-full relative overflow-hidden">
             <div className="flex h-full w-[200px] border-r">
