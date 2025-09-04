@@ -18,10 +18,10 @@ import { LogSearchControls } from '../datasets-view/components/log-search-contro
 import { LogsList } from '../datasets-view/components/logs-list';
 import { SelectedLogsFooter } from '../datasets-view/components/selected-logs-footer';
 
-interface SelectDataPointsDialogProps {
+interface SelectLogsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectDataPoints: (logs: IdkRequestLog[]) => void;
+  onSelectLogs: (logs: IdkRequestLog[]) => void;
   alreadySelectedLogs: IdkRequestLog[];
 }
 
@@ -154,12 +154,12 @@ const matchesBodyFilters = (
   return true;
 };
 
-export function SelectDataPointsDialog({
+export function SelectLogsDialog({
   open,
   onOpenChange,
-  onSelectDataPoints,
+  onSelectLogs,
   alreadySelectedLogs,
-}: SelectDataPointsDialogProps): React.ReactElement {
+}: SelectLogsDialogProps): React.ReactElement {
   const { queryLogs, logs, isLoading, error } = useLogs();
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -334,7 +334,7 @@ export function SelectDataPointsDialog({
     if (!logs || selectedLogs.size === 0) return;
 
     const selectedLogsData = logs.filter((log) => selectedLogs.has(log.id));
-    onSelectDataPoints(selectedLogsData);
+    onSelectLogs(selectedLogsData);
 
     // Reset selection and close dialog
     setSelectedLogs(new Set());
@@ -345,9 +345,9 @@ export function SelectDataPointsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Select Data Points</DialogTitle>
+          <DialogTitle>Select Logs</DialogTitle>
           <DialogDescription>
-            Choose request logs to include as data points in your dataset
+            Choose request logs to include in your dataset
           </DialogDescription>
         </DialogHeader>
 
@@ -357,7 +357,7 @@ export function SelectDataPointsDialog({
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-destructive mb-2">
-                    Failed to load data points
+                    Failed to load logs
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {error.message}
@@ -414,7 +414,7 @@ export function SelectDataPointsDialog({
             onClick={handleAddSelected}
             disabled={selectedLogs.size === 0}
           >
-            Add {selectedLogs.size} Data Point
+            Add {selectedLogs.size} Log
             {selectedLogs.size === 1 ? '' : 's'}
           </Button>
         </DialogFooter>

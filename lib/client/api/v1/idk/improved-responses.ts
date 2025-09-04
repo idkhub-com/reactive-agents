@@ -29,8 +29,8 @@ export function createImprovedResponse(
 }
 
 /**
- * Check if a data point has an improved response (ground truth)
- * @param logId - The log ID associated with the data point
+ * Check if a log has an improved response (ground truth)
+ * @param logId - The log ID associated with the log
  * @returns Promise<ImprovedResponse | null> - The improved response if it exists, null otherwise
  */
 export async function getImprovedResponseByLogId(

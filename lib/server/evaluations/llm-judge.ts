@@ -399,7 +399,7 @@ function parseResponseData(
   useStructuredOutput = false,
 ): LLMJudgeResult {
   const output = response_data.output?.[0];
-  if (!output || output.type !== 'message') {
+  if (!output || output.type !== 'message' || !('content' in output)) {
     throw new Error('No valid message output in LLM evaluation response');
   }
 

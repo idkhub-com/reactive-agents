@@ -1,11 +1,11 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
-import { DataPointOutputQueryParams } from '@shared/types/data/data-point-output';
 import {
   EvaluationRunCreateParams,
   EvaluationRunQueryParams,
   EvaluationRunUpdateParams,
 } from '@shared/types/data/evaluation-run';
+import { LogOutputQueryParams } from '@shared/types/data/log-output';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -119,29 +119,29 @@ export const runsRouter = new Hono<AppEnv>()
     },
   )
   .get(
-    '/:evaluationRunId/data-point-outputs',
+    '/:evaluationRunId/log-outputs',
     zValidator(
       'param',
       z.object({
         evaluationRunId: z.uuid(),
       }),
     ),
-    zValidator('query', DataPointOutputQueryParams.optional()),
+    zValidator('query', LogOutputQueryParams.optional()),
     async (c) => {
       try {
         const { evaluationRunId } = c.req.valid('param');
         const query = c.req.valid('query') || {};
         const connector = c.get('user_data_storage_connector');
 
-        const dataPoints = await connector.getDataPointOutputs(
+        const logOutputs = await connector.getLogOutputs(
           evaluationRunId,
           query,
         );
 
-        return c.json(dataPoints);
+        return c.json(logOutputs);
       } catch (error) {
-        console.error('Error fetching data points:', error);
-        return c.json({ error: 'Failed to fetch data points' }, 500);
+        console.error('Error fetching log outputs:', error);
+        return c.json({ error: 'Failed to fetch log outputs' }, 500);
       }
     },
   );

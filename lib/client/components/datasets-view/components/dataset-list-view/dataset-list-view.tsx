@@ -53,7 +53,7 @@ export function DatasetListView(): React.ReactElement {
               Datasets
             </h3>
             <p className="text-sm text-muted-foreground">
-              Manage evaluation datasets and data points
+              Manage evaluation datasets and logs
             </p>
           </div>
         </div>

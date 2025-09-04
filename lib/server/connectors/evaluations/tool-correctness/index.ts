@@ -2,9 +2,9 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
@@ -42,18 +42,18 @@ const logger = {
 };
 
 // Pure functions for tool evaluation logic
-const extractToolsCalled = (dataPoint: DataPoint): ToolCall[] => {
-  if (!dataPoint || typeof dataPoint !== 'object') {
-    logger.warn('Invalid dataPoint provided to extractToolsCalled', {
-      dataPointId: (dataPoint as DataPoint)?.id,
+const extractToolsCalled = (log: Log): ToolCall[] => {
+  if (!log || typeof log !== 'object') {
+    logger.warn('Invalid log provided to extractToolsCalled', {
+      logId: (log as Log)?.id,
     });
     return [];
   }
 
+  const requestBody = (log.ai_provider_request_log as Record<string, unknown>)
+    ?.request_body as Record<string, unknown>;
   const toolsCalled =
-    dataPoint.request_body?.tools_called ||
-    dataPoint.metadata?.tools_called ||
-    [];
+    requestBody?.tools_called || log.metadata?.tools_called || [];
 
   if (Array.isArray(toolsCalled)) {
     return toolsCalled.map((tool) => ({
@@ -66,18 +66,15 @@ const extractToolsCalled = (dataPoint: DataPoint): ToolCall[] => {
   return [];
 };
 
-const extractExpectedTools = (dataPoint: DataPoint): ToolCall[] => {
-  if (!dataPoint || typeof dataPoint !== 'object') {
-    logger.warn('Invalid dataPoint provided to extractExpectedTools', {
-      dataPointId: (dataPoint as DataPoint)?.id,
+const extractExpectedTools = (log: Log): ToolCall[] => {
+  if (!log || typeof log !== 'object') {
+    logger.warn('Invalid log provided to extractExpectedTools', {
+      logId: (log as Log)?.id,
     });
     return [];
   }
 
-  const expectedTools =
-    dataPoint.ground_truth?.expected_tools ||
-    dataPoint.metadata?.expected_tools ||
-    [];
+  const expectedTools = log.metadata?.expected_tools || [];
 
   if (Array.isArray(expectedTools)) {
     return expectedTools.map((tool) => ({
@@ -451,52 +448,48 @@ const generateReason = (
   return `Partial match: ${matchedCount}/${expected_tools.length} expected tools were called correctly. Expected: ${expectedNames.join(', ')}, Called: ${calledNames.join(', ')}.`;
 };
 
-const evaluateDataPoint = (
-  dataPoint: DataPoint,
+const evaluateLog = (
+  log: Log,
   parameters: ToolCorrectnessEvaluationParameters,
 ): {
-  data_point_id: string;
+  log_id: string;
   score: number;
   reason?: string;
   tools_called: ToolCall[];
   expected_tools: ToolCall[];
 } => {
-  // Enhanced validation for dataPoint structure
-  if (!dataPoint || typeof dataPoint !== 'object') {
+  // Enhanced validation for log structure
+  if (!log || typeof log !== 'object') {
+    throw new Error(`Invalid log: ${(log as Log)?.id || 'unknown'}`);
+  }
+
+  if (!log.id || typeof log.id !== 'string') {
+    throw new Error('Log missing required id field');
+  }
+
+  // Validate that log has expected structure for tool extraction
+  const requestBody = (log.ai_provider_request_log as Record<string, unknown>)
+    ?.request_body as Record<string, unknown>;
+  if (typeof requestBody !== 'object' && typeof log.metadata !== 'object') {
     throw new Error(
-      `Invalid data point: ${(dataPoint as DataPoint)?.id || 'unknown'}`,
+      `Log ${log.id} missing expected structure (request_body or metadata)`,
     );
   }
 
-  if (!dataPoint.id || typeof dataPoint.id !== 'string') {
-    throw new Error('Data point missing required id field');
-  }
-
-  // Validate that dataPoint has expected structure for tool extraction
-  if (
-    typeof dataPoint.request_body !== 'object' &&
-    typeof dataPoint.metadata !== 'object' &&
-    typeof dataPoint.ground_truth !== 'object'
-  ) {
-    throw new Error(
-      `Data point ${dataPoint.id} missing expected structure (request_body, metadata, or ground_truth)`,
-    );
-  }
-
-  // Extract tools_called and expected_tools from data point with validation
-  const tools_called = extractToolsCalled(dataPoint);
-  const expected_tools = extractExpectedTools(dataPoint);
+  // Extract tools_called and expected_tools from log with validation
+  const tools_called = extractToolsCalled(log);
+  const expected_tools = extractExpectedTools(log);
 
   // Validate array contents before processing
   if (!Array.isArray(tools_called)) {
     throw new Error(
-      `Invalid tools_called format in data point ${dataPoint.id}: expected array`,
+      `Invalid tools_called format in log ${log.id}: expected array`,
     );
   }
 
   if (!Array.isArray(expected_tools)) {
     throw new Error(
-      `Invalid expected_tools format in data point ${dataPoint.id}: expected array`,
+      `Invalid expected_tools format in log ${log.id}: expected array`,
     );
   }
 
@@ -505,7 +498,7 @@ const evaluateDataPoint = (
     const tool = tools_called[i];
     if (!tool || typeof tool !== 'object' || typeof tool.name !== 'string') {
       throw new Error(
-        `Invalid tool structure at index ${i} in tools_called for data point ${dataPoint.id}`,
+        `Invalid tool structure at index ${i} in tools_called for log ${log.id}`,
       );
     }
   }
@@ -514,14 +507,14 @@ const evaluateDataPoint = (
     const tool = expected_tools[i];
     if (!tool || typeof tool !== 'object' || typeof tool.name !== 'string') {
       throw new Error(
-        `Invalid tool structure at index ${i} in expected_tools for data point ${dataPoint.id}`,
+        `Invalid tool structure at index ${i} in expected_tools for log ${log.id}`,
       );
     }
   }
 
   // Use structured logging instead of console.log
   if (parameters.verbose_mode) {
-    logger.info(`Evaluating data point ${dataPoint.id}`, {
+    logger.info(`Evaluating log ${log.id}`, {
       tools_called,
       expected_tools,
     });
@@ -540,7 +533,7 @@ const evaluateDataPoint = (
   }
 
   return {
-    data_point_id: dataPoint.id,
+    log_id: log.id,
     score,
     reason,
     tools_called,
@@ -589,21 +582,21 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
         started_at: new Date().toISOString(),
       });
 
-      // Get dataset data points
-      const dataPoints = await userDataStorageConnector.getDataPoints(
-        dataset_id,
-        {},
-      );
+      // Get dataset logs
+      const logs = await userDataStorageConnector.getDatasetLogs(dataset_id, {
+        limit: 1000,
+        offset: 0,
+      });
 
       const results = {
-        total_data_points: dataPoints.length,
-        evaluated_data_points: 0,
+        total_logs: logs.length,
+        evaluated_logs: 0,
         average_score: 0,
         passed_count: 0,
         failed_count: 0,
         threshold_used: toolCorrectnessParams.threshold || 0.5,
         scores: [] as Array<{
-          data_point_id: string;
+          log_id: string;
           score: number;
           reason?: string;
           tools_called: ToolCall[];
@@ -613,59 +606,56 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
 
       let totalScore = 0;
 
-      for (const dataPoint of dataPoints) {
+      for (const log of logs) {
         try {
-          const dataPointResult = evaluateDataPoint(
-            dataPoint,
+          const logResult = evaluateLog(
+            log,
             toolCorrectnessParams as ToolCorrectnessEvaluationParameters,
           );
 
-          results.scores.push(dataPointResult);
-          totalScore += dataPointResult.score;
-          results.evaluated_data_points++;
+          results.scores.push(logResult);
+          totalScore += logResult.score;
+          results.evaluated_logs++;
 
           // Count passed/failed based on threshold
-          if (dataPointResult.score >= results.threshold_used) {
+          if (logResult.score >= results.threshold_used) {
             results.passed_count++;
           } else {
             results.failed_count++;
           }
 
-          // Create data point output
+          // Create log output
           try {
-            await userDataStorageConnector.createDataPointOutput(
-              evaluationRun.id,
-              {
-                data_point_id: dataPoint.id,
-                output: {
-                  tools_called: dataPointResult.tools_called,
-                  expected_tools: dataPointResult.expected_tools,
-                  score: dataPointResult.score,
-                  reason: dataPointResult.reason,
-                },
-                score: dataPointResult.score,
-                metadata: {
-                  evaluation_method: 'tool_correctness',
-                  parameters: toolCorrectnessParams,
-                },
+            await userDataStorageConnector.createLogOutput(evaluationRun.id, {
+              log_id: log.id,
+              output: {
+                tools_called: logResult.tools_called,
+                expected_tools: logResult.expected_tools,
+                score: logResult.score,
+                reason: logResult.reason,
               },
-            );
+              score: logResult.score,
+              metadata: {
+                evaluation_method: 'tool_correctness',
+                parameters: toolCorrectnessParams,
+              },
+            });
           } catch (outputError) {
             logger.error(
-              `Error creating data point output for ${dataPoint.id}:`,
+              `Error creating log output for ${log.id}:`,
               outputError,
             );
-            // Continue with other data points even if output creation fails
+            // Continue with other logs even if output creation fails
           }
         } catch (error) {
-          logger.error(`Error evaluating data point ${dataPoint.id}:`, error);
-          // Continue with other data points
+          logger.error(`Error evaluating log ${log.id}:`, error);
+          // Continue with other logs
         }
       }
 
       // Calculate average score
-      if (results.evaluated_data_points > 0) {
-        results.average_score = totalScore / results.evaluated_data_points;
+      if (results.evaluated_logs > 0) {
+        results.average_score = totalScore / results.evaluated_logs;
       }
 
       // Update evaluation run with results

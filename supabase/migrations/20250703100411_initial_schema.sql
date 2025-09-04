@@ -227,67 +227,24 @@ ALTER TABLE datasets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON datasets FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
--- Data points table
+-- Dataset -> Log bridge table
 -- ================================================
-CREATE TABLE if not exists data_points (
-  -- Base info
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  hash TEXT NOT NULL,
-  method http_method NOT NULL,
-  endpoint TEXT NOT NULL,
-  function_name TEXT NOT NULL,
-  -- Main data
-  request_body JSONB NOT NULL,
-  ground_truth JSONB,
-  is_golden BOOLEAN NOT NULL,
-  metadata JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(function_name, hash)
-);
-
-CREATE TRIGGER update_data_points_updated_at BEFORE UPDATE ON data_points
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-COMMENT ON TABLE data_points IS 'A table of data points. Each data point is a single request to an endpoint. It is used to store the data for the dataset.';
-
-COMMENT ON COLUMN data_points.hash IS 'A hash of the request body. It is used to identify the data point, so we can reuse the same data point for multiple datasets.';
-
-COMMENT ON COLUMN data_points.ground_truth IS 'The ground truth of the data point. Can be null if we generate the data point output on evaluation run. Can be auto-generated ahead of time by AI (Not golden). Can be manually verified by the user through the UI (golden).';
-
-COMMENT ON COLUMN data_points.is_golden IS 'Whether the data point is golden. These are the data points that have been manually verified by the user.';
-
-CREATE INDEX idx_data_points_hash ON data_points(hash);
-
-CREATE INDEX idx_data_points_method ON data_points(method);
-
-CREATE INDEX idx_data_points_endpoint ON data_points(endpoint);
-
-CREATE INDEX idx_data_points_function_name ON data_points(function_name);
-
-ALTER TABLE data_points ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "service_role_full_access" ON data_points FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- ================================================
--- Dataset -> Data point bridge table
--- ================================================
-CREATE TABLE if not exists dataset_data_point_bridge (
+CREATE TABLE if not exists dataset_log_bridge (
   dataset_id UUID NOT NULL,
-  data_point_id UUID NOT NULL,
+  log_id UUID NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (dataset_id, data_point_id),
+  PRIMARY KEY (dataset_id, log_id),
   FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
-  FOREIGN KEY (data_point_id) REFERENCES data_points(id) ON DELETE CASCADE
+  FOREIGN KEY (log_id) REFERENCES logs(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_dataset_data_point_bridge_dataset_id ON dataset_data_point_bridge(dataset_id);
+CREATE INDEX idx_dataset_log_bridge_dataset_id ON dataset_log_bridge(dataset_id);
 
-CREATE INDEX idx_dataset_data_point_bridge_data_point_id ON dataset_data_point_bridge(data_point_id);
+CREATE INDEX idx_dataset_log_bridge_log_id ON dataset_log_bridge(log_id);
 
-ALTER TABLE dataset_data_point_bridge ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dataset_log_bridge ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "service_role_full_access" ON dataset_data_point_bridge FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_full_access" ON dataset_log_bridge FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
 -- Evaluation runs table
@@ -340,36 +297,36 @@ ALTER TABLE evaluation_runs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON evaluation_runs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
--- Data point outputs table
+-- Log outputs table
 -- ================================================
-CREATE TABLE if not exists data_point_outputs (
+CREATE TABLE if not exists log_outputs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   evaluation_run_id UUID NOT NULL,
-  data_point_id UUID NOT NULL,
+  log_id UUID NOT NULL,
   output JSONB NOT NULL,
   score FLOAT,
   metadata JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (evaluation_run_id) REFERENCES evaluation_runs(id) ON DELETE CASCADE,
-  FOREIGN KEY (data_point_id) REFERENCES data_points(id) ON DELETE CASCADE,
-  UNIQUE(evaluation_run_id, data_point_id)
+  FOREIGN KEY (log_id) REFERENCES logs(id) ON DELETE CASCADE,
+  UNIQUE(evaluation_run_id, log_id)
 );
 
-COMMENT ON TABLE data_point_outputs IS 'Stores individual data point outputs and scores for each evaluation run';
+COMMENT ON TABLE log_outputs IS 'Stores individual log outputs and scores for each evaluation run';
 
-COMMENT ON COLUMN data_point_outputs.output IS 'The actual output generated for this data point during the evaluation run';
+COMMENT ON COLUMN log_outputs.output IS 'The actual output generated for this log during the evaluation run';
 
-COMMENT ON COLUMN data_point_outputs.score IS 'Optional score for this specific data point output';
+COMMENT ON COLUMN log_outputs.score IS 'Optional score for this specific log output';
 
-CREATE INDEX idx_data_point_outputs_evaluation_run_id ON data_point_outputs(evaluation_run_id);
+CREATE INDEX idx_log_outputs_evaluation_run_id ON log_outputs(evaluation_run_id);
 
-CREATE INDEX idx_data_point_outputs_data_point_id ON data_point_outputs(data_point_id);
+CREATE INDEX idx_log_outputs_log_id ON log_outputs(log_id);
 
-CREATE INDEX idx_data_point_outputs_score ON data_point_outputs(score);
+CREATE INDEX idx_log_outputs_score ON log_outputs(score);
 
-ALTER TABLE data_point_outputs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE log_outputs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "service_role_full_access" ON data_point_outputs FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_full_access" ON log_outputs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
 -- Cache table

@@ -1,15 +1,15 @@
 import { API_URL } from '@client/constants';
 import type { IdkRoute } from '@server/api/v1';
 import {
-  DataPointOutput,
-  type DataPointOutputQueryParams,
-} from '@shared/types/data/data-point-output';
-import {
   EvaluationRun,
   type EvaluationRunCreateParams,
   type EvaluationRunQueryParams,
   type EvaluationRunUpdateParams,
 } from '@shared/types/data/evaluation-run';
+import {
+  LogOutput,
+  type LogOutputQueryParams,
+} from '@shared/types/data/log-output';
 
 import { hc } from 'hono/client';
 
@@ -101,19 +101,19 @@ export async function deleteEvaluationRun(id: string): Promise<void> {
   }
 }
 
-export async function getDataPointOutputs(
+export async function getLogOutputs(
   evaluationRunId: string,
-  queryParams: DataPointOutputQueryParams,
-): Promise<DataPointOutput[]> {
+  queryParams: LogOutputQueryParams,
+): Promise<LogOutput[]> {
   const response = await client.v1.idk.evaluations.runs[':evaluationRunId'][
-    'data-point-outputs'
+    'log-outputs'
   ].$get({
     param: {
       evaluationRunId,
     },
     query: {
       ids: queryParams.ids,
-      data_point_ids: queryParams.data_point_ids,
+      log_ids: queryParams.log_ids,
       score_min: queryParams.score_min?.toString(),
       score_max: queryParams.score_max?.toString(),
       limit: queryParams.limit?.toString(),
@@ -122,8 +122,8 @@ export async function getDataPointOutputs(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to get evaluation run outputs');
+    throw new Error('Failed to get evaluation run log outputs');
   }
 
-  return DataPointOutput.array().parse(await response.json());
+  return LogOutput.array().parse(await response.json());
 }

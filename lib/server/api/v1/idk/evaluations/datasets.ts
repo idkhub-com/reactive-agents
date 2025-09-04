@@ -1,14 +1,11 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
 import {
-  DataPointCreateParams,
-  DataPointQueryParams,
-} from '@shared/types/data/data-point';
-import {
   DatasetCreateParams,
   DatasetQueryParams,
   DatasetUpdateParams,
 } from '@shared/types/data/dataset';
+import { LogsQueryParams } from '@shared/types/data/log';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -88,60 +85,62 @@ export const datasetsRouter = new Hono<AppEnv>()
     },
   )
   .get(
-    '/:datasetId/data-points',
+    '/:datasetId/logs',
     zValidator(
       'param',
       z.object({
         datasetId: z.uuid(),
       }),
     ),
-    zValidator('query', DataPointQueryParams),
+    zValidator('query', LogsQueryParams),
     async (c) => {
       try {
         const { datasetId } = c.req.valid('param');
         const query = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
-        const dataPoints = await connector.getDataPoints(datasetId, {
+        const logs = await connector.getDatasetLogs(datasetId, {
           ...query,
         });
 
-        return c.json(dataPoints);
+        return c.json(logs);
       } catch (error) {
-        console.error('Error fetching data points:', error);
-        return c.json({ error: 'Failed to fetch data points' }, 500);
+        console.error('Error fetching logs:', error);
+        return c.json({ error: 'Failed to fetch logs' }, 500);
       }
     },
   )
   .post(
-    '/:datasetId/data-points',
+    '/:datasetId/logs',
     zValidator(
       'param',
       z.object({
         datasetId: z.uuid(),
       }),
     ),
-    zValidator('json', z.array(DataPointCreateParams)),
+    zValidator(
+      'json',
+      z.object({
+        logIds: z.array(z.string().uuid()),
+      }),
+    ),
     async (c) => {
       try {
         const { datasetId } = c.req.valid('param');
-        const dataPoints = c.req.valid('json');
+        const logs = c.req.valid('json');
         const connector = c.get('user_data_storage_connector');
 
-        const createdDataPoints = await connector.createDataPoints(
-          datasetId,
-          dataPoints,
-        );
+        await connector.addLogsToDataset(datasetId, logs.logIds);
 
-        return c.json(createdDataPoints, 201);
+        return c.json({ success: true }, 201);
       } catch (error) {
-        console.error('Error creating data points:', error);
-        return c.json({ error: 'Failed to create data points' }, 500);
+        console.error('Error adding logs to dataset:', error);
+        return c.json({ error: 'Failed to add logs to dataset' }, 500);
       }
     },
   )
   .delete(
-    '/:datasetId/data-points',
+    '/:datasetId/logs',
     zValidator(
       'param',
       z.object({
@@ -151,7 +150,7 @@ export const datasetsRouter = new Hono<AppEnv>()
     zValidator(
       'query',
       z.object({
-        dataPointIds: z
+        logIds: z
           .union([z.string(), z.array(z.string())])
           .transform((val) => (Array.isArray(val) ? val : [val]))
           .pipe(z.array(z.uuid())),
@@ -160,15 +159,15 @@ export const datasetsRouter = new Hono<AppEnv>()
     async (c) => {
       try {
         const { datasetId } = c.req.valid('param');
-        const { dataPointIds } = c.req.valid('query');
+        const { logIds } = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
-        await connector.deleteDataPoints(datasetId, dataPointIds);
+        await connector.removeLogsFromDataset(datasetId, logIds);
 
         return c.body(null, 204);
       } catch (error) {
-        console.error('Error deleting data point:', error);
-        return c.json({ error: 'Failed to delete data point' }, 500);
+        console.error('Error deleting logs:', error);
+        return c.json({ error: 'Failed to delete logs' }, 500);
       }
     },
   );

@@ -66,7 +66,7 @@ interface AuctionAnalysis {
 }
 
 // Validation schemas for runtime validation
-const _CopartVehicleSchema = z.object({
+const CopartVehicleSchema = z.object({
   id: z.string(),
   title: z.string(),
   year: z.number(),
@@ -86,7 +86,7 @@ const _CopartVehicleSchema = z.object({
   toolResults: z.any().optional(),
 });
 
-const _SearchCriteriaSchema = z.object({
+const SearchCriteriaSchema = z.object({
   makes: z.array(z.string()),
   models: z.array(z.string()),
   yearRange: z.object({
@@ -104,30 +104,67 @@ export class CopartAuctionAgent {
   private searchCriteria: SearchCriteria;
 
   constructor(initialCriteria: Partial<SearchCriteria>) {
-    // Set default criteria
+    // Validate and set default criteria
+    const validatedCriteria = this.validateSearchCriteria(initialCriteria);
     this.searchCriteria = {
-      makes: initialCriteria.makes || ['Toyota', 'Honda', 'Ford'],
-      models: initialCriteria.models || [],
-      yearRange: initialCriteria.yearRange || { min: 2015, max: 2023 },
-      maxMileage: initialCriteria.maxMileage || 100000,
-      maxDamage: initialCriteria.maxDamage || 'minor',
-      maxPrice: initialCriteria.maxPrice || 25000,
-      locations: initialCriteria.locations || [
+      makes: validatedCriteria.makes || ['Toyota', 'Honda', 'Ford'],
+      models: validatedCriteria.models || [],
+      yearRange: validatedCriteria.yearRange || { min: 2015, max: 2023 },
+      maxMileage: validatedCriteria.maxMileage || 100000,
+      maxDamage: validatedCriteria.maxDamage || 'minor',
+      maxPrice: validatedCriteria.maxPrice || 25000,
+      locations: validatedCriteria.locations || [
         'Los Angeles',
         'Miami',
         'New York',
       ],
-      keywords: initialCriteria.keywords || [],
+      keywords: validatedCriteria.keywords || [],
     };
 
     // Note: Database functionality can be added later if needed
   }
 
   /**
-   * Update search criteria
+   * Validate search criteria using Zod schema
+   */
+  private validateSearchCriteria(
+    criteria: Partial<SearchCriteria>,
+  ): Partial<SearchCriteria> {
+    try {
+      return SearchCriteriaSchema.partial().parse(criteria);
+    } catch (error) {
+      console.warn('Invalid search criteria provided, using defaults:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Validate a CopartVehicle object using Zod schema
+   */
+  validateVehicle(vehicle: unknown): CopartVehicle | null {
+    try {
+      return CopartVehicleSchema.parse(vehicle);
+    } catch (error) {
+      console.warn('Invalid vehicle data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Validate multiple vehicles and return only valid ones
+   */
+  validateVehicles(vehicles: unknown[]): CopartVehicle[] {
+    return vehicles
+      .map((vehicle) => this.validateVehicle(vehicle))
+      .filter((vehicle): vehicle is CopartVehicle => vehicle !== null);
+  }
+
+  /**
+   * Update search criteria with validation
    */
   updateSearchCriteria(newCriteria: Partial<SearchCriteria>): void {
-    this.searchCriteria = { ...this.searchCriteria, ...newCriteria };
+    const validatedCriteria = this.validateSearchCriteria(newCriteria);
+    this.searchCriteria = { ...this.searchCriteria, ...validatedCriteria };
     logger.info({ criteria: this.searchCriteria }, 'Updated search criteria');
   }
 
@@ -206,15 +243,17 @@ export class CopartAuctionAgent {
       },
     ];
 
-    // Filter based on search criteria
-    return mockVehicles.filter((vehicle) => this.matchesCriteria(vehicle));
+    // Validate and filter based on search criteria
+    const validatedVehicles = this.validateVehicles(mockVehicles);
+    return validatedVehicles.filter((vehicle) => this.matchesCriteria(vehicle));
   }
 
   /**
-   * Filter vehicles based on search criteria
+   * Filter vehicles based on search criteria with validation
    */
-  filterVehicles(vehicles: CopartVehicle[]): CopartVehicle[] {
-    return vehicles.filter((vehicle) => this.matchesCriteria(vehicle));
+  filterVehicles(vehicles: unknown[]): CopartVehicle[] {
+    const validatedVehicles = this.validateVehicles(vehicles);
+    return validatedVehicles.filter((vehicle) => this.matchesCriteria(vehicle));
   }
 
   /**

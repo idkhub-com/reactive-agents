@@ -17,7 +17,7 @@ import { useDebounce } from '@client/hooks/use-debounce';
 import { useToast } from '@client/hooks/use-toast';
 import { useDatasets } from '@client/providers/datasets';
 import { useLogs } from '@client/providers/logs';
-import type { DataPoint, DataPointCreateParams } from '@shared/types/data';
+import type { Log } from '@shared/types/data';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LogFiltersPanel } from './log-filters-panel';
@@ -25,11 +25,11 @@ import { LogSearchControls } from './log-search-controls';
 import { LogsList } from './logs-list';
 import { SelectedLogsFooter } from './selected-logs-footer';
 
-interface AddDataPointsDialogProps {
+interface AddLogsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   datasetId: string;
-  existingDataPoints: DataPoint[];
+  existingLogs: Log[];
 }
 
 interface LogFilters {
@@ -47,14 +47,14 @@ interface LogFilters {
   hasResponseBody?: boolean;
 }
 
-export function AddDataPointsDialog({
+export function AddLogsDialog({
   open,
   onOpenChange,
   datasetId,
-  existingDataPoints,
-}: AddDataPointsDialogProps): React.ReactElement {
+  existingLogs,
+}: AddLogsDialogProps): React.ReactElement {
   const { logs, isLoading, error } = useLogs();
-  const { addDataPoints } = useDatasets();
+  const { addLogs } = useDatasets();
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,15 +115,15 @@ export function AddDataPointsDialog({
     return 'Other';
   }, []);
 
-  // Create a set of existing data point log_ids for efficient lookup
+  // Create a set of existing log_ids for efficient lookup
   const existingLogIds = useMemo(
     () =>
       new Set(
-        existingDataPoints
-          .map((dp) => (dp.metadata as Record<string, unknown>)?.log_id)
+        existingLogs
+          .map((log) => log.id)
           .filter((v): v is string => typeof v === 'string'),
       ),
-    [existingDataPoints],
+    [existingLogs],
   );
 
   // Memoize unique values extraction for filter options
@@ -158,7 +158,7 @@ export function AddDataPointsDialog({
     if (!logs) return undefined;
 
     return logs.filter((log) => {
-      // Skip logs that are already data points
+      // Skip logs that are already logs
       if (existingLogIds.has(log.id)) {
         return false;
       }
@@ -245,18 +245,12 @@ export function AddDataPointsDialog({
       }
 
       // Request body filter
-      if (
-        filters.hasRequestBody === true &&
-        !log.ai_provider_request_log?.request_body
-      ) {
+      if (filters.hasRequestBody === true && !log.ai_provider_request_log) {
         return false;
       }
 
       // Response body filter
-      if (
-        filters.hasResponseBody === true &&
-        !log.ai_provider_request_log?.response_body
-      ) {
+      if (filters.hasResponseBody === true && !log.ai_provider_request_log) {
         return false;
       }
 
@@ -302,7 +296,7 @@ export function AddDataPointsDialog({
     });
   }, []);
 
-  const handleAddDataPoints = async () => {
+  const handleAddLogs = async () => {
     if (!logs || selectedLogs.size === 0) return;
 
     // Create a new AbortController for this operation
@@ -311,35 +305,14 @@ export function AddDataPointsDialog({
 
     setIsCreating(true);
     try {
-      const selectedLogsData = logs.filter((log) => selectedLogs.has(log.id));
-
-      const dataPointsToCreate: DataPointCreateParams[] = selectedLogsData.map(
-        (log) => ({
-          method: log.method,
-          endpoint: log.endpoint,
-          function_name: log.function_name,
-          request_body: log.ai_provider_request_log?.request_body || {},
-          ground_truth: log.ai_provider_request_log?.response_body || null,
-          is_golden: false,
-          metadata: {
-            log_id: log.id,
-            status: log.status,
-            duration: log.duration,
-            start_time: log.start_time,
-            end_time: log.end_time,
-            ai_provider: log.ai_provider,
-            model: log.model,
-            ...(log.metadata || {}),
-          },
-        }),
-      );
+      const selectedLogIds = Array.from(selectedLogs);
 
       // Check if operation was aborted before making the API call
       if (abortController.signal.aborted) {
         return;
       }
 
-      await addDataPoints(datasetId, dataPointsToCreate, {
+      await addLogs(datasetId, selectedLogIds, {
         signal: abortController.signal,
       });
 
@@ -349,8 +322,8 @@ export function AddDataPointsDialog({
       }
 
       toast({
-        title: 'Data points added',
-        description: `Successfully added ${dataPointsToCreate.length} data points to the dataset`,
+        title: 'Logs added',
+        description: `Successfully added ${selectedLogIds.length} logs to the dataset`,
       });
 
       onOpenChange(false);
@@ -360,11 +333,11 @@ export function AddDataPointsDialog({
         return; // Silently handle abort
       }
 
-      console.error('Failed to add data points:', error);
+      console.error('Failed to add logs:', error);
       if (!abortController.signal.aborted) {
         toast({
           variant: 'destructive',
-          title: 'Error adding data points',
+          title: 'Error adding logs',
           description: 'Please try again later',
         });
       }
@@ -400,11 +373,11 @@ export function AddDataPointsDialog({
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
-            Add Data Points
+            Add Logs
           </DialogTitle>
           <DialogDescription>
-            Select logs to convert into data points for this dataset. Logs
-            already converted to data points are automatically filtered out.
+            Select logs to convert into logs for this dataset. Logs already
+            converted to logs are automatically filtered out.
           </DialogDescription>
         </DialogHeader>
 
@@ -458,12 +431,12 @@ export function AddDataPointsDialog({
             Cancel
           </Button>
           <Button
-            onClick={handleAddDataPoints}
+            onClick={handleAddLogs}
             disabled={selectedLogs.size === 0 || isCreating}
           >
             {isCreating
               ? 'Adding...'
-              : `Add ${selectedLogs.size} Data Point${selectedLogs.size === 1 ? '' : 's'}`}
+              : `Add ${selectedLogs.size} Log${selectedLogs.size === 1 ? '' : 's'}`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,9 +1,5 @@
 // Agent types
 export * from './agent';
-// Data Point types
-export * from './data-point';
-// Data Point Output types
-export * from './data-point-output';
 // Dataset types
 export * from './dataset';
 // Evaluation Run types
@@ -14,6 +10,8 @@ export * from './feedback';
 export * from './improved-response';
 // Log types
 export * from './log';
+// Log Output types
+export * from './log-output';
 // Skill types
 export * from './skill';
 // Tool types

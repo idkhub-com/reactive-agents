@@ -23,7 +23,7 @@ export interface KnowledgeRetentionResult {
 
 export interface KnowledgeRetentionAverageResult {
   average_score: number;
-  total_data_points: number;
+  total_logs: number;
   passed_count: number;
   failed_count: number;
   threshold_used: number;

@@ -51,22 +51,23 @@ describe('getOrCreateSkill', () => {
       updateDataset: vi.fn(),
       deleteDataset: vi.fn(),
 
-      // Data point methods
-      getDataPoints: vi.fn(),
-      createDataPoints: vi.fn(),
-      updateDataPoint: vi.fn(),
-      deleteDataPoints: vi.fn(),
-
       // Evaluation runs
+      // Log methods (required by interface)
+      getLogs: vi.fn(),
+      deleteLog: vi.fn(),
+      // Dataset-Log Bridge methods (required by interface)
+      getDatasetLogs: vi.fn(),
+      addLogsToDataset: vi.fn(),
+      removeLogsFromDataset: vi.fn(),
+      // Evaluation run methods
       getEvaluationRuns: vi.fn(),
       createEvaluationRun: vi.fn(),
       updateEvaluationRun: vi.fn(),
       deleteEvaluationRun: vi.fn(),
-
-      // Evaluation outputs
-      getDataPointOutputs: vi.fn(),
-      createDataPointOutput: vi.fn(),
-      deleteDataPointOutput: vi.fn(),
+      // Log Output methods (required by interface)
+      getLogOutputs: vi.fn(),
+      createLogOutput: vi.fn(),
+      deleteLogOutput: vi.fn(),
     } as UserDataStorageConnector;
   });
 

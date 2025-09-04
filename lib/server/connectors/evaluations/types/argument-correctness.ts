@@ -1,4 +1,3 @@
-import type { DataPoint } from '@shared/types/data/data-point';
 import { z } from 'zod';
 import { ToolUsageSchema } from './tool_usage';
 
@@ -57,7 +56,6 @@ export type ArgumentCorrectnessResult = z.infer<
 
 // Metadata for outputs
 export type ArgumentCorrectnessMetadata = {
-  datapoint?: DataPoint;
   input?: string;
   actual_output?: string;
   tools_called?: ArgumentCorrectnessToolCall[];
@@ -87,7 +85,7 @@ export const argumentCorrectnessScoringText = Object.values(
 // Average result
 export interface ArgumentCorrectnessAverageResult {
   average_score: number;
-  total_data_points: number;
+  total_logs: number;
   passed_count: number;
   failed_count: number;
   threshold_used: number;

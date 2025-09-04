@@ -1,4 +1,3 @@
-import type { DataPoint } from '@shared/types/data/data-point';
 import { z } from 'zod';
 import { ToolUsageSchema } from './tool_usage';
 
@@ -71,7 +70,6 @@ export type TaskCompletionResult = z.infer<typeof TaskCompletionResultSchema>;
  * Task completion metadata for generic evaluation system
  */
 export type TaskCompletionMetadata = {
-  datapoint?: DataPoint;
   actual_output?: Record<string, unknown>;
   tools_called?: TaskCompletionToolCall[];
   criteria?: {
@@ -113,7 +111,7 @@ export const taskCompletionScoringText = Object.values(
 
 export interface TaskCompletionAverageResult {
   average_score: number;
-  total_data_points: number;
+  total_logs: number;
   passed_count: number;
   failed_count: number;
   threshold_used: number;

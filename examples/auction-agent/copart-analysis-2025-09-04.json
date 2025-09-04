@@ -1,0 +1,482 @@
+{
+  "searchCriteria": {
+    "makes": [
+      "Toyota",
+      "Honda",
+      "Ford"
+    ],
+    "models": [],
+    "yearRange": {
+      "min": 2015,
+      "max": 2023
+    },
+    "maxMileage": 100000,
+    "maxDamage": "minor",
+    "maxPrice": 25000,
+    "locations": [
+      "Los Angeles",
+      "Miami",
+      "New York"
+    ],
+    "keywords": []
+  },
+  "vehicles": [
+    {
+      "id": "1",
+      "title": "2018 Toyota Camry",
+      "year": 2018,
+      "make": "Toyota",
+      "model": "Camry",
+      "vin": "4T1B11HK5JU123456",
+      "mileage": 45000,
+      "damage": "minor",
+      "currentBid": 12000,
+      "estimatedValue": 18000,
+      "auctionEndTime": "2025-09-05T02:50:54.865Z",
+      "location": "Los Angeles, CA",
+      "images": [
+        "https://example.com/camry1.jpg"
+      ],
+      "description": "Clean title, minor front end damage, runs great",
+      "lotNumber": "L123456",
+      "saleStatus": "active",
+      "toolResults": {
+        "riskAssessment": {
+          "level": "low",
+          "score": 15,
+          "factors": [
+            "Vehicle is 7 years old",
+            "Minor damage reported",
+            "High reliability brand"
+          ],
+          "warnings": [],
+          "confidence": 75
+        },
+        "vinDetails": {
+          "Error Code": "1",
+          "Error Text": "1 - Check Digit (9th position) does not calculate properly",
+          "Vehicle Descriptor": "4T1B11HK*JU",
+          "Make": "TOYOTA",
+          "Manufacturer Name": "TOYOTA MOTOR MANUFACTURING, KENTUCKY, INC.",
+          "Model": "Camry",
+          "Model Year": "2018",
+          "Plant City": "GEORGETOWN",
+          "Series": "AXVA70L/GSV70L/AXVH70L/AXVH71L",
+          "Trim": "L/LE/SE/XLE",
+          "Vehicle Type": "PASSENGER CAR",
+          "Plant Country": "UNITED STATES (USA)",
+          "Plant Company Name": "Toyota Motor Manufacturing, Kentucky, Inc.",
+          "Plant State": "KENTUCKY",
+          "Base Price ($)": "23645.00",
+          "Body Class": "Sedan/Saloon",
+          "Doors": "4",
+          "Wheel Base Type": "Standard",
+          "Gross Vehicle Weight Rating From": "Class 1: 6,000 lb or less (2,722 kg or less)",
+          "Wheel Base (inches) From": "111.20",
+          "Gross Vehicle Weight Rating To": "Class 1: 6,000 lb or less (2,722 kg or less)",
+          "Bed Type": "Not Applicable",
+          "Cab Type": "Not Applicable",
+          "Trailer Type Connection": "Not Applicable",
+          "Trailer Body Type": "Not Applicable",
+          "Number of Wheels": "4",
+          "Custom Motorcycle Type": "Not Applicable",
+          "Motorcycle Suspension Type": "Not Applicable",
+          "Motorcycle Chassis Type": "Not Applicable",
+          "Bus Floor Configuration Type": "Not Applicable",
+          "Bus Type": "Not Applicable",
+          "Steering Location": "Left-Hand Drive (LHD)",
+          "Number of Seats": "5",
+          "Number of Seat Rows": "2",
+          "Transmission Style": "Automatic",
+          "Transmission Speeds": "8",
+          "Drive Type": "4x2",
+          "Axles": "2",
+          "Brake System Description": "Calipers / Front Vented Discs",
+          "Number of Battery Packs per Vehicle": "1",
+          "Engine Number of Cylinders": "4",
+          "Displacement (CC)": "2487",
+          "Displacement (CI)": "152",
+          "Displacement (L)": "2.5",
+          "Engine Stroke Cycles": "4",
+          "Engine Model": "A25A-FKS",
+          "Fuel Type - Primary": "Gasoline",
+          "Valve Train Design": "Dual Overhead Cam (DOHC)",
+          "Engine Configuration": "In-Line",
+          "Engine Brake (hp) From": "203",
+          "Other Engine Info": "PORT+DIRECT",
+          "Top Speed (MPH)": "133",
+          "Engine Manufacturer": "Toyota",
+          "Pretensioner": "Yes",
+          "Seat Belt Type": "Manual",
+          "Curtain Air Bag Locations": "All Rows",
+          "Front Air Bag Locations": "1st Row (Driver and Passenger)",
+          "Knee Air Bag Locations": "1st Row (Driver and Passenger)",
+          "Side Air Bag Locations": "All Rows",
+          "Anti-lock Braking System (ABS)": "Standard",
+          "Electronic Stability Control (ESC)": "Standard",
+          "Traction Control": "Standard",
+          "Tire Pressure Monitoring System (TPMS) Type": "Direct",
+          "Active Safety System Note": "Blind Spot Detection: Optional for LE and SE trims, Standard for XLE, XLE V6, XSE, XSE V6 trims; Automatic Crash Notification: Optional for LE, XLE, SE, XSE trims, Standard for XLE V6 and XSE V6 trims",
+          "Auto-Reverse System for Windows and Sunroofs": "Standard",
+          "Adaptive Cruise Control (ACC)": "Standard",
+          "Crash Imminent Braking (CIB)": "Standard",
+          "Forward Collision Warning (FCW)": "Standard",
+          "Dynamic Brake Support (DBS)": "Standard",
+          "Pedestrian Automatic Emergency Braking (PAEB)": "Standard",
+          "Lane Departure Warning (LDW)": "Standard",
+          "Lane Keeping Assistance (LKA)": "Standard",
+          "Backup Camera": "Standard",
+          "Daytime Running Light (DRL)": "Standard",
+          "Semiautomatic Headlamp Beam Switching": "Standard",
+          "Adaptive Driving Beam (ADB)": "Standard"
+        },
+        "marketComps": {
+          "averagePrice": 6760,
+          "priceRange": {
+            "min": 5746,
+            "max": 7774
+          },
+          "marketTrend": "above",
+          "confidence": 65,
+          "source": "NHTSA Safety + Heuristic",
+          "dataPoints": 1
+        }
+      }
+    },
+    {
+      "id": "2",
+      "title": "2015 Honda Civic",
+      "year": 2015,
+      "make": "Honda",
+      "model": "Civic",
+      "vin": "2HGFB2F54FH123456",
+      "mileage": 78000,
+      "damage": "none",
+      "currentBid": 9500,
+      "estimatedValue": 14000,
+      "auctionEndTime": "2025-09-06T02:50:54.866Z",
+      "location": "Miami, FL",
+      "images": [
+        "https://example.com/civic1.jpg"
+      ],
+      "description": "Clean title, no damage, excellent condition",
+      "lotNumber": "L123457",
+      "saleStatus": "upcoming",
+      "toolResults": {
+        "riskAssessment": {
+          "level": "low",
+          "score": 10,
+          "factors": [
+            "Vehicle is 10 years old",
+            "No reported damage",
+            "High reliability brand"
+          ],
+          "warnings": [],
+          "confidence": 75
+        },
+        "vinDetails": {
+          "Error Code": "1",
+          "Error Text": "1 - Check Digit (9th position) does not calculate properly",
+          "Vehicle Descriptor": "2HGFB2F5*FH",
+          "Make": "HONDA",
+          "Manufacturer Name": "HONDA OF CANADA MFG., A DIVISION OF HONDA CANADA INC.",
+          "Model": "Civic",
+          "Model Year": "2015",
+          "Plant City": "ALLISTON",
+          "Trim": "LX",
+          "Vehicle Type": "PASSENGER CAR",
+          "Plant Country": "CANADA",
+          "Plant State": "ONTARIO",
+          "Body Class": "Sedan/Saloon",
+          "Doors": "4",
+          "Gross Vehicle Weight Rating From": "Class 1B: 3,001 - 4,000 lb (1,360 - 1,814 kg)",
+          "Gross Vehicle Weight Rating To": "Class 1: 6,000 lb or less (2,722 kg or less)",
+          "Bed Type": "Not Applicable",
+          "Cab Type": "Not Applicable",
+          "Trailer Type Connection": "Not Applicable",
+          "Trailer Body Type": "Not Applicable",
+          "Custom Motorcycle Type": "Not Applicable",
+          "Motorcycle Suspension Type": "Not Applicable",
+          "Motorcycle Chassis Type": "Not Applicable",
+          "Bus Floor Configuration Type": "Not Applicable",
+          "Bus Type": "Not Applicable",
+          "Transmission Style": "Continuously Variable Transmission (CVT)",
+          "Engine Number of Cylinders": "4",
+          "Displacement (CC)": "1802.577040",
+          "Displacement (CI)": "110",
+          "Displacement (L)": "1.802577040",
+          "Engine Model": "R18Z1",
+          "Fuel Type - Primary": "Gasoline",
+          "Valve Train Design": "Single Overhead Cam (SOHC)",
+          "Engine Configuration": "In-Line",
+          "Engine Brake (hp) From": "143",
+          "Seat Belt Type": "Manual",
+          "Other Restraint System Info": "seat belts: front, rear, rear center",
+          "Curtain Air Bag Locations": "1st Row (Driver and Passenger)",
+          "Front Air Bag Locations": "1st Row (Driver and Passenger)",
+          "Side Air Bag Locations": "1st Row (Driver and Passenger)",
+          "Tire Pressure Monitoring System (TPMS) Type": "Indirect"
+        },
+        "marketComps": {
+          "averagePrice": 4663,
+          "priceRange": {
+            "min": 3963,
+            "max": 5362
+          },
+          "marketTrend": "above",
+          "confidence": 65,
+          "source": "NHTSA Safety + Heuristic",
+          "dataPoints": 2
+        }
+      }
+    }
+  ],
+  "analysis": [
+    {
+      "vehicle": {
+        "id": "1",
+        "title": "2018 Toyota Camry",
+        "year": 2018,
+        "make": "Toyota",
+        "model": "Camry",
+        "vin": "4T1B11HK5JU123456",
+        "mileage": 45000,
+        "damage": "minor",
+        "currentBid": 12000,
+        "estimatedValue": 18000,
+        "auctionEndTime": "2025-09-05T02:50:54.865Z",
+        "location": "Los Angeles, CA",
+        "images": [
+          "https://example.com/camry1.jpg"
+        ],
+        "description": "Clean title, minor front end damage, runs great",
+        "lotNumber": "L123456",
+        "saleStatus": "active",
+        "toolResults": {
+          "riskAssessment": {
+            "level": "low",
+            "score": 15,
+            "factors": [
+              "Vehicle is 7 years old",
+              "Minor damage reported",
+              "High reliability brand"
+            ],
+            "warnings": [],
+            "confidence": 75
+          },
+          "vinDetails": {
+            "Error Code": "1",
+            "Error Text": "1 - Check Digit (9th position) does not calculate properly",
+            "Vehicle Descriptor": "4T1B11HK*JU",
+            "Make": "TOYOTA",
+            "Manufacturer Name": "TOYOTA MOTOR MANUFACTURING, KENTUCKY, INC.",
+            "Model": "Camry",
+            "Model Year": "2018",
+            "Plant City": "GEORGETOWN",
+            "Series": "AXVA70L/GSV70L/AXVH70L/AXVH71L",
+            "Trim": "L/LE/SE/XLE",
+            "Vehicle Type": "PASSENGER CAR",
+            "Plant Country": "UNITED STATES (USA)",
+            "Plant Company Name": "Toyota Motor Manufacturing, Kentucky, Inc.",
+            "Plant State": "KENTUCKY",
+            "Base Price ($)": "23645.00",
+            "Body Class": "Sedan/Saloon",
+            "Doors": "4",
+            "Wheel Base Type": "Standard",
+            "Gross Vehicle Weight Rating From": "Class 1: 6,000 lb or less (2,722 kg or less)",
+            "Wheel Base (inches) From": "111.20",
+            "Gross Vehicle Weight Rating To": "Class 1: 6,000 lb or less (2,722 kg or less)",
+            "Bed Type": "Not Applicable",
+            "Cab Type": "Not Applicable",
+            "Trailer Type Connection": "Not Applicable",
+            "Trailer Body Type": "Not Applicable",
+            "Number of Wheels": "4",
+            "Custom Motorcycle Type": "Not Applicable",
+            "Motorcycle Suspension Type": "Not Applicable",
+            "Motorcycle Chassis Type": "Not Applicable",
+            "Bus Floor Configuration Type": "Not Applicable",
+            "Bus Type": "Not Applicable",
+            "Steering Location": "Left-Hand Drive (LHD)",
+            "Number of Seats": "5",
+            "Number of Seat Rows": "2",
+            "Transmission Style": "Automatic",
+            "Transmission Speeds": "8",
+            "Drive Type": "4x2",
+            "Axles": "2",
+            "Brake System Description": "Calipers / Front Vented Discs",
+            "Number of Battery Packs per Vehicle": "1",
+            "Engine Number of Cylinders": "4",
+            "Displacement (CC)": "2487",
+            "Displacement (CI)": "152",
+            "Displacement (L)": "2.5",
+            "Engine Stroke Cycles": "4",
+            "Engine Model": "A25A-FKS",
+            "Fuel Type - Primary": "Gasoline",
+            "Valve Train Design": "Dual Overhead Cam (DOHC)",
+            "Engine Configuration": "In-Line",
+            "Engine Brake (hp) From": "203",
+            "Other Engine Info": "PORT+DIRECT",
+            "Top Speed (MPH)": "133",
+            "Engine Manufacturer": "Toyota",
+            "Pretensioner": "Yes",
+            "Seat Belt Type": "Manual",
+            "Curtain Air Bag Locations": "All Rows",
+            "Front Air Bag Locations": "1st Row (Driver and Passenger)",
+            "Knee Air Bag Locations": "1st Row (Driver and Passenger)",
+            "Side Air Bag Locations": "All Rows",
+            "Anti-lock Braking System (ABS)": "Standard",
+            "Electronic Stability Control (ESC)": "Standard",
+            "Traction Control": "Standard",
+            "Tire Pressure Monitoring System (TPMS) Type": "Direct",
+            "Active Safety System Note": "Blind Spot Detection: Optional for LE and SE trims, Standard for XLE, XLE V6, XSE, XSE V6 trims; Automatic Crash Notification: Optional for LE, XLE, SE, XSE trims, Standard for XLE V6 and XSE V6 trims",
+            "Auto-Reverse System for Windows and Sunroofs": "Standard",
+            "Adaptive Cruise Control (ACC)": "Standard",
+            "Crash Imminent Braking (CIB)": "Standard",
+            "Forward Collision Warning (FCW)": "Standard",
+            "Dynamic Brake Support (DBS)": "Standard",
+            "Pedestrian Automatic Emergency Braking (PAEB)": "Standard",
+            "Lane Departure Warning (LDW)": "Standard",
+            "Lane Keeping Assistance (LKA)": "Standard",
+            "Backup Camera": "Standard",
+            "Daytime Running Light (DRL)": "Standard",
+            "Semiautomatic Headlamp Beam Switching": "Standard",
+            "Adaptive Driving Beam (ADB)": "Standard"
+          },
+          "marketComps": {
+            "averagePrice": 6760,
+            "priceRange": {
+              "min": 5746,
+              "max": 7774
+            },
+            "marketTrend": "above",
+            "confidence": 65,
+            "source": "NHTSA Safety + Heuristic",
+            "dataPoints": 1
+          }
+        }
+      },
+      "score": 4,
+      "reasoning": "Analysis based on price difference, age, and mileage | Market: NHTSA Safety + Heuristic (65% conf) | Risk: low (15/100)",
+      "marketComparison": {
+        "averagePrice": 6760,
+        "priceDifference": -5240,
+        "marketTrend": "above"
+      },
+      "riskAssessment": {
+        "level": "low",
+        "factors": [
+          "Vehicle is 7 years old",
+          "Minor damage reported",
+          "High reliability brand"
+        ]
+      },
+      "recommendation": "pass"
+    },
+    {
+      "vehicle": {
+        "id": "2",
+        "title": "2015 Honda Civic",
+        "year": 2015,
+        "make": "Honda",
+        "model": "Civic",
+        "vin": "2HGFB2F54FH123456",
+        "mileage": 78000,
+        "damage": "none",
+        "currentBid": 9500,
+        "estimatedValue": 14000,
+        "auctionEndTime": "2025-09-06T02:50:54.866Z",
+        "location": "Miami, FL",
+        "images": [
+          "https://example.com/civic1.jpg"
+        ],
+        "description": "Clean title, no damage, excellent condition",
+        "lotNumber": "L123457",
+        "saleStatus": "upcoming",
+        "toolResults": {
+          "riskAssessment": {
+            "level": "low",
+            "score": 10,
+            "factors": [
+              "Vehicle is 10 years old",
+              "No reported damage",
+              "High reliability brand"
+            ],
+            "warnings": [],
+            "confidence": 75
+          },
+          "vinDetails": {
+            "Error Code": "1",
+            "Error Text": "1 - Check Digit (9th position) does not calculate properly",
+            "Vehicle Descriptor": "2HGFB2F5*FH",
+            "Make": "HONDA",
+            "Manufacturer Name": "HONDA OF CANADA MFG., A DIVISION OF HONDA CANADA INC.",
+            "Model": "Civic",
+            "Model Year": "2015",
+            "Plant City": "ALLISTON",
+            "Trim": "LX",
+            "Vehicle Type": "PASSENGER CAR",
+            "Plant Country": "CANADA",
+            "Plant State": "ONTARIO",
+            "Body Class": "Sedan/Saloon",
+            "Doors": "4",
+            "Gross Vehicle Weight Rating From": "Class 1B: 3,001 - 4,000 lb (1,360 - 1,814 kg)",
+            "Gross Vehicle Weight Rating To": "Class 1: 6,000 lb or less (2,722 kg or less)",
+            "Bed Type": "Not Applicable",
+            "Cab Type": "Not Applicable",
+            "Trailer Type Connection": "Not Applicable",
+            "Trailer Body Type": "Not Applicable",
+            "Custom Motorcycle Type": "Not Applicable",
+            "Motorcycle Suspension Type": "Not Applicable",
+            "Motorcycle Chassis Type": "Not Applicable",
+            "Bus Floor Configuration Type": "Not Applicable",
+            "Bus Type": "Not Applicable",
+            "Transmission Style": "Continuously Variable Transmission (CVT)",
+            "Engine Number of Cylinders": "4",
+            "Displacement (CC)": "1802.577040",
+            "Displacement (CI)": "110",
+            "Displacement (L)": "1.802577040",
+            "Engine Model": "R18Z1",
+            "Fuel Type - Primary": "Gasoline",
+            "Valve Train Design": "Single Overhead Cam (SOHC)",
+            "Engine Configuration": "In-Line",
+            "Engine Brake (hp) From": "143",
+            "Seat Belt Type": "Manual",
+            "Other Restraint System Info": "seat belts: front, rear, rear center",
+            "Curtain Air Bag Locations": "1st Row (Driver and Passenger)",
+            "Front Air Bag Locations": "1st Row (Driver and Passenger)",
+            "Side Air Bag Locations": "1st Row (Driver and Passenger)",
+            "Tire Pressure Monitoring System (TPMS) Type": "Indirect"
+          },
+          "marketComps": {
+            "averagePrice": 4663,
+            "priceRange": {
+              "min": 3963,
+              "max": 5362
+            },
+            "marketTrend": "above",
+            "confidence": 65,
+            "source": "NHTSA Safety + Heuristic",
+            "dataPoints": 2
+          }
+        }
+      },
+      "score": 0,
+      "reasoning": "Analysis based on price difference, age, and mileage | Market: NHTSA Safety + Heuristic (65% conf) | Risk: low (10/100)",
+      "marketComparison": {
+        "averagePrice": 4663,
+        "priceDifference": -4837,
+        "marketTrend": "above"
+      },
+      "riskAssessment": {
+        "level": "low",
+        "factors": [
+          "Vehicle is 10 years old",
+          "No reported damage",
+          "High reliability brand"
+        ]
+      },
+      "recommendation": "pass"
+    }
+  ],
+  "timestamp": "2025-09-04T02:50:55.991Z"
+}

@@ -16,36 +16,34 @@ import {
 } from '@client/components/ui/dropdown-menu';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { getHttpMethodColor } from '@client/utils/http-method-colors';
-import type { DataPoint } from '@shared/types/data';
-import { Code, MoreVertical, Star, Trash2 } from 'lucide-react';
+import type { Log } from '@shared/types/data';
+import { Code, MoreVertical, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
-interface DataPointsListProps {
-  dataPoints: DataPoint[];
+interface LogsListProps {
+  logs: Log[];
   datasetId: string;
   isLoading?: boolean;
-  onDataPointsDeleted?: () => void;
-  onDeleteDataPoint?: (dataPoint: DataPoint) => void;
+  onLogsDeleted?: () => void;
+  onDeleteLog?: (log: Log) => void;
 }
 
-function DataPointsListComponent({
-  dataPoints,
+function LogsListComponent({
+  logs,
   datasetId: _datasetId,
   isLoading,
-  onDataPointsDeleted: _onDataPointsDeleted,
-  onDeleteDataPoint,
-}: DataPointsListProps): React.ReactElement {
-  const dataPointsRef = useRef<DataPoint[]>(dataPoints);
+  onLogsDeleted: _onLogsDeleted,
+  onDeleteLog,
+}: LogsListProps): React.ReactElement {
+  const logsRef = useRef<Log[]>(logs);
   const isMountedRef = useRef(true);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [dataPointToView, setDataPointToView] = useState<DataPoint | null>(
-    null,
-  );
+  const [logToView, setLogToView] = useState<Log | null>(null);
 
-  // Update ref when dataPoints changes
+  // Update ref when logs changes
   useEffect(() => {
-    dataPointsRef.current = dataPoints;
-  }, [dataPoints]);
+    logsRef.current = logs;
+  }, [logs]);
 
   // Track mounted state and cleanup on unmount
   useEffect(() => {
@@ -56,29 +54,36 @@ function DataPointsListComponent({
   }, []);
 
   const handleDeleteClick = useCallback(
-    (dataPoint: DataPoint) => {
-      onDeleteDataPoint?.(dataPoint);
+    (log: Log) => {
+      onDeleteLog?.(log);
     },
-    [onDeleteDataPoint],
+    [onDeleteLog],
   );
 
-  const handleViewClick = useCallback((dataPoint: DataPoint) => {
+  const handleViewClick = useCallback((log: Log) => {
     if (!isMountedRef.current) return;
 
-    // Set the data point to view in the dialog
-    setDataPointToView(dataPoint);
+    // Set the log to view in the dialog
+    setLogToView(log);
     setViewDialogOpen(true);
   }, []);
 
-  const formatDate = useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+  const formatDate = useCallback((timestamp: number) => {
+    try {
+      const date = new Date(timestamp);
+      if (Number.isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    } catch (_error) {
+      return 'Invalid date';
+    }
   }, []);
 
   // Loading skeleton component
@@ -123,13 +128,13 @@ function DataPointsListComponent({
   return (
     <>
       <div className="space-y-4">
-        {dataPoints.map((dataPoint) => (
+        {logs.map((log) => (
           <Card
-            key={dataPoint.id}
+            key={log.id}
             className="cursor-pointer transition-colors hover:bg-accent/50"
             onClick={(e) => {
               e.stopPropagation();
-              handleViewClick(dataPoint);
+              handleViewClick(log);
             }}
           >
             <CardContent className="p-6">
@@ -140,37 +145,21 @@ function DataPointsListComponent({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Badge className={getHttpMethodColor(dataPoint.method)}>
-                        {dataPoint.method}
+                      <Badge className={getHttpMethodColor(log.method)}>
+                        {log.method}
                       </Badge>
                       <span className="font-medium text-sm truncate">
-                        {dataPoint.endpoint}
+                        {log.endpoint}
                       </span>
-                      {dataPoint.is_golden && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                        >
-                          <Star className="mr-1 h-3 w-3" />
-                          Golden
-                        </Badge>
-                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                      <span>Function: {dataPoint.function_name}</span>
-                      {/* Ground truth display commented out - should check for improved responses instead
-                      {dataPoint.ground_truth && (
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          Has Ground Truth
-                        </span>
-                      )} */}
+                      <span>Function: {log.function_name}</span>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Created {formatDate(dataPoint.created_at)}</span>
-                      {Object.keys(dataPoint.metadata).length > 0 && (
+                      <span>Started {formatDate(log.start_time)}</span>
+                      {Object.keys(log.metadata).length > 0 && (
                         <Badge variant="outline" className="text-xs">
-                          {Object.keys(dataPoint.metadata).length} metadata
+                          {Object.keys(log.metadata).length} metadata
                         </Badge>
                       )}
                     </div>
@@ -192,12 +181,12 @@ function DataPointsListComponent({
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteClick(dataPoint);
+                          handleDeleteClick(log);
                         }}
                         variant="destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Data Point
+                        Delete Log
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -213,60 +202,45 @@ function DataPointsListComponent({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Code className="h-5 w-5" />
-              Data Point Details
+              Log Details
             </DialogTitle>
             <DialogDescription>
-              {dataPointToView &&
-                `${dataPointToView.method} ${dataPointToView.endpoint}`}
+              {logToView && `${logToView.method} ${logToView.endpoint}`}
             </DialogDescription>
-            {dataPointToView && (
+            {logToView && (
               <div className="flex items-center gap-2 mt-2">
-                <Badge className={getHttpMethodColor(dataPointToView.method)}>
-                  {dataPointToView.method}
+                <Badge className={getHttpMethodColor(logToView.method)}>
+                  {logToView.method}
                 </Badge>
-                <span>{dataPointToView.endpoint}</span>
+                <span>{logToView.endpoint}</span>
               </div>
             )}
           </DialogHeader>
           <div className="max-h-[60vh] overflow-auto">
-            {dataPointToView && (
+            {logToView && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium mb-2">Request Body</h4>
+                  <h4 className="font-medium mb-2">AI Provider Request Log</h4>
                   <Card>
                     <CardContent className="p-4">
                       <pre className="text-sm overflow-auto">
-                        {JSON.stringify(dataPointToView.request_body, null, 2)}
+                        {JSON.stringify(
+                          logToView.ai_provider_request_log,
+                          null,
+                          2,
+                        )}
                       </pre>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Ground truth display commented out - should be based on improved responses
-                {dataPointToView.ground_truth && (
-                  <div>
-                    <h4 className="font-medium mb-2">Ground Truth</h4>
-                    <Card>
-                      <CardContent className="p-4">
-                        <pre className="text-sm overflow-auto">
-                          {JSON.stringify(
-                            dataPointToView.ground_truth,
-                            null,
-                            2,
-                          )}
-                        </pre>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )} */}
-
-                {Object.keys(dataPointToView.metadata).length > 0 && (
+                {Object.keys(logToView.metadata).length > 0 && (
                   <div>
                     <h4 className="font-medium mb-2">Metadata</h4>
                     <Card>
                       <CardContent className="p-4">
                         <pre className="text-sm overflow-auto">
-                          {JSON.stringify(dataPointToView.metadata, null, 2)}
+                          {JSON.stringify(logToView.metadata, null, 2)}
                         </pre>
                       </CardContent>
                     </Card>
@@ -279,15 +253,12 @@ function DataPointsListComponent({
                     <CardContent className="p-4 space-y-2">
                       <div className="flex justify-between">
                         <span className="font-medium">Function Name:</span>
-                        <span>{dataPointToView.function_name}</span>
+                        <span>{logToView.function_name}</span>
                       </div>
+
                       <div className="flex justify-between">
-                        <span className="font-medium">Golden:</span>
-                        <span>{dataPointToView.is_golden ? 'Yes' : 'No'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Created:</span>
-                        <span>{formatDate(dataPointToView.created_at)}</span>
+                        <span className="font-medium">Started:</span>
+                        <span>{formatDate(logToView.start_time)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -301,4 +272,4 @@ function DataPointsListComponent({
   );
 }
 
-export const DataPointsList = memo(DataPointsListComponent);
+export const LogsList = memo(LogsListComponent);

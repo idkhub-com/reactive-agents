@@ -182,15 +182,10 @@ export function CreateDatasetView(): React.ReactElement {
               <div className="space-y-1">
                 <h4 className="font-medium">About Datasets</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Datasets organize evaluation logs for model testing</li>
+                  <li>• Logs can be created from existing logs or manually</li>
                   <li>
-                    • Datasets organize evaluation data points for model testing
-                  </li>
-                  <li>
-                    • Data points can be created from existing logs or manually
-                  </li>
-                  <li>
-                    • Each data point contains request/response pairs for
-                    evaluation
+                    • Each log contains request/response pairs for evaluation
                   </li>
                   <li>• Use datasets to track model performance over time</li>
                 </ul>

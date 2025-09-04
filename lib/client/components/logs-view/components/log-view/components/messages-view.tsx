@@ -62,7 +62,12 @@ export function MessagesView({
             },
           ]);
         } else {
-          setMessages(idkRequestData.requestBody.input);
+          // Filter for message objects that have role property (ChatCompletionMessage)
+          const messageInputs = idkRequestData.requestBody.input.filter(
+            (item): item is ChatCompletionMessage =>
+              typeof item === 'object' && item !== null && 'role' in item,
+          );
+          setMessages(messageInputs);
         }
       } else if (idkRequestData.functionName === FunctionName.EMBED) {
         const messageValue = getMessageValue(idkRequestData.requestBody.input);

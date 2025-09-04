@@ -73,9 +73,9 @@ export function EvaluationDetailView(): ReactElement {
   const { toast } = useToast();
   const {
     evaluationRuns,
-    loadDataPointOutputs,
-    dataPointOutputs,
-    dataPointOutputsLoading,
+    loadLogOutputs,
+    logOutputs,
+    logOutputsLoading,
     deleteEvaluationRun,
     refetch,
   } = useEvaluationRuns();
@@ -84,8 +84,12 @@ export function EvaluationDetailView(): ReactElement {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState('');
-  // Use provider's data point outputs
-  const outputsLoading = dataPointOutputsLoading;
+  const [selectedLogOutput, setSelectedLogOutput] = useState<
+    (typeof logOutputs)[0] | null
+  >(null);
+  const [logDetailDialogOpen, setLogDetailDialogOpen] = useState(false);
+  // Use provider's log outputs
+  const outputsLoading = logOutputsLoading;
   const outputsError = null; // Provider handles errors internally
 
   const evaluationId = navigationState.evalId;
@@ -102,12 +106,12 @@ export function EvaluationDetailView(): ReactElement {
       ? new Error('Evaluation not found')
       : null;
 
-  // Load data point outputs when evaluation is available
+  // Load log outputs when evaluation is available
   useEffect(() => {
     if (evaluationId) {
-      loadDataPointOutputs(evaluationId, {});
+      loadLogOutputs(evaluationId, {});
     }
-  }, [evaluationId, loadDataPointOutputs]);
+  }, [evaluationId, loadLogOutputs]);
 
   const handleBack = useCallback(() => {
     if (navigationState.selectedAgent && navigationState.selectedSkill) {
@@ -159,7 +163,7 @@ export function EvaluationDetailView(): ReactElement {
   ]);
 
   const handleExport = useCallback(() => {
-    if (!evaluation || !dataPointOutputs.length) return;
+    if (!evaluation || !logOutputs.length) return;
 
     const exportData = {
       evaluation: {
@@ -172,7 +176,7 @@ export function EvaluationDetailView(): ReactElement {
         created_at: evaluation.created_at,
         completed_at: evaluation.completed_at,
       },
-      outputs: dataPointOutputs,
+      outputs: logOutputs,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -192,7 +196,7 @@ export function EvaluationDetailView(): ReactElement {
       title: 'Export completed',
       description: 'Evaluation results have been downloaded.',
     });
-  }, [evaluation, dataPointOutputs, toast]);
+  }, [evaluation, logOutputs, toast]);
 
   const handleDuplicateClick = useCallback(() => {
     if (!evaluation) return;
@@ -203,6 +207,11 @@ export function EvaluationDetailView(): ReactElement {
     setDuplicateName(defaultName);
     setDuplicateDialogOpen(true);
   }, [evaluation]);
+
+  const handleLogRowClick = useCallback((logOutput: (typeof logOutputs)[0]) => {
+    setSelectedLogOutput(logOutput);
+    setLogDetailDialogOpen(true);
+  }, []);
 
   const handleDuplicateConfirm = useCallback(async () => {
     if (!evaluation || !navigationState.selectedAgent) return;
@@ -281,20 +290,18 @@ export function EvaluationDetailView(): ReactElement {
     }
   };
 
-  // Calculate statistics from data point outputs
+  // Calculate statistics from log outputs
   const statistics =
-    dataPointOutputs.length > 0
+    logOutputs.length > 0
       ? {
-          totalDataPoints: dataPointOutputs.length,
+          totalLogs: logOutputs.length,
           averageScore:
-            dataPointOutputs.reduce(
-              (sum, output) => sum + (output.score || 0),
-              0,
-            ) / dataPointOutputs.length,
-          highScoreCount: dataPointOutputs.filter(
+            logOutputs.reduce((sum, output) => sum + (output.score || 0), 0) /
+            logOutputs.length,
+          highScoreCount: logOutputs.filter(
             (output) => (output.score || 0) >= 0.8,
           ).length,
-          lowScoreCount: dataPointOutputs.filter(
+          lowScoreCount: logOutputs.filter(
             (output) => (output.score || 0) < 0.5,
           ).length,
         }
@@ -414,7 +421,7 @@ export function EvaluationDetailView(): ReactElement {
               variant="outline"
               size="sm"
               onClick={handleExport}
-              disabled={!dataPointOutputs.length}
+              disabled={!logOutputs.length}
             >
               <DownloadIcon className="h-4 w-4 mr-2" />
               Export Results
@@ -499,9 +506,9 @@ export function EvaluationDetailView(): ReactElement {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Total Data Points</span>
+                  <span className="text-sm font-medium">Total Logs</span>
                   <span className="text-sm font-bold">
-                    {statistics.totalDataPoints}
+                    {statistics.totalLogs}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -517,8 +524,7 @@ export function EvaluationDetailView(): ReactElement {
                   </div>
                   <Progress
                     value={
-                      (statistics.highScoreCount / statistics.totalDataPoints) *
-                      100
+                      (statistics.highScoreCount / statistics.totalLogs) * 100
                     }
                     className="h-2"
                   />
@@ -530,8 +536,7 @@ export function EvaluationDetailView(): ReactElement {
                   </div>
                   <Progress
                     value={
-                      (statistics.lowScoreCount / statistics.totalDataPoints) *
-                      100
+                      (statistics.lowScoreCount / statistics.totalLogs) * 100
                     }
                     className="h-2"
                   />
@@ -539,14 +544,99 @@ export function EvaluationDetailView(): ReactElement {
               </CardContent>
             </Card>
           )}
+
+          {/* Evaluation Results from Evaluation Run */}
+          {evaluation.results && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Evaluation Results</CardTitle>
+                <CardDescription>
+                  Official results from the evaluation run
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(() => {
+                  const results = evaluation.results as Record<string, unknown>;
+                  const totalLogs = results?.total_logs as number;
+                  const passedCount = results?.passed_count as number;
+                  const failedCount = results?.failed_count as number;
+                  const averageScore = results?.average_score as number;
+                  const thresholdUsed = results?.threshold_used as number;
+
+                  return (
+                    <>
+                      {typeof totalLogs === 'number' && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            Total Logs
+                          </span>
+                          <span className="text-sm font-bold">{totalLogs}</span>
+                        </div>
+                      )}
+                      {typeof passedCount === 'number' && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Passed</span>
+                          <span className="text-sm font-bold text-green-600">
+                            {passedCount}
+                          </span>
+                        </div>
+                      )}
+                      {typeof failedCount === 'number' && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Failed</span>
+                          <span className="text-sm font-bold text-red-600">
+                            {failedCount}
+                          </span>
+                        </div>
+                      )}
+                      {typeof averageScore === 'number' && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            Average Score
+                          </span>
+                          <span className="text-sm font-bold">
+                            {(averageScore * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                      {typeof thresholdUsed === 'number' && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Threshold</span>
+                          <span className="text-sm font-bold">
+                            {thresholdUsed}
+                          </span>
+                        </div>
+                      )}
+                      {typeof passedCount === 'number' &&
+                        typeof totalLogs === 'number' &&
+                        totalLogs > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Pass Rate</span>
+                              <span>
+                                {((passedCount / totalLogs) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <Progress
+                              value={(passedCount / totalLogs) * 100}
+                              className="h-2"
+                            />
+                          </div>
+                        )}
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Data Point Outputs */}
+        {/* Log Outputs */}
         <Card>
           <CardHeader>
-            <CardTitle>Data Point Results</CardTitle>
+            <CardTitle>Log Results</CardTitle>
             <CardDescription>
-              Individual results for each data point in the evaluation
+              Individual results for each log in the evaluation
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -565,61 +655,127 @@ export function EvaluationDetailView(): ReactElement {
               <div className="text-center py-8">
                 <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Failed to load data point outputs
+                  Failed to load log outputs
                 </p>
               </div>
-            ) : dataPointOutputs.length === 0 ? (
+            ) : logOutputs.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">
-                  No data point outputs available yet.
+                  No log outputs available yet.
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data Point ID</TableHead>
+                    <TableHead>Log ID</TableHead>
                     <TableHead>Score</TableHead>
-                    <TableHead>Output</TableHead>
-                    <TableHead>Metadata</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Task/Reasoning</TableHead>
+                    <TableHead>Details</TableHead>
                     <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dataPointOutputs.map((output) => (
-                    <TableRow key={output.id}>
-                      <TableCell className="font-mono text-xs">
-                        {output.data_point_id.slice(0, 8)}...
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            (output.score || 0) >= 0.8
-                              ? 'default'
-                              : (output.score || 0) >= 0.5
-                                ? 'secondary'
-                                : 'destructive'
-                          }
-                        >
-                          {output.score?.toFixed(3) || 'N/A'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {typeof output.output === 'object'
-                          ? JSON.stringify(output.output)
-                          : output.output || 'N/A'}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {typeof output.metadata === 'object' &&
-                        output.metadata?.reasoning
-                          ? String(output.metadata.reasoning)
-                          : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(output.created_at), 'MMM dd, HH:mm')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {logOutputs.map((output) => {
+                    const outputData = output.output as Record<string, unknown>;
+                    const _metadata = output.metadata as Record<
+                      string,
+                      unknown
+                    >;
+
+                    // Extract meaningful information from output
+                    const task = outputData?.task as string;
+                    const reasoning = outputData?.reasoning as string;
+                    const passed = outputData?.passed as boolean;
+                    const threshold = outputData?.threshold as number;
+
+                    // Get status badge
+                    const getStatusBadge = () => {
+                      if (passed === true) {
+                        return <Badge variant="default">Passed</Badge>;
+                      } else if (passed === false) {
+                        return <Badge variant="destructive">Failed</Badge>;
+                      }
+                      return <Badge variant="secondary">Unknown</Badge>;
+                    };
+
+                    // Get task/reasoning display
+                    const getTaskReasoning = () => {
+                      if (task) {
+                        return (
+                          <div className="max-w-xs">
+                            <div className="font-medium text-xs">Task:</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {task}
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (reasoning) {
+                        return (
+                          <div className="max-w-xs">
+                            <div className="text-xs text-muted-foreground truncate">
+                              {reasoning}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <span className="text-xs text-muted-foreground">
+                          N/A
+                        </span>
+                      );
+                    };
+
+                    // Get details
+                    const getDetails = () => {
+                      const details = [];
+                      if (threshold !== undefined) {
+                        details.push(`Threshold: ${threshold}`);
+                      }
+                      if (outputData?.execution_time_ms) {
+                        details.push(`${outputData.execution_time_ms}ms`);
+                      }
+                      if (outputData?.strict_mode) {
+                        details.push('Strict Mode');
+                      }
+                      return details.length > 0 ? details.join(' • ') : 'N/A';
+                    };
+
+                    return (
+                      <TableRow
+                        key={output.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleLogRowClick(output)}
+                      >
+                        <TableCell className="font-mono text-xs">
+                          {output.log_id.slice(0, 8)}...
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              (output.score || 0) >= 0.8
+                                ? 'default'
+                                : (output.score || 0) >= 0.5
+                                  ? 'secondary'
+                                  : 'destructive'
+                            }
+                          >
+                            {output.score?.toFixed(3) || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{getStatusBadge()}</TableCell>
+                        <TableCell>{getTaskReasoning()}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {getDetails()}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {format(new Date(output.created_at), 'MMM dd, HH:mm')}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -642,6 +798,210 @@ export function EvaluationDetailView(): ReactElement {
             </CardContent>
           </Card>
         )}
+
+        {/* Log Detail Dialog */}
+        <Dialog
+          open={logDetailDialogOpen}
+          onOpenChange={setLogDetailDialogOpen}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Log Evaluation Details</DialogTitle>
+              <DialogDescription>
+                Detailed information about the log evaluation
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedLogOutput &&
+              (() => {
+                const outputData = selectedLogOutput.output as Record<
+                  string,
+                  unknown
+                >;
+                const metadata = selectedLogOutput.metadata as Record<
+                  string,
+                  unknown
+                >;
+
+                // Extract all available information
+                const task = outputData?.task as string;
+                const outcome = outputData?.outcome as string;
+                const reasoning = outputData?.reasoning as string;
+                const passed = outputData?.passed as boolean;
+                const threshold = outputData?.threshold as number;
+                const strictMode = outputData?.strict_mode as boolean;
+                const executionTime = outputData?.execution_time_ms as number;
+                const evaluatedAt = outputData?.evaluated_at as string;
+                const extractionLLMOutput =
+                  outputData?.extraction_llm_output as string;
+                const verdictLLMOutput =
+                  outputData?.verdict_llm_output as string;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Basic Information */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Log ID:</span>
+                        <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                          {selectedLogOutput.log_id.slice(0, 8)}...
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Score:</span>
+                        <Badge
+                          variant={
+                            (selectedLogOutput.score || 0) >= 0.8
+                              ? 'default'
+                              : (selectedLogOutput.score || 0) >= 0.5
+                                ? 'secondary'
+                                : 'destructive'
+                          }
+                          className="text-sm"
+                        >
+                          {selectedLogOutput.score?.toFixed(3) || 'N/A'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Status:</span>
+                        <Badge variant={passed ? 'default' : 'destructive'}>
+                          {passed ? 'Passed' : 'Failed'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Threshold:</span>
+                        <span className="text-sm">{threshold || 'N/A'}</span>
+                      </div>
+                      {strictMode && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Mode:</span>
+                          <Badge variant="outline">Strict Mode</Badge>
+                        </div>
+                      )}
+                      {executionTime && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            Execution Time:
+                          </span>
+                          <span className="text-sm">{executionTime}ms</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Task and Outcome */}
+                    {task && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm border-b pb-1">
+                          Task
+                        </h4>
+                        <div className="bg-muted p-2 rounded text-sm max-h-32 overflow-y-auto">
+                          <div className="whitespace-pre-wrap break-words text-xs">
+                            {task}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {outcome && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm border-b pb-1">
+                          Outcome
+                        </h4>
+                        <div className="bg-muted p-2 rounded text-sm max-h-32 overflow-y-auto">
+                          <div className="whitespace-pre-wrap break-words text-xs">
+                            {outcome}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reasoning */}
+                    {reasoning && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm border-b pb-1">
+                          Reasoning
+                        </h4>
+                        <div className="bg-muted p-2 rounded text-sm max-h-40 overflow-y-auto">
+                          <div className="whitespace-pre-wrap break-words text-xs">
+                            {reasoning}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* LLM Outputs */}
+                    {extractionLLMOutput && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm border-b pb-1">
+                          Extraction LLM Output
+                        </h4>
+                        <pre className="bg-muted p-2 rounded text-xs max-h-32 overflow-y-auto break-words whitespace-pre-wrap">
+                          {extractionLLMOutput}
+                        </pre>
+                      </div>
+                    )}
+
+                    {verdictLLMOutput && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm border-b pb-1">
+                          Verdict LLM Output
+                        </h4>
+                        <pre className="bg-muted p-2 rounded text-xs max-h-32 overflow-y-auto break-words whitespace-pre-wrap">
+                          {verdictLLMOutput}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* Metadata */}
+                    {Object.keys(metadata).length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm border-b pb-1">
+                          Metadata
+                        </h4>
+                        <pre className="bg-muted p-2 rounded text-xs max-h-32 overflow-y-auto break-words whitespace-pre-wrap">
+                          {JSON.stringify(metadata, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* Full Output */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm border-b pb-1">
+                        Full Output Data
+                      </h4>
+                      <pre className="bg-muted p-2 rounded text-xs max-h-40 overflow-y-auto break-words whitespace-pre-wrap">
+                        {JSON.stringify(outputData, null, 2)}
+                      </pre>
+                    </div>
+
+                    {/* Timestamps */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium">Created:</span>
+                        <span className="text-muted-foreground">
+                          {format(
+                            new Date(selectedLogOutput.created_at),
+                            'MMM dd, yyyy HH:mm:ss',
+                          )}
+                        </span>
+                      </div>
+                      {evaluatedAt && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium">Evaluated:</span>
+                          <span className="text-muted-foreground">
+                            {format(
+                              new Date(evaluatedAt),
+                              'MMM dd, yyyy HH:mm:ss',
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

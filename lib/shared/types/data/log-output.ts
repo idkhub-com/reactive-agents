@@ -1,19 +1,19 @@
 import { z } from 'zod';
 
-export const DataPointOutput = z.object({
-  id: z.uuid(),
-  data_point_id: z.uuid(),
+export const LogOutput = z.object({
+  id: z.string().uuid(),
+  log_id: z.string().uuid(),
   output: z.record(z.string(), z.unknown()),
   score: z.number().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()),
-  created_at: z.iso.datetime({ offset: true }),
+  created_at: z.string().datetime({ offset: true }),
 });
-export type DataPointOutput = z.infer<typeof DataPointOutput>;
+export type LogOutput = z.infer<typeof LogOutput>;
 
-export const DataPointOutputQueryParams = z
+export const LogOutputQueryParams = z
   .object({
-    ids: z.uuid().array().optional(),
-    data_point_ids: z.uuid().array().optional(),
+    ids: z.string().uuid().array().optional(),
+    log_ids: z.string().uuid().array().optional(),
     score_min: z.coerce.number().optional(),
     score_max: z.coerce.number().optional(),
     limit: z.coerce.number().int().positive().optional(),
@@ -21,19 +21,15 @@ export const DataPointOutputQueryParams = z
   })
   .strict();
 
-export type DataPointOutputQueryParams = z.infer<
-  typeof DataPointOutputQueryParams
->;
+export type LogOutputQueryParams = z.infer<typeof LogOutputQueryParams>;
 
-export const DataPointOutputCreateParams = z
+export const LogOutputCreateParams = z
   .object({
-    data_point_id: z.uuid(),
+    log_id: z.string().uuid(),
     output: z.record(z.string(), z.unknown()),
     score: z.number().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 
-export type DataPointOutputCreateParams = z.infer<
-  typeof DataPointOutputCreateParams
->;
+export type LogOutputCreateParams = z.infer<typeof LogOutputCreateParams>;

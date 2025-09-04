@@ -1,23 +1,22 @@
 'use client';
 
 import {
-  addDataPoints,
+  addDatasetLogs,
   createDataset,
-  deleteDataPoints,
   deleteDataset,
-  getDatasetDataPoints,
+  deleteDatasetLogs,
+  getDatasetLogs,
   getDatasets,
   updateDataset,
 } from '@client/api/v1/idk/evaluations/datasets';
 import { useToast } from '@client/hooks/use-toast';
 import type {
-  DataPoint,
-  DataPointCreateParams,
-  DataPointQueryParams,
   Dataset,
   DatasetCreateParams,
   DatasetQueryParams,
   DatasetUpdateParams,
+  Log,
+  LogsQueryParams,
 } from '@shared/types/data';
 import {
   type UseQueryResult,
@@ -44,10 +43,10 @@ export const datasetQueryKeys = {
     [...datasetQueryKeys.lists(), params] as const,
   details: () => [...datasetQueryKeys.all, 'detail'] as const,
   detail: (id: string) => [...datasetQueryKeys.details(), id] as const,
-  dataPoints: (datasetId: string) =>
-    [...datasetQueryKeys.detail(datasetId), 'dataPoints'] as const,
-  dataPointsList: (datasetId: string, params: DataPointQueryParams) =>
-    [...datasetQueryKeys.dataPoints(datasetId), params] as const,
+  logs: (datasetId: string) =>
+    [...datasetQueryKeys.detail(datasetId), 'logs'] as const,
+  logsList: (datasetId: string, params: LogsQueryParams) =>
+    [...datasetQueryKeys.logs(datasetId), params] as const,
 };
 
 interface DatasetsContextType {
@@ -81,30 +80,27 @@ interface DatasetsContextType {
   updateError: Error | null;
   deleteError: Error | null;
 
-  // Data points functionality
-  dataPoints: DataPoint[];
-  dataPointsLoading: boolean;
-  dataPointsError: Error | null;
-  dataPointQueryParams: DataPointQueryParams;
-  setDataPointQueryParams: (params: DataPointQueryParams) => void;
-  refetchDataPoints: () => void;
+  // Logs functionality
+  logs: Log[];
+  logsLoading: boolean;
+  logsError: Error | null;
+  logQueryParams: LogsQueryParams;
+  setLogQueryParams: (params: LogsQueryParams) => void;
+  refetchLogs: () => void;
 
-  // Data points mutation functions
-  addDataPoints: (
+  // Logs mutation functions
+  addLogs: (
     datasetId: string,
-    dataPoints: DataPointCreateParams[],
+    logIds: string[],
     options?: { signal?: AbortSignal },
-  ) => Promise<DataPoint[]>;
-  deleteDataPoints: (
-    datasetId: string,
-    dataPointIds: string[],
   ) => Promise<void>;
+  deleteLogs: (datasetId: string, logIds: string[]) => Promise<void>;
 
-  // Data points mutation states
-  isAddingDataPoints: boolean;
-  isDeletingDataPoints: boolean;
-  addDataPointsError: Error | null;
-  deleteDataPointsError: Error | null;
+  // Logs mutation states
+  isAddingLogs: boolean;
+  isDeletingLogs: boolean;
+  addLogsError: Error | null;
+  deleteLogsError: Error | null;
 
   // Pagination
   hasNextPage: boolean;
@@ -114,7 +110,7 @@ interface DatasetsContextType {
   // Helper functions
   getDatasetById: (id: string) => Dataset | undefined;
   refreshDatasets: () => void;
-  loadDataPoints: (datasetId: string, params?: DataPointQueryParams) => void;
+  loadLogs: (datasetId: string, params?: LogsQueryParams) => void;
 }
 
 const DatasetsContext = createContext<DatasetsContextType | undefined>(
@@ -132,9 +128,11 @@ export const DatasetsProvider = ({
 
   const [queryParams, setQueryParams] = useState<DatasetQueryParams>({});
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
-  const [dataPointQueryParams, setDataPointQueryParams] =
-    useState<DataPointQueryParams>({});
-  const [shouldFetchDataPoints, setShouldFetchDataPoints] = useState(false);
+  const [logQueryParams, setLogQueryParams] = useState<LogsQueryParams>({
+    limit: 50,
+    offset: 0,
+  });
+  const [shouldFetchLogs, setShouldFetchLogs] = useState(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -177,43 +175,37 @@ export const DatasetsProvider = ({
     initialPageParam: 0,
   });
 
-  // Data points query - only fetch when manually requested
+  // Logs query - only fetch when manually requested
   const {
-    data: dataPoints = [],
-    isLoading: dataPointsLoading,
-    error: dataPointsError,
-    refetch: refetchDataPoints,
-  }: UseQueryResult<DataPoint[], Error> = useQuery({
+    data: logs = [],
+    isLoading: logsLoading,
+    error: logsError,
+    refetch: refetchLogs,
+  }: UseQueryResult<Log[], Error> = useQuery({
     queryKey: selectedDataset
-      ? datasetQueryKeys.dataPointsList(
-          selectedDataset.id,
-          dataPointQueryParams,
-        )
-      : ['dataPoints', 'none'],
+      ? datasetQueryKeys.logsList(selectedDataset.id, logQueryParams)
+      : ['logs', 'none'],
     queryFn: async () => {
       if (!selectedDataset) {
         return [];
       }
 
       try {
-        const result = await getDatasetDataPoints(
-          selectedDataset.id,
-          dataPointQueryParams,
-        );
-        // Reset shouldFetchDataPoints after successful fetch (only if still mounted)
+        const result = await getDatasetLogs(selectedDataset.id, logQueryParams);
+        // Reset shouldFetchLogs after successful fetch (only if still mounted)
         if (isMountedRef.current) {
-          setShouldFetchDataPoints(false);
+          setShouldFetchLogs(false);
         }
         return result;
       } catch (error) {
-        // Reset shouldFetchDataPoints after failed fetch (only if still mounted)
+        // Reset shouldFetchLogs after failed fetch (only if still mounted)
         if (isMountedRef.current) {
-          setShouldFetchDataPoints(false);
+          setShouldFetchLogs(false);
         }
         throw error;
       }
     },
-    enabled: shouldFetchDataPoints && !!selectedDataset,
+    enabled: shouldFetchLogs && !!selectedDataset,
   });
 
   // Create dataset mutation
@@ -311,43 +303,43 @@ export const DatasetsProvider = ({
     },
   });
 
-  // Add data points mutation
-  const addDataPointsMutation = useMutation({
+  // Add logs mutation
+  const addLogsMutation = useMutation({
     mutationFn: ({
       datasetId,
-      dataPoints,
+      logIds,
       options,
     }: {
       datasetId: string;
-      dataPoints: DataPointCreateParams[];
+      logIds: string[];
       options?: { signal?: AbortSignal };
-    }) => addDataPoints(datasetId, dataPoints, options),
-    onSuccess: (newDataPoints, { datasetId }) => {
-      // Invalidate all data points queries for this dataset to ensure fresh data
+    }) => addDatasetLogs(datasetId, logIds, options),
+    onSuccess: (_, { datasetId, logIds }) => {
+      // Invalidate all logs queries for this dataset to ensure fresh data
       queryClient.invalidateQueries({
-        queryKey: datasetQueryKeys.dataPoints(datasetId),
+        queryKey: datasetQueryKeys.logs(datasetId),
       });
 
-      // Also invalidate direct dataset data points queries
+      // Also invalidate direct dataset logs queries
       queryClient.invalidateQueries({
-        queryKey: ['dataset', datasetId, 'dataPoints'],
+        queryKey: ['dataset', datasetId, 'logs'],
       });
 
-      // Also trigger a manual refetch of the current data points
-      refetchDataPoints();
+      // Also trigger a manual refetch of the current logs
+      refetchLogs();
 
       if (isMountedRef.current) {
         toast({
-          title: 'Data points added',
-          description: `${newDataPoints.length} data points have been added successfully.`,
+          title: 'Logs added',
+          description: `${logIds.length} logs have been added successfully.`,
         });
       }
     },
     onError: (error) => {
-      console.error('Error adding data points:', error);
+      console.error('Error adding logs:', error);
       if (isMountedRef.current) {
         toast({
-          title: 'Error adding data points',
+          title: 'Error adding logs',
           description: 'Please try again later',
           variant: 'destructive',
         });
@@ -355,45 +347,44 @@ export const DatasetsProvider = ({
     },
   });
 
-  // Delete data points mutation
-  const deleteDataPointsMutation = useMutation({
+  // Delete logs mutation
+  const deleteLogsMutation = useMutation({
     mutationFn: ({
       datasetId,
-      dataPointIds,
+      logIds,
     }: {
       datasetId: string;
-      dataPointIds: string[];
-    }) => deleteDataPoints(datasetId, dataPointIds),
-    onSuccess: (_, { datasetId, dataPointIds }) => {
-      // Remove from data points cache
-      queryClient.setQueryData<DataPoint[]>(
-        datasetQueryKeys.dataPointsList(datasetId, dataPointQueryParams),
-        (oldData) =>
-          oldData?.filter((dp) => !dataPointIds.includes(dp.id)) ?? [],
+      logIds: string[];
+    }) => deleteDatasetLogs(datasetId, logIds),
+    onSuccess: (_, { datasetId, logIds }) => {
+      // Remove from logs cache
+      queryClient.setQueryData<Log[]>(
+        datasetQueryKeys.logsList(datasetId, logQueryParams),
+        (oldData) => oldData?.filter((log) => !logIds.includes(log.id)) ?? [],
       );
 
-      // Invalidate data points queries
+      // Invalidate logs queries
       queryClient.invalidateQueries({
-        queryKey: datasetQueryKeys.dataPoints(datasetId),
+        queryKey: datasetQueryKeys.logs(datasetId),
       });
 
-      // Also invalidate the direct dataset data points query used by dataset-view
+      // Also invalidate the direct dataset logs query used by dataset-view
       queryClient.invalidateQueries({
-        queryKey: ['dataset', datasetId, 'dataPoints'],
+        queryKey: ['dataset', datasetId, 'logs'],
       });
 
       if (isMountedRef.current) {
         toast({
-          title: 'Data points deleted',
-          description: `${dataPointIds.length} data points have been deleted successfully.`,
+          title: 'Logs deleted',
+          description: `${logIds.length} logs have been deleted successfully.`,
         });
       }
     },
     onError: (error) => {
-      console.error('Error deleting data points:', error);
+      console.error('Error deleting logs:', error);
       if (isMountedRef.current) {
         toast({
-          title: 'Error deleting data points',
+          title: 'Error deleting logs',
           description: 'Please try again later',
           variant: 'destructive',
         });
@@ -413,13 +404,13 @@ export const DatasetsProvider = ({
     queryClient.invalidateQueries({ queryKey: datasetQueryKeys.all });
   }, [queryClient]);
 
-  const loadDataPoints = useCallback(
-    (datasetId: string, params: DataPointQueryParams = {}) => {
+  const loadLogs = useCallback(
+    (datasetId: string, params: LogsQueryParams = { limit: 50, offset: 0 }) => {
       const dataset = getDatasetById(datasetId);
       if (dataset) {
         setSelectedDataset(dataset);
-        setDataPointQueryParams(params);
-        setShouldFetchDataPoints(true);
+        setLogQueryParams(params);
+        setShouldFetchLogs(true);
       }
     },
     [getDatasetById],
@@ -465,30 +456,15 @@ export const DatasetsProvider = ({
     [deleteDatasetMutation],
   );
 
-  const addDataPointsHandler = useCallback(
+  const addLogsHandler = useCallback(
     (
       datasetId: string,
-      dataPoints: DataPointCreateParams[],
+      logIds: string[],
       options?: { signal?: AbortSignal },
-    ): Promise<DataPoint[]> => {
+    ): Promise<void> => {
       return new Promise((resolve, reject) => {
-        addDataPointsMutation.mutate(
-          { datasetId, dataPoints, options },
-          {
-            onSuccess: (result) => resolve(result),
-            onError: (error) => reject(error),
-          },
-        );
-      });
-    },
-    [addDataPointsMutation],
-  );
-
-  const deleteDataPointsHandler = useCallback(
-    (datasetId: string, dataPointIds: string[]): Promise<void> => {
-      return new Promise((resolve, reject) => {
-        deleteDataPointsMutation.mutate(
-          { datasetId, dataPointIds },
+        addLogsMutation.mutate(
+          { datasetId, logIds, options },
           {
             onSuccess: () => resolve(),
             onError: (error) => reject(error),
@@ -496,7 +472,22 @@ export const DatasetsProvider = ({
         );
       });
     },
-    [deleteDataPointsMutation],
+    [addLogsMutation],
+  );
+
+  const deleteLogsHandler = useCallback(
+    (datasetId: string, logIds: string[]): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        deleteLogsMutation.mutate(
+          { datasetId, logIds },
+          {
+            onSuccess: () => resolve(),
+            onError: (error) => reject(error),
+          },
+        );
+      });
+    },
+    [deleteLogsMutation],
   );
 
   const contextValue: DatasetsContextType = {
@@ -515,7 +506,7 @@ export const DatasetsProvider = ({
     setSelectedDataset: (dataset: Dataset | null) => {
       setSelectedDataset(dataset);
       if (!dataset) {
-        setShouldFetchDataPoints(false);
+        setShouldFetchLogs(false);
       }
     },
 
@@ -532,23 +523,23 @@ export const DatasetsProvider = ({
     updateError: updateDatasetMutation.error,
     deleteError: deleteDatasetMutation.error,
 
-    // Data points functionality
-    dataPoints,
-    dataPointsLoading,
-    dataPointsError,
-    dataPointQueryParams,
-    setDataPointQueryParams,
-    refetchDataPoints,
+    // Logs functionality
+    logs,
+    logsLoading,
+    logsError,
+    logQueryParams,
+    setLogQueryParams,
+    refetchLogs,
 
-    // Data points mutation functions
-    addDataPoints: addDataPointsHandler,
-    deleteDataPoints: deleteDataPointsHandler,
+    // Logs mutation functions
+    addLogs: addLogsHandler,
+    deleteLogs: deleteLogsHandler,
 
-    // Data points mutation states
-    isAddingDataPoints: addDataPointsMutation.isPending,
-    isDeletingDataPoints: deleteDataPointsMutation.isPending,
-    addDataPointsError: addDataPointsMutation.error,
-    deleteDataPointsError: deleteDataPointsMutation.error,
+    // Logs mutation states
+    isAddingLogs: addLogsMutation.isPending,
+    isDeletingLogs: deleteLogsMutation.isPending,
+    addLogsError: addLogsMutation.error,
+    deleteLogsError: deleteLogsMutation.error,
 
     // Pagination
     hasNextPage: hasNextPage ?? false,
@@ -558,7 +549,7 @@ export const DatasetsProvider = ({
     // Helper functions
     getDatasetById,
     refreshDatasets,
-    loadDataPoints,
+    loadLogs,
   };
 
   return (

@@ -2,8 +2,35 @@ import type { Logger } from 'pino';
 import type { CopartVehicle, SearchCriteria } from '../copart';
 
 /**
+ * Sanitize URL to prevent injection attacks
+ */
+function sanitizeUrl(url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+    // Only allow https URLs
+    if (parsedUrl.protocol !== 'https:') {
+      throw new Error('Only HTTPS URLs are allowed');
+    }
+    return parsedUrl.toString();
+  } catch (error) {
+    console.warn('Invalid URL provided, using default:', error);
+    return 'https://www.copart.com/lotSearchResults/';
+  }
+}
+
+/**
  * Playwright scraper with multiple extraction strategies and pagination.
  * It is dynamically imported by the agent when COPART_REAL_SCRAPER=true.
+ *
+ * ⚠️  LEGAL COMPLIANCE NOTICE:
+ * This scraper is for educational and research purposes only. Users must:
+ * 1. Review and comply with Copart's Terms of Service and robots.txt
+ * 2. Respect rate limiting and avoid overloading their servers
+ * 3. Consider using official APIs when available
+ * 4. Ensure compliance with applicable laws and regulations
+ * 5. Use responsibly and ethically
+ *
+ * The scraper includes built-in delays and rate limiting to minimize impact.
  */
 export async function scrapeCopartListings(
   criteria: SearchCriteria,
@@ -11,16 +38,35 @@ export async function scrapeCopartListings(
 ): Promise<CopartVehicle[]> {
   if ((process.env.COPART_TOS_ACK || '').toLowerCase() !== 'true') {
     logger.warn(
-      'COPART_TOS_ACK is not true; skipping real scraping and returning empty list',
+      'COPART_TOS_ACK is not true; skipping real scraping and returning empty list. ' +
+        "Please review Copart's Terms of Service and set COPART_TOS_ACK=true if you agree to comply.",
     );
     return [];
   }
   let browser: any;
-  const baseUrl =
-    process.env.COPART_BASE_URL || 'https://www.copart.com/lotSearchResults/';
-  const maxPages = Number(process.env.IDK_SCRAPER_MAX_PAGES || 1);
-  const delayMs = Number(process.env.IDK_SCRAPER_DELAY_MS || 1500);
-  const perPageLimit = Number(process.env.IDK_SCRAPER_PER_PAGE_LIMIT || 50);
+
+  // Input validation and sanitization
+  const baseUrl = sanitizeUrl(
+    process.env.COPART_BASE_URL || 'https://www.copart.com/lotSearchResults/',
+  );
+  const maxPages = Math.min(
+    Math.max(Number(process.env.IDK_SCRAPER_MAX_PAGES || 1), 1),
+    10,
+  ); // Limit to 1-10 pages
+  const delayMs = Math.min(
+    Math.max(Number(process.env.IDK_SCRAPER_DELAY_MS || 1500), 1000),
+    10000,
+  ); // 1-10 seconds
+  const perPageLimit = Math.min(
+    Math.max(Number(process.env.IDK_SCRAPER_PER_PAGE_LIMIT || 50), 10),
+    100,
+  ); // 10-100 items
+
+  // Validate search criteria
+  if (!criteria || typeof criteria !== 'object') {
+    logger.error('Invalid search criteria provided');
+    return [];
+  }
 
   try {
     const { chromium } = await import('playwright');
@@ -28,10 +74,30 @@ export async function scrapeCopartListings(
     const context = await browser.newContext({ userAgent: userAgent() });
     const page = await context.newPage();
 
+    // Sanitize and validate search criteria
+    const sanitizedMakes = (criteria.makes || []).filter(
+      (make) =>
+        typeof make === 'string' &&
+        make.length <= 50 &&
+        /^[a-zA-Z0-9\s-]+$/.test(make),
+    );
+    const sanitizedModels = (criteria.models || []).filter(
+      (model) =>
+        typeof model === 'string' &&
+        model.length <= 50 &&
+        /^[a-zA-Z0-9\s-]+$/.test(model),
+    );
+    const sanitizedKeywords = (criteria.keywords || []).filter(
+      (keyword) =>
+        typeof keyword === 'string' &&
+        keyword.length <= 100 &&
+        /^[a-zA-Z0-9\s-]+$/.test(keyword),
+    );
+
     const queryParts = [
-      (criteria.makes || []).join(' '),
-      (criteria.models || []).join(' '),
-      (criteria.keywords || []).join(' '),
+      sanitizedMakes.join(' '),
+      sanitizedModels.join(' '),
+      sanitizedKeywords.join(' '),
     ].filter(Boolean);
     const searchQuery = encodeURIComponent(queryParts.join(' ').trim());
     const url = `${baseUrl}?query=${searchQuery}`;

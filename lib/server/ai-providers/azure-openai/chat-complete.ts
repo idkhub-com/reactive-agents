@@ -1,3 +1,7 @@
+// Azure OpenAI REST API documentation
+// https://learn.microsoft.com/en-us/azure/ai-foundry/reference/openai/latest
+// https://platform.openai.com/docs/api-reference
+
 import type {
   AIProviderFunctionConfig,
   ResponseTransformFunction,

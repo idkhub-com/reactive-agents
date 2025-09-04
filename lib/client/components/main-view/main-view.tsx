@@ -47,7 +47,7 @@ export function MainView(): React.ReactElement {
   // Parse fragment for skill view (format: skill:skill-id)
   const isSkillView = fragment?.startsWith('skill:');
 
-  // Parse fragment for dataset view (format: dataset:dataset-id or dataset:dataset-id/datapoint:datapoint-id)
+  // Parse fragment for dataset view (format: dataset:dataset-id or dataset:dataset-id/log:log-id)
   const isDatasetView = fragment?.startsWith('dataset:');
 
   // Determine if the current view needs scrolling

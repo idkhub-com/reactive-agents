@@ -17,7 +17,7 @@ export function SelectedLogsFooter({
         {selectedLogs.size} log{selectedLogs.size === 1 ? '' : 's'} selected
       </span>
       <Badge variant="secondary">
-        Will create {selectedLogs.size} data point
+        Will create {selectedLogs.size} log
         {selectedLogs.size === 1 ? '' : 's'}
       </Badge>
     </div>

@@ -1,5 +1,8 @@
 import { HttpMethod } from '@server/types/http';
-import type { DataPoint, Dataset } from '@shared/types/data';
+import { FunctionName } from '@shared/types/api/request';
+import { AIProvider } from '@shared/types/constants';
+import type { Dataset, Log } from '@shared/types/data';
+import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -18,9 +21,9 @@ vi.mock('@client/api/v1/idk/evaluations/datasets', () => ({
   getDatasets: vi.fn(),
   updateDataset: vi.fn(),
   deleteDataset: vi.fn(),
-  getDatasetDataPoints: vi.fn(),
-  addDataPoints: vi.fn(),
-  deleteDataPoints: vi.fn(),
+  getDatasetLogs: vi.fn(),
+  addDatasetLogs: vi.fn(),
+  deleteDatasetLogs: vi.fn(),
 }));
 
 vi.mock('@client/hooks/use-toast', () => ({
@@ -29,11 +32,11 @@ vi.mock('@client/hooks/use-toast', () => ({
 
 // Import mocked functions
 import {
-  addDataPoints,
+  addDatasetLogs,
   createDataset,
-  deleteDataPoints,
   deleteDataset,
-  getDatasetDataPoints,
+  deleteDatasetLogs,
+  getDatasetLogs,
   getDatasets,
   updateDataset,
 } from '@client/api/v1/idk/evaluations/datasets';
@@ -59,28 +62,84 @@ const mockDatasets: Dataset[] = [
   },
 ];
 
-const mockDataPoints: DataPoint[] = [
+const mockLogs: Log[] = [
   {
     id: '1',
+    agent_id: '1',
+    skill_id: '1',
     method: HttpMethod.POST,
     endpoint: '/test',
-    request_body: { test: 'data' },
-    ground_truth: { result: 'ok' },
-    function_name: 'testFunction',
-    is_golden: true,
+    function_name: FunctionName.CHAT_COMPLETE,
+    status: 200,
+    start_time: Date.now(),
+    end_time: Date.now() + 1000,
+    duration: 1000,
+    base_idk_config: {},
+    ai_provider: AIProvider.OPENAI,
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: AIProvider.OPENAI,
+      function_name: FunctionName.CHAT_COMPLETE,
+      request_url: '/test',
+      method: HttpMethod.POST,
+      status: 200,
+      request_body: { test: 'data' },
+      response_body: { result: 'ok' },
+      raw_request_body: JSON.stringify({ test: 'data' }),
+      raw_response_body: JSON.stringify({ result: 'ok' }),
+      cache_mode: CacheMode.SIMPLE,
+      cache_status: CacheStatus.MISS,
+    },
+    hook_logs: [],
     metadata: {},
-    created_at: new Date().toISOString(),
+    cache_status: CacheStatus.MISS,
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
   },
   {
     id: '2',
+    agent_id: '1',
+    skill_id: '1',
     method: HttpMethod.GET,
     endpoint: '/test2',
-    request_body: { test: 'data2' },
-    ground_truth: { result: 'ok2' },
-    function_name: 'testFunction2',
-    is_golden: false,
+    function_name: FunctionName.RETRIEVE_FILE,
+    status: 200,
+    start_time: Date.now(),
+    end_time: Date.now() + 500,
+    duration: 500,
+    base_idk_config: {},
+    ai_provider: AIProvider.OPENAI,
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: AIProvider.OPENAI,
+      function_name: FunctionName.RETRIEVE_FILE,
+      request_url: '/test2',
+      method: HttpMethod.GET,
+      status: 200,
+      request_body: { test: 'data2' },
+      response_body: { result: 'ok2' },
+      raw_request_body: JSON.stringify({ test: 'data2' }),
+      raw_response_body: JSON.stringify({ result: 'ok2' }),
+      cache_mode: CacheMode.SIMPLE,
+      cache_status: CacheStatus.HIT,
+    },
+    hook_logs: [],
     metadata: {},
-    created_at: new Date().toISOString(),
+    cache_status: CacheStatus.HIT,
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
   },
 ];
 
@@ -102,21 +161,21 @@ function TestComponent(): React.ReactElement {
     createError,
     updateError,
     deleteError,
-    dataPoints,
-    dataPointsLoading,
-    dataPointsError,
-    dataPointQueryParams,
-    setDataPointQueryParams,
-    addDataPoints: addDataPointsFn,
-    deleteDataPoints: deleteDataPointsFn,
-    isAddingDataPoints,
-    isDeletingDataPoints,
-    addDataPointsError,
-    deleteDataPointsError,
+    logs,
+    logsLoading,
+    logsError,
+    logQueryParams,
+    setLogQueryParams,
+    addLogs: addLogsFn,
+    deleteLogs: deleteLogsFn,
+    isAddingLogs,
+    isDeletingLogs,
+    addLogsError,
+    deleteLogsError,
     getDatasetById,
     refreshDatasets,
-    loadDataPoints,
-    refetchDataPoints,
+    loadLogs,
+    refetchLogs,
   } = useDatasets();
 
   return (
@@ -148,28 +207,22 @@ function TestComponent(): React.ReactElement {
         {deleteError?.message ?? 'no delete error'}
       </div>
 
-      <div data-testid="datapoints-count">{dataPoints?.length ?? 0}</div>
-      <div data-testid="datapoints-loading">
-        {dataPointsLoading ? 'loading' : 'loaded'}
-      </div>
-      <div data-testid="datapoints-error">
-        {dataPointsError?.message ?? 'no error'}
-      </div>
-      <div data-testid="datapoint-query-params">
-        {JSON.stringify(dataPointQueryParams)}
-      </div>
+      <div data-testid="logs-count">{logs?.length ?? 0}</div>
+      <div data-testid="logs-loading">{logsLoading ? 'loading' : 'loaded'}</div>
+      <div data-testid="logs-error">{logsError?.message ?? 'no error'}</div>
+      <div data-testid="log-query-params">{JSON.stringify(logQueryParams)}</div>
 
-      <div data-testid="adding-datapoints-loading">
-        {isAddingDataPoints ? 'adding' : 'not adding'}
+      <div data-testid="adding-logs-loading">
+        {isAddingLogs ? 'adding' : 'not adding'}
       </div>
-      <div data-testid="deleting-datapoints-loading">
-        {isDeletingDataPoints ? 'deleting' : 'not deleting'}
+      <div data-testid="removing-logs-loading">
+        {isDeletingLogs ? 'removing' : 'not removing'}
       </div>
-      <div data-testid="add-datapoints-error">
-        {addDataPointsError?.message ?? 'no add error'}
+      <div data-testid="add-logs-error">
+        {addLogsError?.message ?? 'no add error'}
       </div>
-      <div data-testid="delete-datapoints-error">
-        {deleteDataPointsError?.message ?? 'no delete error'}
+      <div data-testid="remove-logs-error">
+        {deleteLogsError?.message ?? 'no remove error'}
       </div>
 
       <button
@@ -258,64 +311,50 @@ function TestComponent(): React.ReactElement {
 
       <button
         type="button"
-        data-testid="load-datapoints"
-        onClick={() => loadDataPoints('1', { limit: 10 })}
+        data-testid="load-logs"
+        onClick={() => loadLogs('1', { limit: 10 })}
       >
-        Load Data Points
+        Load Logs
       </button>
 
       <button
         type="button"
-        data-testid="set-datapoint-query-params"
-        onClick={() => setDataPointQueryParams({ is_golden: true })}
+        data-testid="set-log-query-params"
+        onClick={() => setLogQueryParams({ status: 200 })}
       >
-        Set DataPoint Query Params
+        Set Log Query Params
       </button>
 
       <button
         type="button"
-        data-testid="add-datapoints"
+        data-testid="add-logs"
         onClick={async () => {
           try {
-            await addDataPointsFn('1', [
-              {
-                method: HttpMethod.POST,
-                endpoint: '/new',
-                request_body: { new: 'data' },
-                ground_truth: { new: 'result' },
-                function_name: 'newFunction',
-                is_golden: true,
-                metadata: {},
-              },
-            ]);
+            await addLogsFn('1', ['1', '2']);
           } catch (error) {
-            console.error('Add data points failed:', error);
+            console.error('Add logs failed:', error);
           }
         }}
       >
-        Add Data Points
+        Add Logs
       </button>
 
       <button
         type="button"
-        data-testid="delete-datapoints"
+        data-testid="remove-logs"
         onClick={async () => {
           try {
-            await deleteDataPointsFn('1', ['1', '2']);
+            await deleteLogsFn('1', ['1', '2']);
           } catch (error) {
-            console.error('Delete data points failed:', error);
+            console.error('Remove logs failed:', error);
           }
         }}
       >
-        Delete Data Points
+        Remove Logs
       </button>
 
-      <button
-        type="button"
-        data-testid="refetch-datapoints"
-        onClick={refetchDataPoints}
-      >
-        Refetch Data Points
+      <button type="button" data-testid="refetch-logs" onClick={refetchLogs}>
+        Refetch Logs
       </button>
     </div>
   );
@@ -352,21 +391,9 @@ describe('DatasetsProvider', () => {
       description: 'Updated Description',
     });
     vi.mocked(deleteDataset).mockResolvedValue();
-    vi.mocked(getDatasetDataPoints).mockResolvedValue(mockDataPoints);
-    vi.mocked(addDataPoints).mockResolvedValue([
-      {
-        id: '3',
-        method: HttpMethod.POST,
-        endpoint: '/new',
-        request_body: { new: 'data' },
-        ground_truth: { new: 'result' },
-        function_name: 'newFunction',
-        is_golden: true,
-        metadata: {},
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    vi.mocked(deleteDataPoints).mockResolvedValue();
+    vi.mocked(getDatasetLogs).mockResolvedValue(mockLogs);
+    vi.mocked(addDatasetLogs).mockResolvedValue();
+    vi.mocked(deleteDatasetLogs).mockResolvedValue();
   });
 
   afterEach(() => {
@@ -570,7 +597,7 @@ describe('DatasetsProvider', () => {
     expect(screen.getByTestId('selected-dataset-id').textContent).toBe('1');
   });
 
-  it('handles manual data points loading with loadDataPoints function', async () => {
+  it('handles manual logs loading with loadLogs function', async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DatasetsProvider>
@@ -583,27 +610,27 @@ describe('DatasetsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    // Initially no data points loaded
-    expect(screen.getByTestId('datapoints-count').textContent).toBe('0');
+    // Initially no logs loaded
+    expect(screen.getByTestId('logs-count').textContent).toBe('0');
 
-    // Load data points for dataset 1 manually
-    fireEvent.click(screen.getByTestId('load-datapoints'));
+    // Load logs for dataset 1 manually
+    fireEvent.click(screen.getByTestId('load-logs'));
 
     // Should select the dataset and set query params
     expect(screen.getByTestId('selected-dataset-id').textContent).toBe('1');
-    expect(screen.getByTestId('datapoint-query-params').textContent).toBe(
+    expect(screen.getByTestId('log-query-params').textContent).toBe(
       JSON.stringify({ limit: 10 }),
     );
 
-    // Wait for data points to load
+    // Wait for logs to load
     await waitFor(() => {
-      expect(screen.getByTestId('datapoints-count').textContent).toBe('2');
+      expect(screen.getByTestId('logs-count').textContent).toBe('2');
     });
 
-    expect(getDatasetDataPoints).toHaveBeenCalledWith('1', { limit: 10 });
+    expect(getDatasetLogs).toHaveBeenCalledWith('1', { limit: 10 });
   });
 
-  it('handles data points addition successfully', async () => {
+  it('handles logs addition successfully', async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DatasetsProvider>
@@ -616,34 +643,20 @@ describe('DatasetsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    expect(screen.getByTestId('adding-datapoints-loading').textContent).toBe(
+    expect(screen.getByTestId('adding-logs-loading').textContent).toBe(
       'not adding',
     );
 
     await act(() => {
-      fireEvent.click(screen.getByTestId('add-datapoints'));
+      fireEvent.click(screen.getByTestId('add-logs'));
     });
 
     await waitFor(() => {
-      expect(addDataPoints).toHaveBeenCalledWith(
-        '1',
-        [
-          {
-            method: HttpMethod.POST,
-            endpoint: '/new',
-            request_body: { new: 'data' },
-            ground_truth: { new: 'result' },
-            function_name: 'newFunction',
-            is_golden: true,
-            metadata: {},
-          },
-        ],
-        undefined,
-      );
+      expect(addDatasetLogs).toHaveBeenCalledWith('1', ['1', '2'], undefined);
     });
   });
 
-  it('handles data points deletion successfully', async () => {
+  it('handles logs removal successfully', async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DatasetsProvider>
@@ -656,16 +669,16 @@ describe('DatasetsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    expect(screen.getByTestId('deleting-datapoints-loading').textContent).toBe(
-      'not deleting',
+    expect(screen.getByTestId('removing-logs-loading').textContent).toBe(
+      'not removing',
     );
 
     await act(() => {
-      fireEvent.click(screen.getByTestId('delete-datapoints'));
+      fireEvent.click(screen.getByTestId('remove-logs'));
     });
 
     await waitFor(() => {
-      expect(deleteDataPoints).toHaveBeenCalledWith('1', ['1', '2']);
+      expect(deleteDatasetLogs).toHaveBeenCalledWith('1', ['1', '2']);
     });
   });
 
@@ -710,11 +723,9 @@ describe('DatasetsProvider', () => {
     vi.mocked(createDataset).mockRejectedValue(new Error('Create Error'));
     vi.mocked(updateDataset).mockRejectedValue(new Error('Update Error'));
     vi.mocked(deleteDataset).mockRejectedValue(new Error('Delete Error'));
-    vi.mocked(addDataPoints).mockRejectedValue(
-      new Error('Add DataPoints Error'),
-    );
-    vi.mocked(deleteDataPoints).mockRejectedValue(
-      new Error('Delete DataPoints Error'),
+    vi.mocked(addDatasetLogs).mockRejectedValue(new Error('Add Logs Error'));
+    vi.mocked(deleteDatasetLogs).mockRejectedValue(
+      new Error('Remove Logs Error'),
     );
 
     render(
@@ -740,14 +751,14 @@ describe('DatasetsProvider', () => {
       );
     });
 
-    // Test add data points error
+    // Test add logs error
     await act(() => {
-      fireEvent.click(screen.getByTestId('add-datapoints'));
+      fireEvent.click(screen.getByTestId('add-logs'));
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-datapoints-error').textContent).toBe(
-        'Add DataPoints Error',
+      expect(screen.getByTestId('add-logs-error').textContent).toBe(
+        'Add Logs Error',
       );
     });
 
@@ -913,7 +924,7 @@ describe('DatasetsProvider', () => {
     expect(screen.getByTestId('selected-dataset-id').textContent).toBe('1');
   });
 
-  it('manages data point query parameters', async () => {
+  it('manages log query parameters', async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DatasetsProvider>
@@ -926,12 +937,14 @@ describe('DatasetsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    expect(screen.getByTestId('datapoint-query-params').textContent).toBe('{}');
+    expect(screen.getByTestId('log-query-params').textContent).toBe(
+      '{"limit":50,"offset":0}',
+    );
 
-    fireEvent.click(screen.getByTestId('set-datapoint-query-params'));
+    fireEvent.click(screen.getByTestId('set-log-query-params'));
 
-    expect(screen.getByTestId('datapoint-query-params').textContent).toBe(
-      JSON.stringify({ is_golden: true }),
+    expect(screen.getByTestId('log-query-params').textContent).toBe(
+      JSON.stringify({ status: 200 }),
     );
   });
 
@@ -949,22 +962,22 @@ describe('DatasetsProvider', () => {
       'detail',
       '123',
     ]);
-    expect(datasetQueryKeys.dataPoints('123')).toEqual([
+    expect(datasetQueryKeys.logs('123')).toEqual([
       'datasets',
       'detail',
       '123',
-      'dataPoints',
+      'logs',
     ]);
-    expect(datasetQueryKeys.dataPointsList('123', { limit: 10 })).toEqual([
+    expect(datasetQueryKeys.logsList('123', { limit: 10 })).toEqual([
       'datasets',
       'detail',
       '123',
-      'dataPoints',
+      'logs',
       { limit: 10 },
     ]);
   });
 
-  it('only fetches data points when manually requested', async () => {
+  it('only fetches logs when manually requested', async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DatasetsProvider>
@@ -977,23 +990,23 @@ describe('DatasetsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    // Initially no dataset selected, so no data points should be fetched
-    expect(getDatasetDataPoints).not.toHaveBeenCalled();
-    expect(screen.getByTestId('datapoints-count').textContent).toBe('0');
+    // Initially no dataset selected, so no logs should be fetched
+    expect(getDatasetLogs).not.toHaveBeenCalled();
+    expect(screen.getByTestId('logs-count').textContent).toBe('0');
 
-    // Select a dataset - data points should still not be fetched automatically
+    // Select a dataset - logs should still not be fetched automatically
     fireEvent.click(screen.getByTestId('select-dataset'));
 
-    // Data points should still not be fetched automatically
-    expect(getDatasetDataPoints).not.toHaveBeenCalled();
-    expect(screen.getByTestId('datapoints-count').textContent).toBe('0');
+    // Logs should still not be fetched automatically
+    expect(getDatasetLogs).not.toHaveBeenCalled();
+    expect(screen.getByTestId('logs-count').textContent).toBe('0');
 
-    // Only when we manually load data points should they be fetched
-    fireEvent.click(screen.getByTestId('load-datapoints'));
+    // Only when we manually load logs should they be fetched
+    fireEvent.click(screen.getByTestId('load-logs'));
 
     await waitFor(() => {
-      expect(getDatasetDataPoints).toHaveBeenCalledWith('1', { limit: 10 });
-      expect(screen.getByTestId('datapoints-count').textContent).toBe('2');
+      expect(getDatasetLogs).toHaveBeenCalledWith('1', { limit: 10 });
+      expect(screen.getByTestId('logs-count').textContent).toBe('2');
     });
   });
 });
