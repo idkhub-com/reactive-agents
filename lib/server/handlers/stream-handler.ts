@@ -1,3 +1,9 @@
+import { generateErrorResponse } from '@server/utils/ai-provider';
+import {
+  analyzeError,
+  enhanceErrorResponse,
+  extractErrorTexts,
+} from '@server/utils/error-classification-central';
 import {
   getStreamModeSplitPattern,
   type SplitPatternType,
@@ -8,7 +14,10 @@ import type {
   ResponseTransformFunction,
 } from '@shared/types/ai-providers/config';
 import type { IdkRequestData } from '@shared/types/api/request/body';
-import type { IdkResponseBody } from '@shared/types/api/response/body';
+import type {
+  ErrorResponseBody,
+  IdkResponseBody,
+} from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
 import type { CompletionResponseBody } from '@shared/types/api/routes/completions-api';
 import {
@@ -307,17 +316,94 @@ export async function handleNonStreamingMode(
     );
   }
 
+  // Apply centralized error classification for ALL 37+ providers automatically
+  let finalStatus = aiProviderResponse.status;
+  if (!aiProviderResponse.ok) {
+    if (transformedBodyJson && typeof transformedBodyJson === 'object') {
+      // Case 1: Provider has error transformer - enhance the transformed error
+      const isErrorResponse =
+        'error' in transformedBodyJson || 'provider' in transformedBodyJson;
+      if (isErrorResponse) {
+        const enhancedError = enhanceErrorResponse(
+          transformedBodyJson as ErrorResponseBody,
+          aiProviderResponse.status,
+          originalResponseBodyJson || undefined,
+        );
+        transformedBodyJson = enhancedError;
+        finalStatus = enhancedError.status || aiProviderResponse.status;
+      }
+    } else if (
+      originalResponseBodyJson &&
+      typeof originalResponseBodyJson === 'object'
+    ) {
+      // Case 2: Provider has no error transformer - create error response from raw data
+      const analysis = analyzeError(
+        originalResponseBodyJson,
+        aiProviderResponse.status,
+      );
+
+      // Extract error message from raw response (works with any format)
+      const errorTexts = extractErrorTexts(originalResponseBodyJson);
+      const primaryErrorMessage =
+        errorTexts.find((text) => text.length > 0) || 'Unknown error occurred';
+
+      const errorResponse = generateErrorResponse(
+        {
+          message: primaryErrorMessage,
+          type: 'unknown_error',
+        },
+        'unknown', // Provider name not available here
+      );
+
+      // Apply error analysis to enhance the response
+      if (analysis) {
+        errorResponse.error_details = {
+          original_error: originalResponseBodyJson || {},
+          original_message: errorResponse.error.message,
+          classification: analysis.classification,
+          ...(analysis.genericMessage && {
+            suggested_action: analysis.genericMessage,
+          }),
+        };
+        if (analysis.statusCode) {
+          errorResponse.status = analysis.statusCode;
+        }
+      }
+
+      const enhancedError = enhanceErrorResponse(
+        errorResponse,
+        aiProviderResponse.status,
+        originalResponseBodyJson || undefined,
+      );
+
+      transformedBodyJson = enhancedError;
+      finalStatus = enhancedError.status || aiProviderResponse.status;
+    }
+  }
+
   // Make sure that the response body is in the expected format.
   let idkResponseBody: IdkResponseBody | null = null;
   if (transformedBodyJson) {
-    const idkResponseBodyParseResult =
-      idkRequestData.responseSchema.safeParse(transformedBodyJson);
-    if (!idkResponseBodyParseResult.success) {
-      throw new Error(
-        `Invalid response body: ${idkResponseBodyParseResult.error}`,
-      );
+    // For error responses, don't validate against success schema
+    const isErrorResponse =
+      'error' in transformedBodyJson ||
+      'provider' in transformedBodyJson ||
+      !aiProviderResponse.ok;
+
+    if (isErrorResponse) {
+      // For error responses, use the transformed body as-is
+      idkResponseBody = transformedBodyJson as IdkResponseBody;
+    } else {
+      // For success responses, validate against the expected schema
+      const idkResponseBodyParseResult =
+        idkRequestData.responseSchema.safeParse(transformedBodyJson);
+      if (!idkResponseBodyParseResult.success) {
+        throw new Error(
+          `Invalid response body: ${idkResponseBodyParseResult.error}`,
+        );
+      }
+      idkResponseBody = idkResponseBodyParseResult.data as IdkResponseBody;
     }
-    idkResponseBody = idkResponseBodyParseResult.data as IdkResponseBody;
   }
   if (!areSyncHooksAvailable) {
     return {
@@ -327,6 +413,7 @@ export async function handleNonStreamingMode(
           : originalResponseBodyText,
         {
           ...aiProviderResponse,
+          status: finalStatus,
           headers: new Headers(
             cleanResponseHeaders(aiProviderResponse.headers),
           ),
@@ -341,6 +428,7 @@ export async function handleNonStreamingMode(
   return {
     response: new Response(JSON.stringify(idkResponseBody), {
       ...aiProviderResponse,
+      status: finalStatus,
       headers: new Headers(cleanResponseHeaders(aiProviderResponse.headers)),
     }),
     idkResponseBody,

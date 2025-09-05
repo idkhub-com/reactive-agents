@@ -164,18 +164,29 @@ export type endpointStrings =
   | 'initiateMultipartUpload';
 
 /**
- * The structure of a error response for all functions
+ * Enhanced error response structure with proper classification and details
+ * Works with all 37+ AI providers automatically
  */
 export const ErrorResponseBody = z.object({
   error: z.object({
-    message: z.string(),
+    message: z.string(), // Concise message (direct from provider for 400, generic for 500)
     type: z.string().optional(),
     param: z.string().optional(),
     code: z.string().optional(),
   }),
   provider: z.string(),
-  message: z.string().optional(),
-  status: z.number().optional(),
+  error_details: z
+    .object({
+      original_message: z.string().optional(), // Original provider message
+      original_error: z.record(z.string(), z.unknown()), // Full provider error details
+      classification: z
+        .enum(['client_error', 'server_error', 'unknown'])
+        .optional(),
+      suggested_action: z.string().optional(), // Helpful user guidance
+    })
+    .optional(),
+  message: z.string().optional(), // Legacy field
+  status: z.number().optional(), // HTTP status override (400/500)
 });
 
 export type ErrorResponseBody = z.infer<typeof ErrorResponseBody>;

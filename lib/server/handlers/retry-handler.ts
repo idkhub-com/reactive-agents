@@ -148,8 +148,8 @@ export const retryRequest = async (
             throw errorObj;
           } else if (response.status >= 200 && response.status <= 204) {
             // do nothing
-          } else {
-            // All error codes that aren't retried need to be propagated up
+          } else if (response.status >= 500) {
+            // Only throw errors for 5xx status codes
             const errorObj = new HttpError(await response.clone().text(), {
               status: response.status,
               statusText: response.statusText,
@@ -158,6 +158,7 @@ export const retryRequest = async (
             bail(errorObj);
             return;
           }
+          // For 4xx status codes, let them pass through to be handled by the response handler
 
           return {
             response,

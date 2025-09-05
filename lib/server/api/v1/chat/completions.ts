@@ -27,6 +27,17 @@ export const completionsRouter = new Hono<AppEnv>()
       if (err instanceof RouterError) {
         statusCode = 400;
         errorMessage = err.message;
+      } else if (err instanceof Error) {
+        // Handle configuration errors and other client errors
+        if (
+          err.message.includes('is required in target') ||
+          err.message.includes('not found') ||
+          err.message.includes('invalid') ||
+          err.message.includes('missing')
+        ) {
+          statusCode = 400;
+          errorMessage = err.message;
+        }
       }
 
       return new Response(
