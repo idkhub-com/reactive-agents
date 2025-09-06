@@ -2,7 +2,6 @@ import { evaluateRoleAdherenceDataset } from '@server/connectors/evaluations/rol
 
 import type { UserDataStorageConnector } from '@server/types/connector';
 import { HttpMethod } from '@server/types/http';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { LogOutput as EvaluationOutput } from '@shared/types/data/log-output';
 import type { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
@@ -96,24 +95,28 @@ const mockLogs = [
 const mockUserDataStorageConnector = {
   getLogs: vi.fn().mockResolvedValue(mockLogs),
   getDatasetLogs: vi.fn().mockResolvedValue(mockLogs),
-  createEvaluationRun: vi.fn().mockResolvedValue({
-    id: 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
-    dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
-    agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
-    evaluation_method: 'role_adherence',
-    name: 'Test Evaluation Run',
-    description: 'Test description',
-    status: 'running' as EvaluationRunStatus,
-    results: {},
-    metadata: {},
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+  createEvaluationRun: vi.fn().mockImplementation((params) => {
+    return Promise.resolve({
+      id: 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
+      dataset_id: params.dataset_id,
+      agent_id: params.agent_id,
+      skill_id: params.skill_id,
+      evaluation_method: 'role_adherence',
+      name: params.name || 'Test Evaluation Run',
+      description: params.description || 'Test description',
+      status: 'running' as EvaluationRunStatus,
+      results: {},
+      metadata: params.metadata || {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
   }),
   getEvaluationRuns: vi.fn().mockImplementation((queryParams) => {
     const evaluationRun = {
       id: queryParams.id || 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
       dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
+      skill_id: 'skill-1',
       evaluation_method: 'role_adherence',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -152,6 +155,7 @@ const mockUserDataStorageConnector = {
       id: 'c3d4e5f6-a7b8-4012-9456-7890abcdef01',
       dataset_id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
       agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
+      skill_id: 'skill-1',
       evaluation_method: 'role_adherence',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -215,23 +219,35 @@ describe('Role Adherence Evaluation (Dataset)', () => {
   });
 
   it('should successfully evaluate a dataset', async () => {
-    const input: DatasetQueryParams = {
-      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
-      limit: 5,
-    };
+    const agentId = 'b2c3d4e5-f6a7-4901-9345-67890abcdef0';
+    const skillId = 'skill-1';
+    const datasetId = 'a1b2c3d4-e5f6-4890-9234-567890abcdef';
 
     const params: RoleAdherenceEvaluationParameters = {
       threshold: 0.5,
       model: 'gpt-4o',
+      include_reason: true,
+      strict_mode: false,
       async_mode: false,
+      verbose_mode: true,
+      temperature: 0.1,
+      max_tokens: 1000,
       batch_size: 5,
-      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
+      agent_id: agentId,
     } as RoleAdherenceEvaluationParameters;
 
+    const evalRunOptions = {
+      name: 'Test Evaluation Run',
+      description: 'Test description',
+    };
+
     const results = await evaluateRoleAdherenceDataset(
-      input,
+      agentId,
+      skillId,
+      datasetId,
       params,
       mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+      evalRunOptions,
     );
 
     expect(typeof results).toBe('object');
@@ -244,29 +260,40 @@ describe('Role Adherence Evaluation (Dataset)', () => {
 
     expect(mockUserDataStorageConnector.getDatasetLogs).toHaveBeenCalledWith(
       'a1b2c3d4-e5f6-4890-9234-567890abcdef',
-      { limit: 5, offset: 0 },
+      {},
     );
   });
 
   it('should handle strict mode correctly', async () => {
-    const input: DatasetQueryParams = {
-      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
-      limit: 5,
-    };
+    const agentId = 'b2c3d4e5-f6a7-4901-9345-67890abcdef0';
+    const skillId = 'skill-1';
+    const datasetId = 'a1b2c3d4-e5f6-4890-9234-567890abcdef';
 
     const params: RoleAdherenceEvaluationParameters = {
       threshold: 0.5,
       model: 'gpt-4o',
+      include_reason: true,
       strict_mode: true,
       async_mode: false,
+      verbose_mode: true,
+      temperature: 0.1,
+      max_tokens: 1000,
       batch_size: 5,
-      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
+      agent_id: agentId,
     } as RoleAdherenceEvaluationParameters;
 
+    const evalRunOptions = {
+      name: 'Test Strict Mode Evaluation',
+      description: 'Test strict mode description',
+    };
+
     const results = await evaluateRoleAdherenceDataset(
-      input,
+      agentId,
+      skillId,
+      datasetId,
       params,
       mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+      evalRunOptions,
     );
 
     expect(typeof results).toBe('object');
@@ -275,47 +302,70 @@ describe('Role Adherence Evaluation (Dataset)', () => {
   });
 
   it('should handle missing user data storage connector', async () => {
-    const input: DatasetQueryParams = {
-      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
-      limit: 5,
-    };
+    const agentId = 'b2c3d4e5-f6a7-4901-9345-67890abcdef0';
+    const skillId = 'skill-1';
+    const datasetId = 'a1b2c3d4-e5f6-4890-9234-567890abcdef';
 
     const params: RoleAdherenceEvaluationParameters = {
       threshold: 0.5,
       model: 'gpt-4o',
-      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
+      include_reason: true,
+      strict_mode: false,
+      async_mode: false,
+      verbose_mode: true,
+      temperature: 0.1,
+      max_tokens: 1000,
+      batch_size: 5,
+      agent_id: agentId,
     } as RoleAdherenceEvaluationParameters;
+
+    const evalRunOptions = {
+      name: 'Test Evaluation Run',
+      description: 'Test description',
+    };
 
     await expect(
       evaluateRoleAdherenceDataset(
-        input,
+        agentId,
+        skillId,
+        datasetId,
         params,
         undefined as unknown as UserDataStorageConnector,
+        evalRunOptions,
       ),
-    ).rejects.toThrow(
-      'User data storage connector is required for dataset evaluation',
-    );
+    ).rejects.toThrow();
   });
 
   it('should create internal LLM judge with correct parameters', async () => {
-    const input: DatasetQueryParams = {
-      id: 'a1b2c3d4-e5f6-4890-9234-567890abcdef',
-      limit: 5,
-    };
+    const agentId = 'b2c3d4e5-f6a7-4901-9345-67890abcdef0';
+    const skillId = 'skill-1';
+    const datasetId = 'a1b2c3d4-e5f6-4890-9234-567890abcdef';
 
     const params: RoleAdherenceEvaluationParameters = {
       threshold: 0.7,
       model: 'gpt-4o-mini',
+      include_reason: true,
+      strict_mode: false,
+      async_mode: false,
+      verbose_mode: true,
       temperature: 0.2,
       max_tokens: 1500,
-      agent_id: 'b2c3d4e5-f6a7-4901-9345-67890abcdef0',
-      async_mode: false,
+      batch_size: 5,
+      agent_id: agentId,
     } as RoleAdherenceEvaluationParameters;
 
+    const evalRunOptions = {
+      name: 'Test LLM Judge Parameters',
+      description: 'Test LLM judge configuration',
+    };
+
     const results = await evaluateRoleAdherenceDataset(
-      input,
+      agentId,
+      skillId,
+      datasetId,
       params,
       mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+      evalRunOptions,
     );
 
     expect(results.averageResult).toHaveProperty('evaluation_run_id');

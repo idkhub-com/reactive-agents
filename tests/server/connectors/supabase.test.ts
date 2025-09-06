@@ -474,6 +474,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           id: '123e4567-e89b-12d3-a456-426614174000',
           dataset_id: '123e4567-e89b-12d3-a456-426614174001',
           agent_id: '123e4567-e89b-12d3-a456-426614174002',
+          skill_id: 'e8a69698-5913-42d2-adcb-83d614d67d59',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
           name: 'test_evaluation',
           description: 'Test evaluation run',

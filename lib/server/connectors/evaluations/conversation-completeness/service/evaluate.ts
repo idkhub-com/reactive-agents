@@ -18,11 +18,11 @@ export async function evaluateConversationCompleteness(
   params: ConversationCompletenessEvaluationParameters,
 ): Promise<ConversationCompletenessResult> {
   // Create LLM judge instance
-  const llm_judge = createLLMJudge({
-    model: params.model || 'gpt-4o-mini',
-    temperature: params.temperature || 0.1,
-    max_tokens: params.max_tokens || 1000,
-    timeout: params.timeout || 30000,
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+    timeout: params.timeout,
   });
 
   // Extract context and response from log
@@ -69,7 +69,7 @@ export async function evaluateConversationCompleteness(
   const evaluationText = `Analyze the following conversation for completeness quality. CONVERSATION: ${context} ASSISTANT RESPONSE: ${response} Consider how well the assistant completes the conversation by satisfying user needs. Look for: Whether all user intentions were identified and addressed, if the conversation feels complete and resolved, whether there are any unresolved user requests, and the overall satisfaction of user needs throughout the conversation. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
 
   // Evaluate using LLM judge with conversation completeness criteria
-  const result = await llm_judge.evaluate({
+  const result = await llmJudge.evaluate({
     text: evaluationText,
     outputFormat: 'json',
     evaluationCriteria: {
@@ -124,14 +124,12 @@ export async function evaluateConversationCompletenessBatch(
  * Main conversation completeness evaluation function
  */
 export async function evaluateConversationCompletenessMain(
-  input: {
-    id: string;
-    limit?: number;
-    offset?: number;
-  },
+  agentId: string,
+  skillId: string,
+  datasetId: string,
   params: ConversationCompletenessEvaluationParameters,
   userDataStorageConnector: UserDataStorageConnector,
-  evalRunOptions?: {
+  evalRunOptions: {
     name?: string;
     description?: string;
   },
@@ -143,22 +141,20 @@ export async function evaluateConversationCompletenessMain(
 
   // Create evaluation run
   const evaluationRun = await userDataStorageConnector.createEvaluationRun({
-    agent_id: params.agent_id!,
-    dataset_id: input.id!,
+    agent_id: agentId,
+    skill_id: skillId,
+    dataset_id: datasetId,
     evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
-    name: evalRunOptions?.name || 'Conversation Completeness Evaluation',
+    name: evalRunOptions.name || 'Conversation Completeness Evaluation',
     description:
-      evalRunOptions?.description ||
+      evalRunOptions.description ||
       'Evaluating conversation completeness quality',
     metadata: { parameters: params },
   });
 
   try {
     // Get logs
-    const logs = await userDataStorageConnector.getDatasetLogs(input.id!, {
-      limit: input.limit || 10,
-      offset: input.offset || 0,
-    });
+    const logs = await userDataStorageConnector.getDatasetLogs(datasetId!, {});
 
     if (logs.length === 0) {
       throw new Error('No logs found for evaluation');

@@ -95,10 +95,12 @@ export function EvaluationRunsView(): ReactElement {
 
   // Update query params when filters change
   useEffect(() => {
-    if (!navigationState.selectedAgent) return;
+    if (!navigationState.selectedAgent || !navigationState.selectedSkill)
+      return;
 
     const queryParams: EvaluationRunQueryParams = {
       agent_id: navigationState.selectedAgent.id,
+      skill_id: navigationState.selectedSkill.id,
       limit,
       offset: (currentPage - 1) * limit,
     };
@@ -114,6 +116,7 @@ export function EvaluationRunsView(): ReactElement {
     setQueryParams(queryParams);
   }, [
     navigationState.selectedAgent,
+    navigationState.selectedSkill,
     currentPage,
     limit,
     statusFilter,

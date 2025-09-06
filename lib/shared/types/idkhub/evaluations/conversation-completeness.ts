@@ -2,20 +2,16 @@ import { z } from 'zod';
 
 export const ConversationCompletenessEvaluationParameters = z
   .object({
-    threshold: z.number().min(0).max(1).optional(),
-    model: z.string().optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    max_tokens: z.number().int().positive().optional(),
-    timeout: z.number().int().positive().optional(),
-    include_reason: z.boolean().optional(),
-    strict_mode: z.boolean().optional(),
-    async_mode: z.boolean().optional(),
-    verbose_mode: z.boolean().optional(),
-    batch_size: z.number().int().positive().optional(),
-    limit: z.number().int().positive().optional(),
-    offset: z.number().int().min(0).optional(),
-    agent_id: z.uuid().optional(),
-    dataset_id: z.uuid().optional(),
+    threshold: z.number().min(0).max(1),
+    model: z.string().default('gpt-4'),
+    temperature: z.number().min(0).max(2).default(0.1),
+    max_tokens: z.number().int().positive().default(1000),
+    timeout: z.number().int().positive().default(30000),
+    include_reason: z.boolean().default(true),
+    strict_mode: z.boolean().default(false),
+    async_mode: z.boolean().default(false),
+    verbose_mode: z.boolean().default(false),
+    batch_size: z.number().int().positive().default(10),
   })
   .strict();
 

@@ -18,6 +18,7 @@ words = [
     "lucide",
     "mcp",
     "openai",
+    "retryable",
     "sagemaker",
     "sanitization",
     "spii",

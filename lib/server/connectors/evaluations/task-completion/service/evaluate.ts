@@ -1,9 +1,8 @@
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion/task-completion';
 import type { TaskCompletionAverageResult } from '@server/connectors/evaluations/task-completion/types';
 import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
-import { createLLMJudge } from '@server/evaluations/llm-judge';
+import { createLLMJudge } from '@server/evaluations';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -495,8 +494,8 @@ async function evaluateSingleLog(
 async function processLogsInBatches(
   logs: Log[],
   params: TaskCompletionEvaluationParameters,
-  llm_judge: LLMJudge,
-  evaluation_run_id: string,
+  llmJudge: LLMJudge,
+  evaluationRunId: string,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationOutput[]> {
   const batch_size = params.batch_size || 10;
@@ -512,8 +511,8 @@ async function processLogsInBatches(
           evaluateSingleLog(
             log,
             params,
-            llm_judge,
-            evaluation_run_id,
+            llmJudge,
+            evaluationRunId,
             userDataStorageConnector,
           ),
         ),
@@ -525,8 +524,8 @@ async function processLogsInBatches(
         const result = await evaluateSingleLog(
           log,
           params,
-          llm_judge,
-          evaluation_run_id,
+          llmJudge,
+          evaluationRunId,
           userDataStorageConnector,
         );
         results.push(result);
@@ -542,10 +541,12 @@ async function processLogsInBatches(
  * and stores EvaluationOutput records, then returns average results
  */
 export async function evaluateTaskCompletion(
-  input: DatasetQueryParams,
+  agentId: string,
+  skillId: string,
+  datasetId: string,
   params: TaskCompletionEvaluationParameters,
   userDataStorageConnector: UserDataStorageConnector,
-  evalRunOptions?: {
+  evalRunOptions: {
     name?: string;
     description?: string;
   },
@@ -553,64 +554,20 @@ export async function evaluateTaskCompletion(
   averageResult: TaskCompletionAverageResult;
   evaluationRun: EvaluationRun;
 }> {
-  const internalLlmJudge = createLLMJudge({
-    model: params.model || 'gpt-4o',
-    temperature: params.temperature || 0.1,
-    max_tokens: params.max_tokens || 1000,
-  });
-
-  return await evaluateDataset(
-    input,
-    params,
-    internalLlmJudge,
-    userDataStorageConnector,
-    evalRunOptions,
-  );
-}
-
-/**
- * Evaluate a dataset and create EvaluationRun with aggregated results
- */
-async function evaluateDataset(
-  input: DatasetQueryParams,
-  params: TaskCompletionEvaluationParameters,
-  llm_judge: LLMJudge,
-  user_data_storage_connector: UserDataStorageConnector,
-  evalRunOptions?: {
-    name?: string;
-    description?: string;
-  },
-): Promise<{
-  averageResult: TaskCompletionAverageResult;
-  evaluationRun: EvaluationRun;
-}> {
-  if (!user_data_storage_connector) {
-    throw new Error(
-      'User data storage connector is required for dataset evaluation',
-    );
-  }
-
-  if (!input.id) {
-    throw new Error('Dataset ID is required for evaluation');
-  }
-
-  if (!params.agent_id) {
-    throw new Error('Agent ID is required for evaluation');
-  }
-
   const start_time = Date.now();
 
   // Create initial evaluation run record
   const evaluationRunCreateParams: EvaluationRunCreateParams = {
-    dataset_id: input.id,
-    agent_id: params.agent_id,
+    dataset_id: datasetId,
+    agent_id: agentId,
+    skill_id: skillId,
     evaluation_method: EvaluationMethodName.TASK_COMPLETION,
     name:
-      evalRunOptions?.name ||
+      evalRunOptions.name ||
       `Task Completion Evaluation - ${new Date().toISOString()}`,
     description:
-      evalRunOptions?.description ||
-      `Evaluates whether an AI agent successfully completed a given task using LLM-as-a-judge for dataset ${input.id}`,
+      evalRunOptions.description ||
+      `Evaluates whether an AI agent successfully completed a given task using LLM-as-a-judge for dataset ${datasetId}`,
     metadata: {
       parameters: params,
       method_config: taskCompletionEvaluationConnector?.getDetails?.(),
@@ -618,29 +575,27 @@ async function evaluateDataset(
     },
   };
 
-  const evaluationRun = await user_data_storage_connector.createEvaluationRun(
+  const evaluationRun = await userDataStorageConnector.createEvaluationRun(
     evaluationRunCreateParams,
   );
-  const evaluation_run_id = evaluationRun.id;
 
-  if (!evaluation_run_id) {
-    throw new Error('Failed to create evaluation run - no ID returned');
-  }
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
 
   try {
     // Get logs from database
-    const logs = await user_data_storage_connector.getDatasetLogs(input.id, {
-      limit: input.limit || 10,
-      offset: input.offset || 0,
-    });
+    const logs = await userDataStorageConnector.getDatasetLogs(datasetId, {});
 
     // Process all logs and create EvaluationOutput records
     const evaluationOutputs = await processLogsInBatches(
       logs,
       params,
-      llm_judge,
-      evaluation_run_id,
-      user_data_storage_connector,
+      llmJudge,
+      evaluationRun.id,
+      userDataStorageConnector,
     );
 
     // Aggregate results
@@ -655,7 +610,7 @@ async function evaluateDataset(
     const total_execution_time = Date.now() - start_time;
 
     // Update the evaluation run in the database
-    await user_data_storage_connector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: 'completed' as EvaluationRunStatus,
       results: {
         total_logs: logs.length,
@@ -683,11 +638,11 @@ async function evaluateDataset(
 
     // Get the updated evaluation run with results
     const updatedEvaluationRuns =
-      await user_data_storage_connector.getEvaluationRuns({
-        id: evaluation_run_id,
+      await userDataStorageConnector.getEvaluationRuns({
+        id: evaluationRun.id,
       });
     const updatedEvaluationRun =
-      updatedEvaluationRuns.find((run) => run.id === evaluation_run_id) ||
+      updatedEvaluationRuns.find((run) => run.id === evaluationRun.id) ||
       evaluationRun;
 
     const averageResult: TaskCompletionAverageResult = {
@@ -696,13 +651,13 @@ async function evaluateDataset(
       passed_count,
       failed_count,
       threshold_used,
-      evaluation_run_id,
+      evaluation_run_id: evaluationRun.id,
     };
 
     return { averageResult, evaluationRun: updatedEvaluationRun };
   } catch (error) {
     // Update evaluation run with error status
-    await user_data_storage_connector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: 'failed' as EvaluationRunStatus,
       results: {
         error: error instanceof Error ? error.message : 'Unknown error',
