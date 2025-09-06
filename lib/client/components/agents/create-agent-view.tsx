@@ -80,8 +80,8 @@ export function CreateAgentView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Navigate to the agent's pipelines page
-      router.push(`/pipelines/${encodeURIComponent(newAgent.name)}`);
+      // Navigate to the agent's skills page
+      router.push(`/agents/${encodeURIComponent(newAgent.name)}`);
     } catch (error) {
       console.error('Error creating agent:', error);
       // Error is already handled by the agents provider

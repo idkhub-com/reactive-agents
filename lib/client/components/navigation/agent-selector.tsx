@@ -31,7 +31,7 @@ export function AgentSelector(): ReactElement | null {
     }
   };
 
-  if (navigationState.section !== 'pipelines') {
+  if (navigationState.section !== 'agents') {
     return null;
   }
 

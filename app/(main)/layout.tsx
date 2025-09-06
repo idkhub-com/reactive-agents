@@ -1,8 +1,8 @@
 'use client';
 
+import { AgentsView } from '@client/components/agents';
 import { BreadcrumbComponent } from '@client/components/breadcrumb';
 import { ErrorBoundary } from '@client/components/error-boundary';
-import { PipelinesView } from '@client/components/pipelines';
 import { AppSidebar } from '@client/components/side-bar/app-sidebar';
 import { Separator } from '@client/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@client/components/ui/sidebar';
@@ -16,11 +16,12 @@ function MainContent({ children }: { children: ReactNode }): ReactElement {
   const { navigationState } = useNavigation();
   const pathname = usePathname();
 
-  // If we're on a pipelines route with an agent, use the PipelinesView
+  // If we're on a agents route with an agent, use the AgentsView
   // But exclude specific sub-routes like skills/create that should render their own pages
   if (
-    pathname.startsWith('/pipelines/') &&
-    pathname !== '/pipelines' &&
+    pathname.startsWith('/agents/') &&
+    pathname !== '/agents' &&
+    !pathname.includes('/agents/create') &&
     !pathname.includes('/skills/create')
   ) {
     return (
@@ -28,13 +29,13 @@ function MainContent({ children }: { children: ReactNode }): ReactElement {
         fallback={(error) => (
           <div className="flex flex-col items-center justify-center p-8">
             <h2 className="text-lg font-semibold text-destructive mb-2">
-              Failed to load pipeline view
+              Failed to load agents view
             </h2>
             <p className="text-sm text-muted-foreground">{error.message}</p>
           </div>
         )}
       >
-        <PipelinesView />
+        <AgentsView />
       </ErrorBoundary>
     );
   }

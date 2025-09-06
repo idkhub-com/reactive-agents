@@ -124,12 +124,12 @@ describe('AgentView', () => {
 
   const renderAgentView = (
     agentId = '550e8400-e29b-41d4-a716-446655440001',
-    onClose = vi.fn(),
+    onCloseAction = vi.fn(),
   ) =>
     render(
       <QueryClientProvider client={queryClient}>
         <AgentsProvider>
-          <AgentView agentId={agentId} onClose={onClose} />
+          <AgentView agentId={agentId} onCloseAction={onCloseAction} />
         </AgentsProvider>
       </QueryClientProvider>,
     );
@@ -482,7 +482,7 @@ describe('AgentView', () => {
         <AgentsProvider>
           <AgentView
             agentId="550e8400-e29b-41d4-a716-446655440002"
-            onClose={vi.fn()}
+            onCloseAction={vi.fn()}
           />
         </AgentsProvider>
       </QueryClientProvider>,

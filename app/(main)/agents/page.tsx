@@ -1,13 +1,15 @@
 'use client';
 
 import { useAgents } from '@client/providers/agents';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 
 export default function AgentsPage(): ReactElement {
   const { agents, isLoading, selectedAgent } = useAgents();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
   const [hasRedirected, setHasRedirected] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -17,8 +19,18 @@ export default function AgentsPage(): ReactElement {
   }, []);
 
   useEffect(() => {
+    if (error === 'agent-not-found') {
+      // Could show a toast or notification here
+      console.warn('Agent not found in URL');
+    } else if (error === 'skill-not-found') {
+      console.warn('Skill not found in URL');
+    }
+  }, [error]);
+
+  useEffect(() => {
     if (!isMounted || hasRedirected) return;
-    console.log('🔍 AgentsPage useEffect:', {
+
+    console.log('🔍 /agentsPage useEffect:', {
       isLoading,
       selectedAgent,
       agentsCount: agents.length,
@@ -29,11 +41,11 @@ export default function AgentsPage(): ReactElement {
       return;
     }
 
-    // If we have a selected agent, redirect to its pipeline page
+    // If we have a selected agent, redirect to its agent skill page
     if (selectedAgent) {
       console.log('✅ Redirecting to selected agent:', selectedAgent.name);
       setHasRedirected(true);
-      const targetUrl = `/pipelines/${encodeURIComponent(selectedAgent.name)}`;
+      const targetUrl = `/agents/${encodeURIComponent(selectedAgent.name)}`;
       console.log('🔗 Target URL:', targetUrl);
       router.replace(targetUrl);
       return;
@@ -44,7 +56,7 @@ export default function AgentsPage(): ReactElement {
       const firstAgent = agents[0];
       console.log('✅ Redirecting to first agent:', firstAgent.name);
       setHasRedirected(true);
-      const targetUrl = `/pipelines/${encodeURIComponent(firstAgent.name)}`;
+      const targetUrl = `/agents/${encodeURIComponent(firstAgent.name)}`;
       console.log('🔗 Target URL:', targetUrl);
       router.replace(targetUrl);
       return;

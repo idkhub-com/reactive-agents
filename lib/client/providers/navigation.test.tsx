@@ -21,7 +21,7 @@ type Params = Partial<{
   datasetId: string;
 }>;
 const mockParams: Params = {};
-const mockPathname = '/pipelines';
+const mockPathname = '/agents';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: mockPush })),
@@ -167,8 +167,8 @@ describe('NavigationProvider', () => {
     vi.clearAllMocks();
   });
 
-  it('provides initial navigation state', async () => {
-    await act(() => {
+  it('provides initial navigation state', () => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
@@ -178,13 +178,13 @@ describe('NavigationProvider', () => {
     expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Select Agent');
   });
 
-  it('sets selected agent and navigates', async () => {
-    await act(() => {
+  it('sets selected agent and navigates', () => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
     const setAgentButton = screen.getByTestId('set-agent');
-    await act(() => {
+    act(() => {
       fireEvent.click(setAgentButton);
     });
 
@@ -192,37 +192,37 @@ describe('NavigationProvider', () => {
       'selectedAgentName',
       'Test Agent 1',
     );
-    expect(mockPush).toHaveBeenCalledWith('/pipelines/Test%20Agent%201');
+    expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
   });
 
-  it('clears selected agent and navigates', async () => {
-    await act(() => {
+  it('clears selected agent and navigates', () => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
     const clearAgentButton = screen.getByTestId('clear-agent');
-    await act(() => {
+    act(() => {
       fireEvent.click(clearAgentButton);
     });
 
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(
       'selectedAgentName',
     );
-    expect(mockPush).toHaveBeenCalledWith('/pipelines');
+    expect(mockPush).toHaveBeenCalledWith('/agents');
   });
 
-  it('navigates to skill dashboard', async () => {
-    await act(() => {
+  it('navigates to skill dashboard', () => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
     const navigateButton = screen.getByTestId('navigate-skill');
-    await act(() => {
+    act(() => {
       fireEvent.click(navigateButton);
     });
 
     expect(mockPush).toHaveBeenCalledWith(
-      '/pipelines/Test%20Agent%201/Test%20Skill%201',
+      '/agents/Test%20Agent%201/Test%20Skill%201',
     );
   });
 
@@ -241,7 +241,7 @@ describe('NavigationProvider', () => {
     });
 
     // Should still navigate even if localStorage fails
-    expect(mockPush).toHaveBeenCalledWith('/pipelines/Test%20Agent%201');
+    expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
   });
 
   it('sanitizes agent names from URL parameters', async () => {
@@ -266,7 +266,7 @@ describe('NavigationProvider', () => {
     // Test with agent selected
     mockParams.agentName = 'Test%20Agent%201';
 
-    await act(() => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
@@ -305,7 +305,7 @@ describe('NavigationProvider', () => {
       );
     };
 
-    await act(() => {
+    act(() => {
       renderWithProviders(<TestComponentWithSkill />);
     });
 
@@ -314,12 +314,12 @@ describe('NavigationProvider', () => {
     });
 
     const navigateButton = screen.getByTestId('navigate-skill');
-    await act(() => {
+    act(() => {
       fireEvent.click(navigateButton);
     });
 
     expect(mockPush).toHaveBeenCalledWith(
-      '/pipelines/Test%20Agent%201/Test%20Skill%201',
+      '/agents/Test%20Agent%201/Test%20Skill%201',
     );
   });
 });
@@ -330,10 +330,8 @@ describe('Navigation helper functions', () => {
     mockLocalStorage.getItem.mockReturnValue(null);
   });
 
-  it('sanitizes dangerous characters from names', async () => {
+  it('sanitizes dangerous characters from names', () => {
     const TestSanitizeComponent: React.FC = () => {
-      const _navigation = useNavigation();
-
       React.useEffect(() => {
         // Test internal sanitization by attempting to find an agent with dangerous chars
         mockParams.agentName = 'Test<script>Agent';
@@ -342,7 +340,7 @@ describe('Navigation helper functions', () => {
       return <div data-testid="test">Test</div>;
     };
 
-    await act(() => {
+    act(() => {
       renderWithProviders(<TestSanitizeComponent />);
     });
 
@@ -350,7 +348,7 @@ describe('Navigation helper functions', () => {
     expect(screen.getByTestId('test')).toBeInTheDocument();
   });
 
-  it('handles incognito mode localStorage restrictions', async () => {
+  it('handles incognito mode localStorage restrictions', () => {
     // Mock localStorage to throw on access
     mockLocalStorage.setItem.mockImplementation(() => {
       throw new DOMException('QuotaExceededError');
@@ -359,7 +357,7 @@ describe('Navigation helper functions', () => {
       throw new DOMException('SecurityError');
     });
 
-    await act(() => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
@@ -373,10 +371,10 @@ describe('Navigation helper functions', () => {
     }).not.toThrow();
 
     // Should still attempt navigation
-    expect(mockPush).toHaveBeenCalledWith('/pipelines/Test%20Agent%201');
+    expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
   });
 
-  it('uses memory fallback when localStorage fails', async () => {
+  it('uses memory fallback when localStorage fails', () => {
     // Mock localStorage to fail initially
     let storageCallCount = 0;
     mockLocalStorage.setItem.mockImplementation(() => {
@@ -387,21 +385,21 @@ describe('Navigation helper functions', () => {
       return undefined;
     });
 
-    await act(() => {
+    act(() => {
       renderWithProviders(<TestComponent />);
     });
 
     const setAgentButton = screen.getByTestId('set-agent');
 
     // First click should fail localStorage but succeed with memory fallback
-    await act(() => {
+    act(() => {
       fireEvent.click(setAgentButton);
     });
 
-    expect(mockPush).toHaveBeenCalledWith('/pipelines/Test%20Agent%201');
+    expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
 
     // Second attempt should also work (using memory fallback)
-    await act(() => {
+    act(() => {
       fireEvent.click(setAgentButton);
     });
 

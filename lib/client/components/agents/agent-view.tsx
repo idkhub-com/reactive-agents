@@ -31,12 +31,12 @@ import * as React from 'react';
 
 interface AgentViewProps {
   agentId: string;
-  onClose: () => void;
+  onCloseAction: () => void;
 }
 
 export function AgentView({
   agentId,
-  onClose,
+  onCloseAction,
 }: AgentViewProps): React.ReactElement {
   const {
     agents,
@@ -70,7 +70,7 @@ export function AgentView({
   }, [currentAgent]);
 
   const handleClose = () => {
-    onClose();
+    onCloseAction();
   };
 
   const handleEdit = () => {
@@ -113,7 +113,7 @@ export function AgentView({
       try {
         await deleteAgent(currentAgent.id);
         if (abortController.signal.aborted) return;
-        onClose();
+        onCloseAction();
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
         console.error('Error deleting agent:', error);
