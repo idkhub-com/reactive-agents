@@ -26,6 +26,7 @@ describe('Knowledge Retention Evaluation', () => {
 
   it('should validate parameters correctly', () => {
     const validParams = {
+      threshold: 0.8,
       model: 'gpt-4o-mini',
       temperature: 0.1,
       max_tokens: 1000,
@@ -61,17 +62,27 @@ describe('Knowledge Retention Evaluation', () => {
           KnowledgeRetentionEvaluationParameters
         >
       >;
-    // Test valid max_tokens values
-    expect(schema.safeParse({ max_tokens: 1 }).success).toBe(true);
-    expect(schema.safeParse({ max_tokens: 1000 }).success).toBe(true);
-    expect(schema.safeParse({ max_tokens: 5000 }).success).toBe(true); // No upper limit
+    // Test valid max_tokens values with required threshold
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: 1 }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: 1000 }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: 5000 }).success).toBe(
+      true,
+    );
 
     // Test invalid max_tokens values
-    expect(schema.safeParse({ max_tokens: 0 }).success).toBe(false);
-    expect(schema.safeParse({ max_tokens: -100 }).success).toBe(false);
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: 0 }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: -100 }).success).toBe(
+      false,
+    );
   });
 
-  it('should accept empty parameters object', () => {
+  it('should require threshold field', () => {
     const schema =
       knowledgeRetentionEvaluationConnector.getParameterSchema as z.ZodType<
         unknown,
@@ -83,20 +94,35 @@ describe('Knowledge Retention Evaluation', () => {
       >;
 
     const result = schema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it('should validate minimal parameters with defaults', () => {
+    const schema =
+      knowledgeRetentionEvaluationConnector.getParameterSchema as z.ZodType<
+        unknown,
+        unknown,
+        z.core.$ZodTypeInternals<
+          KnowledgeRetentionEvaluationParameters,
+          KnowledgeRetentionEvaluationParameters
+        >
+      >;
+
+    const result = schema.safeParse({ threshold: 0.7 });
     expect(result.success).toBe(true);
 
     if (result.success) {
-      // All fields should be undefined when not provided (defaults applied in business logic)
-      expect(result.data.threshold).toBeUndefined();
-      expect(result.data.model).toBeUndefined();
-      expect(result.data.temperature).toBeUndefined();
-      expect(result.data.max_tokens).toBeUndefined();
-      expect(result.data.timeout).toBeUndefined();
-      expect(result.data.include_reason).toBeUndefined();
-      expect(result.data.strict_mode).toBeUndefined();
-      expect(result.data.async_mode).toBeUndefined();
-      expect(result.data.verbose_mode).toBeUndefined();
-      expect(result.data.batch_size).toBeUndefined();
+      // Fields with defaults should have default values when not provided
+      expect(result.data.threshold).toBe(0.7);
+      expect(result.data.model).toBe('gpt-4o');
+      expect(result.data.temperature).toBe(0.1);
+      expect(result.data.max_tokens).toBe(1000);
+      expect(result.data.timeout).toBe(3000);
+      expect(result.data.include_reason).toBe(true);
+      expect(result.data.strict_mode).toBe(false);
+      expect(result.data.async_mode).toBe(false);
+      expect(result.data.verbose_mode).toBe(false);
+      expect(result.data.batch_size).toBe(10);
     }
   });
 
@@ -116,66 +142,101 @@ describe('Knowledge Retention Evaluation', () => {
   it('should validate temperature range correctly', () => {
     const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
 
-    // Test valid temperature values
-    expect(schema.safeParse({ temperature: 0 }).success).toBe(true);
-    expect(schema.safeParse({ temperature: 1 }).success).toBe(true);
-    expect(schema.safeParse({ temperature: 2 }).success).toBe(true);
+    // Test valid temperature values with required threshold
+    expect(schema.safeParse({ threshold: 0.5, temperature: 0 }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ threshold: 0.5, temperature: 1 }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ threshold: 0.5, temperature: 2 }).success).toBe(
+      true,
+    );
 
     // Test invalid temperature values
-    expect(schema.safeParse({ temperature: -0.1 }).success).toBe(false);
-    expect(schema.safeParse({ temperature: 2.1 }).success).toBe(false);
-  });
-
-  it('should validate UUID format for agent_id and dataset_id', () => {
-    const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
-
-    // Test valid UUIDs
     expect(
-      schema.safeParse({
-        agent_id: '123e4567-e89b-12d3-a456-426614174000',
-      }).success,
-    ).toBe(true);
-    expect(
-      schema.safeParse({
-        dataset_id: '123e4567-e89b-12d3-a456-426614174001',
-      }).success,
-    ).toBe(true);
-
-    // Test invalid UUIDs
-    expect(schema.safeParse({ agent_id: 'invalid-uuid' }).success).toBe(false);
-    expect(schema.safeParse({ dataset_id: 'also-invalid' }).success).toBe(
+      schema.safeParse({ threshold: 0.5, temperature: -0.1 }).success,
+    ).toBe(false);
+    expect(schema.safeParse({ threshold: 0.5, temperature: 2.1 }).success).toBe(
       false,
     );
+  });
+
+  it('should validate valid parameters correctly', () => {
+    const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
+
+    // Test valid parameter combinations
+    expect(
+      schema.safeParse({
+        threshold: 0.8,
+        model: 'gpt-4o',
+      }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({
+        threshold: 0.6,
+        temperature: 0.5,
+        max_tokens: 2000,
+      }).success,
+    ).toBe(true);
+
+    // Test that unknown fields are rejected (strict mode)
+    expect(schema.safeParse({ unknown_field: 'value' }).success).toBe(false);
   });
 
   it('should validate boolean parameters correctly', () => {
     const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
 
-    // Test valid boolean values
-    expect(schema.safeParse({ include_reason: true }).success).toBe(true);
-    expect(schema.safeParse({ include_reason: false }).success).toBe(true);
-    expect(schema.safeParse({ strict_mode: true }).success).toBe(true);
-    expect(schema.safeParse({ strict_mode: false }).success).toBe(true);
-    expect(schema.safeParse({ async_mode: true }).success).toBe(true);
-    expect(schema.safeParse({ async_mode: false }).success).toBe(true);
-    expect(schema.safeParse({ verbose_mode: true }).success).toBe(true);
-    expect(schema.safeParse({ verbose_mode: false }).success).toBe(true);
+    // Test valid boolean values with required threshold
+    expect(
+      schema.safeParse({ threshold: 0.5, include_reason: true }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ threshold: 0.5, include_reason: false }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ threshold: 0.5, strict_mode: true }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ threshold: 0.5, strict_mode: false }).success,
+    ).toBe(true);
+    expect(schema.safeParse({ threshold: 0.5, async_mode: true }).success).toBe(
+      true,
+    );
+    expect(
+      schema.safeParse({ threshold: 0.5, async_mode: false }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ threshold: 0.5, verbose_mode: true }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ threshold: 0.5, verbose_mode: false }).success,
+    ).toBe(true);
   });
 
   it('should validate integer parameters correctly', () => {
     const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
 
-    // Test valid integer values
-    expect(schema.safeParse({ timeout: 1000 }).success).toBe(true);
-    expect(schema.safeParse({ batch_size: 10 }).success).toBe(true);
-    expect(schema.safeParse({ limit: 50 }).success).toBe(true);
-    expect(schema.safeParse({ offset: 0 }).success).toBe(true);
-    expect(schema.safeParse({ offset: 100 }).success).toBe(true);
+    // Test valid integer values with required threshold
+    expect(schema.safeParse({ threshold: 0.5, timeout: 1000 }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ threshold: 0.5, batch_size: 10 }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: 50 }).success).toBe(
+      true,
+    );
 
     // Test invalid integer values
-    expect(schema.safeParse({ timeout: 0 }).success).toBe(false);
-    expect(schema.safeParse({ batch_size: 0 }).success).toBe(false);
-    expect(schema.safeParse({ limit: 0 }).success).toBe(false);
-    expect(schema.safeParse({ offset: -1 }).success).toBe(false);
+    expect(schema.safeParse({ threshold: 0.5, timeout: 0 }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ threshold: 0.5, batch_size: 0 }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ threshold: 0.5, max_tokens: 0 }).success).toBe(
+      false,
+    );
   });
 });

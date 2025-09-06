@@ -103,14 +103,16 @@ export function SkillsListView(): ReactElement {
       skillId: skill.id,
       // Use recent agent logs grouped by skill_id (approximate, not total)
       logsCount: logsBySkill[skill.id] || 0,
-      evaluationsCount: evaluationRuns.length, // Use provider data
+      evaluationsCount: evaluationRuns.filter(
+        (run) => run.skill_id === skill.id,
+      ).length,
       datasetsCount: datasets.length, // Use provider data
     }));
 
     setSkillStats(stats);
   }, [
     skills,
-    evaluationRuns.length,
+    evaluationRuns,
     datasets.length,
     navigationState.selectedAgent,
     logsBySkill,

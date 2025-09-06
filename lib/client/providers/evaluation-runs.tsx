@@ -145,7 +145,7 @@ export const EvaluationRunsProvider = ({
       return currentLength;
     },
     initialPageParam: 0,
-    enabled: !!queryParams.agent_id, // Only fetch when we have an agent_id
+    enabled: !!queryParams.agent_id, // Only fetch when we have agent_id (skill_id is optional for broader queries)
   });
 
   // Log outputs query - only fetch when manually requested

@@ -12,7 +12,7 @@ import type { AppEnv } from '@server/types/hono';
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
-  EvaluationMethodRequest,
+  EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations/evaluations';
 import { Hono } from 'hono';
 import { toJSONSchema, z } from 'zod';
@@ -130,7 +130,7 @@ export const methodsRouter = new Hono<AppEnv>()
     },
   )
   // Execute an evaluation
-  .post('/execute', zValidator('json', EvaluationMethodRequest), async (c) => {
+  .post('/execute', zValidator('json', EvaluationRunJobDetails), async (c) => {
     try {
       const request = c.req.valid('json');
       const connector = c.get('user_data_storage_connector');

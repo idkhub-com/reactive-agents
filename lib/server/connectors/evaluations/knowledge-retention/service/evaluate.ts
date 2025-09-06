@@ -1,7 +1,6 @@
 import type { KnowledgeRetentionAverageResult } from '@server/connectors/evaluations/knowledge-retention/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -259,10 +258,12 @@ async function processLogsInBatches(
  * and stores EvaluationOutput records, then returns average results
  */
 export async function evaluateKnowledgeRetention(
-  input: DatasetQueryParams,
+  agentId: string,
+  skillId: string,
+  datasetId: string,
   params: KnowledgeRetentionEvaluationParameters,
   userDataStorageConnector: UserDataStorageConnector,
-  evalRunOptions?: {
+  evalRunOptions: {
     name?: string;
     description?: string;
   },
@@ -274,12 +275,13 @@ export async function evaluateKnowledgeRetention(
 
   // Create evaluation run
   const evaluationRunParams: EvaluationRunCreateParams = {
-    dataset_id: input.id!,
-    agent_id: params.agent_id!,
+    dataset_id: datasetId,
+    agent_id: agentId,
+    skill_id: skillId,
     evaluation_method: EvaluationMethodName.KNOWLEDGE_RETENTION,
-    name: evalRunOptions?.name || 'Knowledge Retention Evaluation',
+    name: evalRunOptions.name || 'Knowledge Retention Evaluation',
     description:
-      evalRunOptions?.description || 'Evaluating knowledge retention quality',
+      evalRunOptions.description || 'Evaluating knowledge retention quality',
     metadata: {
       parameters: params,
     },
@@ -288,30 +290,27 @@ export async function evaluateKnowledgeRetention(
   const evaluationRun =
     await userDataStorageConnector.createEvaluationRun(evaluationRunParams);
 
+  // Create LLM judge
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+    timeout: params.timeout,
+  });
+
   try {
     // Get logs
-    const logs = await userDataStorageConnector.getDatasetLogs(input.id!, {
-      limit: input.limit || 10,
-      offset: input.offset || 0,
-    });
+    const logs = await userDataStorageConnector.getDatasetLogs(datasetId, {});
 
     if (logs.length === 0) {
       throw new Error('No logs found for evaluation');
     }
 
-    // Create LLM judge
-    const llm_judge = createLLMJudge({
-      model: params.model,
-      temperature: params.temperature,
-      max_tokens: params.max_tokens,
-      timeout: params.timeout,
-    });
-
     // Process logs
     const results = await processLogsInBatches(
       logs,
       params,
-      llm_judge,
+      llmJudge,
       evaluationRun.id,
       userDataStorageConnector,
     );

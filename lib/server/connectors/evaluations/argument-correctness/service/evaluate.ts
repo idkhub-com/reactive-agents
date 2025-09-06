@@ -3,7 +3,6 @@ import type { ArgumentCorrectnessAverageResult } from '@server/connectors/evalua
 import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -93,10 +92,10 @@ async function evaluateSingleLog(
         tools_called = [t as ToolUsage];
     }
 
-    const llm_judge = createLLMJudge({
-      model: params.model || 'gpt-4o',
-      temperature: params.temperature || 0.1,
-      max_tokens: params.max_tokens || 1000,
+    const llmJudge = createLLMJudge({
+      model: params.model,
+      temperature: params.temperature,
+      max_tokens: params.max_tokens,
     });
 
     const { systemPrompt, userPrompt } = buildPromptForToolArgs(
@@ -105,7 +104,7 @@ async function evaluateSingleLog(
       tools_called,
     );
 
-    const judgeResult = await llm_judge.evaluate({
+    const judgeResult = await llmJudge.evaluate({
       text: `${systemPrompt}\n\n${userPrompt}`,
     });
 
@@ -234,10 +233,12 @@ async function processLogsInBatches(
 }
 
 export async function evaluateArgumentCorrectness(
-  input: DatasetQueryParams,
+  agentId: string,
+  skillId: string,
+  datasetId: string,
   params: ArgumentCorrectnessEvaluationParameters,
-  user_data_storage_connector: UserDataStorageConnector,
-  evalRunOptions?: {
+  userDataStorageConnector: UserDataStorageConnector,
+  evalRunOptions: {
     name?: string;
     description?: string;
   },
@@ -245,29 +246,17 @@ export async function evaluateArgumentCorrectness(
   averageResult: ArgumentCorrectnessAverageResult;
   evaluationRun: EvaluationRun;
 }> {
-  if (!user_data_storage_connector) {
-    throw new Error(
-      'User data storage connector is required for dataset evaluation',
-    );
-  }
-  if (!input.id) {
-    throw new Error('Dataset ID is required for evaluation');
-  }
-  const agent_id = params.agent_id;
-  if (!agent_id) {
-    throw new Error('Agent ID is required for evaluation');
-  }
-
   const evaluationRunCreateParams: EvaluationRunCreateParams = {
-    dataset_id: input.id,
-    agent_id,
+    dataset_id: datasetId,
+    agent_id: agentId,
+    skill_id: skillId,
     evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
     name:
-      evalRunOptions?.name ||
+      evalRunOptions.name ||
       `Argument Correctness Evaluation - ${new Date().toISOString()}`,
     description:
-      evalRunOptions?.description ||
-      `Evaluates tool argument correctness using LLM-as-a-judge for dataset ${input.id}`,
+      evalRunOptions.description ||
+      `Evaluates tool argument correctness using LLM-as-a-judge for dataset ${datasetId}`,
     metadata: {
       parameters: params,
       method_config: {
@@ -280,54 +269,45 @@ export async function evaluateArgumentCorrectness(
     },
   };
 
-  const evaluationRun = await user_data_storage_connector.createEvaluationRun(
+  const evaluationRun = await userDataStorageConnector.createEvaluationRun(
     evaluationRunCreateParams,
   );
-  const evaluation_run_id = evaluationRun.id;
-  if (!evaluation_run_id) {
-    throw new Error('Failed to create evaluation run - no ID returned');
-  }
 
   try {
-    const logs = await user_data_storage_connector.getDatasetLogs(input.id, {
-      limit: input.limit || 10,
-      offset: input.offset || 0,
-    });
+    const logs = await userDataStorageConnector.getDatasetLogs(datasetId, {});
 
     const evaluationOutputs = await processLogsInBatches(
       logs,
       params,
-      evaluation_run_id,
-      user_data_storage_connector,
+      evaluationRun.id,
+      userDataStorageConnector,
     );
 
     const scores = evaluationOutputs.map((output) => output.score || 0);
-    const average_score = scores.length
+    const averageScore = scores.length
       ? scores.reduce((sum, score) => sum + score, 0) / scores.length
       : 0;
-    const threshold_used = params.strict_mode ? 1.0 : params.threshold || 0.5;
-    const passed_count = scores.filter(
-      (score) => score >= threshold_used,
-    ).length;
-    const failed_count = scores.length - passed_count;
+    const thresholdUsed = params.strict_mode ? 1.0 : params.threshold || 0.5;
+    const passedCount = scores.filter((score) => score >= thresholdUsed).length;
+    const failedCount = scores.length - passedCount;
 
-    await user_data_storage_connector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: 'completed' as EvaluationRunStatus,
       results: {
         total_logs: logs.length,
-        passed_count,
-        failed_count,
-        average_score,
-        threshold_used,
+        passed_count: passedCount,
+        failed_count: failedCount,
+        average_score: averageScore,
+        threshold_used: thresholdUsed,
         evaluation_outputs: evaluationOutputs.map((o) => o.id),
       },
       metadata: {
         ...evaluationRun.metadata,
         total_logs: logs.length,
-        passed_count,
-        failed_count,
-        average_score,
-        threshold_used,
+        passed_count: passedCount,
+        failed_count: failedCount,
+        average_score: averageScore,
+        threshold_used: thresholdUsed,
         evaluation_outputs: evaluationOutputs.map((o) => o.id),
       },
       completed_at: new Date().toISOString(),
@@ -335,23 +315,23 @@ export async function evaluateArgumentCorrectness(
 
     const updated =
       (
-        await user_data_storage_connector.getEvaluationRuns({
-          id: evaluation_run_id,
+        await userDataStorageConnector.getEvaluationRuns({
+          id: evaluationRun.id,
         })
       )[0] || evaluationRun;
 
     const averageResult: ArgumentCorrectnessAverageResult = {
-      average_score,
+      average_score: averageScore,
       total_logs: logs.length,
-      passed_count,
-      failed_count,
-      threshold_used,
-      evaluation_run_id,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      threshold_used: thresholdUsed,
+      evaluation_run_id: evaluationRun.id,
     };
 
     return { averageResult, evaluationRun: updated };
   } catch (error) {
-    await user_data_storage_connector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: 'failed' as EvaluationRunStatus,
       results: {
         error: error instanceof Error ? error.message : 'Unknown error',

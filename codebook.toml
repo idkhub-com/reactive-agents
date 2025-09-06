@@ -16,6 +16,7 @@ words = [
     "logprobs",
     "mcp",
     "openai",
+    "retryable",
     "sagemaker",
     "sanitization",
     "spii",

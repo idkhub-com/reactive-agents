@@ -59,13 +59,14 @@ export function SkillDashboardView(): ReactElement {
 
   // Update evaluation runs query params
   useEffect(() => {
-    if (!selectedAgent) return;
+    if (!selectedAgent || !selectedSkill) return;
     setEvalQueryParams({
       agent_id: selectedAgent.id,
+      skill_id: selectedSkill.id,
       limit: 100,
       offset: 0,
     });
-  }, [selectedAgent, setEvalQueryParams]);
+  }, [selectedAgent, selectedSkill, setEvalQueryParams]);
 
   // Update datasets query params
   useEffect(() => {
