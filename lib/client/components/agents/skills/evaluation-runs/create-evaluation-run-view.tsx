@@ -28,13 +28,16 @@ import { useNavigation } from '@client/providers/navigation';
 import type {
   EvaluationMethodDetails,
   EvaluationMethodName,
+  EvaluationMethodParameters,
 } from '@shared/types/idkhub/evaluations';
 import {
   ArrowRightIcon,
   CheckCircleIcon,
   DatabaseIcon,
   PlayIcon,
+  PlusIcon,
   SettingsIcon,
+  XIcon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
@@ -48,8 +51,23 @@ interface EvaluationFormData {
   configuration: Record<string, string | number | boolean>;
 }
 
+interface JSONSchemaProperty {
+  type?: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+  enum?: unknown[];
+}
+
+interface JSONSchema {
+  type?: string;
+  properties?: Record<string, JSONSchemaProperty>;
+  default?: Record<string, unknown>;
+}
+
 interface EvaluationMethodWithSchema extends EvaluationMethodDetails {
-  schema?: Record<string, unknown>;
+  schema?: JSONSchema;
   defaults?: Record<string, unknown>;
 }
 
@@ -79,6 +97,9 @@ export function CreateEvaluationRunView(): ReactElement {
     EvaluationMethodWithSchema[]
   >([]);
   const [isLoadingMethods, setIsLoadingMethods] = useState(true);
+  const [shownOptionalParams, setShownOptionalParams] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Update dataset query params when agent changes
   useEffect(() => {
@@ -174,6 +195,8 @@ export function CreateEvaluationRunView(): ReactElement {
         break;
       case 'select-method':
         if (formData.evaluationMethod) {
+          // Clear optional parameters when changing methods
+          setShownOptionalParams(new Set());
           setCurrentStep('configure');
         }
         break;
@@ -192,9 +215,10 @@ export function CreateEvaluationRunView(): ReactElement {
 
       const result = await executeEvaluation({
         agent_id: selectedAgent.id,
+        skill_id: selectedSkill.id,
         dataset_id: formData.datasetId,
         evaluation_method: formData.evaluationMethod as EvaluationMethodName,
-        parameters: formData.configuration,
+        parameters: formData.configuration as EvaluationMethodParameters,
         name: formData.name,
         description: formData.description,
       });
@@ -221,6 +245,24 @@ export function CreateEvaluationRunView(): ReactElement {
 
   const updateFormData = (updates: Partial<EvaluationFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const showOptionalParam = (paramKey: string) => {
+    setShownOptionalParams((prev) => new Set(prev).add(paramKey));
+  };
+
+  const hideOptionalParam = (paramKey: string) => {
+    setShownOptionalParams((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(paramKey);
+      return newSet;
+    });
+    // Also remove the parameter from configuration
+    const newConfig = { ...formData.configuration };
+    delete newConfig[paramKey];
+    updateFormData({
+      configuration: newConfig,
+    });
   };
 
   const selectedDataset = datasets.find((d) => d.id === formData.datasetId);
@@ -396,116 +438,258 @@ export function CreateEvaluationRunView(): ReactElement {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {selectedMethod.schema &&
-                  typeof selectedMethod.schema === 'object' &&
-                  selectedMethod.schema !== null &&
-                  'properties' in selectedMethod.schema &&
-                  selectedMethod.schema.properties &&
-                  typeof selectedMethod.schema.properties === 'object'
-                    ? Object.entries(
-                        // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema properties require any
-                        selectedMethod.schema.properties as Record<string, any>,
-                        // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema field definition requires any
-                      ).map(([paramKey, paramDef]: [string, any]) => {
-                        const defaultValue =
-                          selectedMethod.defaults?.[paramKey] ??
-                          paramDef.default;
-                        const currentValue =
-                          formData.configuration[paramKey] ?? defaultValue;
+                  {selectedMethod.schema?.properties ? (
+                    <>
+                      {/* Required parameters (have defaults) */}
+                      {Object.entries(selectedMethod.schema.properties)
+                        .filter(([paramKey, paramDef]) => {
+                          const defaultValue =
+                            selectedMethod.defaults?.[paramKey] ??
+                            paramDef.default;
+                          return defaultValue !== undefined;
+                        })
+                        .map(([paramKey, paramDef]) => {
+                          const defaultValue =
+                            selectedMethod.defaults?.[paramKey] ??
+                            paramDef.default;
+                          const currentValue =
+                            formData.configuration[paramKey] ?? defaultValue;
 
-                        return (
-                          <div key={paramKey}>
-                            <Label htmlFor={paramKey}>
+                          return (
+                            <div key={paramKey}>
+                              <Label htmlFor={paramKey}>
+                                {paramKey
+                                  .replace(/_/g, ' ')
+                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </Label>
+                              {paramDef.description && (
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  {String(paramDef.description)}
+                                </p>
+                              )}
+                              {paramDef.type === 'number' ? (
+                                <Input
+                                  id={paramKey}
+                                  type="number"
+                                  min={paramDef.minimum}
+                                  max={paramDef.maximum}
+                                  step={0.1}
+                                  value={String(currentValue)}
+                                  onChange={(e) =>
+                                    updateFormData({
+                                      configuration: {
+                                        ...formData.configuration,
+                                        [paramKey]: parseFloat(e.target.value),
+                                      },
+                                    })
+                                  }
+                                />
+                              ) : paramDef.type === 'boolean' ||
+                                typeof defaultValue === 'boolean' ? (
+                                <RadioGroup
+                                  value={String(currentValue)}
+                                  onValueChange={(value: string) =>
+                                    updateFormData({
+                                      configuration: {
+                                        ...formData.configuration,
+                                        [paramKey]: value === 'true',
+                                      },
+                                    })
+                                  }
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem
+                                      value="true"
+                                      id={`${paramKey}-true`}
+                                    />
+                                    <Label htmlFor={`${paramKey}-true`}>
+                                      Enabled
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem
+                                      value="false"
+                                      id={`${paramKey}-false`}
+                                    />
+                                    <Label htmlFor={`${paramKey}-false`}>
+                                      Disabled
+                                    </Label>
+                                  </div>
+                                </RadioGroup>
+                              ) : Array.isArray(defaultValue) ? (
+                                <div className="text-sm text-muted-foreground">
+                                  Array field (not implemented yet)
+                                </div>
+                              ) : (
+                                <Input
+                                  id={paramKey}
+                                  value={String(currentValue)}
+                                  onChange={(e) =>
+                                    updateFormData({
+                                      configuration: {
+                                        ...formData.configuration,
+                                        [paramKey]: e.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+
+                      {/* Optional parameters (no defaults) - shown when toggled */}
+                      {Object.entries(selectedMethod.schema.properties)
+                        .filter(([paramKey, paramDef]) => {
+                          const defaultValue =
+                            selectedMethod.defaults?.[paramKey] ??
+                            paramDef.default;
+                          return (
+                            defaultValue === undefined &&
+                            shownOptionalParams.has(paramKey)
+                          );
+                        })
+                        .map(([paramKey, paramDef]) => {
+                          const currentValue = formData.configuration[paramKey];
+
+                          return (
+                            <div
+                              key={paramKey}
+                              className="border-l-2 border-blue-200 pl-4"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <Label htmlFor={paramKey}>
+                                  {paramKey
+                                    .replace(/_/g, ' ')
+                                    .replace(/\b\w/g, (l) =>
+                                      l.toUpperCase(),
+                                    )}{' '}
+                                  <span className="text-xs text-muted-foreground">
+                                    (optional)
+                                  </span>
+                                </Label>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => hideOptionalParam(paramKey)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              {paramDef.description && (
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  {String(paramDef.description)}
+                                </p>
+                              )}
+                              {paramDef.type === 'number' ? (
+                                <Input
+                                  id={paramKey}
+                                  type="number"
+                                  min={paramDef.minimum}
+                                  max={paramDef.maximum}
+                                  step={0.1}
+                                  value={
+                                    currentValue ? String(currentValue) : ''
+                                  }
+                                  onChange={(e) =>
+                                    updateFormData({
+                                      configuration: {
+                                        ...formData.configuration,
+                                        [paramKey]: parseFloat(e.target.value),
+                                      },
+                                    })
+                                  }
+                                />
+                              ) : paramDef.type === 'boolean' ? (
+                                <RadioGroup
+                                  value={
+                                    currentValue ? String(currentValue) : ''
+                                  }
+                                  onValueChange={(value: string) =>
+                                    updateFormData({
+                                      configuration: {
+                                        ...formData.configuration,
+                                        [paramKey]: value === 'true',
+                                      },
+                                    })
+                                  }
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem
+                                      value="true"
+                                      id={`${paramKey}-true`}
+                                    />
+                                    <Label htmlFor={`${paramKey}-true`}>
+                                      Enabled
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem
+                                      value="false"
+                                      id={`${paramKey}-false`}
+                                    />
+                                    <Label htmlFor={`${paramKey}-false`}>
+                                      Disabled
+                                    </Label>
+                                  </div>
+                                </RadioGroup>
+                              ) : (
+                                <Input
+                                  id={paramKey}
+                                  value={
+                                    currentValue ? String(currentValue) : ''
+                                  }
+                                  onChange={(e) =>
+                                    updateFormData({
+                                      configuration: {
+                                        ...formData.configuration,
+                                        [paramKey]: e.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+
+                      {/* Toggle buttons for hidden optional parameters */}
+                      {Object.entries(selectedMethod.schema.properties)
+                        .filter(([paramKey, paramDef]) => {
+                          const defaultValue =
+                            selectedMethod.defaults?.[paramKey] ??
+                            paramDef.default;
+                          return (
+                            defaultValue === undefined &&
+                            !shownOptionalParams.has(paramKey)
+                          );
+                        })
+                        .map(([paramKey, paramDef]) => (
+                          <div key={`toggle-${paramKey}`}>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => showOptionalParam(paramKey)}
+                              className="flex items-center gap-2"
+                            >
+                              <PlusIcon className="h-3 w-3" />
+                              Add{' '}
                               {paramKey
                                 .replace(/_/g, ' ')
                                 .replace(/\b\w/g, (l) => l.toUpperCase())}
-                            </Label>
+                            </Button>
                             {paramDef.description && (
-                              <p className="text-xs text-muted-foreground mb-2">
+                              <p className="text-xs text-muted-foreground mt-1">
                                 {String(paramDef.description)}
                               </p>
                             )}
-                            {paramDef.type === 'number' ? (
-                              <Input
-                                id={paramKey}
-                                type="number"
-                                min={paramDef.minimum}
-                                max={paramDef.maximum}
-                                step={0.1}
-                                value={String(currentValue)}
-                                onChange={(e) =>
-                                  updateFormData({
-                                    configuration: {
-                                      ...formData.configuration,
-                                      [paramKey]: parseFloat(e.target.value),
-                                    },
-                                  })
-                                }
-                              />
-                            ) : paramDef.type === 'boolean' ||
-                              typeof defaultValue === 'boolean' ? (
-                              <RadioGroup
-                                value={String(currentValue)}
-                                onValueChange={(value: string) =>
-                                  updateFormData({
-                                    configuration: {
-                                      ...formData.configuration,
-                                      [paramKey]: value === 'true',
-                                    },
-                                  })
-                                }
-                              >
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem
-                                    value="true"
-                                    id={`${paramKey}-true`}
-                                  />
-                                  <Label htmlFor={`${paramKey}-true`}>
-                                    Enabled
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem
-                                    value="false"
-                                    id={`${paramKey}-false`}
-                                  />
-                                  <Label htmlFor={`${paramKey}-false`}>
-                                    Disabled
-                                  </Label>
-                                </div>
-                              </RadioGroup>
-                            ) : Array.isArray(defaultValue) ? (
-                              <div className="text-sm text-muted-foreground">
-                                Array field (not implemented yet)
-                              </div>
-                            ) : (
-                              <Input
-                                id={paramKey}
-                                value={String(currentValue)}
-                                onChange={(e) =>
-                                  updateFormData({
-                                    configuration: {
-                                      ...formData.configuration,
-                                      [paramKey]: e.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            )}
                           </div>
-                        );
-                      })
-                    : null}
-                  {(!selectedMethod.schema ||
-                    typeof selectedMethod.schema !== 'object' ||
-                    selectedMethod.schema === null ||
-                    !('properties' in selectedMethod.schema) ||
-                    !selectedMethod.schema.properties ||
-                    typeof selectedMethod.schema.properties !== 'object' ||
-                    Object.keys(
-                      // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema properties require any for Object.keys
-                      selectedMethod.schema.properties as Record<string, any>,
-                    ).length === 0) && (
+                        ))}
+                    </>
+                  ) : (
                     <div className="text-sm text-muted-foreground">
                       No configuration parameters required for this method.
                     </div>

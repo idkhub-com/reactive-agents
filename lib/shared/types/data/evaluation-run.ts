@@ -12,6 +12,7 @@ export const EvaluationRun = z.object({
   id: z.uuid(),
   dataset_id: z.uuid(),
   agent_id: z.uuid(),
+  skill_id: z.uuid(),
   evaluation_method: z.enum(EvaluationMethodName),
   name: z.string().min(1),
   description: z.string().nullable().optional(),
@@ -30,6 +31,7 @@ export const EvaluationRunQueryParams = z
     id: z.uuid().optional(),
     dataset_id: z.uuid().optional(),
     agent_id: z.uuid().optional(),
+    skill_id: z.uuid().optional(),
     evaluation_method: z.enum(EvaluationMethodName).optional(),
     name: z.string().min(1).optional(),
     status: z.enum(EvaluationRunStatus).optional(),
@@ -44,6 +46,7 @@ export const EvaluationRunCreateParams = z
   .object({
     dataset_id: z.uuid(),
     agent_id: z.uuid(),
+    skill_id: z.uuid(),
     evaluation_method: z.enum(EvaluationMethodName),
     name: z.string().min(1),
     description: z.string().nullable().optional(),

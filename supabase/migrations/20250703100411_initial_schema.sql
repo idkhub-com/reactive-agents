@@ -263,6 +263,7 @@ CREATE TABLE if not exists evaluation_runs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   dataset_id UUID NOT NULL,
   agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
   evaluation_method TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
@@ -274,7 +275,8 @@ CREATE TABLE if not exists evaluation_runs (
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
-  FOREIGN KEY (agent_id) REFERENCES agents(id)
+  FOREIGN KEY (agent_id) REFERENCES agents(id),
+  FOREIGN KEY (skill_id) REFERENCES skills(id)
 );
 
 CREATE TRIGGER update_evaluation_runs_updated_at BEFORE UPDATE ON evaluation_runs

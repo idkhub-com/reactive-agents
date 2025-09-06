@@ -2,7 +2,6 @@ import { getTurnRelevancyTemplate } from '@server/connectors/evaluations/turn-re
 import type { TurnRelevancyAverageResult } from '@server/connectors/evaluations/turn-relevancy/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -254,7 +253,9 @@ async function processLogsInBatches(
 }
 
 export async function evaluateTurnRelevancyDataset(
-  input: DatasetQueryParams,
+  agentId: string,
+  skillId: string,
+  datasetId: string,
   params: TurnRelevancyEvaluationParameters,
   userDataStorageConnector: UserDataStorageConnector,
   evalRunOptions?: {
@@ -265,27 +266,20 @@ export async function evaluateTurnRelevancyDataset(
   averageResult: TurnRelevancyAverageResult;
   evaluationRun: EvaluationRun;
 }> {
-  if (!userDataStorageConnector)
-    throw new Error(
-      'User data storage connector is required for dataset evaluation',
-    );
-  if (!input.id) throw new Error('Dataset ID is required for evaluation');
-  const agent_id = params.agent_id;
-  if (!agent_id) throw new Error('Agent ID is required for evaluation');
-
   const start_time = Date.now();
 
   // Create evaluation run
   const evaluationRunParams: EvaluationRunCreateParams = {
-    dataset_id: input.id,
-    agent_id,
+    dataset_id: datasetId,
+    agent_id: agentId,
+    skill_id: skillId,
     evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
     name:
       evalRunOptions?.name ||
       `Turn Relevancy Evaluation - ${new Date().toISOString()}`,
     description:
       evalRunOptions?.description ||
-      `Evaluates turn relevancy for dataset ${input.id}`,
+      `Evaluates turn relevancy for dataset ${datasetId}`,
     metadata: {
       parameters: params,
       method_config: {
@@ -301,35 +295,26 @@ export async function evaluateTurnRelevancyDataset(
   const evaluationRun =
     await userDataStorageConnector.createEvaluationRun(evaluationRunParams);
 
-  const evaluation_run_id = evaluationRun.id;
-  if (!evaluation_run_id) {
-    throw new Error('Failed to create evaluation run - no ID returned');
-  }
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
 
   try {
     // Get logs
-    const logs = await userDataStorageConnector.getDatasetLogs(input.id, {
-      limit: input.limit || 10,
-      offset: input.offset || 0,
-    });
+    const logs = await userDataStorageConnector.getDatasetLogs(datasetId, {});
 
     if (!logs || logs.length === 0) {
       throw new Error('No logs found for evaluation');
     }
 
-    // Create LLM judge
-    const llm_judge = createLLMJudge({
-      model: params.model || 'gpt-4o',
-      temperature: params.temperature || 0.1,
-      max_tokens: params.max_tokens || 1000,
-    });
-
     // Process logs in batches
     const results = await processLogsInBatches(
       logs,
       params,
-      evaluation_run_id,
-      llm_judge,
+      evaluationRun.id,
+      llmJudge,
       userDataStorageConnector,
     );
 
@@ -373,7 +358,7 @@ export async function evaluateTurnRelevancyDataset(
       passed_count,
       failed_count,
       threshold_used: threshold,
-      evaluation_run_id,
+      evaluation_run_id: evaluationRun.id,
       // Additional statistics
       min_score,
       max_score,
@@ -384,7 +369,7 @@ export async function evaluateTurnRelevancyDataset(
 
     // Update evaluation run with final results
     const execution_time = Date.now() - start_time;
-    await userDataStorageConnector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: EvaluationRunStatus.COMPLETED,
       results: averageResult,
       metadata: {
@@ -399,7 +384,7 @@ export async function evaluateTurnRelevancyDataset(
     });
 
     const updated = await userDataStorageConnector.getEvaluationRuns({
-      id: evaluation_run_id,
+      id: evaluationRun.id,
     });
     const updatedRun = updated[0] || evaluationRun;
 
@@ -408,7 +393,7 @@ export async function evaluateTurnRelevancyDataset(
     console.error('Error in turn relevancy evaluation:', error);
 
     // Update evaluation run with error status
-    await userDataStorageConnector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: EvaluationRunStatus.FAILED,
       results: {
         error: true,
@@ -425,25 +410,4 @@ export async function evaluateTurnRelevancyDataset(
 
     throw error;
   }
-}
-
-// Single-turn evaluation function for backward compatibility
-export async function evaluateTurnRelevancy(
-  params: TurnRelevancyEvaluationParameters,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<{
-  averageResult: TurnRelevancyAverageResult;
-  evaluationRun: EvaluationRun;
-}> {
-  const input: DatasetQueryParams = {
-    id: params.dataset_id!,
-    limit: params.limit,
-    offset: params.offset,
-  };
-
-  return await evaluateTurnRelevancyDataset(
-    input,
-    params,
-    userDataStorageConnector,
-  );
 }

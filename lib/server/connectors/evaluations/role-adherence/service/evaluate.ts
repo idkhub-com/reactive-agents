@@ -2,7 +2,6 @@ import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/rol
 import type { RoleAdherenceAverageResult } from '@server/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -140,10 +139,12 @@ async function evaluateSingleLog(
 }
 
 export async function evaluateRoleAdherenceDataset(
-  input: DatasetQueryParams,
+  agentId: string,
+  skillId: string,
+  datasetId: string,
   params: RoleAdherenceEvaluationParameters,
   userDataStorageConnector: UserDataStorageConnector,
-  evalRunOptions?: {
+  evalRunOptions: {
     name?: string;
     description?: string;
   },
@@ -151,24 +152,17 @@ export async function evaluateRoleAdherenceDataset(
   averageResult: RoleAdherenceAverageResult;
   evaluationRun: EvaluationRun;
 }> {
-  if (!userDataStorageConnector)
-    throw new Error(
-      'User data storage connector is required for dataset evaluation',
-    );
-  if (!input.id) throw new Error('Dataset ID is required for evaluation');
-  const agent_id = params.agent_id;
-  if (!agent_id) throw new Error('Agent ID is required for evaluation');
-
   const evaluationRunCreateParams: EvaluationRunCreateParams = {
-    dataset_id: input.id,
-    agent_id,
+    dataset_id: datasetId,
+    agent_id: agentId,
+    skill_id: skillId,
     evaluation_method: EvaluationMethodName.ROLE_ADHERENCE,
     name:
-      evalRunOptions?.name ||
+      evalRunOptions.name ||
       `Role Adherence Evaluation - ${new Date().toISOString()}`,
     description:
-      evalRunOptions?.description ||
-      `Evaluates assistant role adherence using LLM-as-a-judge for dataset ${input.id}`,
+      evalRunOptions.description ||
+      `Evaluates assistant role adherence using LLM-as-a-judge for dataset ${datasetId}`,
     metadata: {
       parameters: params,
       method_config: {
@@ -184,21 +178,15 @@ export async function evaluateRoleAdherenceDataset(
   const evaluationRun = await userDataStorageConnector.createEvaluationRun(
     evaluationRunCreateParams,
   );
-  const evaluation_run_id = evaluationRun.id;
-  if (!evaluation_run_id)
-    throw new Error('Failed to create evaluation run - no ID returned');
 
-  const llm_judge = createLLMJudge({
-    model: params.model || 'gpt-4o',
-    temperature: params.temperature || 0.1,
-    max_tokens: params.max_tokens || 1000,
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
   });
 
   try {
-    const logs = await userDataStorageConnector.getDatasetLogs(input.id, {
-      limit: input.limit || 10,
-      offset: input.offset || 0,
-    });
+    const logs = await userDataStorageConnector.getDatasetLogs(datasetId, {});
 
     const results: EvaluationOutput[] = [];
     const batch_size = params.batch_size || 10;
@@ -210,8 +198,8 @@ export async function evaluateRoleAdherenceDataset(
             evaluateSingleLog(
               log,
               params,
-              evaluation_run_id,
-              llm_judge,
+              evaluationRun.id,
+              llmJudge,
               userDataStorageConnector,
             ),
           ),
@@ -222,8 +210,8 @@ export async function evaluateRoleAdherenceDataset(
           const r = await evaluateSingleLog(
             log,
             params,
-            evaluation_run_id,
-            llm_judge,
+            evaluationRun.id,
+            llmJudge,
             userDataStorageConnector,
           );
           results.push(r);
@@ -239,7 +227,7 @@ export async function evaluateRoleAdherenceDataset(
     const passed_count = scores.filter((s) => s >= threshold_used).length;
     const failed_count = scores.length - passed_count;
 
-    await userDataStorageConnector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: 'completed' as EvaluationRunStatus,
       results: {
         total_logs: logs.length,
@@ -264,7 +252,7 @@ export async function evaluateRoleAdherenceDataset(
     const updated =
       (
         await userDataStorageConnector.getEvaluationRuns({
-          id: evaluation_run_id,
+          id: evaluationRun.id,
         })
       )[0] || evaluationRun;
 
@@ -274,12 +262,12 @@ export async function evaluateRoleAdherenceDataset(
       passed_count,
       failed_count,
       threshold_used,
-      evaluation_run_id,
+      evaluation_run_id: evaluationRun.id,
     };
 
     return { averageResult, evaluationRun: updated };
   } catch (error) {
-    await userDataStorageConnector.updateEvaluationRun(evaluation_run_id, {
+    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: 'failed' as EvaluationRunStatus,
       results: {
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -50,7 +50,8 @@ import { useNavigation } from '@client/providers/navigation';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type {
   EvaluationMethodName,
-  EvaluationMethodRequest,
+  EvaluationMethodParameters,
+  EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations';
 import { format } from 'date-fns';
 import {
@@ -214,7 +215,12 @@ export function EvaluationRunDetailsView(): ReactElement {
   }, []);
 
   const handleDuplicateConfirm = useCallback(async () => {
-    if (!evaluation || !navigationState.selectedAgent) return;
+    if (
+      !evaluation ||
+      !navigationState.selectedAgent ||
+      !navigationState.selectedSkill
+    )
+      return;
 
     setIsDuplicating(true);
     try {
@@ -223,11 +229,12 @@ export function EvaluationRunDetailsView(): ReactElement {
       const originalParameters =
         (metadata?.parameters as Record<string, unknown>) || {};
 
-      const duplicateRequest: EvaluationMethodRequest = {
+      const duplicateRequest: EvaluationRunJobDetails = {
         agent_id: navigationState.selectedAgent.id,
+        skill_id: navigationState.selectedSkill.id,
         dataset_id: evaluation.dataset_id,
         evaluation_method: evaluation.evaluation_method as EvaluationMethodName,
-        parameters: originalParameters,
+        parameters: originalParameters as EvaluationMethodParameters,
         name: duplicateName.trim(),
         description: evaluation.description || undefined,
       };
@@ -255,6 +262,7 @@ export function EvaluationRunDetailsView(): ReactElement {
   }, [
     evaluation,
     navigationState.selectedAgent,
+    navigationState.selectedSkill,
     duplicateName,
     toast,
     refetch,

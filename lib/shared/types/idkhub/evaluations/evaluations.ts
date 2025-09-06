@@ -36,12 +36,14 @@ export const EvaluationMethodParameters = z.union([
 export type EvaluationMethodParameters = z.infer<
   typeof EvaluationMethodParameters
 >;
-export const EvaluationMethodRequest = z.object({
+
+export const EvaluationRunJobDetails = z.object({
   agent_id: z.uuid(),
+  skill_id: z.uuid(),
   dataset_id: z.uuid(),
   evaluation_method: z.enum(EvaluationMethodName),
   parameters: EvaluationMethodParameters,
   name: z.string().optional(),
   description: z.string().optional(),
 });
-export type EvaluationMethodRequest = z.infer<typeof EvaluationMethodRequest>;
+export type EvaluationRunJobDetails = z.infer<typeof EvaluationRunJobDetails>;

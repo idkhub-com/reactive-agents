@@ -206,6 +206,7 @@ const createEvaluationRunsCtx = (
         id: '00000000-0000-0000-0000-000000000010',
         dataset_id: '00000000-0000-0000-0000-000000000011',
         agent_id: '00000000-0000-0000-0000-000000000012',
+        skill_id: '00000000-0000-0000-0000-000000000013',
         evaluation_method: EvaluationMethodName.TOOL_CORRECTNESS,
         name: 'Run',
         description: null,

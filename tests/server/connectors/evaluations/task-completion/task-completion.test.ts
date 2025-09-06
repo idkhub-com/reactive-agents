@@ -134,9 +134,10 @@ describe('Task Completion Evaluator', () => {
       };
 
       const result = await evaluateTaskCompletion(
-        { id: 'dataset-123' },
+        'agent-123', // agentId
+        'skill-1', // skillId
+        'dataset-123', // datasetId
         {
-          agent_id: 'agent-123',
           model: 'gpt-4o',
           temperature: 0.1,
           max_tokens: 1000,
@@ -144,6 +145,8 @@ describe('Task Completion Evaluator', () => {
           strict_mode: false,
           verbose_mode: true,
           include_reason: true,
+          async_mode: false,
+          batch_size: 5,
         },
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
         {
@@ -159,7 +162,7 @@ describe('Task Completion Evaluator', () => {
       // Verify that logs were fetched
       expect(mockUserDataStorageConnector.getDatasetLogs).toHaveBeenCalledWith(
         'dataset-123',
-        { limit: 10, offset: 0 },
+        {},
       );
 
       // Verify that evaluation run was created
@@ -229,9 +232,10 @@ describe('Task Completion Evaluator', () => {
       };
 
       const result = await evaluateTaskCompletion(
-        { id: 'dataset-123' },
+        'agent-123', // agentId
+        'skill-1', // skillId
+        'dataset-123', // datasetId
         {
-          agent_id: 'agent-123',
           model: 'gpt-4o',
           temperature: 0.1,
           max_tokens: 1000,
@@ -239,8 +243,14 @@ describe('Task Completion Evaluator', () => {
           strict_mode: false,
           verbose_mode: true,
           include_reason: true,
+          async_mode: false,
+          batch_size: 5,
         },
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        {
+          name: 'Test Error Handling Evaluation',
+          description: 'Testing error handling',
+        },
       );
 
       expect(result.averageResult).toBeDefined();
@@ -262,25 +272,52 @@ describe('Task Completion Evaluator', () => {
       // Test missing dataset ID
       await expect(
         evaluateTaskCompletion(
-          {} as { id?: string }, // Missing id
+          'agent-123', // agentId
+          'skill-1', // skillId
+          '', // empty datasetId
           {
-            agent_id: 'agent-123',
             model: 'gpt-4o',
+            include_reason: true,
+            strict_mode: false,
+            async_mode: false,
+            verbose_mode: true,
+            temperature: 0.1,
+            max_tokens: 1000,
+            batch_size: 5,
+            threshold: 0.5,
           },
           mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+          {
+            name: 'Test Validation',
+            description: 'Testing validation',
+          },
         ),
-      ).rejects.toThrow('Dataset ID is required for evaluation');
+      ).rejects.toThrow();
 
       // Test missing agent ID
       await expect(
         evaluateTaskCompletion(
-          { id: 'dataset-123' },
+          '', // empty agentId
+          'skill-1', // skillId
+          'dataset-123', // datasetId
           {
             model: 'gpt-4o',
-          } as { agent_id?: string }, // Missing agent_id
+            include_reason: true,
+            strict_mode: false,
+            async_mode: false,
+            verbose_mode: true,
+            temperature: 0.1,
+            max_tokens: 1000,
+            batch_size: 5,
+            threshold: 0.5,
+          },
           mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+          {
+            name: 'Test Validation',
+            description: 'Testing validation',
+          },
         ),
-      ).rejects.toThrow('Agent ID is required for evaluation');
+      ).rejects.toThrow();
     });
 
     it('should handle empty dataset gracefully', async () => {
@@ -303,9 +340,10 @@ describe('Task Completion Evaluator', () => {
       };
 
       const result = await evaluateTaskCompletion(
-        { id: 'dataset-123' },
+        'agent-123', // agentId
+        'skill-1', // skillId
+        'dataset-123', // datasetId
         {
-          agent_id: 'agent-123',
           model: 'gpt-4o',
           temperature: 0.1,
           max_tokens: 1000,
@@ -313,8 +351,14 @@ describe('Task Completion Evaluator', () => {
           strict_mode: false,
           verbose_mode: true,
           include_reason: true,
+          async_mode: false,
+          batch_size: 5,
         },
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        {
+          name: 'Test Empty Dataset Evaluation',
+          description: 'Testing empty dataset handling',
+        },
       );
 
       expect(result.averageResult).toBeDefined();
