@@ -3,21 +3,21 @@
 import {
   createEvaluationRun,
   deleteEvaluationRun,
-  getDataPointOutputs,
+  getLogOutputs,
   queryEvaluationRuns,
   updateEvaluationRun,
 } from '@client/api/v1/idk/evaluations/runs';
 import { useToast } from '@client/hooks/use-toast';
-import type {
-  DataPointOutput,
-  DataPointOutputQueryParams,
-} from '@shared/types/data/data-point-output';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
   EvaluationRunQueryParams,
   EvaluationRunUpdateParams,
 } from '@shared/types/data/evaluation-run';
+import type {
+  LogOutput,
+  LogOutputQueryParams,
+} from '@shared/types/data/log-output';
 import {
   type UseQueryResult,
   useInfiniteQuery,
@@ -36,10 +36,10 @@ export const evaluationRunQueryKeys = {
     [...evaluationRunQueryKeys.lists(), params] as const,
   details: () => [...evaluationRunQueryKeys.all, 'detail'] as const,
   detail: (id: string) => [...evaluationRunQueryKeys.details(), id] as const,
-  dataPointOutputs: (runId: string) =>
-    [...evaluationRunQueryKeys.detail(runId), 'dataPointOutputs'] as const,
-  dataPointOutputsList: (runId: string, params: DataPointOutputQueryParams) =>
-    [...evaluationRunQueryKeys.dataPointOutputs(runId), params] as const,
+  logOutputs: (runId: string) =>
+    [...evaluationRunQueryKeys.detail(runId), 'logOutputs'] as const,
+  logOutputsList: (runId: string, params: LogOutputQueryParams) =>
+    [...evaluationRunQueryKeys.logOutputs(runId), params] as const,
 };
 
 interface EvaluationRunsContextType {
@@ -75,13 +75,13 @@ interface EvaluationRunsContextType {
   updateError: Error | null;
   deleteError: Error | null;
 
-  // Data point outputs functionality
-  dataPointOutputs: DataPointOutput[];
-  dataPointOutputsLoading: boolean;
-  dataPointOutputsError: Error | null;
-  dataPointOutputQueryParams: DataPointOutputQueryParams;
-  setDataPointOutputQueryParams: (params: DataPointOutputQueryParams) => void;
-  refetchDataPointOutputs: () => void;
+  // Log outputs functionality
+  logOutputs: LogOutput[];
+  logOutputsLoading: boolean;
+  logOutputsError: Error | null;
+  logOutputQueryParams: LogOutputQueryParams;
+  setLogOutputQueryParams: (params: LogOutputQueryParams) => void;
+  refetchLogOutputs: () => void;
 
   // Pagination
   hasNextPage: boolean;
@@ -91,10 +91,7 @@ interface EvaluationRunsContextType {
   // Helper functions
   getEvaluationRunById: (id: string) => EvaluationRun | undefined;
   refreshEvaluationRuns: () => void;
-  loadDataPointOutputs: (
-    runId: string,
-    params?: DataPointOutputQueryParams,
-  ) => void;
+  loadLogOutputs: (runId: string, params?: LogOutputQueryParams) => void;
 }
 
 const EvaluationRunsContext = createContext<
@@ -112,10 +109,9 @@ export const EvaluationRunsProvider = ({
   const [queryParams, setQueryParams] = useState<EvaluationRunQueryParams>({});
   const [selectedEvaluationRun, setSelectedEvaluationRun] =
     useState<EvaluationRun | null>(null);
-  const [dataPointOutputQueryParams, setDataPointOutputQueryParams] =
-    useState<DataPointOutputQueryParams>({});
-  const [shouldFetchDataPointOutputs, setShouldFetchDataPointOutputs] =
-    useState(false);
+  const [logOutputQueryParams, setLogOutputQueryParams] =
+    useState<LogOutputQueryParams>({});
+  const [shouldFetchLogOutputs, setShouldFetchLogOutputs] = useState(false);
 
   // Memoize the select function to ensure stable reference
   const selectFlattenedData = useCallback(
@@ -152,39 +148,39 @@ export const EvaluationRunsProvider = ({
     enabled: !!queryParams.agent_id, // Only fetch when we have an agent_id
   });
 
-  // Data point outputs query - only fetch when manually requested
+  // Log outputs query - only fetch when manually requested
   const {
-    data: dataPointOutputs = [],
-    isLoading: dataPointOutputsLoading,
-    error: dataPointOutputsError,
-    refetch: refetchDataPointOutputs,
-  }: UseQueryResult<DataPointOutput[], Error> = useQuery({
+    data: logOutputs = [],
+    isLoading: logOutputsLoading,
+    error: logOutputsError,
+    refetch: refetchLogOutputs,
+  }: UseQueryResult<LogOutput[], Error> = useQuery({
     queryKey: selectedEvaluationRun
-      ? evaluationRunQueryKeys.dataPointOutputsList(
+      ? evaluationRunQueryKeys.logOutputsList(
           selectedEvaluationRun.id,
-          dataPointOutputQueryParams,
+          logOutputQueryParams,
         )
-      : ['dataPointOutputs', 'none'],
+      : ['logOutputs', 'none'],
     queryFn: async () => {
       if (!selectedEvaluationRun) {
         return [];
       }
 
       try {
-        const result = await getDataPointOutputs(
+        const result = await getLogOutputs(
           selectedEvaluationRun.id,
-          dataPointOutputQueryParams,
+          logOutputQueryParams,
         );
-        // Reset shouldFetchDataPointOutputs after successful fetch
-        setShouldFetchDataPointOutputs(false);
+        // Reset shouldFetchLogOutputs after successful fetch
+        setShouldFetchLogOutputs(false);
         return result;
       } catch (error) {
-        // Reset shouldFetchDataPointOutputs after failed fetch
-        setShouldFetchDataPointOutputs(false);
+        // Reset shouldFetchLogOutputs after failed fetch
+        setShouldFetchLogOutputs(false);
         throw error;
       }
     },
-    enabled: shouldFetchDataPointOutputs && !!selectedEvaluationRun,
+    enabled: shouldFetchLogOutputs && !!selectedEvaluationRun,
   });
 
   // Create evaluation run mutation
@@ -291,13 +287,13 @@ export const EvaluationRunsProvider = ({
     });
   }, [queryClient]);
 
-  const loadDataPointOutputs = useCallback(
-    (runId: string, params: DataPointOutputQueryParams = {}) => {
+  const loadLogOutputs = useCallback(
+    (runId: string, params: LogOutputQueryParams = {}) => {
       const run = getEvaluationRunById(runId);
       if (run) {
         setSelectedEvaluationRun(run);
-        setDataPointOutputQueryParams(params);
-        setShouldFetchDataPointOutputs(true);
+        setLogOutputQueryParams(params);
+        setShouldFetchLogOutputs(true);
       }
     },
     [getEvaluationRunById],
@@ -359,7 +355,7 @@ export const EvaluationRunsProvider = ({
     setSelectedEvaluationRun: (run: EvaluationRun | null) => {
       setSelectedEvaluationRun(run);
       if (!run) {
-        setShouldFetchDataPointOutputs(false);
+        setShouldFetchLogOutputs(false);
       }
     },
 
@@ -376,13 +372,13 @@ export const EvaluationRunsProvider = ({
     updateError: updateEvaluationRunMutation.error,
     deleteError: deleteEvaluationRunMutation.error,
 
-    // Data point outputs functionality
-    dataPointOutputs,
-    dataPointOutputsLoading,
-    dataPointOutputsError,
-    dataPointOutputQueryParams,
-    setDataPointOutputQueryParams,
-    refetchDataPointOutputs,
+    // Log outputs functionality
+    logOutputs,
+    logOutputsLoading,
+    logOutputsError,
+    logOutputQueryParams,
+    setLogOutputQueryParams,
+    refetchLogOutputs,
 
     // Pagination
     hasNextPage: hasNextPage ?? false,
@@ -392,7 +388,7 @@ export const EvaluationRunsProvider = ({
     // Helper functions
     getEvaluationRunById,
     refreshEvaluationRuns,
-    loadDataPointOutputs,
+    loadLogOutputs,
   };
 
   return (

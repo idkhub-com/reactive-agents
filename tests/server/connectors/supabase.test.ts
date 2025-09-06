@@ -1,14 +1,14 @@
 import { supabaseUserDataStorageConnector } from '@server/connectors/supabase';
-import type {
-  DataPointOutput,
-  DataPointOutputCreateParams,
-  DataPointOutputQueryParams,
-} from '@shared/types/data/data-point-output';
 import {
   type EvaluationRun,
   type EvaluationRunQueryParams,
   EvaluationRunStatus,
 } from '@shared/types/data/evaluation-run';
+import type {
+  LogOutput,
+  LogOutputCreateParams,
+  LogOutputQueryParams,
+} from '@shared/types/data/log-output';
 import type {
   ToolCreateParams,
   ToolQueryParams,
@@ -556,14 +556,14 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
     });
   });
 
-  describe('DataPointOutput Operations', () => {
-    describe('getDataPointOutputs', () => {
-      it('should fetch data point outputs with evaluation run id', async () => {
+  describe('LogOutput Operations', () => {
+    describe('getLogOutputs', () => {
+      it('should fetch log outputs with evaluation run id', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [
+        const mockResponse: LogOutput[] = [
           {
             id: '123e4567-e89b-12d3-a456-426614174001',
-            data_point_id: '123e4567-e89b-12d3-a456-426614174002',
+            log_id: '123e4567-e89b-12d3-a456-426614174002',
             output: { result: 'test result' },
             score: 0.85,
             metadata: { duration: 1500 },
@@ -577,16 +577,15 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {};
-        const result =
-          await supabaseUserDataStorageConnector.getDataPointOutputs(
-            evaluationRunId,
-            queryParams,
-          );
+        const queryParams: LogOutputQueryParams = {};
+        const result = await supabaseUserDataStorageConnector.getLogOutputs(
+          evaluationRunId,
+          queryParams,
+        );
 
         expect(mockFetch).toHaveBeenCalledWith(
           new URL(
-            `https://test.supabase.co/rest/v1/data_point_outputs?evaluation_run_id=eq.${evaluationRunId}`,
+            `https://test.supabase.co/rest/v1/log_outputs?evaluation_run_id=eq.${evaluationRunId}`,
           ),
           expect.any(Object),
         );
@@ -595,7 +594,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle query parameters with ids filter', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -603,14 +602,14 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
+        const queryParams: LogOutputQueryParams = {
           ids: [
             '123e4567-e89b-12d3-a456-426614174001',
             '123e4567-e89b-12d3-a456-426614174002',
           ],
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
@@ -621,9 +620,9 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         expect(callUrl.href).toContain('123e4567-e89b-12d3-a456-426614174002');
       });
 
-      it('should handle query parameters with data_point_ids filter', async () => {
+      it('should handle query parameters with log_ids filter', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -631,27 +630,27 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
-          data_point_ids: [
+        const queryParams: LogOutputQueryParams = {
+          log_ids: [
             '123e4567-e89b-12d3-a456-426614174003',
             '123e4567-e89b-12d3-a456-426614174004',
           ],
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
 
         const callUrl = mockFetch.mock.calls[0][0] as URL;
-        expect(callUrl.href).toContain('data_point_id=in.');
+        expect(callUrl.href).toContain('log_id=in.');
         expect(callUrl.href).toContain('123e4567-e89b-12d3-a456-426614174003');
         expect(callUrl.href).toContain('123e4567-e89b-12d3-a456-426614174004');
       });
 
       it('should handle score range filters', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -659,12 +658,12 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
+        const queryParams: LogOutputQueryParams = {
           score_min: 0.5,
           score_max: 0.9,
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
@@ -677,7 +676,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle score_min only', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -685,11 +684,11 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
+        const queryParams: LogOutputQueryParams = {
           score_min: 0.7,
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
@@ -700,7 +699,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle score_max only', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -708,11 +707,11 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
+        const queryParams: LogOutputQueryParams = {
           score_max: 0.8,
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
@@ -723,7 +722,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle pagination parameters', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -731,12 +730,12 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
+        const queryParams: LogOutputQueryParams = {
           limit: 20,
           offset: 10,
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
@@ -748,7 +747,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle all parameters combined', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const mockResponse: DataPointOutput[] = [];
+        const mockResponse: LogOutput[] = [];
 
         const mockFetch = vi.mocked(fetch);
         mockFetch.mockResolvedValueOnce({
@@ -756,22 +755,22 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const queryParams: DataPointOutputQueryParams = {
+        const queryParams: LogOutputQueryParams = {
           ids: ['123e4567-e89b-12d3-a456-426614174001'],
-          data_point_ids: ['123e4567-e89b-12d3-a456-426614174002'],
+          log_ids: ['123e4567-e89b-12d3-a456-426614174002'],
           score_min: 0.6,
           score_max: 0.95,
           limit: 50,
           offset: 25,
         };
 
-        await supabaseUserDataStorageConnector.getDataPointOutputs(
+        await supabaseUserDataStorageConnector.getLogOutputs(
           evaluationRunId,
           queryParams,
         );
 
         const expectedUrl = new URL(
-          'https://test.supabase.co/rest/v1/data_point_outputs',
+          'https://test.supabase.co/rest/v1/log_outputs',
         );
         expectedUrl.searchParams.set(
           'evaluation_run_id',
@@ -782,7 +781,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           'in.(123e4567-e89b-12d3-a456-426614174001)',
         );
         expectedUrl.searchParams.set(
-          'data_point_id',
+          'log_id',
           'in.(123e4567-e89b-12d3-a456-426614174002)',
         );
         expectedUrl.searchParams.set('score', 'and(gte.0.6,lte.0.95)');
@@ -803,10 +802,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         } as Response);
 
         await expect(
-          supabaseUserDataStorageConnector.getDataPointOutputs(
-            evaluationRunId,
-            {},
-          ),
+          supabaseUserDataStorageConnector.getLogOutputs(evaluationRunId, {}),
         ).rejects.toThrow('Failed to fetch from Supabase');
       });
 
@@ -826,19 +822,16 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         } as Response);
 
         await expect(
-          supabaseUserDataStorageConnector.getDataPointOutputs(
-            evaluationRunId,
-            {},
-          ),
+          supabaseUserDataStorageConnector.getLogOutputs(evaluationRunId, {}),
         ).rejects.toThrow('Failed to parse data from Supabase');
       });
     });
 
-    describe('createDataPointOutput', () => {
-      it('should create a data point output successfully', async () => {
+    describe('createLogOutput', () => {
+      it('should create a log output successfully', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const createParams: DataPointOutputCreateParams = {
-          data_point_id: '123e4567-e89b-12d3-a456-426614174002',
+        const createParams: LogOutputCreateParams = {
+          log_id: '123e4567-e89b-12d3-a456-426614174002',
           output: { result: 'test result' },
           score: 0.85,
           metadata: { duration: 1500 },
@@ -858,14 +851,13 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const result =
-          await supabaseUserDataStorageConnector.createDataPointOutput(
-            evaluationRunId,
-            createParams,
-          );
+        const result = await supabaseUserDataStorageConnector.createLogOutput(
+          evaluationRunId,
+          createParams,
+        );
 
         expect(mockFetch).toHaveBeenCalledWith(
-          new URL('https://test.supabase.co/rest/v1/data_point_outputs'),
+          new URL('https://test.supabase.co/rest/v1/log_outputs'),
           {
             method: 'POST',
             headers: {
@@ -885,8 +877,8 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle creation without optional fields', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const createParams: DataPointOutputCreateParams = {
-          data_point_id: '123e4567-e89b-12d3-a456-426614174002',
+        const createParams: LogOutputCreateParams = {
+          log_id: '123e4567-e89b-12d3-a456-426614174002',
           output: { result: 'minimal result' },
           metadata: {},
         };
@@ -894,7 +886,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         const mockResponse = [
           {
             id: '123e4567-e89b-12d3-a456-426614174001',
-            data_point_id: createParams.data_point_id,
+            log_id: createParams.log_id,
             output: createParams.output,
             score: null,
             metadata: {},
@@ -908,11 +900,10 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           json: async () => mockResponse,
         } as Response);
 
-        const result =
-          await supabaseUserDataStorageConnector.createDataPointOutput(
-            evaluationRunId,
-            createParams,
-          );
+        const result = await supabaseUserDataStorageConnector.createLogOutput(
+          evaluationRunId,
+          createParams,
+        );
 
         expect(mockFetch).toHaveBeenCalledWith(
           expect.any(URL),
@@ -928,8 +919,8 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle creation errors', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const createParams: DataPointOutputCreateParams = {
-          data_point_id: '123e4567-e89b-12d3-a456-426614174002',
+        const createParams: LogOutputCreateParams = {
+          log_id: '123e4567-e89b-12d3-a456-426614174002',
           output: { result: 'test' },
           metadata: {},
         };
@@ -943,7 +934,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         } as Response);
 
         await expect(
-          supabaseUserDataStorageConnector.createDataPointOutput(
+          supabaseUserDataStorageConnector.createLogOutput(
             evaluationRunId,
             createParams,
           ),
@@ -952,8 +943,8 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       it('should handle foreign key constraint errors', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
-        const createParams: DataPointOutputCreateParams = {
-          data_point_id: 'non-existent-id',
+        const createParams: LogOutputCreateParams = {
+          log_id: 'non-existent-id',
           output: { result: 'test' },
           metadata: {},
         };
@@ -967,7 +958,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         } as Response);
 
         await expect(
-          supabaseUserDataStorageConnector.createDataPointOutput(
+          supabaseUserDataStorageConnector.createLogOutput(
             evaluationRunId,
             createParams,
           ),
@@ -975,8 +966,8 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       });
     });
 
-    describe('deleteDataPointOutput', () => {
-      it('should delete a data point output successfully', async () => {
+    describe('deleteLogOutput', () => {
+      it('should delete a log output successfully', async () => {
         const evaluationRunId = '123e4567-e89b-12d3-a456-426614174000';
         const outputId = '123e4567-e89b-12d3-a456-426614174001';
 
@@ -985,14 +976,14 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           ok: true,
         } as Response);
 
-        await supabaseUserDataStorageConnector.deleteDataPointOutput(
+        await supabaseUserDataStorageConnector.deleteLogOutput(
           evaluationRunId,
           outputId,
         );
 
         expect(mockFetch).toHaveBeenCalledWith(
           new URL(
-            `https://test.supabase.co/rest/v1/data_point_outputs?id=eq.${outputId}&evaluation_run_id=eq.${evaluationRunId}`,
+            `https://test.supabase.co/rest/v1/log_outputs?id=eq.${outputId}&evaluation_run_id=eq.${evaluationRunId}`,
           ),
           {
             method: 'DELETE',
@@ -1017,7 +1008,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         } as Response);
 
         await expect(
-          supabaseUserDataStorageConnector.deleteDataPointOutput(
+          supabaseUserDataStorageConnector.deleteLogOutput(
             evaluationRunId,
             outputId,
           ),
@@ -1035,7 +1026,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
         // Should not throw even if output doesn't exist
         await expect(
-          supabaseUserDataStorageConnector.deleteDataPointOutput(
+          supabaseUserDataStorageConnector.deleteLogOutput(
             evaluationRunId,
             outputId,
           ),

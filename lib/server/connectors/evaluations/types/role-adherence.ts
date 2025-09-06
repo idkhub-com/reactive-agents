@@ -1,4 +1,3 @@
-import type { DataPoint } from '@shared/types/data/data-point';
 import { z } from 'zod';
 
 // Template data for role adherence evaluation
@@ -42,7 +41,6 @@ export type RoleAdherenceResult = z.infer<typeof RoleAdherenceResultSchema>;
 
 // Metadata captured in outputs
 export type RoleAdherenceMetadata = {
-  datapoint?: DataPoint;
   role_definition?: string;
   assistant_output?: string;
   instructions?: string;
@@ -72,7 +70,7 @@ export const roleAdherenceScoringText = Object.values(
 // Average result type for dataset evaluations
 export interface RoleAdherenceAverageResult {
   average_score: number;
-  total_data_points: number;
+  total_logs: number;
   passed_count: number;
   failed_count: number;
   threshold_used: number;

@@ -1,6 +1,5 @@
 import { datasetsRouter } from '@server/api/v1/idk/evaluations/datasets';
 import type { AppEnv } from '@server/types/hono';
-import { HttpMethod } from '@server/types/http';
 import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,11 +34,12 @@ const mockUserDataStorageConnector = {
   createDataset: vi.fn(),
   updateDataset: vi.fn(),
   deleteDataset: vi.fn(),
-  // Data point methods (required by interface)
-  getDataPoints: vi.fn(),
-  createDataPoints: vi.fn(),
-  updateDataPoint: vi.fn(),
-  deleteDataPoints: vi.fn(),
+  // Log methods (migrated from datapoints)
+  getLogs: vi.fn(),
+  deleteLog: vi.fn(),
+  getDatasetLogs: vi.fn(),
+  addLogsToDataset: vi.fn(),
+  removeLogsFromDataset: vi.fn(),
 
   // Evaluation run methods
   getEvaluationRuns: vi.fn(),
@@ -47,10 +47,10 @@ const mockUserDataStorageConnector = {
   updateEvaluationRun: vi.fn(),
   deleteEvaluationRun: vi.fn(),
 
-  // Data point output methods
-  getDataPointOutputs: vi.fn(),
-  createDataPointOutput: vi.fn(),
-  deleteDataPointOutput: vi.fn(),
+  // Log output methods (migrated from data point outputs)
+  getLogOutputs: vi.fn(),
+  createLogOutput: vi.fn(),
+  deleteLogOutput: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector
@@ -197,111 +197,88 @@ describe('Datasets API Status Codes', () => {
     });
   });
 
-  describe('GET /:datasetId/data-points', () => {
+  describe('GET /:datasetId/logs', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockDataPoints = [
+      const mockLogs = [
         {
           id: 'e7f8a9b0-c1d2-4456-9789-0abcdef03456',
           method: 'GET',
           endpoint: '/test',
         },
       ];
-      mockUserDataStorageConnector.getDataPoints.mockResolvedValue(
-        mockDataPoints,
-      );
+      mockUserDataStorageConnector.getDatasetLogs.mockResolvedValue(mockLogs);
 
-      const res = await client[':datasetId']['data-points'].$get({
+      const res = await client[':datasetId'].logs.$get({
         param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {},
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data).toEqual(mockDataPoints);
+      expect(data).toEqual(mockLogs);
     });
 
     it('should return 500 on error', async () => {
-      mockUserDataStorageConnector.getDataPoints.mockRejectedValue(
+      mockUserDataStorageConnector.getDatasetLogs.mockRejectedValue(
         new Error('Fetch failed'),
       );
 
-      const res = await client[':datasetId']['data-points'].$get({
+      const res = await client[':datasetId'].logs.$get({
         param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {},
       });
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to fetch data points' });
+      expect(data).toEqual({ error: 'Failed to fetch logs' });
     });
   });
 
-  describe('POST /:datasetId/data-points', () => {
-    it('should return 201 on successful creation', async () => {
-      const mockDataPoints = [
-        {
-          id: 'e7f8a9b0-c1d2-4456-9789-0abcdef03456',
-          method: 'GET',
-          endpoint: '/test',
-        },
-      ];
-      mockUserDataStorageConnector.createDataPoints.mockResolvedValue(
-        mockDataPoints,
+  describe('POST /:datasetId/logs', () => {
+    it('should return 201 on successful addition', async () => {
+      mockUserDataStorageConnector.addLogsToDataset.mockResolvedValue(
+        undefined,
       );
 
-      const res = await client[':datasetId']['data-points'].$post({
+      const res = await client[':datasetId'].logs.$post({
         param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
-        json: [
-          {
-            endpoint: '/test',
-            metadata: {},
-            function_name: 'test',
-            method: HttpMethod.GET,
-            is_golden: false,
-            request_body: {},
-          },
-        ],
+        json: {
+          logIds: ['e7f8a9b0-c1d2-4456-9789-0abcdef03456'],
+        },
       });
 
       expect(res.status).toBe(201);
       const data = await res.json();
-      expect(data).toEqual(mockDataPoints);
+      expect(data).toEqual({ success: true });
     });
 
     it('should return 500 on creation error', async () => {
-      mockUserDataStorageConnector.createDataPoints.mockRejectedValue(
-        new Error('Create failed'),
+      mockUserDataStorageConnector.addLogsToDataset.mockRejectedValue(
+        new Error('Add failed'),
       );
 
-      const res = await client[':datasetId']['data-points'].$post({
+      const res = await client[':datasetId'].logs.$post({
         param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
-        json: [
-          {
-            endpoint: '/test',
-            metadata: {},
-            function_name: 'test',
-            method: HttpMethod.GET,
-            is_golden: false,
-            request_body: {},
-          },
-        ],
+        json: {
+          logIds: ['e7f8a9b0-c1d2-4456-9789-0abcdef03456'],
+        },
       });
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to create data points' });
+      expect(data).toEqual({ error: 'Failed to add logs to dataset' });
     });
   });
 
-  describe('DELETE /:datasetId/data-points', () => {
+  describe('DELETE /:datasetId/logs', () => {
     it('should return 204 on successful deletion', async () => {
-      mockUserDataStorageConnector.deleteDataPoints.mockResolvedValue(
+      mockUserDataStorageConnector.removeLogsFromDataset.mockResolvedValue(
         undefined,
       );
 
-      const res = await client[':datasetId']['data-points'].$delete({
+      const res = await client[':datasetId'].logs.$delete({
         param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
-        query: { dataPointIds: ['c13d1678-150a-466b-804f-ecc82de3680e'] },
+        query: { logIds: ['c13d1678-150a-466b-804f-ecc82de3680e'] },
       });
 
       if (res.status !== 204) {
@@ -313,18 +290,18 @@ describe('Datasets API Status Codes', () => {
     });
 
     it('should return 500 on deletion error', async () => {
-      mockUserDataStorageConnector.deleteDataPoints.mockRejectedValue(
+      mockUserDataStorageConnector.removeLogsFromDataset.mockRejectedValue(
         new Error('Delete failed'),
       );
 
-      const res = await client[':datasetId']['data-points'].$delete({
+      const res = await client[':datasetId'].logs.$delete({
         param: { datasetId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
-        query: { dataPointIds: ['c13d1678-150a-466b-804f-ecc82de3680e'] },
+        query: { logIds: ['c13d1678-150a-466b-804f-ecc82de3680e'] },
       });
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to delete data point' });
+      expect(data).toEqual({ error: 'Failed to delete logs' });
     });
   });
 });

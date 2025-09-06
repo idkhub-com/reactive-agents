@@ -3,17 +3,17 @@ import type { TaskCompletionAverageResult } from '@server/connectors/evaluations
 import type { ToolUsage } from '@server/connectors/evaluations/types/tool_usage';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
-import type {
-  DataPointOutput as EvaluationOutput,
-  DataPointOutputCreateParams as EvaluationOutputCreateParams,
-} from '@shared/types/data/data-point-output';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
   EvaluationRunStatus,
 } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
+import type {
+  LogOutput as EvaluationOutput,
+  LogOutputCreateParams as EvaluationOutputCreateParams,
+} from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
@@ -107,17 +107,17 @@ function extractTaskAndOutcome(extractionResult: {
 }
 
 /**
- * Get tools called from data point metadata
+ * Get tools called from log metadata
  */
 function getToolsCalled(
-  dataPoint: DataPoint,
+  log: Log,
   params: TaskCompletionEvaluationParameters,
 ): ToolUsage[] {
   if (params.tools_called && Array.isArray(params.tools_called)) {
     return params.tools_called as ToolUsage[];
   }
 
-  const tools = dataPoint.metadata?.tools;
+  const tools = log.metadata?.tools;
   if (typeof tools === 'string') {
     try {
       return JSON.parse(tools) as ToolUsage[];
@@ -138,22 +138,30 @@ function getToolsCalled(
 }
 
 /**
- * Get actual output from params or data point
+ * Get actual output from params or log
  */
 function getActualOutput(
-  dataPoint: DataPoint,
+  log: Log,
   params: TaskCompletionEvaluationParameters,
 ): string {
   if (typeof params.actual_output === 'string') {
     return params.actual_output;
   }
 
-  if (typeof dataPoint.ground_truth === 'string') {
-    return dataPoint.ground_truth;
+  // Try to get from ai_provider_request_log response_body
+  if (log.ai_provider_request_log?.response_body) {
+    if (typeof log.ai_provider_request_log.response_body === 'string') {
+      return log.ai_provider_request_log.response_body;
+    }
+    return JSON.stringify(log.ai_provider_request_log.response_body);
   }
 
-  if (dataPoint.ground_truth !== undefined) {
-    return JSON.stringify(dataPoint.ground_truth);
+  // Try to get from metadata
+  if (log.metadata?.ground_truth) {
+    if (typeof log.metadata.ground_truth === 'string') {
+      return log.metadata.ground_truth;
+    }
+    return JSON.stringify(log.metadata.ground_truth);
   }
 
   return '';
@@ -182,10 +190,10 @@ async function generateVerdict(
 }
 
 /**
- * Evaluate a single data point and create EvaluationOutput record
+ * Evaluate a single log and create EvaluationOutput record
  */
-async function evaluateSingleDataPoint(
-  data_point: DataPoint,
+async function evaluateSingleLog(
+  log: Log,
   params: TaskCompletionEvaluationParameters,
   llm_judge: LLMJudge,
   evaluation_run_id: string,
@@ -202,16 +210,16 @@ async function evaluateSingleDataPoint(
 
     if (params.task) {
       task = params.task;
-    } else if (data_point.metadata?.trace) {
+    } else if (log.metadata?.trace) {
       // Use trace-based extraction
       const { getTaskCompletionExtractionTraceTemplate } = await import(
         '@server/connectors/evaluations/task-completion/templates/extraction-trace'
       );
 
       const traceString =
-        typeof data_point.metadata.trace === 'string'
-          ? data_point.metadata.trace
-          : JSON.stringify(data_point.metadata.trace, null, 2);
+        typeof log.metadata.trace === 'string'
+          ? log.metadata.trace
+          : JSON.stringify(log.metadata.trace, null, 2);
 
       const extractionTemplate = getTaskCompletionExtractionTraceTemplate({
         trace: traceString,
@@ -225,11 +233,17 @@ async function evaluateSingleDataPoint(
       ({ task, outcome } = extractTaskAndOutcome(extraction_result));
     } else {
       // Use standard extraction
-      const rawInput = params.input || data_point.request_body?.input || '';
+      const rawInput =
+        params.input ||
+        (
+          (log.ai_provider_request_log as Record<string, unknown>)
+            ?.request_body as Record<string, unknown>
+        )?.input ||
+        '';
       const input =
         typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
-      const tools_called = getToolsCalled(data_point, params);
-      const actual_output = getActualOutput(data_point, params);
+      const tools_called = getToolsCalled(log, params);
+      const actual_output = getActualOutput(log, params);
 
       const { getTaskCompletionExtractionTemplate } = await import(
         '@server/connectors/evaluations/task-completion/templates/extraction'
@@ -271,7 +285,7 @@ async function evaluateSingleDataPoint(
 
     // Create EvaluationOutput record
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         task,
         outcome,
@@ -303,16 +317,16 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    return await userDataStorageConnector.createDataPointOutput(
+    return await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
   } catch (error) {
-    console.error('Error evaluating data point:', error);
+    console.error('Error evaluating log:', error);
     const execution_time = Date.now() - start_time;
 
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         error: true,
         error_message: error instanceof Error ? error.message : 'Unknown error',
@@ -332,7 +346,7 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    return await userDataStorageConnector.createDataPointOutput(
+    return await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -340,10 +354,10 @@ async function evaluateSingleDataPoint(
 }
 
 /**
- * Process data points in batches for better performance
+ * Process logs in batches for better performance
  */
-async function processDataPointsInBatches(
-  data_points: DataPoint[],
+async function processLogsInBatches(
+  logs: Log[],
   params: TaskCompletionEvaluationParameters,
   llm_judge: LLMJudge,
   evaluation_run_id: string,
@@ -352,15 +366,15 @@ async function processDataPointsInBatches(
   const batch_size = params.batch_size || 10;
   const results: EvaluationOutput[] = [];
 
-  for (let i = 0; i < data_points.length; i += batch_size) {
-    const batch = data_points.slice(i, i + batch_size);
+  for (let i = 0; i < logs.length; i += batch_size) {
+    const batch = logs.slice(i, i + batch_size);
 
     if (params.async_mode !== false) {
       // Process batch concurrently
       const batch_results = await Promise.all(
-        batch.map((data_point) =>
-          evaluateSingleDataPoint(
-            data_point,
+        batch.map((log) =>
+          evaluateSingleLog(
+            log,
             params,
             llm_judge,
             evaluation_run_id,
@@ -371,9 +385,9 @@ async function processDataPointsInBatches(
       results.push(...batch_results);
     } else {
       // Process batch sequentially
-      for (const data_point of batch) {
-        const result = await evaluateSingleDataPoint(
-          data_point,
+      for (const log of batch) {
+        const result = await evaluateSingleLog(
+          log,
           params,
           llm_judge,
           evaluation_run_id,
@@ -388,7 +402,7 @@ async function processDataPointsInBatches(
 }
 
 /**
- * Task completion evaluation function - evaluates each data point individually
+ * Task completion evaluation function - evaluates each log individually
  * and stores EvaluationOutput records, then returns average results
  */
 export async function evaluateTaskCompletion(
@@ -478,18 +492,15 @@ async function evaluateDataset(
   }
 
   try {
-    // Get data points from database
-    const data_points = await user_data_storage_connector.getDataPoints(
-      input.id,
-      {
-        limit: input.limit || 10,
-        offset: input.offset || 0,
-      },
-    );
+    // Get logs from database
+    const logs = await user_data_storage_connector.getDatasetLogs(input.id, {
+      limit: input.limit || 10,
+      offset: input.offset || 0,
+    });
 
-    // Process all data points and create EvaluationOutput records
-    const evaluationOutputs = await processDataPointsInBatches(
-      data_points,
+    // Process all logs and create EvaluationOutput records
+    const evaluationOutputs = await processLogsInBatches(
+      logs,
       params,
       llm_judge,
       evaluation_run_id,
@@ -511,7 +522,7 @@ async function evaluateDataset(
     await user_data_storage_connector.updateEvaluationRun(evaluation_run_id, {
       status: 'completed' as EvaluationRunStatus,
       results: {
-        total_data_points: data_points.length,
+        total_logs: logs.length,
         passed_count,
         failed_count,
         average_score,
@@ -522,7 +533,7 @@ async function evaluateDataset(
       },
       metadata: {
         ...evaluationRun.metadata,
-        total_data_points: data_points.length,
+        total_logs: logs.length,
         passed_count,
         failed_count,
         average_score,
@@ -545,7 +556,7 @@ async function evaluateDataset(
 
     const averageResult: TaskCompletionAverageResult = {
       average_score,
-      total_data_points: data_points.length,
+      total_logs: logs.length,
       passed_count,
       failed_count,
       threshold_used,

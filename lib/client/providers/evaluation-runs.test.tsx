@@ -1,9 +1,9 @@
-import type { DataPointOutput } from '@shared/types/data/data-point-output';
 import type {
   EvaluationRun,
   EvaluationRunQueryParams,
 } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { LogOutput } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -27,7 +27,7 @@ vi.mock('@client/api/v1/idk/evaluations/runs', () => ({
   queryEvaluationRuns: vi.fn(),
   updateEvaluationRun: vi.fn(),
   deleteEvaluationRun: vi.fn(),
-  getDataPointOutputs: vi.fn(),
+  getLogOutputs: vi.fn(),
 }));
 
 vi.mock('@client/hooks/use-toast', () => ({
@@ -38,7 +38,7 @@ vi.mock('@client/hooks/use-toast', () => ({
 import {
   createEvaluationRun,
   deleteEvaluationRun,
-  getDataPointOutputs,
+  getLogOutputs,
   queryEvaluationRuns,
   updateEvaluationRun,
 } from '@client/api/v1/idk/evaluations/runs';
@@ -76,10 +76,10 @@ const mockEvaluationRuns: EvaluationRun[] = [
   },
 ];
 
-const mockDataPointOutputs: DataPointOutput[] = [
+const mockLogOutputs: LogOutput[] = [
   {
     id: '1',
-    data_point_id: 'dp-1',
+    log_id: 'log-1',
     output: { response: 'Test output 1' },
     score: 0.9,
     metadata: {},
@@ -87,7 +87,7 @@ const mockDataPointOutputs: DataPointOutput[] = [
   },
   {
     id: '2',
-    data_point_id: 'dp-2',
+    log_id: 'log-2',
     output: { response: 'Test output 2' },
     score: 0.85,
     metadata: {},
@@ -119,15 +119,15 @@ function TestComponent({
     createError,
     updateError,
     deleteError,
-    dataPointOutputs,
-    dataPointOutputsLoading,
-    dataPointOutputsError,
-    dataPointOutputQueryParams,
-    setDataPointOutputQueryParams,
+    logOutputs,
+    logOutputsLoading,
+    logOutputsError,
+    logOutputQueryParams,
+    setLogOutputQueryParams,
     getEvaluationRunById,
     refreshEvaluationRuns,
-    loadDataPointOutputs,
-    refetchDataPointOutputs,
+    loadLogOutputs,
+    refetchLogOutputs,
   } = useEvaluationRuns();
 
   // Set initial query params if provided
@@ -166,15 +166,15 @@ function TestComponent({
         {deleteError?.message ?? 'no delete error'}
       </div>
 
-      <div data-testid="outputs-count">{dataPointOutputs?.length ?? 0}</div>
+      <div data-testid="outputs-count">{logOutputs?.length ?? 0}</div>
       <div data-testid="outputs-loading">
-        {dataPointOutputsLoading ? 'loading' : 'loaded'}
+        {logOutputsLoading ? 'loading' : 'loaded'}
       </div>
       <div data-testid="outputs-error">
-        {dataPointOutputsError?.message ?? 'no error'}
+        {logOutputsError?.message ?? 'no error'}
       </div>
       <div data-testid="output-query-params">
-        {JSON.stringify(dataPointOutputQueryParams)}
+        {JSON.stringify(logOutputQueryParams)}
       </div>
 
       <button
@@ -270,7 +270,7 @@ function TestComponent({
       <button
         type="button"
         data-testid="load-outputs"
-        onClick={() => loadDataPointOutputs('1', { limit: 10 })}
+        onClick={() => loadLogOutputs('1', { limit: 10 })}
       >
         Load Outputs
       </button>
@@ -278,7 +278,7 @@ function TestComponent({
       <button
         type="button"
         data-testid="set-output-query-params"
-        onClick={() => setDataPointOutputQueryParams({ score_min: 0.8 })}
+        onClick={() => setLogOutputQueryParams({ score_min: 0.8 })}
       >
         Set Output Query Params
       </button>
@@ -286,7 +286,7 @@ function TestComponent({
       <button
         type="button"
         data-testid="refetch-outputs"
-        onClick={refetchDataPointOutputs}
+        onClick={refetchLogOutputs}
       >
         Refetch Outputs
       </button>
@@ -334,7 +334,7 @@ describe('EvaluationRunsProvider', () => {
       description: 'Updated Description',
     });
     vi.mocked(deleteEvaluationRun).mockResolvedValue();
-    vi.mocked(getDataPointOutputs).mockResolvedValue(mockDataPointOutputs);
+    vi.mocked(getLogOutputs).mockResolvedValue(mockLogOutputs);
   });
 
   afterEach(() => {
@@ -559,7 +559,7 @@ describe('EvaluationRunsProvider', () => {
     expect(screen.getByTestId('selected-run-id').textContent).toBe('1');
   });
 
-  it('handles manual data point outputs loading with loadDataPointOutputs function', async () => {
+  it('handles manual log outputs loading with loadLogOutputs function', async () => {
     act(() => {
       render(
         <QueryClientProvider client={queryClient}>
@@ -593,7 +593,7 @@ describe('EvaluationRunsProvider', () => {
       expect(screen.getByTestId('outputs-count').textContent).toBe('2');
     });
 
-    expect(getDataPointOutputs).toHaveBeenCalledWith('1', { limit: 10 });
+    expect(getLogOutputs).toHaveBeenCalledWith('1', { limit: 10 });
   });
 
   it('handles API errors gracefully', async () => {
@@ -847,7 +847,7 @@ describe('EvaluationRunsProvider', () => {
     expect(screen.getByTestId('selected-run-id').textContent).toBe('1');
   });
 
-  it('manages data point output query parameters', async () => {
+  it('manages log output query parameters', async () => {
     act(() => {
       render(
         <QueryClientProvider client={queryClient}>
@@ -890,24 +890,18 @@ describe('EvaluationRunsProvider', () => {
       'detail',
       '123',
     ]);
-    expect(evaluationRunQueryKeys.dataPointOutputs('123')).toEqual([
+    expect(evaluationRunQueryKeys.logOutputs('123')).toEqual([
       'evaluationRuns',
       'detail',
       '123',
-      'dataPointOutputs',
+      'logOutputs',
     ]);
-    expect(
-      evaluationRunQueryKeys.dataPointOutputsList('123', { limit: 10 }),
-    ).toEqual([
-      'evaluationRuns',
-      'detail',
-      '123',
-      'dataPointOutputs',
-      { limit: 10 },
-    ]);
+    expect(evaluationRunQueryKeys.logOutputsList('123', { limit: 10 })).toEqual(
+      ['evaluationRuns', 'detail', '123', 'logOutputs', { limit: 10 }],
+    );
   });
 
-  it('only fetches data point outputs when manually requested', async () => {
+  it('only fetches log outputs when manually requested', async () => {
     act(() => {
       render(
         <QueryClientProvider client={queryClient}>
@@ -923,7 +917,7 @@ describe('EvaluationRunsProvider', () => {
     });
 
     // Initially no run selected, so no outputs should be fetched
-    expect(getDataPointOutputs).not.toHaveBeenCalled();
+    expect(getLogOutputs).not.toHaveBeenCalled();
     expect(screen.getByTestId('outputs-count').textContent).toBe('0');
 
     // Select a run - outputs should still not be fetched automatically
@@ -932,7 +926,7 @@ describe('EvaluationRunsProvider', () => {
     });
 
     // Outputs should still not be fetched automatically
-    expect(getDataPointOutputs).not.toHaveBeenCalled();
+    expect(getLogOutputs).not.toHaveBeenCalled();
     expect(screen.getByTestId('outputs-count').textContent).toBe('0');
 
     // Only when we manually load outputs should they be fetched
@@ -941,7 +935,7 @@ describe('EvaluationRunsProvider', () => {
     });
 
     await waitFor(() => {
-      expect(getDataPointOutputs).toHaveBeenCalledWith('1', { limit: 10 });
+      expect(getLogOutputs).toHaveBeenCalledWith('1', { limit: 10 });
       expect(screen.getByTestId('outputs-count').textContent).toBe('2');
     });
   });

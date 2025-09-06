@@ -21,7 +21,7 @@ interface PerformanceReport {
   fastestRoute?: string;
 }
 
-const METRICS_STORAGE_KEY = 'pipeline-navigation-metrics';
+const METRICS_STORAGE_KEY = 'agent-navigation-metrics';
 const MAX_STORED_METRICS = 100;
 
 export function useNavigationPerformance() {

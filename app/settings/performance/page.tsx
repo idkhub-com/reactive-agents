@@ -1,4 +1,4 @@
-import { PerformanceDashboard } from '@client/components/pipelines/performance-dashboard';
+import { PerformanceDashboard } from '@client/components/agents/performance-dashboard';
 
 export default function PerformancePage() {
   return (

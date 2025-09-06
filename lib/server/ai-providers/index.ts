@@ -18,6 +18,7 @@ import { openAIConfig } from '@server/ai-providers/openai';
 import { openrouterConfig } from '@server/ai-providers/openrouter';
 import { palmAIConfig } from '@server/ai-providers/palm';
 import { predibaseConfig } from '@server/ai-providers/predibase';
+import { xaiConfig } from '@server/ai-providers/xai';
 import type { AIProviderConfig } from '@shared/types/ai-providers/config';
 import { AIProvider } from '@shared/types/constants';
 
@@ -76,6 +77,6 @@ export const providerConfigs: {
   [AIProvider.UPSTAGE]: undefined,
   [AIProvider.VOYAGE]: undefined,
   [AIProvider.WORKERS_AI]: undefined,
-  [AIProvider.X_AI]: undefined,
+  [AIProvider.XAI]: xaiConfig,
   [AIProvider.ZHIPU]: undefined,
 };

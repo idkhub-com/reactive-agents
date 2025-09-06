@@ -49,7 +49,7 @@ export enum AIProvider {
   UPSTAGE = 'upstage',
   LAMBDA = 'lambda',
   DASHSCOPE = 'dashscope',
-  X_AI = 'x-ai',
+  XAI = 'xai',
   CORTEX = 'cortex',
   SAGEMAKER = 'sagemaker',
   NEBIUS = 'nebius',

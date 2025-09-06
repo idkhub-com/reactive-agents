@@ -34,20 +34,25 @@ const mockConnector = {
   createDataset: vi.fn(),
   updateDataset: vi.fn(),
   deleteDataset: vi.fn(),
-  // Data point methods
-  getDataPoints: vi.fn(),
-  createDataPoints: vi.fn(),
-  updateDataPoint: vi.fn(),
-  deleteDataPoints: vi.fn(),
+  // Dataset logs methods
+  getDatasetLogs: vi.fn(),
+  addLogsToDataset: vi.fn(),
+  removeLogsFromDataset: vi.fn(),
+  // Log methods
+  getLogs: vi.fn(),
+  createLogs: vi.fn(),
+  updateLog: vi.fn(),
+  deleteLogs: vi.fn(),
+  deleteLog: vi.fn(),
   // Evaluation run methods
   getEvaluationRuns: vi.fn(),
   createEvaluationRun: vi.fn(),
   updateEvaluationRun: vi.fn(),
   deleteEvaluationRun: vi.fn(),
-  // Data point output methods
-  getDataPointOutputs: vi.fn(),
-  createDataPointOutput: vi.fn(),
-  deleteDataPointOutput: vi.fn(),
+  // Log output methods
+  getLogOutputs: vi.fn(),
+  createLogOutput: vi.fn(),
+  deleteLogOutput: vi.fn(),
 };
 
 const app = new Hono<AppEnv>()
@@ -295,48 +300,48 @@ describe('Evaluation Runs API Status Codes', () => {
     });
   });
 
-  describe('GET /:evaluationRunId/data-point-outputs', () => {
+  describe('GET /:evaluationRunId/log-outputs', () => {
     it('should return 200 on successful fetch', async () => {
-      const mockDataPoints = [
+      const mockLogs = [
         {
           id: 'output-1',
-          data_point_id: 'data-point-1',
+          log_id: 'log-1',
           output: { result: 'test' },
           score: 0.95,
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
         },
       ];
-      mockConnector.getDataPointOutputs.mockResolvedValue(mockDataPoints);
+      mockConnector.getLogOutputs.mockResolvedValue(mockLogs);
 
-      const res = await client[':evaluationRunId']['data-point-outputs'].$get({
+      const res = await client[':evaluationRunId']['log-outputs'].$get({
         param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: { limit: '10', offset: '0' },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data).toEqual(mockDataPoints);
-      expect(mockConnector.getDataPointOutputs).toHaveBeenCalledWith(
+      expect(data).toEqual(mockLogs);
+      expect(mockConnector.getLogOutputs).toHaveBeenCalledWith(
         'c13d1678-150a-466b-804f-ecc82de3680e',
         { limit: 10, offset: 0 },
       );
     });
 
     it('should return 200 with query filters', async () => {
-      const mockDataPoints = [
+      const mockLogs = [
         {
           id: 'output-1',
-          data_point_id: 'data-point-1',
+          log_id: 'log-1',
           output: { result: 'test' },
           score: 0.85,
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
         },
       ];
-      mockConnector.getDataPointOutputs.mockResolvedValue(mockDataPoints);
+      mockConnector.getLogOutputs.mockResolvedValue(mockLogs);
 
-      const res = await client[':evaluationRunId']['data-point-outputs'].$get({
+      const res = await client[':evaluationRunId']['log-outputs'].$get({
         param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {
           score_min: '0.8',
@@ -347,8 +352,8 @@ describe('Evaluation Runs API Status Codes', () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data).toEqual(mockDataPoints);
-      expect(mockConnector.getDataPointOutputs).toHaveBeenCalledWith(
+      expect(data).toEqual(mockLogs);
+      expect(mockConnector.getLogOutputs).toHaveBeenCalledWith(
         'c13d1678-150a-466b-804f-ecc82de3680e',
         {
           score_min: 0.8,
@@ -359,32 +364,30 @@ describe('Evaluation Runs API Status Codes', () => {
     });
 
     it('should return 500 on error', async () => {
-      mockConnector.getDataPointOutputs.mockRejectedValue(
-        new Error('DB error'),
-      );
+      mockConnector.getLogOutputs.mockRejectedValue(new Error('DB error'));
 
-      const res = await client[':evaluationRunId']['data-point-outputs'].$get({
+      const res = await client[':evaluationRunId']['log-outputs'].$get({
         param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: { limit: '10' },
       });
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to fetch data points' });
+      expect(data).toEqual({ error: 'Failed to fetch log outputs' });
     });
 
     it('should validate UUID format for evaluationRunId', async () => {
-      const res = await client[':evaluationRunId']['data-point-outputs'].$get({
+      const res = await client[':evaluationRunId']['log-outputs'].$get({
         param: { evaluationRunId: 'invalid-uuid' },
         query: { limit: '10' },
       });
 
       expect(res.status).toBe(400);
-      expect(mockConnector.getDataPointOutputs).not.toHaveBeenCalled();
+      expect(mockConnector.getLogOutputs).not.toHaveBeenCalled();
     });
 
     it('should validate query parameters', async () => {
-      const res = await client[':evaluationRunId']['data-point-outputs'].$get({
+      const res = await client[':evaluationRunId']['log-outputs'].$get({
         param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {
           limit: '-5', // negative limit should fail validation
@@ -393,11 +396,11 @@ describe('Evaluation Runs API Status Codes', () => {
       });
 
       expect(res.status).toBe(400);
-      expect(mockConnector.getDataPointOutputs).not.toHaveBeenCalled();
+      expect(mockConnector.getLogOutputs).not.toHaveBeenCalled();
     });
 
     it('should validate limit is positive', async () => {
-      const res = await client[':evaluationRunId']['data-point-outputs'].$get({
+      const res = await client[':evaluationRunId']['log-outputs'].$get({
         param: { evaluationRunId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
         query: {
           limit: '0', // should fail because limit must be positive
@@ -405,7 +408,7 @@ describe('Evaluation Runs API Status Codes', () => {
       });
 
       expect(res.status).toBe(400);
-      expect(mockConnector.getDataPointOutputs).not.toHaveBeenCalled();
+      expect(mockConnector.getLogOutputs).not.toHaveBeenCalled();
     });
   });
 });

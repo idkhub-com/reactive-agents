@@ -1,41 +1,91 @@
 import { evaluateTaskCompletion } from '@server/connectors/evaluations/task-completion/service/evaluate';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPointOutput as EvaluationOutput } from '@shared/types/data/data-point-output';
+import { HttpMethod } from '@server/types/http';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { LogOutput as EvaluationOutput } from '@shared/types/data/log-output';
 import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock data
-const mockDataPoints = [
+const mockLogs = [
   {
-    id: 'dp-1',
-    dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-    request_body: { input: 'Test input 1' },
-    ground_truth: 'Expected output 1',
+    id: 'log-1',
+    agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+    skill_id: 'skill-1',
+    method: HttpMethod.POST,
+    endpoint: '/api/test',
+    function_name: 'test_function',
+    status: 200,
+    start_time: Date.now(),
+    end_time: Date.now() + 1000,
+    duration: 1000,
+    base_idk_config: {},
+    ai_provider: 'openai',
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: 'openai',
+      request_url: '/api/test',
+      method: HttpMethod.POST,
+      request_body: { input: 'Test input 1' },
+      response_body: { result: 'Expected output 1' },
+      cache_status: 'MISS',
+    },
+    hook_logs: [],
     metadata: {
       tools: '[]',
-      agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
     },
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z',
+    cache_status: 'MISS',
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
   },
   {
-    id: 'dp-2',
-    dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-    request_body: { input: 'Test input 2' },
-    ground_truth: 'Expected output 2',
+    id: 'log-2',
+    agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+    skill_id: 'skill-2',
+    method: HttpMethod.POST,
+    endpoint: '/api/test2',
+    function_name: 'test_function2',
+    status: 200,
+    start_time: Date.now(),
+    end_time: Date.now() + 500,
+    duration: 500,
+    base_idk_config: {},
+    ai_provider: 'openai',
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: 'openai',
+      request_url: '/api/test2',
+      method: HttpMethod.POST,
+      request_body: { input: 'Test input 2' },
+      response_body: { result: 'Expected output 2' },
+      cache_status: 'HIT',
+    },
+    hook_logs: [],
     metadata: {
       tools: '[]',
-      agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
     },
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z',
+    cache_status: 'HIT',
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
   },
 ];
 
 const mockUserDataStorageConnector = {
-  getDataPoints: vi.fn().mockResolvedValue(mockDataPoints),
+  getLogs: vi.fn().mockResolvedValue(mockLogs),
+  getDatasetLogs: vi.fn().mockResolvedValue(mockLogs),
   createEvaluationRun: vi.fn().mockResolvedValue({
     id: 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
     dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
@@ -60,7 +110,7 @@ const mockUserDataStorageConnector = {
       description: 'Test description',
       status: 'completed' as EvaluationRunStatus,
       results: {
-        total_data_points: 2,
+        total_logs: 2,
         passed_count: 1,
         failed_count: 1,
         average_score: 0.8,
@@ -80,9 +130,9 @@ const mockUserDataStorageConnector = {
     };
     return Promise.resolve([evaluationRun]);
   }),
-  createDataPointOutput: vi.fn().mockResolvedValue({
+  createLogOutput: vi.fn().mockResolvedValue({
     id: 'test-output-id',
-    data_point_id: 'dp-1',
+    log_id: 'log-1',
     output: {},
     score: 0.8,
     metadata: {},
@@ -99,7 +149,7 @@ const mockUserDataStorageConnector = {
       description: 'Test description',
       status: updateData.status || ('completed' as EvaluationRunStatus),
       results: updateData.results || {
-        total_data_points: 2,
+        total_logs: 2,
         passed_count: 1,
         failed_count: 1,
         average_score: 0.8,
@@ -179,17 +229,19 @@ describe('Task Completion Evaluation', () => {
 
         // Check TaskCompletionAverageResult properties
         expect(results.averageResult).toHaveProperty('average_score');
-        expect(results.averageResult).toHaveProperty('total_data_points', 2);
+        expect(results.averageResult).toHaveProperty('total_logs', 2);
         expect(results.averageResult).toHaveProperty('passed_count');
         expect(results.averageResult).toHaveProperty('failed_count');
         expect(results.averageResult).toHaveProperty('threshold_used', 0.5);
         expect(results.averageResult).toHaveProperty('evaluation_run_id');
 
-        // Verify that data points were fetched
-        expect(mockUserDataStorageConnector.getDataPoints).toHaveBeenCalledWith(
-          'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-          { limit: 5, offset: 0 },
-        );
+        // Verify that logs were fetched
+        expect(
+          mockUserDataStorageConnector.getDatasetLogs,
+        ).toHaveBeenCalledWith('d4e5f6a7-b8c9-4123-9567-890abcdef012', {
+          limit: 5,
+          offset: 0,
+        });
       },
     );
 
@@ -219,7 +271,7 @@ describe('Task Completion Evaluation', () => {
 
       // Check that threshold is overridden to 1.0 in strict mode
       expect(results.averageResult).toHaveProperty('threshold_used', 1.0);
-      expect(results.averageResult).toHaveProperty('total_data_points', 2);
+      expect(results.averageResult).toHaveProperty('total_logs', 2);
     });
 
     it('should handle verbose mode correctly', { timeout: 30000 }, async () => {
@@ -247,7 +299,7 @@ describe('Task Completion Evaluation', () => {
       expect(Array.isArray(results)).toBe(false);
 
       // Check that the evaluation completed successfully
-      expect(results.averageResult).toHaveProperty('total_data_points', 2);
+      expect(results.averageResult).toHaveProperty('total_logs', 2);
     });
 
     it('should handle custom task parameter', { timeout: 30000 }, async () => {
@@ -275,7 +327,7 @@ describe('Task Completion Evaluation', () => {
       expect(Array.isArray(results)).toBe(false);
 
       // Check that the evaluation completed successfully
-      expect(results.averageResult).toHaveProperty('total_data_points', 2);
+      expect(results.averageResult).toHaveProperty('total_logs', 2);
     });
 
     it('should handle missing user data storage connector', async () => {
@@ -328,7 +380,7 @@ describe('Task Completion Evaluation', () => {
 
         // Verify that the evaluation completed successfully with the expected parameters
         expect(results.averageResult).toHaveProperty('evaluation_run_id');
-        expect(results.averageResult).toHaveProperty('total_data_points', 2);
+        expect(results.averageResult).toHaveProperty('total_logs', 2);
         expect(results.averageResult).toHaveProperty('threshold_used', 0.7);
 
         // Verify that the evaluation completed successfully

@@ -2,17 +2,17 @@ import { getTurnRelevancyTemplate } from '@server/connectors/evaluations/turn-re
 import type { TurnRelevancyAverageResult } from '@server/connectors/evaluations/types/turn-relevancy';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
-import type {
-  DataPointOutput as EvaluationOutput,
-  DataPointOutputCreateParams as EvaluationOutputCreateParams,
-} from '@shared/types/data/data-point-output';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
 } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
+import type {
+  LogOutput as EvaluationOutput,
+  LogOutputCreateParams as EvaluationOutputCreateParams,
+} from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import type { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
@@ -33,7 +33,7 @@ function isRetryableError(error: unknown): boolean {
 }
 
 function pickTurnRelevancyData(
-  data_point: DataPoint,
+  log: Log,
   params: TurnRelevancyEvaluationParameters,
 ): {
   conversation_history: string;
@@ -42,23 +42,23 @@ function pickTurnRelevancyData(
 } {
   const conversation_history =
     params.conversation_history ||
-    (data_point.metadata?.conversation_history as string) ||
+    (log.metadata?.conversation_history as string) ||
     '';
   const current_turn =
     params.current_turn ||
-    (typeof data_point.ground_truth === 'string'
-      ? (data_point.ground_truth as string)
-      : data_point.ground_truth
-        ? JSON.stringify(data_point.ground_truth)
-        : (data_point.metadata?.current_turn as string) || '') ||
+    (typeof log.metadata?.ground_truth === 'string'
+      ? (log.metadata.ground_truth as string)
+      : log.metadata?.ground_truth
+        ? JSON.stringify(log.metadata.ground_truth)
+        : (log.metadata?.current_turn as string) || '') ||
     '';
   const instructions =
-    params.instructions || (data_point.metadata?.instructions as string);
+    params.instructions || (log.metadata?.instructions as string);
   return { conversation_history, current_turn, instructions };
 }
 
-async function evaluateSingleDataPoint(
-  data_point: DataPoint,
+async function evaluateSingleLog(
+  log: Log,
   params: TurnRelevancyEvaluationParameters,
   evaluation_run_id: string,
   llm_judge: LLMJudge,
@@ -71,7 +71,7 @@ async function evaluateSingleDataPoint(
 
   try {
     const { conversation_history, current_turn, instructions } =
-      pickTurnRelevancyData(data_point, params);
+      pickTurnRelevancyData(log, params);
 
     const tpl = getTurnRelevancyTemplate({
       conversation_history,
@@ -97,7 +97,7 @@ async function evaluateSingleDataPoint(
     const execution_time = Date.now() - start_time;
 
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         score: final_score,
         passed,
@@ -124,7 +124,7 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    const createdOutput = await userDataStorageConnector.createDataPointOutput(
+    const createdOutput = await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -132,20 +132,20 @@ async function evaluateSingleDataPoint(
     return createdOutput;
   } catch (error) {
     console.error(
-      `Error evaluating turn relevancy for data point (attempt ${retryCount + 1}):`,
+      `Error evaluating turn relevancy for log (attempt ${retryCount + 1}):`,
       error,
     );
 
     // Retry logic for transient errors
     if (retryCount < maxRetries && isRetryableError(error)) {
       console.log(
-        `Retrying data point evaluation (attempt ${retryCount + 2}/${maxRetries + 1})`,
+        `Retrying log evaluation (attempt ${retryCount + 2}/${maxRetries + 1})`,
       );
       await new Promise((resolve) =>
         setTimeout(resolve, 1000 * (retryCount + 1)),
       ); // Exponential backoff
-      return evaluateSingleDataPoint(
-        data_point,
+      return evaluateSingleLog(
+        log,
         params,
         evaluation_run_id,
         llm_judge,
@@ -157,7 +157,7 @@ async function evaluateSingleDataPoint(
     const execution_time = Date.now() - start_time;
 
     const errorOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         score: 0,
         passed: false,
@@ -180,15 +180,15 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    return await userDataStorageConnector.createDataPointOutput(
+    return await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       errorOutput,
     );
   }
 }
 
-async function processDataPointsInBatches(
-  data_points: DataPoint[],
+async function processLogsInBatches(
+  logs: Log[],
   params: TurnRelevancyEvaluationParameters,
   evaluation_run_id: string,
   llm_judge: LLMJudge,
@@ -197,14 +197,14 @@ async function processDataPointsInBatches(
   const batch_size = params.batch_size || 10;
   const results = [];
 
-  for (let i = 0; i < data_points.length; i += batch_size) {
-    const batch = data_points.slice(i, i + batch_size);
+  for (let i = 0; i < logs.length; i += batch_size) {
+    const batch = logs.slice(i, i + batch_size);
 
     if (params.async_mode !== false) {
       // Process batch in parallel
-      const batchPromises = batch.map((data_point) =>
-        evaluateSingleDataPoint(
-          data_point,
+      const batchPromises = batch.map((log) =>
+        evaluateSingleLog(
+          log,
           params,
           evaluation_run_id,
           llm_judge,
@@ -216,9 +216,9 @@ async function processDataPointsInBatches(
       results.push(...batchResults);
     } else {
       // Process batch sequentially
-      for (const data_point of batch) {
-        const result = await evaluateSingleDataPoint(
-          data_point,
+      for (const log of batch) {
+        const result = await evaluateSingleLog(
+          log,
           params,
           evaluation_run_id,
           llm_judge,
@@ -229,11 +229,11 @@ async function processDataPointsInBatches(
     }
 
     // Update evaluation run progress
-    const processed = Math.min(i + batch_size, data_points.length);
-    const percentage = Math.round((processed / data_points.length) * 100);
+    const processed = Math.min(i + batch_size, logs.length);
+    const percentage = Math.round((processed / logs.length) * 100);
 
     console.log(
-      `Turn relevancy evaluation progress: ${processed}/${data_points.length} (${percentage}%)`,
+      `Turn relevancy evaluation progress: ${processed}/${logs.length} (${percentage}%)`,
     );
 
     await userDataStorageConnector.updateEvaluationRun(evaluation_run_id, {
@@ -241,10 +241,10 @@ async function processDataPointsInBatches(
       metadata: {
         progress: {
           processed,
-          total: data_points.length,
+          total: logs.length,
           percentage,
           current_batch: Math.floor(i / batch_size) + 1,
-          total_batches: Math.ceil(data_points.length / batch_size),
+          total_batches: Math.ceil(logs.length / batch_size),
         },
       },
     });
@@ -307,14 +307,14 @@ export async function evaluateTurnRelevancyDataset(
   }
 
   try {
-    // Get data points
-    const data_points = await userDataStorageConnector.getDataPoints(input.id, {
+    // Get logs
+    const logs = await userDataStorageConnector.getDatasetLogs(input.id, {
       limit: input.limit || 10,
       offset: input.offset || 0,
     });
 
-    if (!data_points || data_points.length === 0) {
-      throw new Error('No data points found for evaluation');
+    if (!logs || logs.length === 0) {
+      throw new Error('No logs found for evaluation');
     }
 
     // Create LLM judge
@@ -324,9 +324,9 @@ export async function evaluateTurnRelevancyDataset(
       max_tokens: params.max_tokens || 1000,
     });
 
-    // Process data points in batches
-    const results = await processDataPointsInBatches(
-      data_points,
+    // Process logs in batches
+    const results = await processLogsInBatches(
+      logs,
       params,
       evaluation_run_id,
       llm_judge,
@@ -355,7 +355,7 @@ export async function evaluateTurnRelevancyDataset(
         : 0;
 
     console.log(`Turn relevancy evaluation completed:`, {
-      total_data_points: data_points.length,
+      total_logs: logs.length,
       valid_results: validResults.length,
       error_results: errorResults.length,
       average_score: average_score.toFixed(3),
@@ -369,7 +369,7 @@ export async function evaluateTurnRelevancyDataset(
 
     const averageResult = {
       average_score,
-      total_data_points: data_points.length,
+      total_logs: logs.length,
       passed_count,
       failed_count,
       threshold_used: threshold,
@@ -392,7 +392,7 @@ export async function evaluateTurnRelevancyDataset(
         results: averageResult,
         execution_time,
         execution_time_ms: execution_time,
-        processed_data_points: validResults.length,
+        processed_logs: validResults.length,
         error_count: results.length - validResults.length,
       },
       completed_at: new Date().toISOString(),

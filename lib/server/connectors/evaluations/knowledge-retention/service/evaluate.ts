@@ -1,27 +1,27 @@
 import type { KnowledgeRetentionAverageResult } from '@server/connectors/evaluations/types/knowledge-retention';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import type { DataPoint } from '@shared/types/data/data-point';
-import type {
-  DataPointOutput as EvaluationOutput,
-  DataPointOutputCreateParams as EvaluationOutputCreateParams,
-} from '@shared/types/data/data-point-output';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
 } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { Log } from '@shared/types/data/log';
+import type {
+  LogOutput as EvaluationOutput,
+  LogOutputCreateParams as EvaluationOutputCreateParams,
+} from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 
 /**
- * Extract context and response from data point with standardized fallback logic
- * @param dataPoint The data point to extract content from
+ * Extract context and response from log with standardized fallback logic
+ * @param log The log to extract content from
  * @returns Object containing context and response strings
  */
-function extractDataPointContent(dataPoint: DataPoint): {
+function extractLogContent(log: Log): {
   context: string;
   response: string;
 } {
@@ -48,8 +48,10 @@ function extractDataPointContent(dataPoint: DataPoint): {
   const contextFields = ['context', 'text', 'input', 'prompt', 'message'];
   let context = '';
 
+  const requestBody = (log.ai_provider_request_log as Record<string, unknown>)
+    ?.request_body as Record<string, unknown>;
   for (const field of contextFields) {
-    const value = dataPoint.request_body?.[field];
+    const value = requestBody?.[field];
     if (value) {
       context = sanitizeContent(value);
       break;
@@ -57,8 +59,8 @@ function extractDataPointContent(dataPoint: DataPoint): {
   }
 
   // Fallback to entire request_body if no specific field found
-  if (!context && dataPoint.request_body) {
-    context = sanitizeContent(dataPoint.request_body);
+  if (!context && requestBody) {
+    context = sanitizeContent(requestBody);
   }
 
   // Extract response with priority order
@@ -66,8 +68,9 @@ function extractDataPointContent(dataPoint: DataPoint): {
   let response = '';
 
   // Try ground_truth first
+  const groundTruth = log.metadata?.ground_truth as Record<string, unknown>;
   for (const field of responseFields) {
-    const value = dataPoint.ground_truth?.[field];
+    const value = groundTruth?.[field];
     if (value) {
       response = sanitizeContent(value);
       break;
@@ -77,7 +80,7 @@ function extractDataPointContent(dataPoint: DataPoint): {
   // Try metadata if no ground_truth found
   if (!response) {
     for (const field of responseFields) {
-      const value = dataPoint.metadata?.[field];
+      const value = log.metadata?.[field];
       if (value) {
         response = sanitizeContent(value);
         break;
@@ -86,26 +89,26 @@ function extractDataPointContent(dataPoint: DataPoint): {
   }
 
   // Fallback to entire ground_truth if no specific field found
-  if (!response && dataPoint.ground_truth) {
-    response = sanitizeContent(dataPoint.ground_truth);
+  if (!response && log.metadata?.ground_truth) {
+    response = sanitizeContent(log.metadata.ground_truth);
   }
 
-  // Final fallback to entire data point
+  // Final fallback to entire log
   if (!context) {
-    context = sanitizeContent(dataPoint);
+    context = sanitizeContent(log);
   }
   if (!response) {
-    response = sanitizeContent(dataPoint);
+    response = sanitizeContent(log);
   }
 
   return { context, response };
 }
 
 /**
- * Evaluate a single data point for knowledge retention
+ * Evaluate a single log for knowledge retention
  */
-async function evaluateSingleDataPoint(
-  data_point: DataPoint,
+async function evaluateSingleLog(
+  log: Log,
   params: KnowledgeRetentionEvaluationParameters,
   llm_judge: LLMJudge,
   evaluation_run_id: string,
@@ -115,10 +118,10 @@ async function evaluateSingleDataPoint(
 
   try {
     // Extract context and response using standardized utility function
-    const { context, response } = extractDataPointContent(data_point);
+    const { context, response } = extractLogContent(log);
 
     if (!context || !response) {
-      throw new Error('Missing context or response in data point');
+      throw new Error('Missing context or response in log');
     }
 
     // Create evaluation prompt that avoids triggering template detection
@@ -134,7 +137,7 @@ async function evaluateSingleDataPoint(
 
     // Create evaluation output
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         score: result.score,
         reasoning: result.reasoning,
@@ -159,12 +162,12 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    return await userDataStorageConnector.createDataPointOutput(
+    return await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
   } catch (error) {
-    console.error('Error evaluating data point:', error);
+    console.error('Error evaluating log:', error);
     const execution_time = Date.now() - start_time;
 
     // Sanitize error message to prevent information leakage
@@ -176,7 +179,7 @@ async function evaluateSingleDataPoint(
         : 'Unknown error occurred';
 
     const evaluationOutput: EvaluationOutputCreateParams = {
-      data_point_id: data_point.id,
+      log_id: log.id,
       output: {
         error: true,
         error_message: sanitizedErrorMessage,
@@ -196,7 +199,7 @@ async function evaluateSingleDataPoint(
       },
     };
 
-    return await userDataStorageConnector.createDataPointOutput(
+    return await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
       evaluationOutput,
     );
@@ -204,10 +207,10 @@ async function evaluateSingleDataPoint(
 }
 
 /**
- * Process data points in batches for better performance
+ * Process logs in batches for better performance
  */
-async function processDataPointsInBatches(
-  data_points: DataPoint[],
+async function processLogsInBatches(
+  logs: Log[],
   params: KnowledgeRetentionEvaluationParameters,
   llm_judge: LLMJudge,
   evaluation_run_id: string,
@@ -216,15 +219,15 @@ async function processDataPointsInBatches(
   const batch_size = params.batch_size || 10;
   const results: EvaluationOutput[] = [];
 
-  for (let i = 0; i < data_points.length; i += batch_size) {
-    const batch = data_points.slice(i, i + batch_size);
+  for (let i = 0; i < logs.length; i += batch_size) {
+    const batch = logs.slice(i, i + batch_size);
 
     if (params.async_mode !== false) {
       // Process batch concurrently
       const batch_results = await Promise.all(
-        batch.map((data_point) =>
-          evaluateSingleDataPoint(
-            data_point,
+        batch.map((log) =>
+          evaluateSingleLog(
+            log,
             params,
             llm_judge,
             evaluation_run_id,
@@ -235,9 +238,9 @@ async function processDataPointsInBatches(
       results.push(...batch_results);
     } else {
       // Process batch sequentially
-      for (const data_point of batch) {
-        const result = await evaluateSingleDataPoint(
-          data_point,
+      for (const log of batch) {
+        const result = await evaluateSingleLog(
+          log,
           params,
           llm_judge,
           evaluation_run_id,
@@ -252,7 +255,7 @@ async function processDataPointsInBatches(
 }
 
 /**
- * Knowledge retention evaluation function - evaluates each data point individually
+ * Knowledge retention evaluation function - evaluates each log individually
  * and stores EvaluationOutput records, then returns average results
  */
 export async function evaluateKnowledgeRetention(
@@ -286,17 +289,14 @@ export async function evaluateKnowledgeRetention(
     await userDataStorageConnector.createEvaluationRun(evaluationRunParams);
 
   try {
-    // Get data points
-    const data_points = await userDataStorageConnector.getDataPoints(
-      input.id!,
-      {
-        limit: input.limit || 10,
-        offset: input.offset || 0,
-      },
-    );
+    // Get logs
+    const logs = await userDataStorageConnector.getDatasetLogs(input.id!, {
+      limit: input.limit || 10,
+      offset: input.offset || 0,
+    });
 
-    if (data_points.length === 0) {
-      throw new Error('No data points found for evaluation');
+    if (logs.length === 0) {
+      throw new Error('No logs found for evaluation');
     }
 
     // Create LLM judge
@@ -307,9 +307,9 @@ export async function evaluateKnowledgeRetention(
       timeout: params.timeout,
     });
 
-    // Process data points
-    const results = await processDataPointsInBatches(
-      data_points,
+    // Process logs
+    const results = await processLogsInBatches(
+      logs,
       params,
       llm_judge,
       evaluationRun.id,
@@ -321,8 +321,8 @@ export async function evaluateKnowledgeRetention(
       .map((r) => r.score)
       .filter((s) => s !== null && s !== undefined);
     const threshold = params.threshold || 0.6;
-    const passedDataPoints = scores.filter((s) => s >= threshold).length;
-    const failedDataPoints = scores.length - passedDataPoints;
+    const passedLogs = scores.filter((s) => s >= threshold).length;
+    const failedLogs = scores.length - passedLogs;
 
     const averageScore =
       scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
@@ -374,9 +374,9 @@ export async function evaluateKnowledgeRetention(
 
     const averageResult: KnowledgeRetentionAverageResult = {
       average_score: averageScore,
-      total_data_points: data_points.length,
-      passed_count: passedDataPoints,
-      failed_count: failedDataPoints,
+      total_logs: logs.length,
+      passed_count: passedLogs,
+      failed_count: failedLogs,
       threshold_used: params.threshold || 0.6,
       evaluation_run_id: evaluationRun.id,
     };
@@ -385,9 +385,9 @@ export async function evaluateKnowledgeRetention(
     await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
       status: EvaluationRunStatus.COMPLETED,
       results: {
-        total_data_points: data_points.length,
-        passed_count: passedDataPoints,
-        failed_count: failedDataPoints,
+        total_logs: logs.length,
+        passed_count: passedLogs,
+        failed_count: failedLogs,
         average_score: averageScore,
         threshold_used: params.threshold || 0.6,
         evaluation_outputs: results.map((output) => output.id),
@@ -402,9 +402,9 @@ export async function evaluateKnowledgeRetention(
       },
       metadata: {
         ...evaluationRun.metadata,
-        total_data_points: data_points.length,
-        passed_count: passedDataPoints,
-        failed_count: failedDataPoints,
+        total_logs: logs.length,
+        passed_count: passedLogs,
+        failed_count: failedLogs,
         average_score: averageScore,
         threshold_used: params.threshold || 0.6,
         evaluation_outputs: results.map((output) => output.id),

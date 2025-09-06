@@ -18,8 +18,8 @@ export function useSmartBack() {
         // Fallback to provided URL
         router.push(fallbackUrl);
       } else {
-        // Ultimate fallback to pipelines
-        router.push('/pipelines');
+        // Ultimate fallback to agents
+        router.push('/agents');
       }
     },
     [router],

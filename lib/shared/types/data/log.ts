@@ -1,5 +1,7 @@
 import { HttpMethod } from '@server/types/http';
+import { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CacheStatus } from '@shared/types/middleware/cache';
+
 import { z } from 'zod';
 
 export type LogMessage = {
@@ -12,11 +14,15 @@ export interface LogsClient {
   sendLog: (logMessage: LogMessage) => Promise<void>;
 }
 
+export const Log = IdkRequestLog;
+export type Log = z.infer<typeof Log>;
+
 export const LogsQueryParams = z.object({
-  id: z.uuid().optional(),
-  agent_id: z.uuid().optional(),
-  skill_id: z.uuid().optional(),
-  app_id: z.string().optional(),
+  id: z.string().uuid().optional(),
+  ids: z.array(z.string().uuid()).optional(),
+  agent_id: z.string().uuid().optional(),
+  skill_id: z.string().uuid().optional(),
+  app_id: z.string().uuid().optional(),
   after: z
     .string()
     .transform((val) => (val ? Number(val) : undefined))

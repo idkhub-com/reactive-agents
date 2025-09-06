@@ -1,15 +1,18 @@
 import type { ToolCall } from '@server/connectors/evaluations/tool-correctness/types';
 import { HttpMethod } from '@server/types/http';
-import type { DataPoint } from '@shared/types/data/data-point';
+import { FunctionName } from '@shared/types/api/request';
+import { AIProvider } from '@shared/types/constants';
+import type { Log } from '@shared/types/data';
 import type { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
+import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 
 // Re-export the core functions for testing
 // These functions are copied from the main implementation to allow direct testing
 
-export const extractToolsCalled = (dataPoint: DataPoint): ToolCall[] => {
+export const extractToolsCalled = (log: Log): ToolCall[] => {
   const toolsCalled =
-    dataPoint.request_body?.tools_called ||
-    dataPoint.metadata?.tools_called ||
+    log.ai_provider_request_log.request_body?.tools_called ||
+    log.metadata?.tools_called ||
     [];
 
   if (Array.isArray(toolsCalled)) {
@@ -23,11 +26,8 @@ export const extractToolsCalled = (dataPoint: DataPoint): ToolCall[] => {
   return [];
 };
 
-export const extractExpectedTools = (dataPoint: DataPoint): ToolCall[] => {
-  const expectedTools =
-    dataPoint.ground_truth?.expected_tools ||
-    dataPoint.metadata?.expected_tools ||
-    [];
+export const extractExpectedTools = (log: Log): ToolCall[] => {
+  const expectedTools = log.metadata?.expected_tools || [];
 
   if (Array.isArray(expectedTools)) {
     return expectedTools.map((tool) => ({
@@ -321,30 +321,80 @@ export const generateReason = (
   return `Partial match: ${matchedCount}/${expected_tools.length} expected tools were called correctly. Expected: ${expectedNames.join(', ')}, Called: ${calledNames.join(', ')}.`;
 };
 
-// Helper function to create test data points
-export const createTestDataPoint = (
+// Helper function to create test logs
+export const createTestLog = (
   id: string,
   toolsCalled: ToolCall[],
   expectedTools: ToolCall[],
   metadata?: Record<string, unknown>,
-): DataPoint => ({
-  id,
-  method: HttpMethod.POST,
-  endpoint: '/v1/chat/completions',
-  function_name: 'chat_complete',
-  request_body: {
-    messages: [{ role: 'user', content: 'Test message' }],
-  },
-  ground_truth: {
-    expected_tools: expectedTools,
-  },
-  metadata: {
-    tools_called: toolsCalled,
-    ...metadata,
-  },
-  is_golden: true,
-  created_at: new Date().toISOString(),
-});
+): Log => {
+  const seen = new WeakSet();
+  return {
+    id,
+    agent_id: 'agent-123',
+    skill_id: 'skill-123',
+    method: HttpMethod.POST,
+    endpoint: '/v1/chat/completions',
+    function_name: FunctionName.CHAT_COMPLETE,
+    status: 200,
+    start_time: Date.now(),
+    end_time: Date.now() + 1000,
+    duration: 1000,
+    base_idk_config: {},
+    ai_provider: AIProvider.OPENAI,
+    model: 'gpt-4',
+    ai_provider_request_log: {
+      provider: AIProvider.OPENAI,
+      function_name: FunctionName.CHAT_COMPLETE,
+      method: HttpMethod.POST,
+      request_url: '/v1/chat/completions',
+      status: 200,
+      request_body: {
+        messages: [{ role: 'user', content: 'Test message' }],
+        tools_called: toolsCalled,
+      },
+      response_body: {
+        choices: [{ message: { content: 'Test response' } }],
+      },
+      raw_request_body: JSON.stringify(
+        {
+          messages: [{ role: 'user', content: 'Test message' }],
+          tools_called: toolsCalled,
+        },
+        (_key, value) => {
+          // Handle circular references
+          if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+              return '[Circular Reference]';
+            }
+            seen.add(value);
+          }
+          return value;
+        },
+      ),
+      raw_response_body: JSON.stringify({
+        choices: [{ message: { content: 'Test response' } }],
+      }),
+      cache_mode: CacheMode.SIMPLE,
+      cache_status: CacheStatus.MISS,
+    },
+    hook_logs: [],
+    metadata: {
+      expected_tools: expectedTools,
+      tools_called: toolsCalled,
+      ...metadata,
+    },
+    cache_status: CacheStatus.MISS,
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
+  };
+};
 
 // Helper function to create tool calls
 export const createToolCall = (

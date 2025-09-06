@@ -10,7 +10,7 @@ export interface BreadcrumbSegment {
 }
 
 export interface NavigationState {
-  section: 'pipelines' | 'documentation' | 'settings';
+  section: 'agents' | 'documentation' | 'settings';
   selectedAgent?: Agent;
   selectedSkill?: Skill;
   currentView:

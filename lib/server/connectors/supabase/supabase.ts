@@ -1,4 +1,3 @@
-import { DatasetDataPointBridge } from '@server/connectors/supabase/types';
 import {
   SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY,
@@ -9,24 +8,14 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
-import { generateObjectHash } from '@server/utils/hashing';
+
 import {
   Agent,
   type AgentCreateParams,
   type AgentQueryParams,
   type AgentUpdateParams,
 } from '@shared/types/data/agent';
-import {
-  DataPoint,
-  type DataPointCreateParams,
-  type DataPointQueryParams,
-  type DataPointUpdateParams,
-} from '@shared/types/data/data-point';
-import {
-  DataPointOutput,
-  type DataPointOutputCreateParams,
-  type DataPointOutputQueryParams,
-} from '@shared/types/data/data-point-output';
+
 import {
   Dataset,
   type DatasetCreateParams,
@@ -48,7 +37,12 @@ import {
   type ImprovedResponseQueryParams,
   type ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
-import type { LogsQueryParams } from '@shared/types/data/log';
+import { Log, type LogsQueryParams } from '@shared/types/data/log';
+import {
+  LogOutput,
+  type LogOutputCreateParams,
+  type LogOutputQueryParams,
+} from '@shared/types/data/log-output';
 import type { SkillQueryParams } from '@shared/types/data/skill';
 import {
   Skill,
@@ -63,6 +57,8 @@ import {
 import { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CachedValue } from '@shared/types/middleware/cache';
 import { z } from 'zod';
+import type { DatasetLogBridgeCreateParams } from './types';
+import { DatasetLogBridge } from './types';
 
 const checkEnvironmentVariables = (): void => {
   if (!SUPABASE_SERVICE_ROLE_KEY) {
@@ -261,38 +257,6 @@ ${await response.text()}`,
   }
 };
 
-/**
- * Deletes orphaned data points from the database.
- *
- * Not super efficient, but we can optimize it later.
- *
- * @param dataPointIds - The data point ids to check for orphaned data points.
- * @returns void
- */
-async function deleteOrphanedDataPoints(dataPointIds: string[]): Promise<void> {
-  const neededDataPoints = await selectFromSupabase(
-    'dataset_data_point_bridge',
-    { data_point_id: `in.(${dataPointIds.join(',')})` },
-    z.array(DatasetDataPointBridge),
-  );
-
-  // If a bridge record is not in the neededDataPoints, it is orphaned
-  const orphanedDataPoints = dataPointIds.filter(
-    (dataPointId) =>
-      !neededDataPoints.some(
-        (bridgeRecord) => bridgeRecord.data_point_id === dataPointId,
-      ),
-  );
-
-  if (orphanedDataPoints.length === 0) {
-    return;
-  }
-
-  await deleteFromSupabase('data_points', {
-    id: `in.(${orphanedDataPoints.join(',')})`,
-  });
-}
-
 export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   getFeedback: async (
     queryParams: FeedbackQueryParams,
@@ -373,49 +337,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       z.array(ImprovedResponse),
     );
 
-    // Compute content hash from the related log and set is_golden for matching data points
-    const logs = await selectFromSupabase(
-      'logs',
-      { id: `eq.${improvedResponse.log_id}` },
-      z.array(IdkRequestLog),
-    );
-    if (logs.length > 0) {
-      const base = `${logs[0].function_name}-${JSON.stringify(
-        logs[0].ai_provider_request_log?.request_body || {},
-      )}`;
-      const encoded = new TextEncoder().encode(base);
-      const digest = await crypto.subtle.digest({ name: 'SHA-256' }, encoded);
-      const contentHash = Array.from(new Uint8Array(digest))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-
-      // Primary: update rows matching content hash
-      const urlByContent = new URL(`${SUPABASE_URL}/rest/v1/data_points`);
-      urlByContent.searchParams.set('hash', `eq.${contentHash}`);
-      await fetch(urlByContent, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          apikey: SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ is_golden: true }),
-      });
-
-      // Legacy: also update rows where hash equals the log_id
-      const urlByLegacy = new URL(`${SUPABASE_URL}/rest/v1/data_points`);
-      urlByLegacy.searchParams.set('hash', `eq.${improvedResponse.log_id}`);
-      await fetch(urlByLegacy, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          apikey: SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ is_golden: true }),
-      });
-    }
-
     return insertedResponse[0];
   },
 
@@ -434,73 +355,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   deleteImprovedResponse: async (id: string): Promise<void> => {
-    // First get the improved response to find its log_id
-    const improvedResponse = await selectFromSupabase(
-      'improved_responses',
-      { id: `eq.${id}` },
-      z.array(ImprovedResponse),
-    );
-
-    if (improvedResponse.length === 0) {
-      throw new Error('Improved response not found');
-    }
-
-    const logId = improvedResponse[0].log_id;
-
-    // Delete the improved response
     await deleteFromSupabase('improved_responses', { id: `eq.${id}` });
-
-    // Check if there are any other improved responses for this log_id
-    const remainingResponses = await selectFromSupabase(
-      'improved_responses',
-      { log_id: `eq.${logId}` },
-      z.array(ImprovedResponse),
-    );
-
-    // If no other improved responses exist for this log_id, set is_golden = false
-    if (remainingResponses.length === 0) {
-      const logs = await selectFromSupabase(
-        'logs',
-        { id: `eq.${logId}` },
-        z.array(IdkRequestLog),
-      );
-      if (logs.length > 0) {
-        const base = `${logs[0].function_name}-${JSON.stringify(
-          logs[0].ai_provider_request_log?.request_body || {},
-        )}`;
-        const encoded = new TextEncoder().encode(base);
-        const digest = await crypto.subtle.digest({ name: 'SHA-256' }, encoded);
-        const contentHash = Array.from(new Uint8Array(digest))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('');
-
-        // Primary: update rows matching content hash
-        const urlByContent = new URL(`${SUPABASE_URL}/rest/v1/data_points`);
-        urlByContent.searchParams.set('hash', `eq.${contentHash}`);
-        await fetch(urlByContent, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            apikey: SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({ is_golden: false }),
-        });
-
-        // Legacy: also update rows where hash equals the log_id
-        const urlByLegacy = new URL(`${SUPABASE_URL}/rest/v1/data_points`);
-        urlByLegacy.searchParams.set('hash', `eq.${logId}`);
-        await fetch(urlByLegacy, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            apikey: SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({ is_golden: false }),
-        });
-      }
-    }
   },
 
   getAgents: async (queryParams: AgentQueryParams): Promise<Agent[]> => {
@@ -703,176 +558,8 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   deleteDataset: async (id: string): Promise<void> => {
-    // First, get all data points that are only referenced by this dataset
-    const dataPointsInDataset = await selectFromSupabase(
-      'dataset_data_point_bridge',
-      { dataset_id: `eq.${id}` },
-      z.array(
-        z.object({
-          dataset_id: z.uuid(),
-          data_point_id: z.uuid(),
-          created_at: z.iso.datetime({ offset: true }),
-        }),
-      ),
-    );
-
     // Delete the dataset (this will cascade delete bridge records due to ON DELETE CASCADE)
     await deleteFromSupabase('datasets', { id: `eq.${id}` });
-
-    // Delete orphaned data points
-    await deleteOrphanedDataPoints(
-      dataPointsInDataset.map((bridgeRecord) => bridgeRecord.data_point_id),
-    );
-  },
-
-  // Data Point methods
-  getDataPoints: async (
-    datasetId: string,
-    queryParams: DataPointQueryParams,
-  ): Promise<DataPoint[]> => {
-    const postgRESTQuery: Record<string, string> = {};
-    const bridgesPostgRESTQuery: Record<string, string> = {
-      dataset_id: `eq.${datasetId}`,
-    };
-
-    if (queryParams.ids) {
-      bridgesPostgRESTQuery.data_point_id = `in.(${queryParams.ids.join(',')})`;
-    }
-
-    // First get the data point IDs from the bridge table
-    const bridgeRecords = await selectFromSupabase(
-      'dataset_data_point_bridge',
-      bridgesPostgRESTQuery,
-      z.array(DatasetDataPointBridge),
-    );
-
-    if (bridgeRecords.length === 0) {
-      return [];
-    }
-
-    const dataPointIds = bridgeRecords.map((record) => record.data_point_id);
-
-    // Then get the actual data points
-    postgRESTQuery.id = `in.(${dataPointIds.join(',')})`;
-
-    if (queryParams.method) {
-      postgRESTQuery.method = `eq.${queryParams.method}`;
-    }
-    if (queryParams.endpoint) {
-      postgRESTQuery.endpoint = `eq.${queryParams.endpoint}`;
-    }
-    if (queryParams.function_name) {
-      postgRESTQuery.function_name = `eq.${queryParams.function_name}`;
-    }
-    if (queryParams.is_golden !== undefined) {
-      postgRESTQuery.is_golden = `eq.${queryParams.is_golden}`;
-    }
-    if (queryParams.limit) {
-      postgRESTQuery.limit = queryParams.limit.toString();
-    }
-    if (queryParams.offset) {
-      postgRESTQuery.offset = queryParams.offset.toString();
-    }
-
-    const dataPoints = await selectFromSupabase(
-      'data_points',
-      postgRESTQuery,
-      z.array(DataPoint),
-    );
-
-    return dataPoints;
-  },
-
-  createDataPoints: async (
-    datasetId: string,
-    dataPoints: DataPointCreateParams[],
-  ): Promise<DataPoint[]> => {
-    // Compute content hashes based on request_body only (matches cache middleware)
-    const computedHashes = await Promise.all(
-      dataPoints.map((dp) => {
-        return generateObjectHash(dp.request_body || {});
-      }),
-    );
-
-    // Look up existing data point hashes only
-    const existingHashRows = computedHashes.length
-      ? await selectFromSupabase(
-          'data_points',
-          { select: 'hash', hash: `in.(${computedHashes.join(',')})` },
-          z.array(z.object({ hash: z.string() })),
-        )
-      : [];
-
-    const existingHashSet = new Set(existingHashRows.map((r) => r.hash));
-    const toInsert = dataPoints
-      .map((dp, i) => ({ dp, hash: computedHashes[i] }))
-      .filter(({ hash }) => !existingHashSet.has(hash))
-      .map(({ dp, hash }) => ({
-        // table expects: hash + rest of fields
-        hash,
-        method: dp.method,
-        endpoint: dp.endpoint,
-        function_name: dp.function_name,
-        request_body: dp.request_body,
-        ground_truth: dp.ground_truth ?? null,
-        is_golden: dp.is_golden,
-        metadata: dp.metadata ?? {},
-      }));
-
-    // Create the data points without linking to the dataset
-    const insertedDataPoints = toInsert.length
-      ? await insertIntoSupabase('data_points', toInsert, z.array(DataPoint))
-      : [];
-
-    // Fetch full existing data points for return/linking
-    const existingDataPoints = existingHashSet.size
-      ? await selectFromSupabase(
-          'data_points',
-          { hash: `in.(${Array.from(existingHashSet).join(',')})` },
-          z.array(DataPoint),
-        )
-      : [];
-
-    const allDataPoints = [...existingDataPoints, ...insertedDataPoints];
-
-    const linkingBridges = allDataPoints.map((dp) => ({
-      dataset_id: datasetId,
-      data_point_id: dp.id,
-    }));
-
-    // Create the bridge record to link dataset and data point
-    // With upsert true to avoid insert errors
-    await insertIntoSupabase(
-      'dataset_data_point_bridge',
-      linkingBridges,
-      null,
-      true,
-    );
-
-    return [...existingDataPoints, ...insertedDataPoints];
-  },
-
-  updateDataPoint: async (
-    id: string,
-    update: DataPointUpdateParams,
-  ): Promise<DataPoint> => {
-    const updatedDataPoint = await updateInSupabase(
-      'data_points',
-      id,
-      update,
-      z.array(DataPoint),
-    );
-    return updatedDataPoint[0];
-  },
-
-  deleteDataPoints: async (datasetId: string, ids: string[]): Promise<void> => {
-    await deleteFromSupabase('dataset_data_point_bridge', {
-      dataset_id: `eq.${datasetId}`,
-      data_point_id: `in.(${ids.join(',')})`,
-    });
-
-    // Delete orphaned data points
-    await deleteOrphanedDataPoints(ids);
   },
 
   // Evaluation Run methods
@@ -943,69 +630,191 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     await deleteFromSupabase('evaluation_runs', { id: `eq.${id}` });
   },
 
-  // Evaluation Output methods
-  getDataPointOutputs: async (
+  // Logs
+  getLogs: async (queryParams: LogsQueryParams): Promise<Log[]> => {
+    const postgrestParams: Record<string, string> = {};
+
+    if (queryParams.id) {
+      postgrestParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.ids) {
+      postgrestParams.id = `in.(${queryParams.ids.join(',')})`;
+    }
+    if (queryParams.agent_id) {
+      postgrestParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.app_id) {
+      postgrestParams.app_id = `eq.${queryParams.app_id}`;
+    }
+    if (queryParams.method) {
+      postgrestParams.method = `eq.${queryParams.method}`;
+    }
+    if (queryParams.endpoint) {
+      postgrestParams.endpoint = `eq.${queryParams.endpoint}`;
+    }
+    if (queryParams.function_name) {
+      postgrestParams.function_name = `eq.${queryParams.function_name}`;
+    }
+    if (queryParams.status) {
+      postgrestParams.status = `eq.${queryParams.status}`;
+    }
+    if (queryParams.cache_status) {
+      postgrestParams.cache_status = `eq.${queryParams.cache_status}`;
+    }
+    if (queryParams.after) {
+      postgrestParams.start_time = `gte.${queryParams.after}`;
+    }
+    if (queryParams.before) {
+      postgrestParams.start_time = `lte.${queryParams.before}`;
+    }
+    if (queryParams.limit) {
+      postgrestParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgrestParams.offset = queryParams.offset.toString();
+    }
+
+    const logs = await selectFromSupabase(
+      'logs',
+      postgrestParams,
+      z.array(Log),
+    );
+
+    return logs;
+  },
+
+  deleteLog: async (id: string): Promise<void> => {
+    await deleteFromSupabase('logs', { id: `eq.${id}` });
+  },
+
+  // Dataset-Log Bridge
+  getDatasetLogs: async (
+    datasetId: string,
+    queryParams: LogsQueryParams,
+  ): Promise<Log[]> => {
+    // First, get the log IDs from the bridge table
+    const bridgeEntries = await selectFromSupabase(
+      'dataset_log_bridge',
+      { dataset_id: `eq.${datasetId}` },
+      z.array(DatasetLogBridge),
+    );
+
+    if (bridgeEntries.length === 0) {
+      return [];
+    }
+
+    const logIds = bridgeEntries.map((entry: DatasetLogBridge) => entry.log_id);
+
+    // Then, get the logs using the IDs
+    const postgrestParams: Record<string, string> = {
+      id: `in.(${logIds.join(',')})`,
+    };
+
+    if (queryParams.limit) {
+      postgrestParams.limit = queryParams.limit.toString();
+    }
+
+    if (queryParams.offset) {
+      postgrestParams.offset = queryParams.offset.toString();
+    }
+
+    const logs = await selectFromSupabase(
+      'logs',
+      postgrestParams,
+      z.array(Log),
+    );
+
+    return logs;
+  },
+
+  addLogsToDataset: async (
+    datasetId: string,
+    logIds: string[],
+  ): Promise<void> => {
+    const bridgeEntries: DatasetLogBridgeCreateParams[] = logIds.map(
+      (logId) => ({
+        dataset_id: datasetId,
+        log_id: logId,
+      }),
+    );
+
+    await insertIntoSupabase('dataset_log_bridge', bridgeEntries, null);
+  },
+
+  removeLogsFromDataset: async (
+    datasetId: string,
+    logIds: string[],
+  ): Promise<void> => {
+    await deleteFromSupabase('dataset_log_bridge', {
+      dataset_id: `eq.${datasetId}`,
+      log_id: `in.(${logIds.join(',')})`,
+    });
+  },
+
+  // Log Outputs
+  getLogOutputs: async (
     evaluationRunId: string,
-    queryParams: DataPointOutputQueryParams,
-  ): Promise<DataPointOutput[]> => {
-    const postgRESTQuery: Record<string, string> = {
-      // The evaluation run id is always required
+    queryParams: LogOutputQueryParams,
+  ): Promise<LogOutput[]> => {
+    const postgrestParams: Record<string, string> = {
       evaluation_run_id: `eq.${evaluationRunId}`,
     };
 
-    if (queryParams.ids) {
-      postgRESTQuery.id = `in.(${queryParams.ids.join(',')})`;
+    if (queryParams.ids && queryParams.ids.length > 0) {
+      postgrestParams.id = `in.(${queryParams.ids.join(',')})`;
     }
-    if (queryParams.data_point_ids) {
-      postgRESTQuery.data_point_id = `in.(${queryParams.data_point_ids.join(',')})`;
+
+    if (queryParams.log_ids && queryParams.log_ids.length > 0) {
+      postgrestParams.log_id = `in.(${queryParams.log_ids.join(',')})`;
     }
-    if (queryParams.score_min !== undefined) {
-      postgRESTQuery.score = `gte.${queryParams.score_min}`;
+
+    if (
+      typeof queryParams.score_min === 'number' &&
+      typeof queryParams.score_max === 'number'
+    ) {
+      postgrestParams.score = `and(gte.${queryParams.score_min},lte.${queryParams.score_max})`;
+    } else if (typeof queryParams.score_min === 'number') {
+      postgrestParams.score = `gte.${queryParams.score_min}`;
+    } else if (typeof queryParams.score_max === 'number') {
+      postgrestParams.score = `lte.${queryParams.score_max}`;
     }
-    if (queryParams.score_max !== undefined) {
-      const existing = postgRESTQuery.score;
-      if (existing) {
-        postgRESTQuery.score = `and(${existing},lte.${queryParams.score_max})`;
-      } else {
-        postgRESTQuery.score = `lte.${queryParams.score_max}`;
-      }
-    }
+
     if (queryParams.limit) {
-      postgRESTQuery.limit = queryParams.limit.toString();
+      postgrestParams.limit = queryParams.limit.toString();
     }
+
     if (queryParams.offset) {
-      postgRESTQuery.offset = queryParams.offset.toString();
+      postgrestParams.offset = queryParams.offset.toString();
     }
 
-    const dataPointOutputs = await selectFromSupabase(
-      'data_point_outputs',
-      postgRESTQuery,
-      z.array(DataPointOutput),
+    const logOutputs = await selectFromSupabase(
+      'log_outputs',
+      postgrestParams,
+      z.array(LogOutput),
     );
-
-    return dataPointOutputs;
+    return logOutputs;
   },
 
-  createDataPointOutput: async (
+  createLogOutput: async (
     evaluationRunId: string,
-    dataPointOutput: DataPointOutputCreateParams,
-  ): Promise<DataPointOutput> => {
-    const insertedDataPointOutput = await insertIntoSupabase(
-      'data_point_outputs',
-      {
-        ...dataPointOutput,
-        evaluation_run_id: evaluationRunId,
-      },
-      z.array(DataPointOutput),
+    logOutput: LogOutputCreateParams,
+  ): Promise<LogOutput> => {
+    const createdLogOutput = await insertIntoSupabase(
+      'log_outputs',
+      { ...logOutput, evaluation_run_id: evaluationRunId },
+      z.array(LogOutput),
     );
-    return insertedDataPointOutput[0];
+    return createdLogOutput[0];
   },
 
-  deleteDataPointOutput: async (
+  deleteLogOutput: async (
     evaluationRunId: string,
     id: string,
   ): Promise<void> => {
-    await deleteFromSupabase('data_point_outputs', {
+    await deleteFromSupabase('log_outputs', {
       id: `eq.${id}`,
       evaluation_run_id: `eq.${evaluationRunId}`,
     });
@@ -1099,8 +908,10 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
       postgRESTQuery,
       z.array(IdkRequestLog),
     );
+
     return logs;
   },
+
   createLog: async (log: IdkRequestLog): Promise<IdkRequestLog> => {
     const insertedLog = await insertIntoSupabase(
       'logs',
@@ -1109,6 +920,7 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     );
     return insertedLog[0];
   },
+
   deleteLog: async (id: string) => {
     await deleteFromSupabase('logs', { id: `eq.${id}` });
   },

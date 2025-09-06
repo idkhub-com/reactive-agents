@@ -6,7 +6,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToSkillDashboard = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}`,
       );
     },
     [router],
@@ -15,7 +15,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToLogs = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/logs`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/logs`,
       );
     },
     [router],
@@ -24,7 +24,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToLogDetail = useCallback(
     (agentName: string, skillName: string, logId: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/logs/${logId}`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/logs/${logId}`,
       );
     },
     [router],
@@ -33,7 +33,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToEvaluations = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations`,
       );
     },
     [router],
@@ -42,7 +42,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToEvaluationDetail = useCallback(
     (agentName: string, skillName: string, evalId: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations/${evalId}`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations/${evalId}`,
       );
     },
     [router],
@@ -51,7 +51,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToCreateEvaluation = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations/create`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations/create`,
       );
     },
     [router],
@@ -60,7 +60,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const replaceToEvaluations = useCallback(
     (agentName: string, skillName: string) => {
       router.replace(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations`,
       );
     },
     [router],
@@ -69,7 +69,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToDatasets = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets`,
       );
     },
     [router],
@@ -78,7 +78,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const replaceToDatasets = useCallback(
     (agentName: string, skillName: string) => {
       router.replace(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets`,
       );
     },
     [router],
@@ -87,7 +87,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToDatasetDetail = useCallback(
     (agentName: string, skillName: string, datasetId: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets/${datasetId}`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets/${datasetId}`,
       );
     },
     [router],
@@ -96,7 +96,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToCreateDataset = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/pipelines/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets/create`,
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets/create`,
       );
     },
     [router],
