@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import { Checkbox } from '@client/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -37,8 +38,16 @@ import { z } from 'zod';
 import { SelectLogsDialog } from './select-logs-dialog';
 
 const createDatasetSchema = z.object({
-  name: z.string().min(1, 'Dataset name is required'),
-  description: z.string().optional(),
+  name: z
+    .string()
+    .min(1, 'Dataset name is required')
+    .max(100, 'Dataset name must be less than 100 characters'),
+  description: z
+    .string()
+    .max(500, 'Description must be less than 500 characters')
+    .optional(),
+  is_realtime: z.boolean(),
+  realtime_size: z.number().min(1),
 });
 
 // Enhanced schema with async validation
@@ -102,14 +111,16 @@ export function CreateDatasetView(): ReactElement {
     defaultValues: {
       name: '',
       description: '',
+      is_realtime: false,
+      realtime_size: 100,
     },
     mode: 'onChange', // Enable real-time validation
   });
 
-  // Update current name when form value changes
+  // Update current name when form name field changes
   useEffect(() => {
-    const subscription = form.watch((value) => {
-      if (value.name !== undefined) {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'name' && value.name !== undefined) {
         setCurrentName(value.name);
       }
     });
@@ -118,7 +129,7 @@ export function CreateDatasetView(): ReactElement {
 
   const [isCreating, setIsCreating] = useState(false);
 
-  const onSubmit = (_data: CreateDatasetFormData) => {
+  const onSubmit = (data: CreateDatasetFormData) => {
     // Double-check name availability before submitting
     if (isAvailable === false) {
       form.setError('name', {
@@ -136,16 +147,28 @@ export function CreateDatasetView(): ReactElement {
       return;
     }
 
-    // Store form data and move to step 2 instead of creating immediately
-    setCurrentStep(CreateDatasetStep.SELECT_LOGS);
+    // If realtime dataset, create immediately since it doesn't need log selection
+    if (data.is_realtime) {
+      handleFinalCreate();
+    } else {
+      // Store form data and move to step 2 for manual log selection
+      setCurrentStep(CreateDatasetStep.SELECT_LOGS);
+    }
   };
 
   const handleFinalCreate = useCallback(async () => {
     const formData = form.getValues();
+    const currentAgent = navigationState.selectedAgent;
+    const currentSkill = navigationState.selectedSkill;
+
+    if (!currentAgent) return;
+
     const createParams: DatasetCreateParams = {
       name: formData.name.trim(),
-      agent_id: selectedAgent!.id,
+      agent_id: currentAgent.id,
       description: formData.description?.trim() || null,
+      is_realtime: formData.is_realtime,
+      realtime_size: formData.realtime_size,
       metadata: {},
     };
 
@@ -167,11 +190,8 @@ export function CreateDatasetView(): ReactElement {
 
       // Refresh datasets list and redirect to datasets, replacing history
       refetch();
-      if (navigationState.selectedAgent && navigationState.selectedSkill) {
-        replaceToDatasets(
-          navigationState.selectedAgent.name,
-          navigationState.selectedSkill.name,
-        );
+      if (currentAgent && currentSkill) {
+        replaceToDatasets(currentAgent.name, currentSkill.name);
         return;
       }
     } catch (error) {
@@ -180,6 +200,7 @@ export function CreateDatasetView(): ReactElement {
       // Parse error message to provide better feedback
       let errorMessage = 'Please try again later';
       let errorTitle = 'Error creating dataset';
+      const datasetName = formData.name.trim();
 
       if (
         error instanceof Error &&
@@ -188,14 +209,14 @@ export function CreateDatasetView(): ReactElement {
           error.message.toLowerCase().includes('unique'))
       ) {
         errorTitle = 'Dataset name already exists';
-        errorMessage = `A dataset named "${currentName}" already exists for this agent. Please choose a different name.`;
+        errorMessage = `A dataset named "${datasetName}" already exists for this agent. Please choose a different name.`;
 
         // Suggest an alternative name
         if (
           suggestAlternativeName &&
           typeof suggestAlternativeName === 'function'
         ) {
-          const suggestion = suggestAlternativeName(currentName);
+          const suggestion = suggestAlternativeName(datasetName);
           errorMessage += ` Try "${suggestion}" instead.`;
         }
       }
@@ -210,13 +231,11 @@ export function CreateDatasetView(): ReactElement {
     }
   }, [
     form,
-    selectedAgent,
     createDataset,
     addLogs,
     selectedLogs,
     refetch,
     toast,
-    currentName,
     suggestAlternativeName,
     navigationState.selectedAgent,
     navigationState.selectedSkill,
@@ -316,6 +335,9 @@ export function CreateDatasetView(): ReactElement {
   }
 
   // Progress steps for header
+  const formData = form.getValues();
+  const isRealtimeDataset = formData.is_realtime;
+
   const steps = [
     {
       id: CreateDatasetStep.DATASET_INFO,
@@ -324,7 +346,7 @@ export function CreateDatasetView(): ReactElement {
     },
     {
       id: CreateDatasetStep.SELECT_LOGS,
-      title: 'Select Logs',
+      title: isRealtimeDataset ? 'Auto-managed Logs' : 'Select Logs',
       completed: false,
     },
   ];
@@ -498,6 +520,58 @@ export function CreateDatasetView(): ReactElement {
                         )}
                       />
 
+                      <FormField
+                        control={form.control}
+                        name="is_realtime"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Realtime Dataset</FormLabel>
+                              <FormDescription>
+                                Realtime datasets automatically maintain a
+                                buffer of recent logs instead of manually
+                                selected ones.
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {form.watch('is_realtime') && (
+                        <FormField
+                          control={form.control}
+                          name="realtime_size"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Buffer Size *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  placeholder="100"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(Number(e.target.value))
+                                  }
+                                  autoComplete="off"
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Maximum number of recent logs to keep in the
+                                realtime buffer
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
                       <div className="flex gap-2 pt-4">
                         <Button
                           type="submit"
@@ -537,8 +611,12 @@ export function CreateDatasetView(): ReactElement {
                           • Datasets organize evaluation logs for model testing
                         </li>
                         <li>
-                          • Logs can be imported from existing requests or added
-                          manually
+                          • Manual datasets: Logs can be imported from existing
+                          requests or added manually
+                        </li>
+                        <li>
+                          • Realtime datasets: Automatically maintain a buffer
+                          of the most recent logs
                         </li>
                         <li>
                           • Each log contains request/response pairs for
@@ -561,9 +639,13 @@ export function CreateDatasetView(): ReactElement {
               {/* Selected Logs */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Selected Logs</CardTitle>
+                  <CardTitle className="text-lg">
+                    {isRealtimeDataset ? 'Auto-managed Logs' : 'Selected Logs'}
+                  </CardTitle>
                   <CardDescription>
-                    Choose logs to include in your dataset
+                    {isRealtimeDataset
+                      ? 'This realtime dataset automatically manages its logs'
+                      : 'Choose logs to include in your dataset'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -145,6 +145,8 @@ const createDatasetsCtx = (
         agent_id: '00000000-0000-0000-0000-000000000002',
         name: 'Dataset',
         description: null,
+        is_realtime: false,
+        realtime_size: 0,
         metadata: {},
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',

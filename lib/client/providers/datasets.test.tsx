@@ -47,6 +47,8 @@ const mockDatasets: Dataset[] = [
     agent_id: '1',
     name: 'Test Dataset 1',
     description: 'Test Description 1',
+    is_realtime: false,
+    realtime_size: 0,
     metadata: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -56,6 +58,8 @@ const mockDatasets: Dataset[] = [
     agent_id: '2',
     name: 'Test Dataset 2',
     description: 'Test Description 2',
+    is_realtime: true,
+    realtime_size: 100,
     metadata: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -250,6 +254,8 @@ function TestComponent(): React.ReactElement {
               name: 'New Dataset',
               agent_id: '1',
               description: 'New Description',
+              is_realtime: false,
+              realtime_size: 0,
               metadata: {},
             });
           } catch (error) {
@@ -381,6 +387,8 @@ describe('DatasetsProvider', () => {
       agent_id: '1',
       name: 'New Dataset',
       description: 'New Description',
+      is_realtime: false,
+      realtime_size: 0,
       metadata: {},
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -449,6 +457,8 @@ describe('DatasetsProvider', () => {
         name: 'New Dataset',
         agent_id: '1',
         description: 'New Description',
+        is_realtime: false,
+        realtime_size: 0,
         metadata: {},
       });
     });

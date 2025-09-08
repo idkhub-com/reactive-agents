@@ -218,6 +218,7 @@ export function DatasetsView(): ReactElement {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Logs</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Last Used</TableHead>
@@ -238,7 +239,38 @@ export function DatasetsView(): ReactElement {
                         {dataset.description || 'No description'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">0 logs</Badge>
+                        {dataset.is_realtime ? (
+                          <Badge variant="default" className="text-xs">
+                            Realtime
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            Manual
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {dataset.is_realtime ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Max: {dataset.realtime_size}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              Auto-managed
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="text-xs text-primary hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDatasetClick(dataset);
+                            }}
+                          >
+                            View logs →
+                          </button>
+                        )}
                       </TableCell>
                       <TableCell>
                         {format(new Date(dataset.created_at), 'MMM dd, yyyy')}
