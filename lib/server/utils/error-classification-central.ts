@@ -8,6 +8,7 @@ import type { ErrorResponseBody } from '@shared/types/api/response/body';
 export enum ErrorClassification {
   CLIENT_ERROR = 'client_error',
   SERVER_ERROR = 'server_error',
+  INTERNAL_ERROR = 'internal_error',
   UNKNOWN = 'unknown',
 }
 
@@ -73,6 +74,146 @@ export function analyzeError(
     classification: ErrorClassification.SERVER_ERROR,
     statusCode: 500,
     genericMessage: getGenericServerMessage(errorTexts),
+  };
+}
+
+/**
+ * Analyzes internal system errors and classifies them appropriately
+ */
+export function analyzeInternalError(
+  error: Error,
+  context: {
+    provider?: string;
+    functionName?: string;
+    stage?: 'request' | 'response' | 'transformation' | 'validation';
+  } = {},
+): ErrorAnalysis {
+  const errorMessage = error.message.toLowerCase();
+  const errorName = error.name.toLowerCase();
+
+  // Network and connection errors
+  if (
+    errorMessage.includes('fetch') ||
+    errorMessage.includes('network') ||
+    errorMessage.includes('connection') ||
+    errorMessage.includes('timeout') ||
+    errorName.includes('timeout') ||
+    errorName.includes('network')
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 503,
+      genericMessage:
+        'Service temporarily unavailable due to network issues. Please retry your request.',
+    };
+  }
+
+  // Provider configuration errors
+  if (
+    (errorMessage.includes('provider') && errorMessage.includes('config')) ||
+    (errorMessage.includes('provider') && errorMessage.includes('not found')) ||
+    (errorMessage.includes('config') && errorMessage.includes('not found'))
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 500,
+      genericMessage:
+        'Internal configuration error. Our team has been notified.',
+    };
+  }
+
+  // Schema validation errors (check this before parsing errors)
+  if (
+    errorMessage.includes('schema') ||
+    errorMessage.includes('validation') ||
+    errorMessage.includes('invalid response') ||
+    context.stage === 'validation'
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 502,
+      genericMessage: 'Response validation failed. Please retry your request.',
+    };
+  }
+
+  // Response parsing and transformation errors
+  if (
+    errorMessage.includes('parse') ||
+    errorMessage.includes('json') ||
+    errorMessage.includes('transform') ||
+    context.stage === 'transformation' ||
+    context.stage === 'response'
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 502,
+      genericMessage:
+        'Invalid response format received from provider. Please retry your request.',
+    };
+  }
+
+  // Authentication/authorization errors in our system
+  if (
+    errorMessage.includes('unauthorized') ||
+    errorMessage.includes('forbidden') ||
+    errorMessage.includes('auth')
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 500,
+      genericMessage: 'Internal authentication error. Please contact support.',
+    };
+  }
+
+  // Memory/Resource exhaustion errors (check before general resource errors)
+  if (
+    errorMessage.includes('memory') ||
+    errorMessage.includes('out of memory') ||
+    errorMessage.includes('resource exhausted')
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 507,
+      genericMessage:
+        'Service temporarily unavailable due to resource constraints.',
+    };
+  }
+
+  // Rate limiting and throttling errors
+  if (
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('throttle') ||
+    errorMessage.includes('too many requests')
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 429,
+      genericMessage:
+        'Request rate limit exceeded. Please retry after a moment.',
+    };
+  }
+
+  // File/Resource access errors
+  if (
+    errorMessage.includes('file') ||
+    (errorMessage.includes('resource') &&
+      !errorMessage.includes('exhausted')) ||
+    errorMessage.includes('not found') ||
+    errorMessage.includes('access denied')
+  ) {
+    return {
+      classification: ErrorClassification.INTERNAL_ERROR,
+      statusCode: 404,
+      genericMessage: 'Requested resource not found or access denied.',
+    };
+  }
+
+  // Default internal error
+  return {
+    classification: ErrorClassification.INTERNAL_ERROR,
+    statusCode: 500,
+    genericMessage:
+      'An internal system error occurred. Our team has been notified.',
   };
 }
 
@@ -431,7 +572,69 @@ function getSuggestedAction(classification: ErrorClassification): string {
       return 'Review and correct your request parameters, authentication, or usage limits.';
     case ErrorClassification.SERVER_ERROR:
       return 'This appears to be a server-side issue. Please retry your request.';
+    case ErrorClassification.INTERNAL_ERROR:
+      return 'This is an internal system issue. Please retry your request or contact support if the problem persists.';
     default:
       return 'Please retry your request. Contact support if the issue persists.';
   }
+}
+
+/**
+ * Creates a standardized internal error response
+ */
+export function createInternalErrorResponse(
+  error: Error,
+  context: {
+    provider?: string;
+    functionName?: string;
+    stage?: 'request' | 'response' | 'transformation' | 'validation';
+  } = {},
+): ErrorResponseBody {
+  const analysis = analyzeInternalError(error, context);
+  const provider = context.provider || 'system';
+
+  return {
+    error: {
+      message: analysis.genericMessage || 'An internal system error occurred.',
+      type: 'internal_error',
+      param: undefined,
+      code: 'INTERNAL_ERROR',
+    },
+    provider: provider,
+    error_details: {
+      original_message: error.message,
+      original_error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause,
+      },
+      classification: analysis.classification,
+      suggested_action: getSuggestedAction(analysis.classification),
+      context: context,
+    },
+    status: analysis.statusCode,
+  };
+}
+
+/**
+ * Helper function for provider-specific request handlers to create standardized error responses
+ * This replaces the manual error handling in individual provider handlers
+ */
+export function createProviderErrorResponse(
+  error: unknown,
+  provider: string,
+  functionName?: string,
+): Response {
+  const errorObj = error instanceof Error ? error : new Error(String(error));
+  const internalErrorResponse = createInternalErrorResponse(errorObj, {
+    provider,
+    functionName,
+    stage: 'request',
+  });
+
+  return new Response(JSON.stringify(internalErrorResponse), {
+    status: internalErrorResponse.status || 500,
+    headers: { 'content-type': 'application/json' },
+  });
 }

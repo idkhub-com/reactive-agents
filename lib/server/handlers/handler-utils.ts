@@ -408,27 +408,48 @@ export async function tryTargets(
         // TypeError will check for all unhandled exceptions.
         // GatewayError will check for all handled exceptions which cannot allow the request to proceed.
         if (e instanceof TypeError || e instanceof GatewayError) {
-          const errorMessage =
-            e instanceof GatewayError ? e.message : 'Something went wrong';
-          response = new Response(
-            JSON.stringify({
-              status: 'failure',
-              message: errorMessage,
-            }),
-            {
-              status: 500,
-              headers: {
-                'content-type': 'application/json',
-                // Add this header so that the fallback loop can be interrupted if its an exception.
-                'x-idk-gateway-exception': 'true',
-              },
-            },
+          const { createInternalErrorResponse } = await import(
+            '@server/utils/error-classification-central'
           );
+          const errorObj = e instanceof Error ? e : new Error(String(e));
+          const internalErrorResponse = createInternalErrorResponse(errorObj, {
+            provider: idkConfig.targets[0]?.provider || 'system',
+            functionName: idkRequestData.functionName,
+            stage: 'request',
+          });
+
+          response = new Response(JSON.stringify(internalErrorResponse), {
+            status: internalErrorResponse.status || 500,
+            headers: {
+              'content-type': 'application/json',
+              // Add this header so that the fallback loop can be interrupted if its an exception.
+              'x-idk-gateway-exception': 'true',
+            },
+          });
         } else {
           if (e instanceof HttpError) {
             response = new Response(e.response.body, {
               status: e.response.status,
               statusText: e.response.statusText,
+            });
+          } else {
+            // Handle any other thrown errors with centralized system
+            const { createInternalErrorResponse } = await import(
+              '@server/utils/error-classification-central'
+            );
+            const errorObj = e instanceof Error ? e : new Error(String(e));
+            const internalErrorResponse = createInternalErrorResponse(
+              errorObj,
+              {
+                provider: idkConfig.targets[0]?.provider || 'system',
+                functionName: idkRequestData.functionName,
+                stage: 'request',
+              },
+            );
+
+            response = new Response(JSON.stringify(internalErrorResponse), {
+              status: internalErrorResponse.status || 500,
+              headers: { 'content-type': 'application/json' },
             });
           }
           console.error(e);

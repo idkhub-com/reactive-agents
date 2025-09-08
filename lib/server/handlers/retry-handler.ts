@@ -1,4 +1,5 @@
 import { HttpError } from '@server/errors/http';
+import { createInternalErrorResponse } from '@server/utils/error-classification-central';
 import {
   MAX_RETRY_LIMIT_MS,
   POSSIBLE_RETRY_STATUS_HEADERS,
@@ -192,33 +193,31 @@ export const retryRequest = async (
   } catch (error) {
     console.error(error);
     let errorResponse: Response;
-    if (
-      error instanceof TypeError &&
-      error.cause instanceof Error &&
-      error.cause?.name === 'ConnectTimeoutError'
-    ) {
-      console.error('ConnectTimeoutError: ', error.cause);
-      // This error comes in case the host address is unreachable. Empty status code used to get returned
-      // from here hence no retry logic used to get called.
-      errorResponse = new Response(error.message, {
-        status: 503,
-      });
-    } else if (error instanceof HttpError) {
+
+    if (error instanceof HttpError) {
       errorResponse = new Response(error.response.body, {
         status: error.response.status,
         statusText: error.response.statusText,
       });
     } else if (error instanceof Error) {
-      // The retry handler will always attach status code to the error object
-      errorResponse = new Response(
-        `Message: ${error.message} Cause: ${error.cause ?? 'NA'} Name: ${error.name}`,
-        {
-          status: 500,
-        },
-      );
+      // Create standardized internal error response for all other errors
+      const internalErrorResponse = createInternalErrorResponse(error, {
+        provider: 'system',
+        stage: 'request',
+      });
+      errorResponse = new Response(JSON.stringify(internalErrorResponse), {
+        status: internalErrorResponse.status || 500,
+        headers: { 'content-type': 'application/json' },
+      });
     } else {
-      errorResponse = new Response('Something went wrong', {
-        status: 500,
+      const unknownError = new Error('Unknown error occurred during request');
+      const internalErrorResponse = createInternalErrorResponse(unknownError, {
+        provider: 'system',
+        stage: 'request',
+      });
+      errorResponse = new Response(JSON.stringify(internalErrorResponse), {
+        status: internalErrorResponse.status || 500,
+        headers: { 'content-type': 'application/json' },
       });
     }
 

@@ -180,9 +180,10 @@ export const ErrorResponseBody = z.object({
       original_message: z.string().optional(), // Original provider message
       original_error: z.record(z.string(), z.unknown()), // Full provider error details
       classification: z
-        .enum(['client_error', 'server_error', 'unknown'])
+        .enum(['client_error', 'server_error', 'internal_error', 'unknown'])
         .optional(),
       suggested_action: z.string().optional(), // Helpful user guidance
+      context: z.record(z.string(), z.unknown()).optional(), // Additional context for internal errors
     })
     .optional(),
   message: z.string().optional(), // Legacy field

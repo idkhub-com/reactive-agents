@@ -2,7 +2,7 @@ import { providerConfigs } from '@server/ai-providers';
 import { openAIModelResponseJSONToStreamGenerator } from '@server/ai-providers/open-ai-base/create-model-response';
 import { openAIChatCompleteJSONToStreamResponseTransform } from '@server/ai-providers/openai/chat-complete';
 import { openAICompleteJSONToStreamResponseTransform } from '@server/ai-providers/openai/complete';
-import { HttpError } from '@server/errors/http';
+import { createInternalErrorResponse } from '@server/utils/error-classification-central';
 import type {
   JSONToStreamGeneratorTransformFunction,
   ResponseChunkStreamTransformFunction,
@@ -49,11 +49,21 @@ export async function responseHandler(
 
   const providerConfig = providerConfigs[provider];
   if (!providerConfig) {
-    throw new HttpError('Provider not found', {
-      status: 500,
-      statusText: 'Provider not found',
-      body: JSON.stringify({ error: 'Provider not found' }),
-    });
+    const internalErrorResponse = createInternalErrorResponse(
+      new Error(`Provider config not found for provider: ${provider}`),
+      {
+        provider: provider,
+        functionName: responseTransformerFunctionName,
+        stage: 'request',
+      },
+    );
+    return {
+      response: new Response(JSON.stringify(internalErrorResponse), {
+        status: internalErrorResponse.status || 500,
+        headers: { 'content-type': 'application/json' },
+      }),
+      idkResponseBody: internalErrorResponse,
+    };
   }
   let responseTransformFunctions = providerConfig?.responseTransforms;
 
