@@ -23,7 +23,7 @@
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/types": "^3.862.0",
-    "@cloudflare/workers-types": "^4.20250826.0",
+    "@cloudflare/workers-types": "^4.20250906.0",
     "@dicebear/collection": "^9.2.4",
     "@dicebear/core": "^9.2.4",
     "@hono/node-ws": "^1.2.0",
