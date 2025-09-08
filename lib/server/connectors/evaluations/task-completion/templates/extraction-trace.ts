@@ -1,4 +1,4 @@
-import type { TaskCompletionTemplateConfig } from '../../types/task-completion';
+import type { TaskCompletionTemplateConfig } from '@server/connectors/evaluations/task-completion/types';
 
 /**
  * Template for extracting task and outcome from trace data

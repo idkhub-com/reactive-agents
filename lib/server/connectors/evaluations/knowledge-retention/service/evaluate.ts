@@ -1,4 +1,4 @@
-import type { KnowledgeRetentionAverageResult } from '@server/connectors/evaluations/types/knowledge-retention';
+import type { KnowledgeRetentionAverageResult } from '@server/connectors/evaluations/knowledge-retention/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';

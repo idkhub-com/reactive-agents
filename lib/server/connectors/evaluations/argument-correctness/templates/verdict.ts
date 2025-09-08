@@ -1,4 +1,4 @@
-import type { ArgumentCorrectnessTemplateConfig } from '../../types/argument-correctness';
+import type { ArgumentCorrectnessTemplateConfig } from '@server/connectors/evaluations/argument-correctness/types';
 
 /**
  * Template for generating overall verdict on argument correctness

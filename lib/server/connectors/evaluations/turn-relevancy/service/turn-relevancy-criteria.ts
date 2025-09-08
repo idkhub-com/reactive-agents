@@ -1,6 +1,8 @@
 import { getTurnRelevancyTemplate } from '@server/connectors/evaluations/turn-relevancy/templates/main';
-import type { TurnRelevancyMetadata } from '@server/connectors/evaluations/types/turn-relevancy';
-import { TurnRelevancyResultSchema } from '@server/connectors/evaluations/types/turn-relevancy';
+import {
+  type TurnRelevancyMetadata,
+  TurnRelevancyResultSchema,
+} from '@server/connectors/evaluations/turn-relevancy/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type {
   GenericEvaluationInput,

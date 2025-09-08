@@ -1,5 +1,5 @@
 import { getTurnRelevancyTemplate } from '@server/connectors/evaluations/turn-relevancy/templates/main';
-import type { TurnRelevancyAverageResult } from '@server/connectors/evaluations/types/turn-relevancy';
+import type { TurnRelevancyAverageResult } from '@server/connectors/evaluations/turn-relevancy/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';

@@ -1,5 +1,5 @@
 import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/role-adherence/templates/main';
-import type { RoleAdherenceAverageResult } from '@server/connectors/evaluations/types/role-adherence';
+import type { RoleAdherenceAverageResult } from '@server/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';

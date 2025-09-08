@@ -1,6 +1,7 @@
 import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/role-adherence/templates/main';
-import type { RoleAdherenceMetadata } from '@server/connectors/evaluations/types/role-adherence';
-import { RoleAdherenceResultSchema } from '@server/connectors/evaluations/types/role-adherence';
+import type { RoleAdherenceMetadata } from '@server/connectors/evaluations/role-adherence/types';
+import { RoleAdherenceResultSchema } from '@server/connectors/evaluations/role-adherence/types';
+
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type {
   GenericEvaluationInput,

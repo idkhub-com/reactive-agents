@@ -2,13 +2,11 @@ import { chatRouter } from '@server/api/v1/chat';
 import { completionsRouter } from '@server/api/v1/completions';
 import { idkRouter } from '@server/api/v1/idk';
 import { responsesRouter } from '@server/api/v1/responses';
-import {
-  argumentCorrectnessEvaluationConnector,
-  roleAdherenceEvaluationConnector,
-  taskCompletionEvaluationConnector,
-  toolCorrectnessEvaluationConnector,
-  turnRelevancyEvaluationConnector,
-} from '@server/connectors/evaluations';
+import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
+import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
+import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
+import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
+import { turnRelevancyEvaluationConnector } from '@server/connectors/evaluations/turn-relevancy';
 
 import {
   supabaseCacheStorageConnector,
