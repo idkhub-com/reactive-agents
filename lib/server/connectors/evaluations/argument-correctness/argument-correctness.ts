@@ -10,8 +10,12 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName as Names } from '@shared/types/idkhub/evaluations';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
-import { evaluateArgumentCorrectness } from './service/evaluate';
+import {
+  evaluateArgumentCorrectness,
+  evaluateOneLogForArgumentCorrectness,
+} from './service/evaluate';
 
 const methodConfig: EvaluationMethodDetails = {
   method: Names.ARGUMENT_CORRECTNESS as unknown as EvaluationMethodName,
@@ -43,9 +47,22 @@ async function runEvaluation(
   return evaluationRun;
 }
 
+async function evaluateOneLog(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  await evaluateOneLogForArgumentCorrectness(
+    evaluationRunId,
+    log,
+    userDataStorageConnector,
+  );
+}
+
 export const argumentCorrectnessEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => methodConfig,
     evaluate: runEvaluation,
+    evaluateOneLog,
     getParameterSchema: ArgumentCorrectnessEvaluationParameters,
   };
