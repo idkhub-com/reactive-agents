@@ -14,6 +14,7 @@ import type {
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 /**
  * Extract context and response from log with standardized fallback logic
@@ -433,4 +434,131 @@ export async function evaluateKnowledgeRetention(
 
     throw error;
   }
+}
+
+export async function evaluateOneLogForKnowledgeRetention(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  // Get the evaluation run to access parameters
+  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
+    id: evaluationRunId,
+  });
+  const evaluationRun = evaluationRuns[0];
+  if (!evaluationRun) {
+    throw new Error(`Evaluation run ${evaluationRunId} not found`);
+  }
+
+  const params = (evaluationRun.metadata?.parameters ||
+    {}) as KnowledgeRetentionEvaluationParameters;
+
+  // Convert IdkRequestLog to Log format for compatibility
+  const logForEvaluation: Log = log as Log;
+
+  // Create LLM judge
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+    timeout: params.timeout,
+  });
+
+  // Evaluate the single log
+  await evaluateSingleLog(
+    logForEvaluation,
+    params,
+    llmJudge,
+    evaluationRunId,
+    userDataStorageConnector,
+  );
+
+  // Get all log outputs for this evaluation run to calculate new average
+  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
+    evaluationRunId,
+    {},
+  );
+
+  // Recalculate the evaluation run statistics
+  const scores = allLogOutputs
+    .map((output) => output.score)
+    .filter((s) => s !== null && s !== undefined);
+  const averageScore = scores.length
+    ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+    : 0;
+
+  const threshold = params.threshold || 0.6;
+  const passedCount = scores.filter((score) => score >= threshold).length;
+  const failedCount = scores.length - passedCount;
+
+  // Calculate knowledge retention metrics
+  let totalAssistantTurns = 0;
+  let assistantTurnsWithoutAttrition = 0;
+  let totalRetentionAccuracy = 0;
+  let totalContextConsistency = 0;
+  let knowledgeRetentionCount = 0;
+
+  for (const output of allLogOutputs) {
+    const kr = output.metadata?.knowledgeRetention as
+      | {
+          assistantTurnsWithoutAttrition?: number;
+          totalAssistantTurns?: number;
+          retentionAccuracy?: number;
+          contextConsistency?: number;
+        }
+      | undefined;
+
+    if (kr) {
+      totalAssistantTurns += kr.totalAssistantTurns || 0;
+      assistantTurnsWithoutAttrition += kr.assistantTurnsWithoutAttrition || 0;
+      totalRetentionAccuracy += kr.retentionAccuracy || 0;
+      totalContextConsistency += kr.contextConsistency || 0;
+      knowledgeRetentionCount++;
+    }
+  }
+
+  const averageRetentionAccuracy =
+    knowledgeRetentionCount > 0
+      ? totalRetentionAccuracy / knowledgeRetentionCount
+      : 0;
+  const averageContextConsistency =
+    knowledgeRetentionCount > 0
+      ? totalContextConsistency / knowledgeRetentionCount
+      : 0;
+  const overallRetentionRate =
+    totalAssistantTurns > 0
+      ? assistantTurnsWithoutAttrition / totalAssistantTurns
+      : 0;
+
+  // Update the evaluation run with new statistics
+  await userDataStorageConnector.updateEvaluationRun(evaluationRunId, {
+    results: {
+      ...(evaluationRun.results || {}),
+      total_logs: allLogOutputs.length,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      average_score: averageScore,
+      threshold_used: threshold,
+      evaluation_outputs: allLogOutputs.map((o) => o.id),
+      average_retention_accuracy: averageRetentionAccuracy,
+      average_context_consistency: averageContextConsistency,
+      total_assistant_turns: totalAssistantTurns,
+      assistant_turns_without_attrition: assistantTurnsWithoutAttrition,
+      overall_retention_rate: overallRetentionRate,
+    },
+    metadata: {
+      ...evaluationRun.metadata,
+      total_logs: allLogOutputs.length,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      average_score: averageScore,
+      threshold_used: threshold,
+      evaluation_outputs: allLogOutputs.map((o) => o.id),
+      average_retention_accuracy: averageRetentionAccuracy,
+      average_context_consistency: averageContextConsistency,
+      total_assistant_turns: totalAssistantTurns,
+      assistant_turns_without_attrition: assistantTurnsWithoutAttrition,
+      overall_retention_rate: overallRetentionRate,
+    },
+  });
 }

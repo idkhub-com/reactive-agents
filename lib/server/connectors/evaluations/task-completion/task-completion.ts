@@ -1,4 +1,7 @@
-import { evaluateTaskCompletion } from '@server/connectors/evaluations/task-completion/service/evaluate';
+import {
+  evaluateOneLogForTaskCompletion,
+  evaluateTaskCompletion,
+} from '@server/connectors/evaluations/task-completion/service/evaluate';
 import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
@@ -10,6 +13,7 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 // Simplified method configuration constant - only essential fields for standardization
 const taskCompletionMethodConfig: EvaluationMethodDetails = {
@@ -51,9 +55,22 @@ async function runEvaluation(
   return evaluationRun;
 }
 
+async function evaluateOneLog(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  await evaluateOneLogForTaskCompletion(
+    evaluationRunId,
+    log,
+    userDataStorageConnector,
+  );
+}
+
 // Evaluation connector constant
 export const taskCompletionEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => taskCompletionMethodConfig,
   evaluate: runEvaluation,
+  evaluateOneLog,
   getParameterSchema: TaskCompletionEvaluationParameters,
 };

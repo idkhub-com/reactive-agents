@@ -163,5 +163,10 @@ export interface EvaluationMethodConnector {
     jobDetails: EvaluationRunJobDetails,
     userDataStorageConnector: UserDataStorageConnector,
   ) => Promise<EvaluationRun>;
+  evaluateOneLog: (
+    evaluationRunId: string,
+    log: IdkRequestLog,
+    userDataStorageConnector: UserDataStorageConnector,
+  ) => Promise<void>;
   getParameterSchema: z.ZodType;
 }
