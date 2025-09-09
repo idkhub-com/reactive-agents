@@ -1,10 +1,54 @@
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness/conversation-completeness';
+import { evaluateOneLogForConversationCompleteness } from '@server/connectors/evaluations/conversation-completeness/service/evaluate';
+import type { UserDataStorageConnector } from '@server/types/connector';
+import {
+  type EvaluationRun,
+  EvaluationRunStatus,
+} from '@shared/types/data/evaluation-run';
 import type { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import { describe, expect, it } from 'vitest';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type z from 'zod';
 
+// Mock the constants
+vi.mock('@server/constants', () => ({
+  OPENAI_API_KEY: 'test-api-key',
+  API_URL: 'http://localhost:3000',
+  BEARER_TOKEN: 'idk',
+}));
+
+// Mock fetch globally
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Mock the user data storage connector
+const mockUserDataStorageConnector = {
+  getEvaluationRuns: vi.fn(),
+  createLogOutput: vi.fn(),
+  getLogOutputs: vi.fn(),
+  updateEvaluationRun: vi.fn(),
+} as unknown as UserDataStorageConnector;
+
+const mockedGetEvaluationRuns = vi.mocked(
+  mockUserDataStorageConnector.getEvaluationRuns,
+);
+const mockedCreateLogOutput = vi.mocked(
+  mockUserDataStorageConnector.createLogOutput,
+);
+const mockedGetLogOutputs = vi.mocked(
+  mockUserDataStorageConnector.getLogOutputs,
+);
+const mockedUpdateEvaluationRun = vi.mocked(
+  mockUserDataStorageConnector.updateEvaluationRun,
+);
+
 describe('Conversation Completeness Evaluation', () => {
+  beforeEach(() => {
+    mockFetch.mockClear();
+    vi.clearAllMocks();
+  });
+
   it('should have correct connector configuration', () => {
     const details = conversationCompletenessEvaluationConnector.getDetails();
 
@@ -249,5 +293,289 @@ describe('Conversation Completeness Evaluation', () => {
 
     const result = schema.safeParse(unknownParams);
     expect(result.success).toBe(false);
+  });
+
+  describe('evaluateOneLogForConversationCompleteness', () => {
+    it('should evaluate a single log and update evaluation run statistics', async () => {
+      const evaluationRunId = 'test-evaluation-run-id';
+      const mockLog = {
+        id: 'test-log-id',
+        input: 'User wants help with their project',
+        output:
+          'I can help you with your project. What specifically do you need?',
+        ai_provider_request_log: {
+          request_body: {
+            context: 'User conversation about project help',
+          },
+        },
+        metadata: {
+          ground_truth: {
+            text: 'Helpful response that addresses user needs',
+          },
+        },
+      } as unknown as IdkRequestLog;
+
+      // Mock LLM judge response
+      const mockLLMResponse = {
+        output: [
+          {
+            type: 'message',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  score: 0.8,
+                  reasoning:
+                    'The conversation shows good completeness with relevant follow-up questions.',
+                }),
+              },
+            ],
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockLLMResponse),
+      });
+
+      // Mock evaluation run retrieval
+      mockedGetEvaluationRuns.mockResolvedValue([
+        {
+          id: evaluationRunId,
+          dataset_id: 'test-dataset-id',
+          agent_id: 'test-agent-id',
+          skill_id: 'test-skill-id',
+          evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
+          name: 'Test Evaluation Run',
+          description: 'Test description',
+          status: EvaluationRunStatus.RUNNING,
+          results: {
+            total_logs: 1,
+            passed_count: 1,
+            failed_count: 0,
+            average_score: 0.9,
+            threshold_used: 0.5,
+            evaluation_outputs: ['existing-output-id'],
+          },
+          metadata: {
+            parameters: {
+              threshold: 0.5,
+              model: 'gpt-4o',
+              temperature: 0.1,
+              max_tokens: 1000,
+            },
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      // Mock log output creation
+      mockedCreateLogOutput.mockResolvedValue({
+        id: 'new-output-id',
+        log_id: 'test-log-id',
+        output: {
+          score: 0.8,
+          reasoning: 'The conversation shows good completeness',
+          passed: true,
+          threshold: 0.5,
+        },
+        score: 0.8,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      });
+
+      // Mock existing log outputs retrieval
+      mockedGetLogOutputs.mockResolvedValue([
+        {
+          id: 'existing-output-id',
+          log_id: 'existing-log-id',
+          output: {},
+          score: 0.9,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'new-output-id',
+          log_id: 'test-log-id',
+          output: {},
+          score: 0.8,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      // Mock evaluation run update
+      mockedUpdateEvaluationRun.mockResolvedValue(
+        {} as unknown as EvaluationRun,
+      );
+
+      await evaluateOneLogForConversationCompleteness(
+        evaluationRunId,
+        mockLog,
+        mockUserDataStorageConnector,
+      );
+
+      // Verify evaluation run was retrieved
+      expect(mockedGetEvaluationRuns).toHaveBeenCalledWith({
+        id: evaluationRunId,
+      });
+
+      // Verify log output was created
+      expect(mockedCreateLogOutput).toHaveBeenCalledWith(
+        evaluationRunId,
+        expect.objectContaining({
+          log_id: 'test-log-id',
+          score: 0.8,
+        }),
+      );
+
+      // Verify log outputs were retrieved for recalculation
+      expect(mockedGetLogOutputs).toHaveBeenCalledWith(evaluationRunId, {});
+
+      // Verify evaluation run was updated with new statistics
+      expect(mockedUpdateEvaluationRun).toHaveBeenCalledWith(
+        evaluationRunId,
+        expect.objectContaining({
+          results: expect.objectContaining({
+            total_logs: 2,
+            passed_count: 2,
+            failed_count: 0,
+            average_score: expect.closeTo(0.85, 0.01), // Account for floating point precision
+            threshold_used: 0.5,
+          }),
+          metadata: expect.objectContaining({
+            total_logs: 2,
+            passed_count: 2,
+            failed_count: 0,
+            average_score: expect.closeTo(0.85, 0.01), // Account for floating point precision
+            threshold_used: 0.5,
+          }),
+        }),
+      );
+    });
+
+    it('should handle threshold checking correctly', async () => {
+      const evaluationRunId = 'test-evaluation-run-id';
+      const mockLog = {
+        id: 'test-log-id',
+        input: 'Simple question',
+        output: 'Simple answer',
+        ai_provider_request_log: {
+          request_body: { context: 'Simple conversation' },
+        },
+        metadata: {
+          ground_truth: { text: 'Simple answer that lacks depth' },
+        },
+      } as unknown as IdkRequestLog;
+
+      const mockLLMResponse = {
+        output: [
+          {
+            type: 'message',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  score: 0.4, // Below threshold
+                  reasoning: 'Conversation lacks depth and completeness',
+                }),
+              },
+            ],
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockLLMResponse),
+      });
+
+      mockedGetEvaluationRuns.mockResolvedValue([
+        {
+          id: evaluationRunId,
+          dataset_id: 'test-dataset-id',
+          agent_id: 'test-agent-id',
+          skill_id: 'test-skill-id',
+          evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
+          name: 'Test Evaluation Run',
+          description: 'Test description',
+          status: EvaluationRunStatus.RUNNING,
+          results: {},
+          metadata: {
+            parameters: {
+              threshold: 0.6, // Higher threshold
+              model: 'gpt-4o',
+            },
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      mockedCreateLogOutput.mockResolvedValue({
+        id: 'new-output-id',
+        log_id: 'test-log-id',
+        output: {},
+        score: 0.4,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      });
+
+      mockedGetLogOutputs.mockResolvedValue([
+        {
+          id: 'new-output-id',
+          log_id: 'test-log-id',
+          output: {},
+          score: 0.4,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      mockedUpdateEvaluationRun.mockResolvedValue(
+        {} as unknown as EvaluationRun,
+      );
+
+      await evaluateOneLogForConversationCompleteness(
+        evaluationRunId,
+        mockLog,
+        mockUserDataStorageConnector,
+      );
+
+      // Verify that the log failed the threshold check
+      expect(mockedUpdateEvaluationRun).toHaveBeenCalledWith(
+        evaluationRunId,
+        expect.objectContaining({
+          results: expect.objectContaining({
+            total_logs: 1,
+            passed_count: 0, // Score 0.4 < threshold 0.6
+            failed_count: 1,
+            average_score: 0.4,
+            threshold_used: 0.6,
+          }),
+        }),
+      );
+    });
+
+    it('should handle evaluation run not found error', async () => {
+      const evaluationRunId = 'non-existent-run-id';
+      const mockLog = {
+        id: 'test-log-id',
+        input: 'test input',
+        output: 'test output',
+      } as unknown as IdkRequestLog;
+
+      mockedGetEvaluationRuns.mockResolvedValue([]);
+
+      await expect(
+        evaluateOneLogForConversationCompleteness(
+          evaluationRunId,
+          mockLog,
+          mockUserDataStorageConnector,
+        ),
+      ).rejects.toThrow(`Evaluation run ${evaluationRunId} not found`);
+    });
   });
 });

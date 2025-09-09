@@ -2,19 +2,25 @@ import { getArgumentCorrectnessTemplate } from '@server/connectors/evaluations/a
 import type { ArgumentCorrectnessAverageResult } from '@server/connectors/evaluations/argument-correctness/types';
 import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
+import { updateEvaluationRunWithStatistics } from '@server/evaluations/utils/evaluation-run-updater';
+import {
+  calculateEvaluationStatistics,
+  extractEvaluationOutputIds,
+} from '@server/evaluations/utils/statistics';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
-  EvaluationRunStatus,
 } from '@shared/types/data/evaluation-run';
+import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import type {
   LogOutput as EvaluationOutput,
   LogOutputCreateParams as EvaluationOutputCreateParams,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
-import type { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
+import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { v4 as uuidv4 } from 'uuid';
 
 // Use a template builder to construct prompts
@@ -283,34 +289,28 @@ export async function evaluateArgumentCorrectness(
       userDataStorageConnector,
     );
 
-    const scores = evaluationOutputs.map((output) => output.score || 0);
-    const averageScore = scores.length
-      ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-      : 0;
     const thresholdUsed = params.strict_mode ? 1.0 : params.threshold || 0.5;
-    const passedCount = scores.filter((score) => score >= thresholdUsed).length;
-    const failedCount = scores.length - passedCount;
 
-    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
-      status: 'completed' as EvaluationRunStatus,
-      results: {
-        total_logs: logs.length,
-        passed_count: passedCount,
-        failed_count: failedCount,
-        average_score: averageScore,
-        threshold_used: thresholdUsed,
-        evaluation_outputs: evaluationOutputs.map((o) => o.id),
+    // Calculate statistics using shared utility
+    const statistics = calculateEvaluationStatistics(
+      evaluationOutputs,
+      thresholdUsed,
+    );
+    const evaluationOutputIds = extractEvaluationOutputIds(evaluationOutputs);
+
+    // Update evaluation run with results using shared utility
+    await updateEvaluationRunWithStatistics({
+      evaluationRunId: evaluationRun.id,
+      statistics,
+      threshold: thresholdUsed,
+      evaluationOutputIds,
+      userDataStorageConnector,
+      additionalMetadata: {
+        completed_at: new Date().toISOString(),
       },
-      metadata: {
-        ...evaluationRun.metadata,
-        total_logs: logs.length,
-        passed_count: passedCount,
-        failed_count: failedCount,
-        average_score: averageScore,
-        threshold_used: thresholdUsed,
-        evaluation_outputs: evaluationOutputs.map((o) => o.id),
-      },
-      completed_at: new Date().toISOString(),
+      preserveExistingResults: true,
+      status: EvaluationRunStatus.COMPLETED,
+      completedAt: new Date().toISOString(),
     });
 
     const updated =
@@ -321,10 +321,10 @@ export async function evaluateArgumentCorrectness(
       )[0] || evaluationRun;
 
     const averageResult: ArgumentCorrectnessAverageResult = {
-      average_score: averageScore,
-      total_logs: logs.length,
-      passed_count: passedCount,
-      failed_count: failedCount,
+      average_score: statistics.averageScore,
+      total_logs: statistics.totalLogs,
+      passed_count: statistics.passedCount,
+      failed_count: statistics.failedCount,
       threshold_used: thresholdUsed,
       evaluation_run_id: evaluationRun.id,
     };
@@ -332,7 +332,7 @@ export async function evaluateArgumentCorrectness(
     return { averageResult, evaluationRun: updated };
   } catch (error) {
     await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
-      status: 'failed' as EvaluationRunStatus,
+      status: EvaluationRunStatus.FAILED,
       results: {
         error: error instanceof Error ? error.message : 'Unknown error',
       },
@@ -345,4 +345,56 @@ export async function evaluateArgumentCorrectness(
     });
     throw error;
   }
+}
+
+export async function evaluateOneLogForArgumentCorrectness(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  // Get the evaluation run to access parameters
+  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
+    id: evaluationRunId,
+  });
+  const evaluationRun = evaluationRuns[0];
+  if (!evaluationRun) {
+    throw new Error(`Evaluation run ${evaluationRunId} not found`);
+  }
+
+  const params = ArgumentCorrectnessEvaluationParameters.parse(
+    evaluationRun.metadata?.parameters || {},
+  );
+
+  // Convert IdkRequestLog to Log format for compatibility
+  const logForEvaluation: Log = log as Log;
+
+  // Evaluate the single log
+  await evaluateSingleLog(
+    logForEvaluation,
+    params,
+    evaluationRunId,
+    userDataStorageConnector,
+  );
+
+  // Get all log outputs for this evaluation run to calculate new average
+  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
+    evaluationRunId,
+    {},
+  );
+
+  // Calculate statistics and update evaluation run using shared utilities
+  const thresholdUsed = params.strict_mode ? 1.0 : params.threshold || 0.5;
+  const statistics = calculateEvaluationStatistics(
+    allLogOutputs,
+    thresholdUsed,
+  );
+  const evaluationOutputIds = extractEvaluationOutputIds(allLogOutputs);
+
+  await updateEvaluationRunWithStatistics({
+    evaluationRunId,
+    statistics,
+    threshold: thresholdUsed,
+    evaluationOutputIds,
+    userDataStorageConnector,
+  });
 }

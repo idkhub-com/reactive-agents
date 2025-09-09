@@ -4,11 +4,17 @@ import type {
   ConversationCompletenessResult,
 } from '@server/connectors/evaluations/conversation-completeness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
+import { updateEvaluationRunWithStatistics } from '@server/evaluations/utils/evaluation-run-updater';
+import {
+  calculateEvaluationStatistics,
+  extractEvaluationOutputIds,
+} from '@server/evaluations/utils/statistics';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 /**
  * Evaluate conversation completeness for a single log
@@ -190,48 +196,42 @@ export async function evaluateConversationCompletenessMain(
       evaluationOutputs.push(output);
     }
 
-    // Calculate statistics
-    const scores = results.map((r) => r.score);
-    const threshold = params.threshold || 0.5;
-    const passedLogs = scores.filter((s) => s >= threshold).length;
-    const failedLogs = scores.length - passedLogs;
-
-    const averageScore =
-      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-
     const execution_time = Date.now() - start_time;
+    const threshold = params.threshold || 0.5;
+
+    // Calculate statistics using shared utility
+    const statistics = calculateEvaluationStatistics(
+      evaluationOutputs,
+      threshold,
+    );
+    const evaluationOutputIds = extractEvaluationOutputIds(evaluationOutputs);
 
     const averageResult: ConversationCompletenessAverageResult = {
-      average_score: averageScore,
-      total_logs: logs.length,
-      passed_count: passedLogs,
-      failed_count: failedLogs,
-      threshold_used: params.threshold || 0.5,
+      average_score: statistics.averageScore,
+      total_logs: statistics.totalLogs,
+      passed_count: statistics.passedCount,
+      failed_count: statistics.failedCount,
+      threshold_used: threshold,
       evaluation_run_id: evaluationRun.id,
     };
 
-    // Update evaluation run with results
-    await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
-      status: EvaluationRunStatus.COMPLETED,
-      results: {
-        total_logs: logs.length,
-        passed_count: passedLogs,
-        failed_count: failedLogs,
-        average_score: averageScore,
-        threshold_used: params.threshold || 0.5,
-        evaluation_outputs: evaluationOutputs.map((output) => output.id),
+    // Update evaluation run with results using shared utility
+    await updateEvaluationRunWithStatistics({
+      evaluationRunId: evaluationRun.id,
+      statistics,
+      threshold,
+      evaluationOutputIds,
+      userDataStorageConnector,
+      additionalResults: {
         total_execution_time: execution_time,
         total_execution_time_ms: execution_time,
       },
-      metadata: {
-        ...evaluationRun.metadata,
-        total_logs: logs.length,
-        passed_count: passedLogs,
-        failed_count: failedLogs,
-        average_score: averageScore,
-        threshold_used: params.threshold || 0.5,
+      additionalMetadata: {
         completed_at: new Date().toISOString(),
       },
+      preserveExistingResults: true,
+      status: EvaluationRunStatus.COMPLETED,
+      completedAt: new Date().toISOString(),
     });
 
     return { averageResult, evaluationRun };
@@ -251,4 +251,66 @@ export async function evaluateConversationCompletenessMain(
 
     throw error;
   }
+}
+
+export async function evaluateOneLogForConversationCompleteness(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  // Get the evaluation run to access parameters
+  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
+    id: evaluationRunId,
+  });
+  const evaluationRun = evaluationRuns[0];
+  if (!evaluationRun) {
+    throw new Error(`Evaluation run ${evaluationRunId} not found`);
+  }
+
+  const params = (evaluationRun.metadata?.parameters ||
+    {}) as ConversationCompletenessEvaluationParameters;
+
+  // Convert IdkRequestLog to Log format for compatibility
+  const logForEvaluation: Log = log as Log;
+
+  // Evaluate the single log
+  const result = await evaluateConversationCompleteness(
+    logForEvaluation,
+    params,
+  );
+
+  // Create log output
+  await userDataStorageConnector.createLogOutput(evaluationRunId, {
+    log_id: log.id,
+    score: result.score,
+    output: {
+      score: result.score,
+      reasoning: result.reasoning,
+      passed: result.score >= (params.threshold || 0.5),
+      threshold: params.threshold || 0.5,
+      execution_time_ms: 0,
+      evaluated_at: new Date().toISOString(),
+      evaluation_run_id: evaluationRunId,
+    },
+    metadata: result.metadata || {},
+  });
+
+  // Get all log outputs for this evaluation run to calculate new average
+  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
+    evaluationRunId,
+    {},
+  );
+
+  // Calculate statistics and update evaluation run using shared utilities
+  const threshold = params.threshold || 0.5;
+  const statistics = calculateEvaluationStatistics(allLogOutputs, threshold);
+  const evaluationOutputIds = extractEvaluationOutputIds(allLogOutputs);
+
+  await updateEvaluationRunWithStatistics({
+    evaluationRunId,
+    statistics,
+    threshold,
+    evaluationOutputIds,
+    userDataStorageConnector,
+  });
 }
