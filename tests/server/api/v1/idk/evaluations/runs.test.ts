@@ -4,6 +4,7 @@ import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 const mockConnector = {
   // Feedback methods
@@ -55,9 +56,23 @@ const mockConnector = {
   deleteLogOutput: vi.fn(),
 };
 
+const mockEvaluationConnector = {
+  getDetails: vi.fn().mockReturnValue({
+    method: EvaluationMethodName.TURN_RELEVANCY,
+    name: 'Turn Relevancy',
+    description: 'Test evaluation method',
+  }),
+  evaluate: vi.fn(),
+  evaluateOneLog: vi.fn(),
+  getParameterSchema: z.object({}),
+};
+
 const app = new Hono<AppEnv>()
   .use('*', async (c, next) => {
     c.set('user_data_storage_connector', mockConnector);
+    c.set('evaluation_connectors_map', {
+      [EvaluationMethodName.TURN_RELEVANCY]: mockEvaluationConnector,
+    });
     await next();
   })
   .route('/', runsRouter);
@@ -191,13 +206,142 @@ describe('Evaluation Runs API Status Codes', () => {
           agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           skill_id: '3e35a872-b7de-4f67-8df5-93a2fc2cf71e',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
-          metadata: {},
         },
       });
 
       expect(res.status).toBe(201);
       const data = await res.json();
       expect(data).toEqual(mockRun);
+    });
+
+    it('should trigger backfill evaluation for realtime datasets', async () => {
+      const mockRun = {
+        id: 'a9b0c1d2-e3f4-4678-8901-23456789def0',
+        dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680f',
+        name: 'new-realtime-run',
+        evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
+      };
+      const mockRealtimeDataset = {
+        id: 'c13d1678-150a-466b-804f-ecc82de3680f',
+        is_realtime: true,
+        realtime_size: 5,
+      };
+      const mockExistingLogs = [
+        { id: 'log-1', start_time: 1000 },
+        { id: 'log-2', start_time: 2000 },
+      ];
+
+      mockConnector.createEvaluationRun.mockResolvedValue(mockRun);
+      mockConnector.getDatasets.mockResolvedValue([mockRealtimeDataset]);
+      mockConnector.getDatasetLogs.mockResolvedValue(mockExistingLogs);
+
+      const res = await client.index.$post({
+        json: {
+          name: 'new-realtime-run',
+          dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680f',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          skill_id: '3e35a872-b7de-4f67-8df5-93a2fc2cf71e',
+          evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
+        },
+      });
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data).toEqual(mockRun);
+
+      // Wait a tick for async backfill to potentially start
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Verify backfill evaluation was triggered
+      expect(mockConnector.getDatasets).toHaveBeenCalledWith({
+        id: 'c13d1678-150a-466b-804f-ecc82de3680f',
+      });
+      expect(mockConnector.getDatasetLogs).toHaveBeenCalledWith(
+        'c13d1678-150a-466b-804f-ecc82de3680f',
+        {},
+      );
+    });
+
+    it('should not trigger backfill for non-realtime datasets', async () => {
+      const mockRun = {
+        id: 'a9b0c1d2-e3f4-4678-8901-23456789def0',
+        dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680d',
+        name: 'new-regular-run',
+        evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
+      };
+      const mockRegularDataset = {
+        id: 'c13d1678-150a-466b-804f-ecc82de3680d',
+        is_realtime: false,
+      };
+
+      mockConnector.createEvaluationRun.mockResolvedValue(mockRun);
+      mockConnector.getDatasets.mockResolvedValue([mockRegularDataset]);
+
+      const res = await client.index.$post({
+        json: {
+          name: 'new-regular-run',
+          dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680d',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          skill_id: '3e35a872-b7de-4f67-8df5-93a2fc2cf71e',
+          evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
+        },
+      });
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data).toEqual(mockRun);
+
+      // Wait a tick for async backfill to potentially start
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Verify dataset was checked but logs were not fetched
+      expect(mockConnector.getDatasets).toHaveBeenCalledWith({
+        id: 'c13d1678-150a-466b-804f-ecc82de3680d',
+      });
+      expect(mockConnector.getDatasetLogs).not.toHaveBeenCalled();
+      expect(mockEvaluationConnector.evaluateOneLog).not.toHaveBeenCalled();
+    });
+
+    it('should handle backfill errors gracefully without failing API request', async () => {
+      const mockRun = {
+        id: 'a9b0c1d2-e3f4-4678-8901-23456789def0',
+        dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680c',
+        name: 'new-run-with-error',
+        evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
+      };
+
+      mockConnector.createEvaluationRun.mockResolvedValue(mockRun);
+      mockConnector.getDatasets.mockRejectedValue(
+        new Error('Database error during backfill'),
+      );
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Mock implementation to suppress console output
+      });
+
+      const res = await client.index.$post({
+        json: {
+          name: 'new-run-with-error',
+          dataset_id: 'c13d1678-150a-466b-804f-ecc82de3680c',
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+          skill_id: '3e35a872-b7de-4f67-8df5-93a2fc2cf71e',
+          evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
+        },
+      });
+
+      // API request should still succeed
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data).toEqual(mockRun);
+
+      // Wait for async backfill error to be logged
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify error was logged but didn't fail the request
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error in backfill evaluation for evaluation run a9b0c1d2-e3f4-4678-8901-23456789def0:',
+        expect.any(Error),
+      );
     });
 
     it('should return 500 on creation error', async () => {
@@ -212,7 +356,6 @@ describe('Evaluation Runs API Status Codes', () => {
           agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           skill_id: '3e35a872-b7de-4f67-8df5-93a2fc2cf71e',
           evaluation_method: EvaluationMethodName.TASK_COMPLETION,
-          metadata: {},
         },
       });
 

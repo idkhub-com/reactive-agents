@@ -1,6 +1,15 @@
-import type { LogsStorageConnector } from '@server/types/connector';
+import type {
+  EvaluationMethodConnector,
+  LogsStorageConnector,
+  UserDataStorageConnector,
+} from '@server/types/connector';
 import type { AppEnv } from '@server/types/hono';
 import type { HttpMethod } from '@server/types/http';
+import {
+  findRealtimeEvaluations,
+  shouldTriggerRealtimeEvaluation,
+  triggerRealtimeEvaluations,
+} from '@server/utils/realtime-evaluations';
 import type { FunctionName } from '@shared/types/api/request';
 import {
   BaseIdkConfig,
@@ -9,6 +18,7 @@ import {
 import type { Agent } from '@shared/types/data/agent';
 import type { LogMessage, LogsClient } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
+import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type {
   AIProviderRequestLog,
   HookLog,
@@ -82,6 +92,10 @@ interface ProcessLogsParams {
   aiProviderLog: AIProviderRequestLog;
   hookLogs: HookLog[];
   logsStorageConnector: LogsStorageConnector;
+  userDataStorageConnector?: UserDataStorageConnector;
+  evaluationConnectorsMap?: Partial<
+    Record<EvaluationMethodName, EvaluationMethodConnector>
+  >;
 }
 
 async function processLogs({
@@ -96,6 +110,8 @@ async function processLogs({
   aiProviderLog,
   hookLogs,
   logsStorageConnector,
+  userDataStorageConnector,
+  evaluationConnectorsMap,
 }: ProcessLogsParams): Promise<void> {
   const endTime = Date.now();
   const duration = endTime - startTime;
@@ -154,6 +170,37 @@ async function processLogs({
     await logsStorageConnector.createLog(log);
   } catch (error) {
     console.error(error);
+  }
+
+  // Trigger realtime evaluations if conditions are met
+  if (
+    shouldTriggerRealtimeEvaluation(status, url) &&
+    userDataStorageConnector &&
+    evaluationConnectorsMap
+  ) {
+    try {
+      const realtimeEvaluations = await findRealtimeEvaluations(
+        agent.id,
+        skill.id,
+        userDataStorageConnector,
+      );
+
+      if (realtimeEvaluations.length > 0) {
+        // Run realtime evaluations asynchronously to not block the response
+        // We don't await this to ensure the main request flow isn't delayed
+        triggerRealtimeEvaluations(
+          log,
+          realtimeEvaluations,
+          evaluationConnectorsMap,
+          userDataStorageConnector,
+        ).catch((error) => {
+          console.error('Error in async realtime evaluations:', error);
+        });
+      }
+    } catch (error) {
+      console.error('Error triggering realtime evaluations:', error);
+      // Don't throw - we don't want to break the main request flow
+    }
   }
 }
 
@@ -215,6 +262,8 @@ export const logsMiddleware = (
       aiProviderLog,
       hookLogs,
       logsStorageConnector: c.get('logs_storage_connector'),
+      userDataStorageConnector: c.get('user_data_storage_connector'),
+      evaluationConnectorsMap: c.get('evaluation_connectors_map'),
     };
 
     if (getRuntimeKey() === 'workerd') {
