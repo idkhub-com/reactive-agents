@@ -131,6 +131,11 @@ vi.mock('@server/connectors/evaluations/conversation-completeness', () => ({
   },
 }));
 
+// Mock realtime evaluation utilities
+vi.mock('@server/utils/realtime-evaluations', () => ({
+  evaluateExistingLogsInRealtimeDataset: vi.fn(),
+}));
+
 // Mock the main evaluations module to export all connectors
 vi.mock('@server/connectors/evaluations', () => {
   // Create a mock Zod schema object with safeParse method
@@ -266,6 +271,16 @@ const mockUserDataStorageConnector = {
 const app = new Hono<AppEnv>()
   .use('*', async (c, next) => {
     c.set('user_data_storage_connector', mockUserDataStorageConnector);
+    // Set evaluation_connectors_map for realtime evaluation tests
+    c.set('evaluation_connectors_map', {
+      [EvaluationMethodName.TASK_COMPLETION]: taskCompletionEvaluationConnector,
+      [EvaluationMethodName.ARGUMENT_CORRECTNESS]:
+        argumentCorrectnessEvaluationConnector,
+      [EvaluationMethodName.ROLE_ADHERENCE]: roleAdherenceEvaluationConnector,
+      [EvaluationMethodName.TURN_RELEVANCY]: turnRelevancyEvaluationConnector,
+      [EvaluationMethodName.TOOL_CORRECTNESS]:
+        toolCorrectnessEvaluationConnector,
+    });
     await next();
   })
   .route('/', methodsRouter);
@@ -660,6 +675,374 @@ describe('Evaluation Methods API', () => {
       expect(data).toHaveProperty('details', 'Unknown error');
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('POST /execute - Realtime Evaluation Execution', () => {
+    // Import the mocked function
+    let mockEvaluateExistingLogsInRealtimeDataset: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+      const realtimeEvaluations = await import(
+        '@server/utils/realtime-evaluations'
+      );
+      mockEvaluateExistingLogsInRealtimeDataset =
+        realtimeEvaluations.evaluateExistingLogsInRealtimeDataset as ReturnType<
+          typeof vi.fn
+        >;
+    });
+
+    it('should handle realtime dataset evaluation with backfill', async () => {
+      // Mock realtime dataset
+      const mockRealtimeDataset = {
+        id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 5,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockCreatedEvaluationRun = {
+        id: 'realtime-eval-run-123',
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        skill_id: 'd4a9623f-1ae7-482a-b8f0-7304e839b4d8',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+        name: 'Realtime TASK_COMPLETION Evaluation - 2024-01-01T00:00:00.000Z',
+        description:
+          'Realtime evaluation for dataset 987fcdeb-51a2-43d7-8f9e-123456789abc',
+        status: 'pending',
+        metadata: {
+          parameters: { threshold: 0.7, model: 'gpt-4o' },
+          is_realtime: true,
+        },
+        results: null,
+        started_at: null,
+        completed_at: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockUpdatedEvaluationRun = {
+        ...mockCreatedEvaluationRun,
+        status: 'running',
+        started_at: '2024-01-01T00:00:00.000Z',
+        metadata: {
+          parameters: { threshold: 0.7, model: 'gpt-4o' },
+          is_realtime: true,
+          backfill_completed: true,
+          backfill_completed_at: '2024-01-01T00:00:00.000Z',
+        },
+        results: {
+          average_score: 0.85,
+          total_logs: 3,
+        },
+      };
+
+      // Mock the connector methods
+      mockUserDataStorageConnector.getDatasets.mockResolvedValue([
+        mockRealtimeDataset,
+      ]);
+      mockUserDataStorageConnector.createEvaluationRun.mockResolvedValue(
+        mockCreatedEvaluationRun,
+      );
+      mockUserDataStorageConnector.updateEvaluationRun.mockResolvedValue(
+        mockUpdatedEvaluationRun,
+      );
+      mockUserDataStorageConnector.getEvaluationRuns.mockResolvedValue([
+        mockUpdatedEvaluationRun,
+      ]);
+
+      // Mock successful backfill evaluation
+      mockEvaluateExistingLogsInRealtimeDataset.mockResolvedValue(undefined);
+
+      const realtimeEvaluationRequest = {
+        ...validEvaluationRequest,
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc', // realtime dataset
+      };
+
+      const res = await client.execute.$post({
+        json: realtimeEvaluationRequest,
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+
+      // Verify realtime-specific response
+      expect(data).toHaveProperty('evaluation_run_id', 'realtime-eval-run-123');
+      expect(data).toHaveProperty('status', 'running'); // Should stay running for continuous evaluation
+      expect(data).toHaveProperty(
+        'message',
+        'Realtime evaluation has been created and existing logs have been processed',
+      );
+      expect(data).toHaveProperty('results');
+      expect(data).toHaveProperty('is_realtime', true);
+
+      // Verify the correct sequence of calls
+      expect(mockUserDataStorageConnector.getDatasets).toHaveBeenCalledWith({
+        id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+      });
+      expect(
+        mockUserDataStorageConnector.createEvaluationRun,
+      ).toHaveBeenCalledWith({
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        skill_id: 'd4a9623f-1ae7-482a-b8f0-7304e839b4d8',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+        name: 'Test Evaluation', // Uses the provided name from request
+        description: 'Test evaluation description', // Uses the provided description from request
+        metadata: {
+          parameters: {
+            threshold: 0.7,
+            model: 'gpt-4o',
+            temperature: 0.1,
+            max_tokens: 1000,
+            include_reason: true,
+            strict_mode: false,
+            async_mode: false,
+            verbose_mode: false,
+            batch_size: 10,
+          },
+          is_realtime: true,
+        },
+      });
+      expect(
+        mockUserDataStorageConnector.updateEvaluationRun,
+      ).toHaveBeenCalledTimes(2);
+      expect(mockEvaluateExistingLogsInRealtimeDataset).toHaveBeenCalledWith(
+        mockCreatedEvaluationRun,
+        expect.any(Object), // evaluation connectors map
+        mockUserDataStorageConnector,
+      );
+    });
+
+    it('should handle realtime dataset evaluation with backfill errors', async () => {
+      // Mock realtime dataset
+      const mockRealtimeDataset = {
+        id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 5,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockCreatedEvaluationRun = {
+        id: 'realtime-eval-run-123',
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        skill_id: 'd4a9623f-1ae7-482a-b8f0-7304e839b4d8',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+        status: 'pending',
+        metadata: { parameters: { threshold: 0.7 }, is_realtime: true },
+        results: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockUpdatedEvaluationRunWithError = {
+        ...mockCreatedEvaluationRun,
+        status: 'running',
+        metadata: {
+          parameters: { threshold: 0.7 },
+          is_realtime: true,
+          backfill_error: 'Backfill evaluation failed',
+          backfill_attempted_at: '2024-01-01T00:00:00.000Z',
+        },
+      };
+
+      // Mock the connector methods
+      mockUserDataStorageConnector.getDatasets.mockResolvedValue([
+        mockRealtimeDataset,
+      ]);
+      mockUserDataStorageConnector.createEvaluationRun.mockResolvedValue(
+        mockCreatedEvaluationRun,
+      );
+      mockUserDataStorageConnector.updateEvaluationRun.mockResolvedValue(
+        mockUpdatedEvaluationRunWithError,
+      );
+      mockUserDataStorageConnector.getEvaluationRuns.mockResolvedValue([
+        mockUpdatedEvaluationRunWithError,
+      ]);
+
+      // Mock backfill evaluation error
+      mockEvaluateExistingLogsInRealtimeDataset.mockRejectedValue(
+        new Error('Backfill evaluation failed'),
+      );
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        /* Mock implementation to suppress console output */
+      });
+
+      const realtimeEvaluationRequest = {
+        ...validEvaluationRequest,
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+      };
+
+      const res = await client.execute.$post({
+        json: realtimeEvaluationRequest,
+      });
+
+      expect(res.status).toBe(200); // Should still succeed despite backfill error
+      const data = await res.json();
+
+      // Verify realtime evaluation was created despite backfill error
+      expect(data).toHaveProperty('evaluation_run_id', 'realtime-eval-run-123');
+      expect(data).toHaveProperty('status', 'running'); // Should still be running
+      expect(data).toHaveProperty('is_realtime', true);
+
+      // Verify error was logged and metadata updated
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Error in backfill evaluation for realtime evaluation run',
+        ),
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle missing evaluation connectors map gracefully', async () => {
+      // Mock realtime dataset
+      const mockRealtimeDataset = {
+        id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 5,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockCreatedEvaluationRun = {
+        id: 'realtime-eval-run-123',
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        status: 'pending',
+        metadata: { parameters: { threshold: 0.7 }, is_realtime: true },
+        results: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      // Mock the connector methods
+      mockUserDataStorageConnector.getDatasets.mockResolvedValue([
+        mockRealtimeDataset,
+      ]);
+      mockUserDataStorageConnector.createEvaluationRun.mockResolvedValue(
+        mockCreatedEvaluationRun,
+      );
+      mockUserDataStorageConnector.updateEvaluationRun.mockResolvedValue(
+        mockCreatedEvaluationRun,
+      );
+      mockUserDataStorageConnector.getEvaluationRuns.mockResolvedValue([
+        mockCreatedEvaluationRun,
+      ]);
+
+      // Create a test app without evaluation_connectors_map in context
+      const appWithoutConnectorsMap = new Hono<AppEnv>()
+        .use('*', async (c, next) => {
+          c.set('user_data_storage_connector', mockUserDataStorageConnector);
+          // Don't set evaluation_connectors_map
+          await next();
+        })
+        .route('/', methodsRouter);
+
+      const clientWithoutConnectors = testClient(appWithoutConnectorsMap);
+
+      const realtimeEvaluationRequest = {
+        ...validEvaluationRequest,
+        dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+      };
+
+      const res = await clientWithoutConnectors.execute.$post({
+        json: realtimeEvaluationRequest,
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+
+      // Should still create the evaluation run but skip backfill
+      expect(data).toHaveProperty('evaluation_run_id', 'realtime-eval-run-123');
+      expect(data).toHaveProperty('is_realtime', true);
+      expect(mockEvaluateExistingLogsInRealtimeDataset).not.toHaveBeenCalled();
+    });
+
+    it('should handle regular datasets normally (not realtime)', async () => {
+      // Mock regular (non-realtime) dataset
+      const mockRegularDataset = {
+        id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
+        agent_id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'Test Regular Dataset',
+        is_realtime: false,
+        realtime_size: 1,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      mockUserDataStorageConnector.getDatasets.mockResolvedValue([
+        mockRegularDataset,
+      ]);
+
+      // Mock the evaluation connector for regular datasets
+      const mockEvaluate =
+        taskCompletionEvaluationConnector.evaluate as ReturnType<typeof vi.fn>;
+      mockEvaluate.mockResolvedValue(mockEvaluationRun);
+
+      const res = await client.execute.$post({
+        json: validEvaluationRequest,
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+
+      // Verify regular evaluation response (not realtime)
+      expect(data).toHaveProperty('evaluation_run_id', 'eval-run-123');
+      expect(data).toHaveProperty('status', 'completed');
+      expect(data).toHaveProperty(
+        'message',
+        'Evaluation has been completed successfully',
+      );
+      expect(data).not.toHaveProperty('is_realtime');
+
+      // Verify regular evaluation flow was used
+      expect(taskCompletionEvaluationConnector.evaluate).toHaveBeenCalledWith(
+        validEvaluationRequest,
+        mockUserDataStorageConnector,
+      );
+      expect(mockEvaluateExistingLogsInRealtimeDataset).not.toHaveBeenCalled();
+    });
+
+    it('should handle dataset not found gracefully', async () => {
+      // Mock empty datasets response
+      mockUserDataStorageConnector.getDatasets.mockResolvedValue([]);
+
+      // Mock the evaluation connector for when no dataset is found
+      const mockEvaluate =
+        taskCompletionEvaluationConnector.evaluate as ReturnType<typeof vi.fn>;
+      mockEvaluate.mockResolvedValue(mockEvaluationRun);
+
+      const res = await client.execute.$post({
+        json: validEvaluationRequest,
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+
+      // Should fall back to regular evaluation when no dataset found
+      expect(data).toHaveProperty('evaluation_run_id', 'eval-run-123');
+      expect(data).toHaveProperty(
+        'message',
+        'Evaluation has been completed successfully',
+      );
+      expect(taskCompletionEvaluationConnector.evaluate).toHaveBeenCalled();
+      expect(mockEvaluateExistingLogsInRealtimeDataset).not.toHaveBeenCalled();
     });
   });
 });
