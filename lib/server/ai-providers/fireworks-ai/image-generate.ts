@@ -30,7 +30,10 @@ export const FireworksAIImageGenerateConfig: AIProviderFunctionConfig = {
     {
       param: 'height',
       transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseInt(idkRequestBody.size?.toLowerCase().split('x')[1] ?? '1024'),
+        parseInt(
+          idkRequestBody.size?.toLowerCase().split('x')[1] ?? '1024',
+          10,
+        ),
       min: 512,
       max: 1024,
       default: 1024,
@@ -38,7 +41,10 @@ export const FireworksAIImageGenerateConfig: AIProviderFunctionConfig = {
     {
       param: 'width',
       transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseInt(idkRequestBody.size?.toLowerCase().split('x')[0] ?? '1024'),
+        parseInt(
+          idkRequestBody.size?.toLowerCase().split('x')[0] ?? '1024',
+          10,
+        ),
       min: 512,
       max: 1024,
       default: 1024,

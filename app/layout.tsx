@@ -11,6 +11,7 @@ import { DevToolsInit } from '@client/components/dev-tools-init';
 import { SidebarProvider } from '@client/providers/side-bar';
 import { ThemeProvider } from '@client/providers/theme';
 import type { NextFontWithVariable } from 'next/dist/compiled/@next/font';
+import { useId } from 'react';
 
 const lato: NextFontWithVariable = Lato({
   subsets: ['latin'],
@@ -37,13 +38,14 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
+  const nonceScriptId = useId();
   const nonce = (await headers()).get('X-Nonce');
   return (
     <html lang="en" className={`${lato.variable}`} suppressHydrationWarning>
       <body className="flex flex-col overflow-hidden overscroll-none w-screen h-screen">
         <Script
           strategy="afterInteractive"
-          id="nonce-script"
+          id={nonceScriptId}
           nonce={nonce ?? undefined}
         >
           {`__webpack_nonce__ = ${JSON.stringify(nonce)}`}

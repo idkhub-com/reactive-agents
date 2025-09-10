@@ -118,9 +118,9 @@ export const retryRequest = async (
               let retryAfter: number | undefined;
               // if the header is `retry-after` convert it to milliseconds.
               if (retryHeader === 'retry-after') {
-                retryAfter = Number.parseInt(retryAfterValue.trim()) * 1000;
+                retryAfter = Number.parseInt(retryAfterValue.trim(), 10) * 1000;
               } else {
-                retryAfter = Number.parseInt(retryAfterValue.trim());
+                retryAfter = Number.parseInt(retryAfterValue.trim(), 10);
               }
 
               if (retryAfter && !Number.isNaN(retryAfter)) {

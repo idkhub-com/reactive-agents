@@ -66,9 +66,10 @@ import {
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 
 export function EvaluationRunDetailsView(): ReactElement {
+  const duplicateNameId = useId();
   const { navigationState, navigateToEvaluations } = useNavigation();
   const { toast } = useToast();
   const {
@@ -380,9 +381,9 @@ export function EvaluationRunDetailsView(): ReactElement {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
-                    <Label htmlFor="duplicate-name">Evaluation Name</Label>
+                    <Label htmlFor={duplicateNameId}>Evaluation Name</Label>
                     <Input
-                      id="duplicate-name"
+                      id={duplicateNameId}
                       value={duplicateName}
                       onChange={(e) => setDuplicateName(e.target.value)}
                       placeholder="Enter evaluation name..."

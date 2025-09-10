@@ -32,13 +32,13 @@ export const StabilityAIImageGenerateV1Config: AIProviderFunctionConfig = {
     {
       param: 'height',
       transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseInt(idkRequestBody.size?.toLowerCase().split('x')[1] || '0'),
+        parseInt(idkRequestBody.size?.toLowerCase().split('x')[1] || '0', 10),
       min: 320,
     },
     {
       param: 'width',
       transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseInt(idkRequestBody.size?.toLowerCase().split('x')[0] || '0'),
+        parseInt(idkRequestBody.size?.toLowerCase().split('x')[0] || '0', 10),
       min: 320,
     },
   ],

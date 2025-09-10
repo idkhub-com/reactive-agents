@@ -633,6 +633,7 @@ export const googleChatCompleteStreamChunkTransform: ResponseChunkStreamTransfor
                     },
                   };
                 }
+                return undefined;
               }),
               content: '',
             };

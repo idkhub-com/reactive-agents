@@ -24,11 +24,9 @@ export function selectProviderByWeight(targetConfigs: IdkTarget[]): IdkTarget {
   // Find the provider that corresponds to the selected weight
   for (let index = 0; index < targetConfigs.length; index++) {
     const targetConfig = targetConfigs[index];
-    // @ts-ignore since weight is being default set above
     if (randomWeight < targetConfig.weight) {
       return { ...targetConfig, index };
     }
-    // @ts-ignore since weight is being default set above
     randomWeight -= targetConfig.weight;
   }
 

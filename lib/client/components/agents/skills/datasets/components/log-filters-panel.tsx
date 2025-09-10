@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from '@client/components/ui/popover';
 import { ChevronDown, Filter, RotateCcw } from 'lucide-react';
-import type { ChangeEvent } from 'react';
+import { type ChangeEvent, useId } from 'react';
 
 interface LogFilters {
   methods: string[];
@@ -54,6 +54,14 @@ export function LogFiltersPanel({
   onFiltersChange,
   onReset,
 }: LogFiltersPanelProps): React.ReactElement {
+  const endpointFilterId = useId();
+  const minDurationId = useId();
+  const maxDurationId = useId();
+  const dateFromId = useId();
+  const dateToId = useId();
+  const hasRequestBodyId = useId();
+  const hasResponseBodyId = useId();
+
   const updateFilters = (updates: Partial<LogFilters>): void => {
     onFiltersChange({ ...filters, ...updates });
   };
@@ -126,7 +134,6 @@ export function LogFiltersPanel({
                 <Label className="text-sm font-medium">HTTP Methods</Label>
                 <div className="flex flex-wrap gap-1">
                   {uniqueValues.methods.map((method) => (
-                    // biome-ignore lint/a11y/useSemanticElements: Using Badge as interactive chip; role and keyboard handling added
                     <Badge
                       key={method}
                       variant={
@@ -251,11 +258,11 @@ export function LogFiltersPanel({
 
             {/* Endpoint Filter */}
             <div className="space-y-2">
-              <Label htmlFor="endpoint-filter" className="text-sm font-medium">
+              <Label htmlFor={endpointFilterId} className="text-sm font-medium">
                 Endpoint Contains
               </Label>
               <Input
-                id="endpoint-filter"
+                id={endpointFilterId}
                 placeholder="e.g., /api/users"
                 value={filters.endpoints}
                 onChange={(e) => updateFilters({ endpoints: e.target.value })}
@@ -265,11 +272,11 @@ export function LogFiltersPanel({
             {/* Duration Filters */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="min-duration" className="text-sm font-medium">
+                <Label htmlFor={minDurationId} className="text-sm font-medium">
                   Min Duration (ms)
                 </Label>
                 <Input
-                  id="min-duration"
+                  id={minDurationId}
                   type="number"
                   placeholder="Min duration..."
                   value={filters.minDuration ?? ''}
@@ -277,11 +284,11 @@ export function LogFiltersPanel({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="max-duration" className="text-sm font-medium">
+                <Label htmlFor={maxDurationId} className="text-sm font-medium">
                   Max Duration (ms)
                 </Label>
                 <Input
-                  id="max-duration"
+                  id={maxDurationId}
                   type="number"
                   placeholder="Max duration..."
                   value={filters.maxDuration ?? ''}
@@ -293,22 +300,22 @@ export function LogFiltersPanel({
             {/* Date Range Filters */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date-from" className="text-sm font-medium">
+                <Label htmlFor={dateFromId} className="text-sm font-medium">
                   From Date
                 </Label>
                 <Input
-                  id="date-from"
+                  id={dateFromId}
                   type="date"
                   value={filters.dateFrom ?? ''}
                   onChange={handleDateChange('dateFrom')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date-to" className="text-sm font-medium">
+                <Label htmlFor={dateToId} className="text-sm font-medium">
                   To Date
                 </Label>
                 <Input
-                  id="date-to"
+                  id={dateToId}
                   type="date"
                   value={filters.dateTo ?? ''}
                   onChange={handleDateChange('dateTo')}
@@ -320,7 +327,7 @@ export function LogFiltersPanel({
             <div className="flex gap-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="has-request-body"
+                  id={hasRequestBodyId}
                   checked={filters.hasRequestBody === true}
                   onCheckedChange={(checked) =>
                     updateFilters({
@@ -329,7 +336,7 @@ export function LogFiltersPanel({
                   }
                 />
                 <Label
-                  htmlFor="has-request-body"
+                  htmlFor={hasRequestBodyId}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   Has Request Body
@@ -337,7 +344,7 @@ export function LogFiltersPanel({
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="has-response-body"
+                  id={hasResponseBodyId}
                   checked={filters.hasResponseBody === true}
                   onCheckedChange={(checked) =>
                     updateFilters({
@@ -346,7 +353,7 @@ export function LogFiltersPanel({
                   }
                 />
                 <Label
-                  htmlFor="has-response-body"
+                  htmlFor={hasResponseBodyId}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   Has Response Body
