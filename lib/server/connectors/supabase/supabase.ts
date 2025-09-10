@@ -698,7 +698,50 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     datasetId: string,
     queryParams: LogsQueryParams,
   ): Promise<Log[]> => {
-    // First, get the log IDs from the bridge table
+    // First, check if this is a realtime dataset
+    const datasets = await selectFromSupabase(
+      'datasets',
+      { id: `eq.${datasetId}` },
+      z.array(Dataset),
+    );
+    const dataset = datasets[0];
+
+    if (dataset?.is_realtime) {
+      // For realtime datasets, return the most recent logs with 200 status for this agent
+      // If skill_id is provided in queryParams, filter by it too
+      const postgrestParams: Record<string, string> = {
+        agent_id: `eq.${dataset.agent_id}`,
+        status: 'eq.200',
+        order: 'start_time.desc',
+        limit: (dataset.realtime_size || 10).toString(), // Use realtime_size as limit
+      };
+
+      // If skill_id is provided in the query params, filter by it
+      if (queryParams.skill_id) {
+        postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
+      }
+
+      if (
+        queryParams.limit &&
+        queryParams.limit < (dataset.realtime_size || 10)
+      ) {
+        postgrestParams.limit = queryParams.limit.toString();
+      }
+
+      if (queryParams.offset) {
+        postgrestParams.offset = queryParams.offset.toString();
+      }
+
+      const logs = await selectFromSupabase(
+        'logs',
+        postgrestParams,
+        z.array(Log),
+      );
+
+      return logs;
+    }
+
+    // For regular datasets, use the bridge table approach
     const bridgeEntries = await selectFromSupabase(
       'dataset_log_bridge',
       { dataset_id: `eq.${datasetId}` },
@@ -737,6 +780,24 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     datasetId: string,
     logIds: string[],
   ): Promise<void> => {
+    // Check if this is a realtime dataset
+    const datasets = await selectFromSupabase(
+      'datasets',
+      { id: `eq.${datasetId}` },
+      z.array(Dataset),
+    );
+    const dataset = datasets[0];
+
+    if (dataset?.is_realtime) {
+      // For realtime datasets, we don't store logs in the bridge table
+      // The logs are determined dynamically, so this is a no-op
+      console.log(
+        `Skipping addLogsToDataset for realtime dataset ${datasetId} - logs are managed dynamically`,
+      );
+      return;
+    }
+
+    // For regular datasets, use the bridge table
     const bridgeEntries: DatasetLogBridgeCreateParams[] = logIds.map(
       (logId) => ({
         dataset_id: datasetId,
@@ -751,6 +812,24 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     datasetId: string,
     logIds: string[],
   ): Promise<void> => {
+    // Check if this is a realtime dataset
+    const datasets = await selectFromSupabase(
+      'datasets',
+      { id: `eq.${datasetId}` },
+      z.array(Dataset),
+    );
+    const dataset = datasets[0];
+
+    if (dataset?.is_realtime) {
+      // For realtime datasets, we don't store logs in the bridge table
+      // The logs are determined dynamically, so this is a no-op
+      console.log(
+        `Skipping removeLogsFromDataset for realtime dataset ${datasetId} - logs are managed dynamically`,
+      );
+      return;
+    }
+
+    // For regular datasets, use the bridge table
     await deleteFromSupabase('dataset_log_bridge', {
       dataset_id: `eq.${datasetId}`,
       log_id: `in.(${logIds.join(',')})`,
