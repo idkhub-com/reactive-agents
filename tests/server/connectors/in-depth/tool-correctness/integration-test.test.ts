@@ -1779,11 +1779,18 @@ describe('Tool Correctness Integration Tests', () => {
         ) / performanceResults.length;
       const standardDeviation = Math.sqrt(variance);
 
-      // If all results are the same, variance will be 0, which is perfect consistency
+      // For very fast operations (< 10ms), timing precision can cause high relative variance
+      // Use absolute thresholds instead of relative ones for sub-millisecond operations
+
       if (variance === 0) {
         expect(standardDeviation).toBe(0);
+      } else if (avgPerformance < 10) {
+        // For very fast operations, use absolute threshold - variance should be reasonable
+        // but not try to be a percentage of a very small number
+        expect(standardDeviation).toBeLessThan(2); // Allow up to 2ms variance for fast operations
       } else {
-        expect(standardDeviation).toBeLessThan(avgPerformance * 0.5); // Variance should be less than 50% of average
+        // For longer operations, use the relative 50% threshold
+        expect(standardDeviation).toBeLessThan(avgPerformance * 0.5);
       }
     });
   });
