@@ -1036,3 +1036,616 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
     });
   });
 });
+
+describe('supabaseUserDataStorageConnector - Dataset Operations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('getDatasetLogs', () => {
+    it('should return logs from bridge table for regular datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Dataset',
+        is_realtime: false,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+      const mockBridgeEntries = [
+        {
+          dataset_id: datasetId,
+          log_id: '123e4567-e89b-12d3-a456-426614174002',
+          created_at: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          dataset_id: datasetId,
+          log_id: '123e4567-e89b-12d3-a456-426614174003',
+          created_at: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+      const mockLogs = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174002',
+          agent_id: '123e4567-e89b-12d3-a456-426614174001',
+          skill_id: '123e4567-e89b-12d3-a456-426614174004',
+          method: 'POST',
+          endpoint: '/v1/chat/completions',
+          function_name: 'chat_complete',
+          status: 200,
+          start_time: 1000,
+          end_time: 1100,
+          duration: 100,
+          base_idk_config: {},
+          ai_provider: 'openai',
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: 'openai',
+            function_name: 'chat_complete',
+            method: 'POST',
+            request_url: 'https://api.openai.com/v1/chat/completions',
+            status: 200,
+            request_body: {},
+            response_body: {},
+            raw_request_body: '{}',
+            raw_response_body: '{}',
+            cache_mode: 'simple',
+            cache_status: 'MISS',
+          },
+          hook_logs: [],
+          metadata: {},
+          cache_status: 'MISS',
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
+        },
+        {
+          id: '123e4567-e89b-12d3-a456-426614174003',
+          agent_id: '123e4567-e89b-12d3-a456-426614174001',
+          skill_id: '123e4567-e89b-12d3-a456-426614174004',
+          method: 'POST',
+          endpoint: '/v1/chat/completions',
+          function_name: 'chat_complete',
+          status: 200,
+          start_time: 2000,
+          end_time: 2100,
+          duration: 100,
+          base_idk_config: {},
+          ai_provider: 'openai',
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: 'openai',
+            function_name: 'chat_complete',
+            method: 'POST',
+            request_url: 'https://api.openai.com/v1/chat/completions',
+            status: 200,
+            request_body: {},
+            response_body: {},
+            raw_request_body: '{}',
+            raw_response_body: '{}',
+            cache_mode: 'simple',
+            cache_status: 'MISS',
+          },
+          hook_logs: [],
+          metadata: {},
+          cache_status: 'MISS',
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
+        },
+      ];
+
+      const mockFetch = vi.mocked(fetch);
+      // First call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      // Second call to get bridge entries
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBridgeEntries,
+      } as Response);
+      // Third call to get logs
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockLogs,
+      } as Response);
+
+      const result = await supabaseUserDataStorageConnector.getDatasetLogs(
+        datasetId,
+        {},
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      // Check dataset lookup call
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        new URL(`https://test.supabase.co/rest/v1/datasets?id=eq.${datasetId}`),
+        expect.any(Object),
+      );
+      // Check bridge entries call
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        new URL(
+          `https://test.supabase.co/rest/v1/dataset_log_bridge?dataset_id=eq.${datasetId}`,
+        ),
+        expect.any(Object),
+      );
+      // Check logs call
+      const thirdCallUrl = mockFetch.mock.calls[2][0] as URL;
+      expect(thirdCallUrl.pathname).toBe('/rest/v1/logs');
+      expect(thirdCallUrl.searchParams.get('id')).toBe(
+        'in.(123e4567-e89b-12d3-a456-426614174002,123e4567-e89b-12d3-a456-426614174003)',
+      );
+      expect(result).toEqual(mockLogs);
+    });
+
+    it('should return dynamic logs for realtime datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const agentId = '123e4567-e89b-12d3-a456-426614174001';
+      const skillId = '123e4567-e89b-12d3-a456-426614174007';
+      const mockDataset = {
+        id: datasetId,
+        agent_id: agentId,
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 5,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+      const mockLogs = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174005',
+          agent_id: agentId,
+          skill_id: skillId,
+          method: 'POST',
+          endpoint: '/v1/chat/completions',
+          function_name: 'chat_complete',
+          status: 200,
+          start_time: 3000,
+          end_time: 3100,
+          duration: 100,
+          base_idk_config: {},
+          ai_provider: 'openai',
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: 'openai',
+            function_name: 'chat_complete',
+            method: 'POST',
+            request_url: 'https://api.openai.com/v1/chat/completions',
+            status: 200,
+            request_body: {},
+            response_body: {},
+            raw_request_body: '{}',
+            raw_response_body: '{}',
+            cache_mode: 'simple',
+            cache_status: 'MISS',
+          },
+          hook_logs: [],
+          metadata: {},
+          cache_status: 'MISS',
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
+        },
+        {
+          id: '123e4567-e89b-12d3-a456-426614174006',
+          agent_id: agentId,
+          skill_id: skillId,
+          method: 'POST',
+          endpoint: '/v1/chat/completions',
+          function_name: 'chat_complete',
+          status: 200,
+          start_time: 2000,
+          end_time: 2100,
+          duration: 100,
+          base_idk_config: {},
+          ai_provider: 'openai',
+          model: 'gpt-4',
+          ai_provider_request_log: {
+            provider: 'openai',
+            function_name: 'chat_complete',
+            method: 'POST',
+            request_url: 'https://api.openai.com/v1/chat/completions',
+            status: 200,
+            request_body: {},
+            response_body: {},
+            raw_request_body: '{}',
+            raw_response_body: '{}',
+            cache_mode: 'simple',
+            cache_status: 'MISS',
+          },
+          hook_logs: [],
+          metadata: {},
+          cache_status: 'MISS',
+          trace_id: null,
+          parent_span_id: null,
+          span_id: null,
+          span_name: null,
+          app_id: null,
+          external_user_id: null,
+          external_user_human_name: null,
+          user_metadata: null,
+        },
+      ];
+
+      const mockFetch = vi.mocked(fetch);
+      // First call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      // Second call to get dynamic logs
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockLogs,
+      } as Response);
+
+      const result = await supabaseUserDataStorageConnector.getDatasetLogs(
+        datasetId,
+        { skill_id: skillId },
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // Check dataset lookup call
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        new URL(`https://test.supabase.co/rest/v1/datasets?id=eq.${datasetId}`),
+        expect.any(Object),
+      );
+      // Check dynamic logs call with realtime parameters
+      const expectedUrl = new URL('https://test.supabase.co/rest/v1/logs');
+      expectedUrl.searchParams.set('agent_id', `eq.${agentId}`);
+      expectedUrl.searchParams.set('status', 'eq.200');
+      expectedUrl.searchParams.set('order', 'start_time.desc');
+      expectedUrl.searchParams.set('limit', '5');
+      expectedUrl.searchParams.set('skill_id', `eq.${skillId}`);
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        expectedUrl,
+        expect.any(Object),
+      );
+      expect(result).toEqual(mockLogs);
+    });
+
+    it('should use query params limit for realtime datasets when smaller than realtime_size', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const agentId = '123e4567-e89b-12d3-a456-426614174001';
+      const mockDataset = {
+        id: datasetId,
+        agent_id: agentId,
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockFetch = vi.mocked(fetch);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      } as Response);
+
+      await supabaseUserDataStorageConnector.getDatasetLogs(datasetId, {
+        limit: 3,
+      });
+
+      // Check that the limit parameter was used instead of realtime_size
+      const expectedUrl = new URL('https://test.supabase.co/rest/v1/logs');
+      expectedUrl.searchParams.set('agent_id', `eq.${agentId}`);
+      expectedUrl.searchParams.set('status', 'eq.200');
+      expectedUrl.searchParams.set('order', 'start_time.desc');
+      expectedUrl.searchParams.set('limit', '3'); // Should use query param limit, not realtime_size
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        expectedUrl,
+        expect.any(Object),
+      );
+    });
+
+    it('should return empty array when bridge table has no entries for regular datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Dataset',
+        is_realtime: false,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockFetch = vi.mocked(fetch);
+      // First call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      // Second call to get bridge entries (empty)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      } as Response);
+
+      const result = await supabaseUserDataStorageConnector.getDatasetLogs(
+        datasetId,
+        {},
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('addLogsToDataset', () => {
+    it('should add logs to bridge table for regular datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const logIds = ['log-1', 'log-2'];
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Dataset',
+        is_realtime: false,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockFetch = vi.mocked(fetch);
+      // First call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      // Second call to insert bridge entries
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+      } as Response);
+
+      await supabaseUserDataStorageConnector.addLogsToDataset(
+        datasetId,
+        logIds,
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // Check bridge table insert call
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        new URL('https://test.supabase.co/rest/v1/dataset_log_bridge'),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-service-role-key',
+            apiKey: 'test-service-role-key',
+            Prefer: '',
+          },
+          body: JSON.stringify([
+            { dataset_id: datasetId, log_id: 'log-1' },
+            { dataset_id: datasetId, log_id: 'log-2' },
+          ]),
+        },
+      );
+    });
+
+    it('should be a no-op for realtime datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const logIds = ['log-1', 'log-2'];
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        /* Mock implementation to suppress console output */
+      });
+
+      const mockFetch = vi.mocked(fetch);
+      // Only call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+
+      await supabaseUserDataStorageConnector.addLogsToDataset(
+        datasetId,
+        logIds,
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1); // Only dataset lookup, no insert
+      expect(consoleSpy).toHaveBeenCalledWith(
+        `Skipping addLogsToDataset for realtime dataset ${datasetId} - logs are managed dynamically`,
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('removeLogsFromDataset', () => {
+    it('should remove logs from bridge table for regular datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const logIds = ['log-1', 'log-2'];
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Dataset',
+        is_realtime: false,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockFetch = vi.mocked(fetch);
+      // First call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      // Second call to delete bridge entries
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+      } as Response);
+
+      await supabaseUserDataStorageConnector.removeLogsFromDataset(
+        datasetId,
+        logIds,
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // Check bridge table delete call
+      const expectedUrl = new URL(
+        'https://test.supabase.co/rest/v1/dataset_log_bridge',
+      );
+      expectedUrl.searchParams.set('dataset_id', `eq.${datasetId}`);
+      expectedUrl.searchParams.set('log_id', 'in.(log-1,log-2)');
+      expect(mockFetch).toHaveBeenNthCalledWith(2, expectedUrl, {
+        method: 'DELETE',
+        headers: {
+          Authorization: 'Bearer test-service-role-key',
+          apiKey: 'test-service-role-key',
+        },
+      });
+    });
+
+    it('should be a no-op for realtime datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const logIds = ['log-1', 'log-2'];
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Realtime Dataset',
+        is_realtime: true,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        /* Mock implementation to suppress console output */
+      });
+
+      const mockFetch = vi.mocked(fetch);
+      // Only call to get dataset
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+
+      await supabaseUserDataStorageConnector.removeLogsFromDataset(
+        datasetId,
+        logIds,
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1); // Only dataset lookup, no delete
+      expect(consoleSpy).toHaveBeenCalledWith(
+        `Skipping removeLogsFromDataset for realtime dataset ${datasetId} - logs are managed dynamically`,
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('error handling for dataset operations', () => {
+    it('should handle dataset lookup failure in getDatasetLogs', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+
+      const mockFetch = vi.mocked(fetch);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Database error',
+      } as Response);
+
+      await expect(
+        supabaseUserDataStorageConnector.getDatasetLogs(datasetId, {}),
+      ).rejects.toThrow('Failed to fetch from Supabase');
+    });
+
+    it('should handle dataset lookup failure in addLogsToDataset', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const logIds = ['log-1'];
+
+      const mockFetch = vi.mocked(fetch);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => 'Dataset not found',
+      } as Response);
+
+      await expect(
+        supabaseUserDataStorageConnector.addLogsToDataset(datasetId, logIds),
+      ).rejects.toThrow('Failed to fetch from Supabase');
+    });
+
+    it('should handle bridge table insert failure for regular datasets', async () => {
+      const datasetId = '123e4567-e89b-12d3-a456-426614174000';
+      const logIds = ['log-1'];
+      const mockDataset = {
+        id: datasetId,
+        agent_id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Test Dataset',
+        is_realtime: false,
+        realtime_size: 10,
+        metadata: {},
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockFetch = vi.mocked(fetch);
+      // First call to get dataset succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDataset],
+      } as Response);
+      // Second call to insert bridge entries fails
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Insert failed',
+      } as Response);
+
+      await expect(
+        supabaseUserDataStorageConnector.addLogsToDataset(datasetId, logIds),
+      ).rejects.toThrow('Failed to insert into Supabase');
+    });
+  });
+});
