@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
+import { evaluateExistingLogsInRealtimeDataset } from '@server/utils/realtime-evaluations';
 import {
   EvaluationRunCreateParams,
   EvaluationRunQueryParams,
@@ -58,8 +59,24 @@ export const runsRouter = new Hono<AppEnv>()
     try {
       const params = c.req.valid('json');
       const connector = c.get('user_data_storage_connector');
+      const evaluationConnectorsMap = c.get('evaluation_connectors_map');
 
       const evaluationRun = await connector.createEvaluationRun(params);
+
+      // Trigger backfill evaluation for existing logs in realtime datasets
+      if (evaluationConnectorsMap) {
+        evaluateExistingLogsInRealtimeDataset(
+          evaluationRun,
+          evaluationConnectorsMap,
+          connector,
+        ).catch((error) => {
+          console.error(
+            `Error in backfill evaluation for evaluation run ${evaluationRun.id}:`,
+            error,
+          );
+          // Don't fail the API request if backfill fails
+        });
+      }
 
       return c.json(evaluationRun, 201);
     } catch (error) {
