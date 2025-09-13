@@ -19,12 +19,40 @@ import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
 
 /**
- * Extract task and outcome from LLM response
+ * Standardized interface for task/outcome extraction results
+ * This ensures consistent handling across all evaluation methods
+ *
+ * The LLM judge returns structured output in the metadata field:
+ * {
+ *   score: 1.0,
+ *   reasoning: "Structured data extracted successfully",
+ *   metadata: {
+ *     task: "...",
+ *     outcome: "..."
+ *   }
+ * }
  */
-function extractTaskAndOutcome(extractionResult: {
+interface TaskOutcomeExtractionResult {
   reasoning?: string;
   metadata?: Record<string, unknown>;
-}): { task: string; outcome: string } {
+  task?: string;
+  outcome?: string;
+}
+
+/**
+ * Extract task and outcome from LLM response using standardized approach
+ *
+ * STANDARDIZED EXTRACTION ORDER:
+ * 1. metadata.task/outcome (LLM judge puts structured output here)
+ * 2. top-level task/outcome (backward compatibility)
+ * 3. nested metadata (legacy support)
+ * 4. pattern matching from reasoning text
+ * 5. JSON parsing fallbacks
+ */
+function extractTaskAndOutcome(extractionResult: TaskOutcomeExtractionResult): {
+  task: string;
+  outcome: string;
+} {
   const reasoning = extractionResult.reasoning || '';
   const metadata = (extractionResult.metadata || {}) as Record<string, unknown>;
 
@@ -33,9 +61,20 @@ function extractTaskAndOutcome(extractionResult: {
     return { task: '', outcome: '' };
   }
 
-  // Try to get structured data from metadata first
+  // STANDARDIZED EXTRACTION ORDER:
+  // 1. Check metadata first (LLM judge puts structured output here)
   let task = typeof metadata.task === 'string' ? metadata.task : '';
   let outcome = typeof metadata.outcome === 'string' ? metadata.outcome : '';
+
+  // 2. Fallback to top-level fields (for backward compatibility)
+  if (!task || !outcome) {
+    task =
+      typeof extractionResult.task === 'string' ? extractionResult.task : task;
+    outcome =
+      typeof extractionResult.outcome === 'string'
+        ? extractionResult.outcome
+        : outcome;
+  }
 
   // If not found in top-level metadata, check nested metadata structure
   if (!task || !outcome) {
@@ -58,10 +97,10 @@ function extractTaskAndOutcome(extractionResult: {
       // Try to extract task and outcome from the reasoning text
       // Look for patterns like "The user was trying to..." and "However, the actual outcome was..."
       const taskMatch = reasoning.match(
-        /The user (?:was trying to|requested|wanted to|asked to) (.+?)(?:\.|,|;|however|but|$)/i,
+        /The user (?:was trying to|requested|wanted to|asked to|asked a question about|asked about|asked a specific question about) (.+?)(?:\.|,|;|however|but|seeking|$)/i,
       );
       const outcomeMatch = reasoning.match(
-        /(?:However, the actual outcome was|the outcome was|the result was) (.+?)(?:\.|;|therefore|so|indicating|$)/i,
+        /(?:However, the actual outcome was|the outcome was|the result was|and the system provided|The system.*?provided|The assistant provided|The output provided) (.+?)(?:\.|;|therefore|so|indicating|$)/i,
       );
 
       // For the battery creation case, we need a different pattern since it doesn't follow the standard format
@@ -72,6 +111,39 @@ function extractTaskAndOutcome(extractionResult: {
         if (batteryMatch) {
           task = batteryMatch[1].trim();
           outcome = batteryMatch[2].trim();
+        }
+      }
+
+      // For cases like "The user asked a question about X. The system provided Y"
+      if (!task && !outcome) {
+        const questionMatch = reasoning.match(
+          /The user asked a question about (.+?)\. The system provided (.+?)\./i,
+        );
+        if (questionMatch) {
+          task = `answer a question about ${questionMatch[1].trim()}`;
+          outcome = questionMatch[2].trim();
+        }
+      }
+
+      // For cases like "The user requested X. The output provided Y"
+      if (!task && !outcome) {
+        const outputMatch = reasoning.match(
+          /The user requested (.+?)\. The output provided (.+?)\./i,
+        );
+        if (outputMatch) {
+          task = outputMatch[1].trim();
+          outcome = outputMatch[2].trim();
+        }
+      }
+
+      // For cases like "The user asked a specific question about X, seeking Y. The system provided Z"
+      if (!task && !outcome) {
+        const specificQuestionMatch = reasoning.match(
+          /The user asked a specific question about (.+?), seeking (.+?)\. The system.*?provided (.+?)\./i,
+        );
+        if (specificQuestionMatch) {
+          task = `answer a question about ${specificQuestionMatch[1].trim()}`;
+          outcome = specificQuestionMatch[3].trim();
         }
       }
 
@@ -99,6 +171,25 @@ function extractTaskAndOutcome(extractionResult: {
       console.warn(
         'Failed to parse JSON from extraction reasoning:',
         reasoning,
+      );
+    }
+  }
+
+  // Final fallback: try to parse the entire extraction result as JSON
+  // This handles edge cases where the LLM returns unexpected structures
+  if (!task || !outcome) {
+    try {
+      const parsed = JSON.parse(JSON.stringify(extractionResult)) as Record<
+        string,
+        unknown
+      >;
+      if (!task && typeof parsed.task === 'string') task = parsed.task;
+      if (!outcome && typeof parsed.outcome === 'string')
+        outcome = parsed.outcome;
+    } catch {
+      console.warn(
+        'Failed to parse extraction result as JSON:',
+        extractionResult,
       );
     }
   }
@@ -150,10 +241,30 @@ function getActualOutput(
 
   // Try to get from ai_provider_request_log response_body
   if (log.ai_provider_request_log?.response_body) {
-    if (typeof log.ai_provider_request_log.response_body === 'string') {
-      return log.ai_provider_request_log.response_body;
+    const responseBody = log.ai_provider_request_log.response_body;
+
+    if (typeof responseBody === 'string') {
+      return responseBody;
     }
-    return JSON.stringify(log.ai_provider_request_log.response_body);
+
+    // Handle structured response (like OpenAI chat completion response)
+    if (typeof responseBody === 'object' && responseBody !== null) {
+      const response = responseBody as Record<string, unknown>;
+
+      // Try to extract the actual content from chat completion response
+      if (response.choices && Array.isArray(response.choices)) {
+        const firstChoice = response.choices[0] as Record<string, unknown>;
+        if (firstChoice.message && typeof firstChoice.message === 'object') {
+          const message = firstChoice.message as Record<string, unknown>;
+          if (typeof message.content === 'string') {
+            return message.content;
+          }
+        }
+      }
+
+      // Fallback to JSON string
+      return JSON.stringify(responseBody);
+    }
   }
 
   // Try to get from metadata
@@ -233,13 +344,38 @@ async function evaluateSingleLog(
       ({ task, outcome } = extractTaskAndOutcome(extraction_result));
     } else {
       // Use standard extraction
-      const rawInput =
-        params.input ||
-        (
-          (log.ai_provider_request_log as Record<string, unknown>)
-            ?.request_body as Record<string, unknown>
-        )?.input ||
-        '';
+      const requestBody = (
+        log.ai_provider_request_log as Record<string, unknown>
+      )?.request_body as Record<string, unknown>;
+
+      let rawInput = params.input;
+
+      if (!rawInput && requestBody) {
+        // Try to get input from different possible fields
+        const possibleInput =
+          requestBody.input || requestBody.messages || requestBody.prompt;
+
+        if (possibleInput) {
+          // If we got messages array, convert it to a readable format
+          if (Array.isArray(possibleInput)) {
+            rawInput = possibleInput
+              .map(
+                (msg: Record<string, unknown>) => `${msg.role}: ${msg.content}`,
+              )
+              .join('\n');
+          } else if (typeof possibleInput === 'string') {
+            rawInput = possibleInput;
+          } else {
+            rawInput = JSON.stringify(possibleInput);
+          }
+        }
+      }
+
+      // Ensure rawInput is a string
+      if (!rawInput) {
+        rawInput = '';
+      }
+
       const input =
         typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
       const tools_called = getToolsCalled(log, params);
