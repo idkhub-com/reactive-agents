@@ -67,25 +67,29 @@ idk
 
 ### Chat Completion API
 
-| AI Provider      | Messages | Streaming | Tool Calls | JSON Output | Structured Output | MCP Servers |
-| ---------------- | -------- | --------- | ---------- | ----------- | ----------------- | ------------- |
-| Anthropic        | ✅       | 🟡        | ✅         | ✅          | ⬛                | ⬛            |
-| Azure AI Foundry | ✅       | ⬛        | ✅         | ✅          | ✅                | ⬛            |
-| Azure OpenAI     | ✅       | ⬛        | ✅         | ✅          | ✅                | ⬛            |
-| OpenAI           | ✅       | ⬛        | ✅         | ✅          | ✅                | ⬛            |
-| Gemini (Google)  | ✅       | ⬛        | ✅         | ✅          | ⬛                | ⬛            |
-| XAI              | ✅       | ⬛        | ✅         | ✅          | ✅                | ⬛            |
+***Streaming mode not yet implemented***
+
+| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers | Vision |
+| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- | ------ |
+| Anthropic        | ✅       | ✅         | ✅          | ⬛                | ⬛            | ✅     |
+| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
+| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
+| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
+| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛            | ⬛     |
+| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
 
 ### Responses API
 
-| AI Provider      | API Support | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers |
-| ---------------- | ----------- | -------- | ---------- | ----------- | ----------------- | ------------- |
-| Anthropic        | 🔴          | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
-| Azure AI Foundry | ⬛          | ⬛       | ⬛         | ⬛          | ⬛                | ⬛            |
-| Azure OpenAI     | ✅          | ✅       | ✅         | ✅          | ✅                | ✅            |
-| OpenAI           | ✅          | ✅       | ✅         | ✅          | ✅                | ✅            |
-| Gemini (Google)  | 🔴          | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
-| XAI              | ✅          | ✅       | ✅         | ✅          | ✅                | ✅            |
+***Streaming mode not yet implemented***
+
+| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers |
+| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- |
+| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ✅            |
+| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ✅            |
+| OpenAI           | ✅       | ✅         | ✅          | ✅                | ✅            |
+| Gemini (Google)  | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
+| XAI              | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
+| Anthropic        | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
 
 - ✅: Fully supported
 - 🟡: Partial support (configuration exists but has known issues)

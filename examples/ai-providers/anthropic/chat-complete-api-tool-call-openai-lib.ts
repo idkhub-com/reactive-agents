@@ -18,7 +18,7 @@ const idkhubConfig = {
   targets: [
     {
       provider: 'anthropic',
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-opus-4-1-20250805',
       api_key: process.env.ANTHROPIC_API_KEY,
     },
   ],
@@ -82,7 +82,7 @@ const response1 = await client
     },
   })
   .chat.completions.create({
-    model: 'claude-3-haiku-20240307',
+    model: 'claude-opus-4-1-20250805',
     messages: [
       {
         role: 'user',
@@ -155,7 +155,7 @@ if (toolCalls && toolCalls.length > 0) {
       },
     })
     .chat.completions.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-opus-4-1-20250805',
       messages,
       tools,
     });
