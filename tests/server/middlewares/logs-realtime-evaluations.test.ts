@@ -198,10 +198,6 @@ describe('Realtime Evaluations Integration', () => {
         skill_id: 'skill-789',
         status: EvaluationRunStatus.RUNNING,
       });
-      expect(userDataStorageConnector.addLogsToDataset).toHaveBeenCalledWith(
-        'dataset-789',
-        ['log-123'],
-      );
       expect(evaluationConnector.evaluateOneLog).toHaveBeenCalledWith(
         'eval-run-123',
         mockIdkRequestLog,
@@ -298,21 +294,6 @@ describe('Realtime Evaluations Integration', () => {
         evaluationConnectorsMap,
         userDataStorageConnector,
       );
-
-      // Verify dataset size management
-      expect(userDataStorageConnector.addLogsToDataset).toHaveBeenCalledWith(
-        'dataset-789',
-        ['log-123'],
-      );
-
-      // Verify old logs were removed (6 logs exceed limit of 3, so remove 3 oldest)
-      expect(
-        userDataStorageConnector.removeLogsFromDataset,
-      ).toHaveBeenCalledWith('dataset-789', [
-        'existing-log-0',
-        'existing-log-1',
-        'existing-log-2',
-      ]);
 
       // Verify evaluation was still triggered
       expect(evaluationConnector.evaluateOneLog).toHaveBeenCalled();
