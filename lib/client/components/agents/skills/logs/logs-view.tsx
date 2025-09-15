@@ -56,7 +56,7 @@ export function LogsView(): ReactElement {
       offset: (currentPage - 1) * limit,
     } as Partial<LogsQueryParams>;
     if (statusFilter !== 'all') {
-      params.status = parseInt(statusFilter);
+      params.status = parseInt(statusFilter, 10);
     } else {
       params.status = undefined;
     }

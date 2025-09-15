@@ -241,6 +241,19 @@
       }
     },
     {
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
+          },
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/types/cloudflare-env.d.ts"],
       "linter": {
         "enabled": false,

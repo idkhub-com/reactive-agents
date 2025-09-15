@@ -159,7 +159,7 @@ export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
       object: 'file',
       create_at: Date.now(),
       purpose: purpose,
-      bytes: Number.parseInt(bytes ?? '0'),
+      bytes: Number.parseInt(bytes ?? '0', 10),
       status: 'processed',
     };
 

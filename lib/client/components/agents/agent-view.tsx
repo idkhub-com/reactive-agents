@@ -28,6 +28,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import * as React from 'react';
+import { useId } from 'react';
 
 interface AgentViewProps {
   agentId: string;
@@ -38,6 +39,9 @@ export function AgentView({
   agentId,
   onCloseAction,
 }: AgentViewProps): React.ReactElement {
+  const agentViewCardId = useId();
+  const agentViewCloseButtonId = useId();
+
   const {
     agents,
     selectedAgent,
@@ -135,7 +139,7 @@ export function AgentView({
 
   React.useEffect(() => {
     if (currentAgent) {
-      const agentView = document.getElementById('agent-view-close-button');
+      const agentView = document.getElementById(agentViewCloseButtonId);
       if (agentView) {
         // Delay until animation is complete
         setTimeout(() => {
@@ -143,7 +147,7 @@ export function AgentView({
         }, AGENT_VIEW_FOCUS_DELAY_MS);
       }
     }
-  }, [currentAgent]);
+  }, [currentAgent, agentViewCloseButtonId]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -166,8 +170,9 @@ export function AgentView({
       data-testid="agent-view"
     >
       <Card
-        id="agent-view-card"
+        id={agentViewCardId}
         className="flex flex-col h-full relative overflow-hidden shadow-xl"
+        data-testid="agent-view-card"
         onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>): void => {
           if (e.key === 'Escape') {
             handleClose();
@@ -245,11 +250,12 @@ export function AgentView({
               </>
             )}
             <Button
-              id="agent-view-close-button"
+              id={agentViewCloseButtonId}
               className="invert-0 hover:invert-100"
               onClick={handleClose}
               variant="ghost"
               size="icon"
+              aria-label="Close agent view"
             >
               <XIcon className="w-4 h-4" />
             </Button>

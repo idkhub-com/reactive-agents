@@ -673,7 +673,7 @@ export const vertexGoogleChatCompleteStreamChunkTransform: ResponseChunkStreamTr
                 if (part.functionCall) {
                   return {
                     index: idx,
-                    id: `portkey-${crypto.randomUUID()}`,
+                    id: `idk-${crypto.randomUUID()}`,
                     type: 'function',
                     function: {
                       name: part.functionCall.name,
@@ -681,6 +681,7 @@ export const vertexGoogleChatCompleteStreamChunkTransform: ResponseChunkStreamTr
                     },
                   };
                 }
+                return undefined;
               }),
               content: '',
             };

@@ -386,7 +386,7 @@ export const GoogleToOpenAIBatch = (
 ): CreateBatchResponse => {
   const jobId = response.name.split('/').at(-1);
   const total = Object.values(response.completionsStats ?? {}).reduce(
-    (acc, current) => acc + Number.parseInt(current),
+    (acc, current) => acc + Number.parseInt(current, 10),
     0,
   );
 
@@ -413,8 +413,12 @@ export const GoogleToOpenAIBatch = (
       total: total,
       completed: Number.parseInt(
         response.completionsStats?.successfulCount ?? '0',
+        10,
       ),
-      failed: Number.parseInt(response.completionsStats?.failedCount ?? '0'),
+      failed: Number.parseInt(
+        response.completionsStats?.failedCount ?? '0',
+        10,
+      ),
     },
     ...(response.error && {
       errors: {
