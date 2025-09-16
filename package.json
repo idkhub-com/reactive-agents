@@ -28,7 +28,7 @@
     "@dicebear/core": "^9.2.4",
     "@hono/node-ws": "^1.2.0",
     "@hono/zod-validator": "^0.7.2",
-    "@hookform/resolvers": "^5.2.1",
+    "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@opennextjs/cloudflare": "^1.8.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
