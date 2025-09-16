@@ -17,9 +17,13 @@ import type { IdkRequestData } from '@shared/types/api/request/body';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 import { format } from 'date-fns';
 import { XIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 export function LogView(): React.ReactElement {
+  const logViewId = useId();
+  const logViewCardId = useId();
+  const logViewCloseButtonId = useId();
+
   const { selectedLog, logsViewOpen, setLogsViewOpen } = useLogs();
 
   const [idkRequestData, setIdkRequestData] = useState<IdkRequestData | null>(
@@ -28,7 +32,7 @@ export function LogView(): React.ReactElement {
 
   useEffect(() => {
     if (logsViewOpen) {
-      const logsView = document.getElementById('logs-view-close-button');
+      const logsView = document.getElementById(logViewCloseButtonId);
       if (logsView) {
         // Delay until animation is complete
         setTimeout(() => {
@@ -36,7 +40,7 @@ export function LogView(): React.ReactElement {
         }, 700);
       }
     }
-  }, [logsViewOpen]);
+  }, [logsViewOpen, logViewCloseButtonId]);
 
   // Function to format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -60,7 +64,7 @@ export function LogView(): React.ReactElement {
 
   return (
     <div
-      id="log-view"
+      id={logViewId}
       className={cn(
         logsViewOpen
           ? 'translate-x-0'
@@ -69,7 +73,7 @@ export function LogView(): React.ReactElement {
       )}
     >
       <Card
-        id="log-view-card"
+        id={logViewCardId}
         className="flex flex-col h-full relative overflow-hidden shadow-xl"
         onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>): void => {
           if (e.key === 'Escape') {
@@ -93,7 +97,7 @@ export function LogView(): React.ReactElement {
           </CardTitle>
           <div className="flex flex-row justify-end shrink-0">
             <Button
-              id="log-view-close-button"
+              id={logViewCloseButtonId}
               className="invert-0 hover:invert-100"
               onClick={(): void => setLogsViewOpen(false)}
               variant="ghost"

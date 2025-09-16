@@ -196,6 +196,8 @@ INSERT INTO public.datasets (
     agent_id,
     name,
     description,
+    is_realtime,
+    realtime_size,
     metadata,
     created_at,
     updated_at
@@ -205,6 +207,8 @@ VALUES (
     'df178cc6-692b-4165-ad9d-e34071d7a140'::uuid,
     'battery-agent-requests',
     'A dataset of battery agent requests',
+    FALSE,
+    1,
     '{}',
     '2025-07-16 19:11:59.839',
     '2025-07-16 19:11:59.839'

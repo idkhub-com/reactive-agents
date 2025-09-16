@@ -40,7 +40,6 @@ export function LogRow({ log }: { log: IdkRequestLog }): ReactElement {
   };
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: TableRow cannot be a button; adding role and key handlers for accessibility
     <TableRow
       className="hover:cursor-pointer"
       key={log.id}

@@ -1,8 +1,8 @@
 import type {
   TaskCompletionTemplateConfig,
   TaskCompletionTemplateData,
-} from '../../types/task-completion';
-import { taskCompletionScoringText } from '../../types/task-completion';
+} from '@server/connectors/evaluations/task-completion/types';
+import { taskCompletionScoringText } from '@server/connectors/evaluations/task-completion/types';
 
 /**
  * Main task completion evaluation template

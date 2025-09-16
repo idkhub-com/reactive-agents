@@ -1,4 +1,9 @@
 import { methodsRouter } from '@server/api/v1/idk/evaluations/methods';
+import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
+import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
+import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
+import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
+import { turnRelevancyEvaluationConnector } from '@server/connectors/evaluations/turn-relevancy';
 import type { AppEnv } from '@server/types/hono';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { Hono } from 'hono';
@@ -21,7 +26,112 @@ vi.mock('zod', async () => {
   };
 });
 
-// Mock the evaluation connectors to prevent actual evaluation execution
+// Mock all individual evaluation connectors
+vi.mock('@server/connectors/evaluations/task-completion', () => ({
+  taskCompletionEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.TASK_COMPLETION,
+      name: 'Task Completion',
+      description:
+        'Evaluates whether the AI agent successfully completes the given task',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+vi.mock('@server/connectors/evaluations/argument-correctness', () => ({
+  argumentCorrectnessEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
+      name: 'Argument Correctness',
+      description:
+        'Evaluates the correctness of function arguments passed by the AI agent',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+vi.mock('@server/connectors/evaluations/role-adherence', () => ({
+  roleAdherenceEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.ROLE_ADHERENCE,
+      name: 'Role Adherence',
+      description:
+        'Evaluates how well the AI agent adheres to its assigned role',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+vi.mock('@server/connectors/evaluations/turn-relevancy', () => ({
+  turnRelevancyEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.TURN_RELEVANCY,
+      name: 'Turn Relevancy',
+      description: 'Evaluates the relevancy of the AI agent responses',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+vi.mock('@server/connectors/evaluations/tool-correctness', () => ({
+  toolCorrectnessEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.TOOL_CORRECTNESS,
+      name: 'Tool Correctness',
+      description:
+        'Evaluates the correctness of tool function calls and responses',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+vi.mock('@server/connectors/evaluations/knowledge-retention', () => ({
+  knowledgeRetentionEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.KNOWLEDGE_RETENTION,
+      name: 'Knowledge Retention',
+      description:
+        'Evaluates how well the AI agent retains and recalls information across conversations',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+vi.mock('@server/connectors/evaluations/conversation-completeness', () => ({
+  conversationCompletenessEvaluationConnector: {
+    getDetails: vi.fn(() => ({
+      method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
+      name: 'Conversation Completeness',
+      description:
+        'Evaluates how well an AI assistant completes conversations by satisfying user needs throughout the interaction',
+    })),
+    evaluate: vi.fn(),
+    getParameterSchema: {
+      safeParse: vi.fn(() => ({ success: true, data: { threshold: 0.7 } })),
+    },
+  },
+}));
+
+// Mock the main evaluations module to export all connectors
 vi.mock('@server/connectors/evaluations', () => {
   // Create a mock Zod schema object with safeParse method
   const createMockSchema = () => ({
@@ -346,10 +456,9 @@ describe('Evaluation Methods API', () => {
   describe('POST /execute - Execute evaluation', () => {
     it('should return 200 on successful evaluation execution', async () => {
       // Mock the evaluation connector
-      const { taskCompletionEvaluationConnector } = await import(
-        '@server/connectors/evaluations'
-      );
-      vi.mocked(taskCompletionEvaluationConnector.evaluate).mockResolvedValue(
+      const mockEvaluate =
+        taskCompletionEvaluationConnector.evaluate as ReturnType<typeof vi.fn>;
+      mockEvaluate.mockResolvedValue(
         // biome-ignore lint/suspicious/noExplicitAny: Mock return values require any for flexible test scenarios
         mockEvaluationRun as any,
       );
@@ -405,12 +514,9 @@ describe('Evaluation Methods API', () => {
     });
 
     it('should return 500 when evaluation connector throws error', async () => {
-      const { taskCompletionEvaluationConnector } = await import(
-        '@server/connectors/evaluations'
-      );
-      vi.mocked(taskCompletionEvaluationConnector.evaluate).mockRejectedValue(
-        new Error('Evaluation failed'),
-      );
+      const mockEvaluate =
+        taskCompletionEvaluationConnector.evaluate as ReturnType<typeof vi.fn>;
+      mockEvaluate.mockRejectedValue(new Error('Evaluation failed'));
 
       const consoleSpy = vi
         .spyOn(console, 'error')
@@ -430,23 +536,6 @@ describe('Evaluation Methods API', () => {
     });
 
     it('should handle all evaluation method types', async () => {
-      const evaluationMethods = [
-        EvaluationMethodName.TASK_COMPLETION,
-        EvaluationMethodName.ARGUMENT_CORRECTNESS,
-        EvaluationMethodName.ROLE_ADHERENCE,
-        EvaluationMethodName.TURN_RELEVANCY,
-        EvaluationMethodName.TOOL_CORRECTNESS,
-      ];
-
-      // Import all connectors
-      const {
-        taskCompletionEvaluationConnector,
-        argumentCorrectnessEvaluationConnector,
-        roleAdherenceEvaluationConnector,
-        turnRelevancyEvaluationConnector,
-        toolCorrectnessEvaluationConnector,
-      } = await import('@server/connectors/evaluations');
-
       const connectors = [
         taskCompletionEvaluationConnector,
         argumentCorrectnessEvaluationConnector,
@@ -455,9 +544,18 @@ describe('Evaluation Methods API', () => {
         toolCorrectnessEvaluationConnector,
       ];
 
+      const evaluationMethods = [
+        EvaluationMethodName.TASK_COMPLETION,
+        EvaluationMethodName.ARGUMENT_CORRECTNESS,
+        EvaluationMethodName.ROLE_ADHERENCE,
+        EvaluationMethodName.TURN_RELEVANCY,
+        EvaluationMethodName.TOOL_CORRECTNESS,
+      ];
+
       // Mock all connectors to return success
       connectors.forEach((connector) => {
-        vi.mocked(connector.evaluate).mockResolvedValue(
+        const mockEvaluate = connector.evaluate as ReturnType<typeof vi.fn>;
+        mockEvaluate.mockResolvedValue(
           // biome-ignore lint/suspicious/noExplicitAny: Mock return values require any for flexible test scenarios
           mockEvaluationRun as any,
         );
@@ -479,7 +577,8 @@ describe('Evaluation Methods API', () => {
         expect(data).toHaveProperty('evaluation_run_id', 'eval-run-123');
 
         // Verify the correct connector was called
-        expect(connectors[i].evaluate).toHaveBeenCalledWith(
+        const mockEvaluate = connectors[i].evaluate as ReturnType<typeof vi.fn>;
+        expect(mockEvaluate).toHaveBeenCalledWith(
           request,
           mockUserDataStorageConnector,
         );
@@ -487,10 +586,9 @@ describe('Evaluation Methods API', () => {
     });
 
     it('should preserve evaluation request parameters', async () => {
-      const { taskCompletionEvaluationConnector } = await import(
-        '@server/connectors/evaluations'
-      );
-      vi.mocked(taskCompletionEvaluationConnector.evaluate).mockResolvedValue(
+      const mockEvaluate =
+        taskCompletionEvaluationConnector.evaluate as ReturnType<typeof vi.fn>;
+      mockEvaluate.mockResolvedValue(
         // biome-ignore lint/suspicious/noExplicitAny: Mock return values require any for flexible test scenarios
         mockEvaluationRun as any,
       );
@@ -517,7 +615,7 @@ describe('Evaluation Methods API', () => {
       expect(res.status).toBe(200);
 
       // Verify that the exact request (including custom parameters) was passed to the connector
-      expect(taskCompletionEvaluationConnector.evaluate).toHaveBeenCalledWith(
+      expect(mockEvaluate).toHaveBeenCalledWith(
         requestWithCustomParams,
         mockUserDataStorageConnector,
       );
@@ -541,14 +639,10 @@ describe('Evaluation Methods API', () => {
     });
 
     it('should handle unknown errors gracefully', async () => {
-      const { taskCompletionEvaluationConnector } = await import(
-        '@server/connectors/evaluations'
-      );
-
       // Throw a non-Error object to test error handling
-      vi.mocked(taskCompletionEvaluationConnector.evaluate).mockRejectedValue(
-        'String error',
-      );
+      const mockEvaluate =
+        taskCompletionEvaluationConnector.evaluate as ReturnType<typeof vi.fn>;
+      mockEvaluate.mockRejectedValue('String error');
 
       const consoleSpy = vi
         .spyOn(console, 'error')

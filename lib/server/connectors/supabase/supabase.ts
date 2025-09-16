@@ -519,6 +519,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     if (queryParams.name) {
       postgrestParams.name = `eq.${queryParams.name}`;
     }
+    if (queryParams.is_realtime !== undefined) {
+      postgrestParams.is_realtime = `eq.${queryParams.is_realtime}`;
+    }
     if (queryParams.limit) {
       postgrestParams.limit = queryParams.limit.toString();
     }

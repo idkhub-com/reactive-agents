@@ -1,7 +1,7 @@
 import type {
   ArgumentCorrectnessTemplateConfig,
   ArgumentCorrectnessTemplateData,
-} from '@server/connectors/evaluations/types/argument-correctness';
+} from '@server/connectors/evaluations/argument-correctness/types';
 
 export function getArgumentCorrectnessTemplate(
   data: ArgumentCorrectnessTemplateData,

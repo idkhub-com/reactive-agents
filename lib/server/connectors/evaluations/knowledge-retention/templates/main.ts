@@ -1,4 +1,4 @@
-import type { KnowledgeRetentionEvaluationParameters } from '@server/connectors/evaluations/types/knowledge-retention';
+import type { KnowledgeRetentionEvaluationParameters } from '@server/connectors/evaluations/knowledge-retention/types';
 
 // Default evaluation criteria for knowledge retention
 export const defaultKnowledgeRetentionCriteria = [

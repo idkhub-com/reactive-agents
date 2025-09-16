@@ -1,6 +1,6 @@
 import { getArgumentCorrectnessTemplate } from '@server/connectors/evaluations/argument-correctness/templates/main';
-import type { ArgumentCorrectnessAverageResult } from '@server/connectors/evaluations/types/argument-correctness';
-import type { ToolUsage } from '@server/connectors/evaluations/types/tool_usage';
+import type { ArgumentCorrectnessAverageResult } from '@server/connectors/evaluations/argument-correctness/types';
+import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';

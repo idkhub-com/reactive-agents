@@ -1,6 +1,6 @@
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion/task-completion';
-import type { TaskCompletionAverageResult } from '@server/connectors/evaluations/types/task-completion';
-import type { ToolUsage } from '@server/connectors/evaluations/types/tool_usage';
+import type { TaskCompletionAverageResult } from '@server/connectors/evaluations/task-completion/types';
+import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { DatasetQueryParams } from '@shared/types/data/dataset';

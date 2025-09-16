@@ -1,8 +1,8 @@
-import type {
-  RoleAdherenceTemplateConfig,
-  RoleAdherenceTemplateData,
-} from '../../types/role-adherence';
-import { roleAdherenceScoringText } from '../../types/role-adherence';
+import {
+  type RoleAdherenceTemplateConfig,
+  type RoleAdherenceTemplateData,
+  roleAdherenceScoringText,
+} from '@server/connectors/evaluations/role-adherence/types';
 
 export function getRoleAdherenceMainTemplate(
   data: RoleAdherenceTemplateData,

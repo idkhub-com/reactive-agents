@@ -2,7 +2,7 @@ import type {
   ConversationCompletenessAverageResult,
   ConversationCompletenessEvaluationParameters,
   ConversationCompletenessResult,
-} from '@server/connectors/evaluations/types/conversation-completeness';
+} from '@server/connectors/evaluations/conversation-completeness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';

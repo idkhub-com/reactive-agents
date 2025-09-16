@@ -100,6 +100,11 @@ export function DatasetList({
                       <h3 className="font-medium text-sm truncate">
                         {dataset.name}
                       </h3>
+                      {dataset.is_realtime && (
+                        <Badge variant="default" className="text-xs">
+                          Realtime ({dataset.realtime_size})
+                        </Badge>
+                      )}
                       <Badge variant="secondary" className="text-xs">
                         {Object.keys(dataset.metadata).length} metadata
                       </Badge>

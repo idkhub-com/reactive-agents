@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ToolUsageSchema } from './tool_usage';
+import { ToolUsageSchema } from '../tool-correctness/types';
 
 // Tool call structure
 export const ArgumentCorrectnessToolCallSchema = z.object({

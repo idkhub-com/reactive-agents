@@ -52,7 +52,7 @@ export const workersAIImageGenerateConfig: AIProviderFunctionConfig = {
           );
         }
 
-        const height = parseInt(parts[1]);
+        const height = parseInt(parts[1], 10);
         if (Number.isNaN(height) || height <= 0) {
           throw new Error(
             `Invalid height value in size parameter: ${idkRequestBody.size}`,
@@ -83,7 +83,7 @@ export const workersAIImageGenerateConfig: AIProviderFunctionConfig = {
           );
         }
 
-        const width = parseInt(parts[0]);
+        const width = parseInt(parts[0], 10);
         if (Number.isNaN(width) || width <= 0) {
           throw new Error(
             `Invalid width value in size parameter: ${idkRequestBody.size}`,

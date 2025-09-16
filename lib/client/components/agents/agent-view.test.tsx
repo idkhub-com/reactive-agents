@@ -228,11 +228,9 @@ describe('AgentView', () => {
       expect(screen.getAllByText('Test Agent 1')).toHaveLength(2);
     });
 
-    // Click close button using its ID
-    const closeButton = document.getElementById('agent-view-close-button');
-    if (closeButton) {
-      fireEvent.click(closeButton);
-    }
+    // Click close button using aria-label
+    const closeButton = screen.getByLabelText('Close agent view');
+    fireEvent.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
@@ -406,8 +404,10 @@ describe('AgentView', () => {
       expect(screen.getAllByText('Test Agent 1')).toHaveLength(2);
     });
 
-    // Press Escape key on the agent view card
-    const agentViewCard = document.getElementById('agent-view-card');
+    // Press Escape key on the agent view card (which has the onKeyDown handler)
+    const agentViewCard = screen.queryByTestId('agent-view-card');
+    expect(agentViewCard).toBeInTheDocument();
+
     if (agentViewCard) {
       fireEvent.keyDown(agentViewCard, { key: 'Escape' });
     }

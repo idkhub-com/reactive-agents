@@ -1,13 +1,12 @@
 import { zValidator } from '@hono/zod-validator';
-import {
-  argumentCorrectnessEvaluationConnector,
-  conversationCompletenessEvaluationConnector,
-  knowledgeRetentionEvaluationConnector,
-  roleAdherenceEvaluationConnector,
-  taskCompletionEvaluationConnector,
-  toolCorrectnessEvaluationConnector,
-  turnRelevancyEvaluationConnector,
-} from '@server/connectors/evaluations';
+
+import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
+import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
+import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
+import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
+import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
+import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
+import { turnRelevancyEvaluationConnector } from '@server/connectors/evaluations/turn-relevancy';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import type { AppEnv } from '@server/types/hono';
 import {

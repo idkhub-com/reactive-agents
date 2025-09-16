@@ -2,6 +2,7 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
+import { error, info, warn } from '@shared/console-logging';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
@@ -13,38 +14,10 @@ import {
 import { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
 import type { ToolCall } from './types';
 
-// Simple logger utility - TODO: Replace with proper logging framework (e.g., winston, pino)
-const logger = {
-  info: (message: string, data?: unknown) => {
-    console.log(`[INFO] ${message}`, data ? JSON.stringify(data, null, 2) : '');
-  },
-  warn: (message: string, data?: unknown) => {
-    console.warn(
-      `[WARN] ${message}`,
-      data ? JSON.stringify(data, null, 2) : '',
-    );
-  },
-  error: (message: string, error?: unknown) => {
-    console.error(
-      `[ERROR] ${message}`,
-      error instanceof Error ? error.message : error,
-    );
-  },
-  debug: (message: string, data?: unknown) => {
-    // Only log debug messages in development or when verbose mode is enabled
-    if (process.env.NODE_ENV === 'development') {
-      console.log(
-        `[DEBUG] ${message}`,
-        data ? JSON.stringify(data, null, 2) : '',
-      );
-    }
-  },
-};
-
 // Pure functions for tool evaluation logic
 const extractToolsCalled = (log: Log): ToolCall[] => {
   if (!log || typeof log !== 'object') {
-    logger.warn('Invalid log provided to extractToolsCalled', {
+    warn('Invalid log provided to extractToolsCalled', {
       logId: (log as Log)?.id,
     });
     return [];
@@ -68,7 +41,7 @@ const extractToolsCalled = (log: Log): ToolCall[] => {
 
 const extractExpectedTools = (log: Log): ToolCall[] => {
   if (!log || typeof log !== 'object') {
-    logger.warn('Invalid log provided to extractExpectedTools', {
+    warn('Invalid log provided to extractExpectedTools', {
       logId: (log as Log)?.id,
     });
     return [];
@@ -157,15 +130,14 @@ const parametersMatch = (
     return deepEqual(calledParams, expectedParams);
   } catch (error) {
     // Fallback to JSON comparison if deep equality fails
-    logger.warn(
-      'Failed to compare parameters, falling back to JSON comparison',
-      { error },
-    );
+    warn('Failed to compare parameters, falling back to JSON comparison', {
+      error,
+    });
 
     try {
       return JSON.stringify(calledParams) === JSON.stringify(expectedParams);
     } catch (jsonError) {
-      logger.warn('Failed to serialize parameters', { error: jsonError });
+      warn('Failed to serialize parameters', { error: jsonError });
 
       // Final fallback to shallow comparison
       const calledKeys = Object.keys(calledParams);
@@ -195,7 +167,7 @@ const outputMatch = (
     return deepEqual(calledOutput, expectedOutput);
   } catch (error) {
     // Handle circular references or other comparison issues
-    logger.warn('Failed to compare outputs, using shallow comparison', {
+    warn('Failed to compare outputs, using shallow comparison', {
       error,
     });
     // If we can't compare, perform a shallow comparison as fallback
@@ -323,7 +295,7 @@ const countMatchedTools = (
       );
     } catch (error) {
       // Fallback to original algorithm if optimization fails
-      logger.warn('Falling back to original matching algorithm', { error });
+      warn('Falling back to original matching algorithm', { error });
     }
   }
 
@@ -514,7 +486,7 @@ const evaluateLog = (
 
   // Use structured logging instead of console.log
   if (parameters.verbose_mode) {
-    logger.info(`Evaluating log ${log.id}`, {
+    info(`Evaluating log ${log.id}`, {
       tools_called,
       expected_tools,
     });
@@ -641,14 +613,11 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
               },
             });
           } catch (outputError) {
-            logger.error(
-              `Error creating log output for ${log.id}:`,
-              outputError,
-            );
+            error(`Error creating log output for ${log.id}:`, outputError);
             // Continue with other logs even if output creation fails
           }
-        } catch (error) {
-          logger.error(`Error evaluating log ${log.id}:`, error);
+        } catch (e) {
+          error(`Error evaluating log ${log.id}:`, e);
           // Continue with other logs
         }
       }
@@ -669,19 +638,19 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
         id: evaluationRun.id,
       });
       return updatedRuns[0];
-    } catch (error) {
-      logger.error('Error during tool correctness evaluation:', error);
+    } catch (e) {
+      error('Error during tool correctness evaluation:', e);
 
       // Update evaluation run with error status
       await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
         status: EvaluationRunStatus.FAILED,
         results: {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: e instanceof Error ? e.message : 'Unknown error',
         },
         completed_at: new Date().toISOString(),
       });
 
-      throw error;
+      throw e;
     }
   },
 

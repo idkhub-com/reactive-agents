@@ -208,6 +208,8 @@ CREATE TABLE if not exists datasets (
   agent_id UUID NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
+  is_realtime BOOLEAN NOT NULL DEFAULT FALSE,
+  realtime_size INTEGER NOT NULL DEFAULT 1,
   metadata JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -221,6 +223,12 @@ CREATE TRIGGER update_datasets_updated_at BEFORE UPDATE ON datasets
 CREATE INDEX idx_datasets_name ON datasets(name);
 
 CREATE INDEX idx_datasets_agent_id ON datasets(agent_id);
+
+CREATE INDEX idx_datasets_is_realtime ON datasets(is_realtime);
+
+COMMENT ON COLUMN datasets.is_realtime IS 'Whether the dataset is realtime or not. Realtime datasets do not use bridge tables to decide which logs are part of the dataset. Instead, they use a dedicated buffer (e.g. Last 100 logs of the skill).';
+
+COMMENT ON COLUMN datasets.realtime_size IS 'Only used when is_realtime is true. The maximum number of logs to keep in the realtime buffer';
 
 ALTER TABLE datasets ENABLE ROW LEVEL SECURITY;
 

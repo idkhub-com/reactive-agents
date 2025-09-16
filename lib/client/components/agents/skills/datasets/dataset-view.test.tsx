@@ -6,6 +6,7 @@ import type { Dataset, Log } from '@shared/types/data';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DatasetView } from './dataset-view';
 
@@ -67,6 +68,8 @@ const mockDataset: Dataset = {
   agent_id: '1',
   name: 'Test Dataset',
   description: 'A test dataset for testing',
+  is_realtime: false,
+  realtime_size: 1,
   metadata: {},
   created_at: '2023-01-01T00:00:00Z',
   updated_at: '2023-01-02T00:00:00Z',
@@ -238,6 +241,7 @@ describe('DatasetView', () => {
     });
 
     it('saves changes when save button is clicked', async () => {
+      const user = userEvent.setup();
       mockUseDatasets.updateDataset.mockResolvedValue(undefined);
 
       renderDatasetView('test-dataset-id');
@@ -247,29 +251,37 @@ describe('DatasetView', () => {
       });
 
       const editButton = screen.getByRole('button', { name: /edit/i });
-      fireEvent.click(editButton);
+      await user.click(editButton);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('Test Dataset')).toBeInTheDocument();
       });
 
       const nameInput = screen.getByDisplayValue('Test Dataset');
-      fireEvent.change(nameInput, {
-        target: { value: 'Updated Dataset Name' },
-      });
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Dataset Name');
 
       const saveButton = screen.getByRole('button', { name: /save/i });
-      fireEvent.click(saveButton);
+      await user.click(saveButton);
 
-      await waitFor(() => {
-        expect(mockUseDatasets.updateDataset).toHaveBeenCalledWith(
-          'test-dataset-id',
-          {
-            name: 'Updated Dataset Name',
-            description: 'A test dataset for testing',
-          },
-        );
-      });
+      // Add debugging to see what calls were made
+      await waitFor(
+        () => {
+          // First check if the function was called at all
+          expect(mockUseDatasets.updateDataset).toHaveBeenCalled();
+        },
+        { timeout: 3000 },
+      );
+
+      // Then check the specific call
+      expect(mockUseDatasets.updateDataset).toHaveBeenCalledWith(
+        'test-dataset-id',
+        {
+          name: 'Updated Dataset Name',
+          description: 'A test dataset for testing',
+          realtime_size: 1,
+        },
+      );
     });
   });
 
