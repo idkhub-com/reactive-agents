@@ -43,7 +43,7 @@ export const googleRetrieveFileRequestHandler: RequestHandlerFunction = async ({
   const status = 'processed';
 
   const fileObject = {
-    bytes: Number.parseInt(bytes ?? '0'),
+    bytes: Number.parseInt(bytes ?? '0', 10),
     updatedAt: new Date(updatedAt ?? '').getTime(),
     createdAt: new Date(createdAt ?? '').getTime(),
     id,

@@ -86,41 +86,6 @@ function LogsListComponent({
     }
   }, []);
 
-  // Loading skeleton component
-  const skeletonKeys = ['req', 'res', 'meta'] as const;
-  const LoadingSkeleton = () => (
-    <div className="space-y-4">
-      {skeletonKeys.map((key) => (
-        <Card key={key} className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4 min-w-0 flex-1">
-              <div className="shrink-0 mt-1">
-                <Skeleton className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <Skeleton className="h-6 w-12" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-6 w-16" />
-                </div>
-                <div className="flex items-center gap-4 text-sm mb-2">
-                  <Skeleton className="h-4 w-32" />
-                </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-5 w-20" />
-                </div>
-              </div>
-            </div>
-            <div className="shrink-0 ml-2">
-              <Skeleton className="h-8 w-8" />
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -273,3 +238,41 @@ function LogsListComponent({
 }
 
 export const LogsList = memo(LogsListComponent);
+
+const LoadingSkeleton = () => {
+  // Loading skeleton component
+  const skeletonKeys = ['req', 'res', 'meta'] as const;
+
+  return (
+    <div className="space-y-4">
+      {skeletonKeys.map((key) => (
+        <Card key={key} className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="shrink-0 mt-1">
+                <Skeleton className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <Skeleton className="h-6 w-12" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+                <div className="flex items-center gap-4 text-sm mb-2">
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="flex items-center gap-4 text-xs">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-5 w-20" />
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0 ml-2">
+              <Skeleton className="h-8 w-8" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+};

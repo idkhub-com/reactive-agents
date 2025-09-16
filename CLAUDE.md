@@ -17,8 +17,17 @@ pnpm check:fix  # Run biome linting and formatting and automatically fix issues
 Development server commands:
 ```bash
 pnpm dev        # Start development server (auto-restarts on changes)
-pnpm test       # Run all tests
+pnpm test       # Run all tests (excludes in-depth integration tests)
 pnpm test path/to/test.ts  # Run specific test file
+```
+
+Integration test commands:
+```bash
+# Run all tests including in-depth integration tests (slower, more comprehensive)
+INCLUDE_IN_DEPTH=true pnpm test
+
+# Run specific in-depth test file
+INCLUDE_IN_DEPTH=true pnpm test tests/server/connectors/in-depth/tool-correctness/integration-test.test.ts
 ```
 
 API testing:

@@ -195,7 +195,7 @@ export async function safeParseResponse(
 ): Promise<ChatCompletionResponseBody> {
   // Check content length
   const contentLength = response.headers.get('content-length');
-  if (contentLength && parseInt(contentLength) > MAX_RESPONSE_SIZE) {
+  if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
     throw new Error(
       `Response too large: ${contentLength} bytes exceeds limit of ${MAX_RESPONSE_SIZE} bytes`,
     );

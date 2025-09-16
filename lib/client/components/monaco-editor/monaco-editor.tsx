@@ -74,11 +74,8 @@ export function MonacoEditor({
             schema: {
               description: rawSchema.description,
               type: 'object',
-              // @ts-ignore package seems to be outdated
               properties: rawSchema.properties,
-              // @ts-ignore package seems to be outdated
               additionalProperties: rawSchema.additionalProperties,
-              // @ts-ignore package seems to be outdated
               required: rawSchema.required,
             },
           };

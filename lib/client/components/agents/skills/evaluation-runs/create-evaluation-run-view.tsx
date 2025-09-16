@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 interface EvaluationFormData {
   name: string;
@@ -54,6 +54,9 @@ interface EvaluationMethodWithSchema extends EvaluationMethodDetails {
 }
 
 export function CreateEvaluationRunView(): ReactElement {
+  const nameId = useId();
+  const descriptionId = useId();
+
   const { navigationState, replaceToEvaluations } = useNavigation();
   const smartBack = useSmartBack();
 
@@ -365,18 +368,18 @@ export function CreateEvaluationRunView(): ReactElement {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Evaluation Name</Label>
+                  <Label htmlFor={nameId}>Evaluation Name</Label>
                   <Input
-                    id="name"
+                    id={nameId}
                     placeholder="e.g., Tool Correctness - Week 1"
                     value={formData.name}
                     onChange={(e) => updateFormData({ name: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Label htmlFor={descriptionId}>Description (Optional)</Label>
                   <Textarea
-                    id="description"
+                    id={descriptionId}
                     placeholder="Describe what this evaluation is testing..."
                     value={formData.description}
                     onChange={(e) =>

@@ -21,11 +21,7 @@ Object.defineProperty(window, 'localStorage', {
 // Ensure process.nextTick exists without replacing the whole process object
 // Some environments (jsdom) may not provide a full Node `process` impl.
 // We only define `nextTick` if missing to avoid breaking methods like `emit`.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 if (typeof process !== 'undefined' && typeof process.nextTick !== 'function') {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
   process.nextTick = (fn: () => void): void => {
     setTimeout(fn, 0);
   };
