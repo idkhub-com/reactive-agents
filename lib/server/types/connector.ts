@@ -46,7 +46,7 @@ import type {
 } from '@shared/types/data/tool';
 import type {
   EvaluationMethodDetails,
-  EvaluationMethodRequest,
+  EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations/evaluations';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import type { Hook, HookResult } from '@shared/types/middleware/hooks';
@@ -160,7 +160,7 @@ export interface HooksConnector {
 export interface EvaluationMethodConnector {
   getDetails: () => EvaluationMethodDetails;
   evaluate: (
-    request: EvaluationMethodRequest,
+    jobDetails: EvaluationRunJobDetails,
     userDataStorageConnector: UserDataStorageConnector,
   ) => Promise<EvaluationRun>;
   getParameterSchema: z.ZodType;

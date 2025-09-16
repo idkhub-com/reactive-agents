@@ -276,6 +276,7 @@ describe('Evaluation Methods API', () => {
   // Define shared test data with valid UUIDs and proper parameter structure
   const validEvaluationRequest = {
     agent_id: '123e4567-e89b-12d3-a456-426614174000',
+    skill_id: 'd4a9623f-1ae7-482a-b8f0-7304e839b4d8',
     dataset_id: '987fcdeb-51a2-43d7-8f9e-123456789abc',
     evaluation_method: EvaluationMethodName.TASK_COMPLETION,
     name: 'Test Evaluation',

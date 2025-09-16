@@ -9,7 +9,7 @@ import type { Log } from '@shared/types/data/log';
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
-  type EvaluationMethodRequest,
+  type EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations';
 import { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
 import type { ToolCall } from './types';
@@ -524,24 +524,26 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
   },
 
   async evaluate(
-    request: EvaluationMethodRequest,
+    jobDetails: EvaluationRunJobDetails,
     userDataStorageConnector: UserDataStorageConnector,
   ): Promise<EvaluationRun> {
-    const { agent_id, dataset_id, parameters } = request;
+    const { agent_id, skill_id, dataset_id, parameters } = jobDetails;
 
     // Parameters are now directly ToolCorrectnessEvaluationMethodDetails with defaults from schema
-    const toolCorrectnessParams = parameters;
+    const toolCorrectnessParams =
+      ToolCorrectnessEvaluationParameters.parse(parameters);
 
     // Create evaluation run
     const evaluationRun = await userDataStorageConnector.createEvaluationRun({
       dataset_id,
       agent_id,
+      skill_id,
       evaluation_method: EvaluationMethodName.TOOL_CORRECTNESS,
       name:
-        request.name ||
+        jobDetails.name ||
         `Tool Correctness Evaluation - ${new Date().toISOString()}`,
       description:
-        request.description || 'Evaluation of tool calling correctness',
+        jobDetails.description || 'Evaluation of tool calling correctness',
       metadata: {
         parameters: toolCorrectnessParams,
       },
@@ -555,10 +557,10 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
       });
 
       // Get dataset logs
-      const logs = await userDataStorageConnector.getDatasetLogs(dataset_id, {
-        limit: 1000,
-        offset: 0,
-      });
+      const logs = await userDataStorageConnector.getDatasetLogs(
+        dataset_id,
+        {},
+      );
 
       const results = {
         total_logs: logs.length,

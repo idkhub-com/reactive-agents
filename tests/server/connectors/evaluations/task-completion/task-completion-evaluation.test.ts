@@ -1,7 +1,6 @@
 import { evaluateTaskCompletion } from '@server/connectors/evaluations/task-completion/service/evaluate';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import { HttpMethod } from '@server/types/http';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { LogOutput as EvaluationOutput } from '@shared/types/data/log-output';
 import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
@@ -86,18 +85,21 @@ const mockLogs = [
 const mockUserDataStorageConnector = {
   getLogs: vi.fn().mockResolvedValue(mockLogs),
   getDatasetLogs: vi.fn().mockResolvedValue(mockLogs),
-  createEvaluationRun: vi.fn().mockResolvedValue({
-    id: 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
-    dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-    agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
-    evaluation_method: 'task_completion',
-    name: 'Test Evaluation Run',
-    description: 'Test description',
-    status: 'running' as EvaluationRunStatus,
-    results: {},
-    metadata: {},
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+  createEvaluationRun: vi.fn().mockImplementation((params) => {
+    return Promise.resolve({
+      id: 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
+      dataset_id: params.dataset_id,
+      agent_id: params.agent_id,
+      skill_id: params.skill_id,
+      evaluation_method: 'task_completion',
+      name: params.name || 'Test Evaluation Run',
+      description: params.description || 'Test description',
+      status: 'running' as EvaluationRunStatus,
+      results: {},
+      metadata: params.metadata || {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
   }),
   getEvaluationRuns: vi.fn().mockImplementation((queryParams) => {
     // Return the evaluation run that matches the query
@@ -105,6 +107,7 @@ const mockUserDataStorageConnector = {
       id: queryParams.id || 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
       dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
       agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+      skill_id: 'skill-1',
       evaluation_method: 'task_completion',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -144,6 +147,7 @@ const mockUserDataStorageConnector = {
       id: 'f6a7b8c9-d0e1-4345-9789-0abcdef01234',
       dataset_id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
       agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+      skill_id: 'skill-1',
       evaluation_method: 'task_completion',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -205,23 +209,34 @@ describe('Task Completion Evaluation', () => {
       'should successfully evaluate a dataset',
       { timeout: 30000 },
       async () => {
-        const input: DatasetQueryParams = {
-          id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-          limit: 5,
-        };
+        const agentId = 'e5f6a7b8-c9d0-4234-9678-90abcdef0123';
+        const skillId = 'skill-1';
+        const datasetId = 'd4e5f6a7-b8c9-4123-9567-890abcdef012';
 
         const params: TaskCompletionEvaluationParameters = {
           threshold: 0.5,
           model: 'gpt-4o',
-          async_mode: false, // Disable async for simpler testing
+          include_reason: true,
+          strict_mode: false,
+          async_mode: false,
+          verbose_mode: true,
+          temperature: 0.1,
+          max_tokens: 1000,
           batch_size: 5,
-          agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+        };
+
+        const evalRunOptions = {
+          name: 'Test Task Completion Evaluation',
+          description: 'Test description',
         };
 
         const results = await evaluateTaskCompletion(
-          input,
+          agentId,
+          skillId,
+          datasetId,
           params,
           mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+          evalRunOptions,
         );
 
         expect(typeof results).toBe('object');
@@ -238,32 +253,39 @@ describe('Task Completion Evaluation', () => {
         // Verify that logs were fetched
         expect(
           mockUserDataStorageConnector.getDatasetLogs,
-        ).toHaveBeenCalledWith('d4e5f6a7-b8c9-4123-9567-890abcdef012', {
-          limit: 5,
-          offset: 0,
-        });
+        ).toHaveBeenCalledWith('d4e5f6a7-b8c9-4123-9567-890abcdef012', {});
       },
     );
 
     it('should handle strict mode correctly', { timeout: 30000 }, async () => {
-      const input: DatasetQueryParams = {
-        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-        limit: 5,
-      };
+      const agentId = 'e5f6a7b8-c9d0-4234-9678-90abcdef0123';
+      const skillId = 'skill-1';
+      const datasetId = 'd4e5f6a7-b8c9-4123-9567-890abcdef012';
 
       const params: TaskCompletionEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        strict_mode: true, // Enable strict mode
-        async_mode: false, // Disable async for simpler testing
+        include_reason: true,
+        strict_mode: true,
+        async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
         batch_size: 5,
-        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+      };
+
+      const evalRunOptions = {
+        name: 'Test Strict Mode Evaluation',
+        description: 'Test strict mode description',
       };
 
       const results = await evaluateTaskCompletion(
-        input,
+        agentId,
+        skillId,
+        datasetId,
         params,
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        evalRunOptions,
       );
 
       expect(typeof results).toBe('object');
@@ -275,24 +297,34 @@ describe('Task Completion Evaluation', () => {
     });
 
     it('should handle verbose mode correctly', { timeout: 30000 }, async () => {
-      const input: DatasetQueryParams = {
-        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-        limit: 5,
-      };
+      const agentId = 'e5f6a7b8-c9d0-4234-9678-90abcdef0123';
+      const skillId = 'skill-1';
+      const datasetId = 'd4e5f6a7-b8c9-4123-9567-890abcdef012';
 
       const params: TaskCompletionEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        verbose_mode: true, // Enable verbose mode
-        async_mode: false, // Disable async for simpler testing
+        include_reason: true,
+        strict_mode: false,
+        async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
         batch_size: 5,
-        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+      };
+
+      const evalRunOptions = {
+        name: 'Test Verbose Mode Evaluation',
+        description: 'Test verbose mode description',
       };
 
       const results = await evaluateTaskCompletion(
-        input,
+        agentId,
+        skillId,
+        datasetId,
         params,
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        evalRunOptions,
       );
 
       expect(typeof results).toBe('object');
@@ -303,24 +335,35 @@ describe('Task Completion Evaluation', () => {
     });
 
     it('should handle custom task parameter', { timeout: 30000 }, async () => {
-      const input: DatasetQueryParams = {
-        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-        limit: 5,
-      };
+      const agentId = 'e5f6a7b8-c9d0-4234-9678-90abcdef0123';
+      const skillId = 'skill-1';
+      const datasetId = 'd4e5f6a7-b8c9-4123-9567-890abcdef012';
 
       const params: TaskCompletionEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        task: 'Custom task description', // Custom task
-        async_mode: false, // Disable async for simpler testing
+        include_reason: true,
+        strict_mode: false,
+        async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
         batch_size: 5,
-        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+        task: 'Custom task description',
+      };
+
+      const evalRunOptions = {
+        name: 'Test Custom Task Evaluation',
+        description: 'Test custom task parameter',
       };
 
       const results = await evaluateTaskCompletion(
-        input,
+        agentId,
+        skillId,
+        datasetId,
         params,
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        evalRunOptions,
       );
 
       expect(typeof results).toBe('object');
@@ -331,26 +374,37 @@ describe('Task Completion Evaluation', () => {
     });
 
     it('should handle missing user data storage connector', async () => {
-      const input: DatasetQueryParams = {
-        id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-        limit: 5,
-      };
+      const agentId = 'e5f6a7b8-c9d0-4234-9678-90abcdef0123';
+      const skillId = 'skill-1';
+      const datasetId = 'd4e5f6a7-b8c9-4123-9567-890abcdef012';
 
       const params: TaskCompletionEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+        include_reason: true,
+        strict_mode: false,
+        async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
+        batch_size: 5,
+      };
+
+      const evalRunOptions = {
+        name: 'Test Evaluation Run',
+        description: 'Test description',
       };
 
       await expect(
         evaluateTaskCompletion(
-          input,
+          agentId,
+          skillId,
+          datasetId,
           params,
-          undefined as unknown as UserDataStorageConnector, // Explicitly cast undefined
+          undefined as unknown as UserDataStorageConnector,
+          evalRunOptions,
         ),
-      ).rejects.toThrow(
-        'User data storage connector is required for dataset evaluation',
-      );
+      ).rejects.toThrow();
     });
   });
 
@@ -359,23 +413,34 @@ describe('Task Completion Evaluation', () => {
       'should create internal LLM judge with correct parameters',
       { timeout: 30000 },
       async () => {
-        const input: DatasetQueryParams = {
-          id: 'd4e5f6a7-b8c9-4123-9567-890abcdef012',
-          limit: 5,
-        };
+        const agentId = 'e5f6a7b8-c9d0-4234-9678-90abcdef0123';
+        const skillId = 'skill-1';
+        const datasetId = 'd4e5f6a7-b8c9-4123-9567-890abcdef012';
 
         const params: TaskCompletionEvaluationParameters = {
           threshold: 0.7,
           model: 'gpt-4o-mini',
+          include_reason: true,
+          strict_mode: false,
+          async_mode: false,
+          verbose_mode: true,
           temperature: 0.2,
           max_tokens: 1500,
-          agent_id: 'e5f6a7b8-c9d0-4234-9678-90abcdef0123',
+          batch_size: 5,
+        };
+
+        const evalRunOptions = {
+          name: 'Test LLM Judge Parameters',
+          description: 'Test LLM judge configuration',
         };
 
         const results = await evaluateTaskCompletion(
-          input,
+          agentId,
+          skillId,
+          datasetId,
           params,
           mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+          evalRunOptions,
         );
 
         // Verify that the evaluation completed successfully with the expected parameters

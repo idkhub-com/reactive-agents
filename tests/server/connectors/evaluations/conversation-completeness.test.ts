@@ -50,10 +50,6 @@ describe('Conversation Completeness Evaluation', () => {
       async_mode: true,
       verbose_mode: false,
       batch_size: 10,
-      limit: 50,
-      offset: 0,
-      agent_id: '123e4567-e89b-12d3-a456-426614174000',
-      dataset_id: '123e4567-e89b-12d3-a456-426614174001',
     };
 
     const result = schema.safeParse(validParams);
@@ -78,7 +74,7 @@ describe('Conversation Completeness Evaluation', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should use default threshold when not provided', () => {
+  it('should use default values when fields are not provided', () => {
     const schema =
       conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
         unknown,
@@ -88,33 +84,32 @@ describe('Conversation Completeness Evaluation', () => {
           ConversationCompletenessEvaluationParameters
         >
       >;
-    const paramsWithoutThreshold = {
-      model: 'gpt-4o-mini',
-      temperature: 0.1,
+    const minimalParams = {
+      threshold: 0.8,
     };
 
-    const result = schema.safeParse(paramsWithoutThreshold);
+    const result = schema.safeParse(minimalParams);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.threshold).toBeUndefined(); // Optional field not provided
+      expect(result.data.threshold).toBe(0.8);
+      expect(result.data.model).toBe('gpt-4');
+      expect(result.data.temperature).toBe(0.1);
+      expect(result.data.include_reason).toBe(true);
     }
   });
 
-  it('should validate UUID format for agent_id and dataset_id', () => {
+  it('should require at least threshold when validating', () => {
     const schema =
       conversationCompletenessEvaluationConnector.getParameterSchema;
 
-    // Invalid UUID format
-    const invalidUUID = {
-      agent_id: 'invalid-uuid',
-      dataset_id: 'also-invalid',
-    };
+    // Empty object should fail because threshold is required
+    const emptyParams = {};
 
-    const result = schema.safeParse(invalidUUID);
+    const result = schema.safeParse(emptyParams);
     expect(result.success).toBe(false);
   });
 
-  it('should accept optional parameters', () => {
+  it('should accept minimal parameters with defaults applied', () => {
     const schema =
       conversationCompletenessEvaluationConnector.getParameterSchema as z.ZodType<
         unknown,
@@ -132,8 +127,9 @@ describe('Conversation Completeness Evaluation', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.threshold).toBe(0.6);
-      expect(result.data.model).toBeUndefined();
-      expect(result.data.temperature).toBeUndefined();
+      expect(result.data.model).toBe('gpt-4');
+      expect(result.data.temperature).toBe(0.1);
+      expect(result.data.timeout).toBe(30000);
     }
   });
 
@@ -226,6 +222,7 @@ describe('Conversation Completeness Evaluation', () => {
         >
       >;
     const booleanParams = {
+      threshold: 0.5,
       include_reason: true,
       strict_mode: false,
       async_mode: true,

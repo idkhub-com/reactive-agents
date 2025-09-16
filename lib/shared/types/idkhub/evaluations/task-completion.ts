@@ -2,22 +2,19 @@ import { z } from 'zod';
 
 // Parameters for task completion evaluation using Zod schema validation
 export const TaskCompletionEvaluationParameters = z.object({
-  threshold: z.number().min(0).max(1).default(0.7).optional(),
+  threshold: z.number().min(0).max(1).default(0.7),
   task: z.string().optional(),
-  model: z.string().optional(),
-  include_reason: z.boolean().optional(),
-  strict_mode: z.boolean().optional(),
-  async_mode: z.boolean().optional(),
-  verbose_mode: z.boolean().optional(),
-  temperature: z.number().min(0).max(2).optional(),
-  max_tokens: z.number().positive().optional(),
+  model: z.string().default('gpt-4o'),
+  include_reason: z.boolean().default(true),
+  strict_mode: z.boolean().default(false),
+  async_mode: z.boolean().default(true),
+  verbose_mode: z.boolean().default(false),
+  temperature: z.number().min(0).max(2).default(0.1),
+  max_tokens: z.number().positive().default(1000),
+  batch_size: z.number().positive().default(10),
   input: z.string().optional(),
   actual_output: z.string().optional(),
   tools_called: z.array(z.unknown()).optional(),
-  batch_size: z.number().positive().optional(),
-  limit: z.number().positive().optional(),
-  offset: z.number().int().min(0).optional(),
-  agent_id: z.string().optional(),
 });
 
 export type TaskCompletionEvaluationParameters = z.infer<
