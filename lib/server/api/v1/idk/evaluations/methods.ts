@@ -9,6 +9,8 @@ import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluatio
 import { turnRelevancyEvaluationConnector } from '@server/connectors/evaluations/turn-relevancy';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import type { AppEnv } from '@server/types/hono';
+import { evaluateExistingLogsInRealtimeDataset } from '@server/utils/realtime-evaluations';
+import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
@@ -135,7 +137,107 @@ export const methodsRouter = new Hono<AppEnv>()
       const request = c.req.valid('json');
       const connector = c.get('user_data_storage_connector');
 
-      // Get the appropriate evaluation connector using type-safe lookup
+      // Check if this is a realtime dataset
+      const datasets = await connector.getDatasets({
+        id: request.dataset_id,
+      });
+      const dataset = datasets?.[0];
+
+      if (dataset?.is_realtime) {
+        // For realtime datasets, we create the evaluation run but don't process logs immediately
+        // The logs will be evaluated as they come in through the middleware
+        console.log(
+          `Creating realtime evaluation for dataset ${request.dataset_id} (realtime_size: ${dataset.realtime_size})`,
+        );
+
+        // Create the evaluation run with running status for realtime
+        const evaluationRun = await connector.createEvaluationRun({
+          dataset_id: request.dataset_id,
+          agent_id: request.agent_id,
+          skill_id: request.skill_id,
+          evaluation_method: request.evaluation_method,
+          name:
+            request.name ||
+            `Realtime ${request.evaluation_method} Evaluation - ${new Date().toISOString()}`,
+          description:
+            request.description ||
+            `Realtime evaluation for dataset ${request.dataset_id}`,
+          metadata: {
+            parameters: request.parameters,
+            is_realtime: true,
+          },
+        });
+
+        // Update status to running since we're about to process existing logs
+        await connector.updateEvaluationRun(evaluationRun.id, {
+          status: EvaluationRunStatus.RUNNING,
+          started_at: new Date().toISOString(),
+        });
+
+        // Get evaluation connectors map from context to trigger backfill
+        const evaluationConnectorsMap = c.get('evaluation_connectors_map');
+        if (evaluationConnectorsMap) {
+          // Process existing logs immediately (synchronously)
+          try {
+            await evaluateExistingLogsInRealtimeDataset(
+              evaluationRun,
+              evaluationConnectorsMap,
+              connector,
+            );
+            console.log(
+              `Completed backfill evaluation for realtime evaluation run ${evaluationRun.id}`,
+            );
+
+            // For realtime evaluations, we keep the status as 'running' so it can continue
+            // to evaluate new logs, but we mark that the initial processing is complete
+            await connector.updateEvaluationRun(evaluationRun.id, {
+              status: EvaluationRunStatus.RUNNING, // Keep running for new logs
+              metadata: {
+                parameters: request.parameters,
+                is_realtime: true,
+                backfill_completed: true,
+                backfill_completed_at: new Date().toISOString(),
+              },
+            });
+          } catch (error) {
+            console.error(
+              `Error in backfill evaluation for realtime evaluation run ${evaluationRun.id}:`,
+              error,
+            );
+            // Update status to indicate error in backfill, but keep running for new logs
+            await connector.updateEvaluationRun(evaluationRun.id, {
+              status: EvaluationRunStatus.RUNNING,
+              metadata: {
+                parameters: request.parameters,
+                is_realtime: true,
+                backfill_error:
+                  error instanceof Error ? error.message : String(error),
+                backfill_attempted_at: new Date().toISOString(),
+              },
+            });
+          }
+        }
+
+        // Get updated evaluation run with results from backfill
+        const updatedRuns = await connector.getEvaluationRuns({
+          id: evaluationRun.id,
+        });
+        const updatedEvaluationRun = updatedRuns[0] || evaluationRun;
+
+        return c.json(
+          {
+            evaluation_run_id: updatedEvaluationRun.id,
+            status: updatedEvaluationRun.status,
+            message:
+              'Realtime evaluation has been created and existing logs have been processed',
+            results: updatedEvaluationRun.results,
+            is_realtime: true,
+          },
+          200,
+        );
+      }
+
+      // For regular datasets, use the standard evaluation flow
       const evaluationConnector =
         evaluationConnectors[request.evaluation_method];
 
