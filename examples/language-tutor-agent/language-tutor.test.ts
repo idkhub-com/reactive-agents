@@ -189,8 +189,8 @@ describe('Language Tutor Agent - Validation Tests', () => {
       const { evaluateLearnerText } = await import('./language-tutor');
 
       // Test input validation (these should throw synchronously)
-      expect(() => evaluateLearnerText('', 'en')).rejects.toThrow();
-      expect(() =>
+      expect(evaluateLearnerText('', 'en')).rejects.toThrow();
+      expect(
         evaluateLearnerText('valid text', 'unsupported-lang'),
       ).rejects.toThrow();
     });

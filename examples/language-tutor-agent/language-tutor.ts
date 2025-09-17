@@ -22,7 +22,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Load environment variables from .env.local file
 function loadEnvFile(): void {
@@ -208,6 +208,7 @@ export function isValidChatCompletionResponse(
         typeof message === 'object' &&
         message !== null &&
         typeof message.role === 'string' &&
+        typeof message.content === 'string' &&
         typeof choiceObj.finish_reason === 'string'
       );
     })
@@ -410,7 +411,12 @@ export async function multiLanguageTutorWorkflow(
 
   // English Analysis
   console.log('English Analysis...');
-  const englishSkill = allSkills[0]; // English is first in the array
+  const englishSkill = getLanguageSkill('en');
+
+  if (!englishSkill) {
+    console.error('English skill not found in available skills');
+    return;
+  }
   const englishMessages: ChatMessage[] = [
     {
       role: 'system',
@@ -718,6 +724,6 @@ async function main(): Promise<void> {
 }
 
 // Only run main if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(console.error);
 }

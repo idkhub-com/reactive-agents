@@ -46,7 +46,6 @@ export function LogRow({ log }: { log: IdkRequestLog }): ReactElement {
       onClick={handleLogSelect}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      role="button"
       aria-label={`View log details for ${PrettyFunctionName[log.function_name]}`}
     >
       <TableCell className="w-[96px] text-right">

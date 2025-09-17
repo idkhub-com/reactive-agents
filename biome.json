@@ -243,14 +243,7 @@
     {
       "includes": ["**/*.css"],
       "linter": {
-        "rules": {
-          "suspicious": {
-            "noUnknownAtRules": "off"
-          },
-          "complexity": {
-            "noImportantStyles": "off"
-          }
-        }
+        "rules": {}
       }
     },
     {

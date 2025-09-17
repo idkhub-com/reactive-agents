@@ -134,25 +134,23 @@ export function LogFiltersPanel({
                 <Label className="text-sm font-medium">HTTP Methods</Label>
                 <div className="flex flex-wrap gap-1">
                   {uniqueValues.methods.map((method) => (
-                    <Badge
+                    <button
                       key={method}
-                      variant={
-                        filters.methods.includes(method)
-                          ? 'default'
-                          : 'secondary'
-                      }
-                      className="cursor-pointer text-xs"
-                      role="button"
-                      tabIndex={0}
+                      type="button"
                       onClick={() => handleArrayFilterToggle('methods', method)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          handleArrayFilterToggle('methods', method);
-                        }
-                      }}
+                      className="border-none bg-transparent p-0"
                     >
-                      {method}
-                    </Badge>
+                      <Badge
+                        variant={
+                          filters.methods.includes(method)
+                            ? 'default'
+                            : 'secondary'
+                        }
+                        className="cursor-pointer text-xs"
+                      >
+                        {method}
+                      </Badge>
+                    </button>
                   ))}
                 </div>
               </div>

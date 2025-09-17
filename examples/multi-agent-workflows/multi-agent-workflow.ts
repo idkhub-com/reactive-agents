@@ -83,6 +83,7 @@ export function isValidChatCompletionResponse(
         typeof message === 'object' &&
         message !== null &&
         typeof message.role === 'string' &&
+        typeof message.content === 'string' &&
         typeof choiceObj.finish_reason === 'string'
       );
     })
