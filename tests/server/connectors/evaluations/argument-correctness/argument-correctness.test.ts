@@ -94,6 +94,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -169,6 +170,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -192,6 +194,7 @@ describe('Argument Correctness Evaluator', () => {
           id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
           dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
           agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
           evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
           name: 'Test Evaluation Run',
           description: 'Test description',
@@ -212,7 +215,9 @@ describe('Argument Correctness Evaluator', () => {
       ]);
 
       const result = await evaluateArgumentCorrectness(
-        { id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef', limit: 5 },
+        'e1f2a3b4-c5d6-4890-9234-56789abcdef0', // agentId
+        '97e27a2c-1856-443c-87c8-cb734eb12700', // skillId
+        'd0e1f2a3-b4c5-4789-9123-456789abcdef', // datasetId
         {
           threshold: 0.5,
           model: 'gpt-4o',
@@ -223,9 +228,12 @@ describe('Argument Correctness Evaluator', () => {
           async_mode: false,
           verbose_mode: true,
           batch_size: 5,
-          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
         },
         mockUserDataStorageConnector,
+        {
+          name: 'Test Argument Correctness Evaluation',
+          description: 'Test evaluation description',
+        },
       );
 
       expect(result.averageResult.average_score).toBe(0.9);
@@ -284,6 +292,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -366,6 +375,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -389,6 +399,7 @@ describe('Argument Correctness Evaluator', () => {
           id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
           dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
           agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
           evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
           name: 'Test Evaluation Run',
           description: 'Test description',
@@ -409,7 +420,9 @@ describe('Argument Correctness Evaluator', () => {
       ]);
 
       const result = await evaluateArgumentCorrectness(
-        { id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef', limit: 5 },
+        'e1f2a3b4-c5d6-4890-9234-56789abcdef0', // agentId
+        '97e27a2c-1856-443c-87c8-cb734eb12700', // skillId
+        'd0e1f2a3-b4c5-4789-9123-456789abcdef', // datasetId
         {
           threshold: 0.5,
           model: 'gpt-4o',
@@ -420,9 +433,12 @@ describe('Argument Correctness Evaluator', () => {
           async_mode: false,
           verbose_mode: true,
           batch_size: 5,
-          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
         },
         mockUserDataStorageConnector,
+        {
+          name: 'Test Multiple Tools Evaluation',
+          description: 'Test evaluation with multiple tools',
+        },
       );
 
       expect(result.averageResult.average_score).toBe(0.8);
@@ -467,6 +483,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -540,6 +557,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -563,6 +581,7 @@ describe('Argument Correctness Evaluator', () => {
           id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
           dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
           agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
           evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
           name: 'Test Evaluation Run',
           description: 'Test description',
@@ -583,7 +602,9 @@ describe('Argument Correctness Evaluator', () => {
       ]);
 
       const result = await evaluateArgumentCorrectness(
-        { id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef', limit: 5 },
+        'e1f2a3b4-c5d6-4890-9234-56789abcdef0', // agentId
+        '97e27a2c-1856-443c-87c8-cb734eb12700', // skillId
+        'd0e1f2a3-b4c5-4789-9123-456789abcdef', // datasetId
         {
           threshold: 0.5,
           model: 'gpt-4o',
@@ -594,9 +615,12 @@ describe('Argument Correctness Evaluator', () => {
           async_mode: false,
           verbose_mode: true,
           batch_size: 5,
-          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
         },
         mockUserDataStorageConnector,
+        {
+          name: 'Test Strict Mode Evaluation',
+          description: 'Test evaluation with strict mode enabled',
+        },
       );
 
       expect(result.averageResult.threshold_used).toBe(1.0); // Should be 1.0 in strict mode
@@ -611,6 +635,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -688,6 +713,7 @@ describe('Argument Correctness Evaluator', () => {
         id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
         dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
         agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+        skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
         evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
         name: 'Test Evaluation Run',
         description: 'Test description',
@@ -711,6 +737,7 @@ describe('Argument Correctness Evaluator', () => {
           id: 'f2a3b4c5-d6e7-4901-9345-6789abcdef01',
           dataset_id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef',
           agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
+          skill_id: '97e27a2c-1856-443c-87c8-cb734eb12700',
           evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
           name: 'Test Evaluation Run',
           description: 'Test description',
@@ -731,7 +758,9 @@ describe('Argument Correctness Evaluator', () => {
       ]);
 
       const result = await evaluateArgumentCorrectness(
-        { id: 'd0e1f2a3-b4c5-4789-9123-456789abcdef', limit: 5 },
+        'e1f2a3b4-c5d6-4890-9234-56789abcdef0', // agentId
+        '97e27a2c-1856-443c-87c8-cb734eb12700', // skillId
+        'd0e1f2a3-b4c5-4789-9123-456789abcdef', // datasetId
         {
           threshold: 0.5,
           model: 'gpt-4o',
@@ -742,9 +771,12 @@ describe('Argument Correctness Evaluator', () => {
           async_mode: false,
           verbose_mode: true,
           batch_size: 5,
-          agent_id: 'e1f2a3b4-c5d6-4890-9234-56789abcdef0',
         },
         mockUserDataStorageConnector,
+        {
+          name: 'Test Error Handling Evaluation',
+          description: 'Test evaluation error handling',
+        },
       );
 
       expect(result.averageResult.average_score).toBe(0.5); // Fallback score

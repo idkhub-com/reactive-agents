@@ -23,6 +23,7 @@ describe('EvaluationRun schema', () => {
       id: '123e4567-e89b-12d3-a456-426614174000',
       dataset_id: '123e4567-e89b-12d3-a456-426614174001',
       agent_id: '123e4567-e89b-12d3-a456-426614174002',
+      skill_id: '123e4567-e89b-12d3-a456-426614174003',
       evaluation_method: EvaluationMethodName.TASK_COMPLETION,
       name: 'Test Evaluation',
       description: 'A test evaluation run',
@@ -134,6 +135,7 @@ describe('EvaluationRunCreateParams schema', () => {
     const validParams = {
       dataset_id: '123e4567-e89b-12d3-a456-426614174001',
       agent_id: '123e4567-e89b-12d3-a456-426614174002',
+      skill_id: '123e4567-e89b-12d3-a456-426614174003',
       evaluation_method: EvaluationMethodName.TASK_COMPLETION,
       name: 'New Evaluation',
       description: 'A new evaluation run',
@@ -152,7 +154,7 @@ describe('EvaluationRunCreateParams schema', () => {
     expect(() => EvaluationRunCreateParams.parse(invalidParams)).toThrow();
   });
 
-  it('should require dataset_id and agent_id', () => {
+  it('should require dataset_id, agent_id, and skill_id', () => {
     const invalidParams = {
       name: 'New Evaluation',
       evaluation_method: EvaluationMethodName.TASK_COMPLETION,
@@ -165,6 +167,7 @@ describe('EvaluationRunCreateParams schema', () => {
     const params = {
       dataset_id: '123e4567-e89b-12d3-a456-426614174001',
       agent_id: '123e4567-e89b-12d3-a456-426614174002',
+      skill_id: '123e4567-e89b-12d3-a456-426614174003',
       evaluation_method: EvaluationMethodName.TASK_COMPLETION,
       name: 'New Evaluation',
     };

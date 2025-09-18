@@ -3,7 +3,7 @@ import type { IdkRoute } from '@server/api/v1';
 import type {
   EvaluationMethodDetails,
   EvaluationMethodName,
-  EvaluationMethodRequest,
+  EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations';
 import { hc } from 'hono/client';
 
@@ -73,7 +73,7 @@ export async function getEvaluationMethodSchema(
  * Execute an evaluation
  */
 export async function executeEvaluation(
-  request: EvaluationMethodRequest,
+  request: EvaluationRunJobDetails,
 ): Promise<EvaluationExecutionResponse> {
   const response = await client.v1.idk.evaluations.methods.execute.$post({
     json: request,

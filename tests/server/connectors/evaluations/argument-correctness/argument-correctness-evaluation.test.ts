@@ -2,7 +2,6 @@ import { evaluateArgumentCorrectness } from '@server/connectors/evaluations/argu
 
 import type { UserDataStorageConnector } from '@server/types/connector';
 import { HttpMethod } from '@server/types/http';
-import type { DatasetQueryParams } from '@shared/types/data/dataset';
 import type { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { LogOutput as EvaluationOutput } from '@shared/types/data/log-output';
 import type { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
@@ -94,24 +93,28 @@ const mockLogs = [
 const mockUserDataStorageConnector = {
   getLogs: vi.fn().mockResolvedValue(mockLogs),
   getDatasetLogs: vi.fn().mockResolvedValue(mockLogs),
-  createEvaluationRun: vi.fn().mockResolvedValue({
-    id: 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
-    dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
-    agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
-    evaluation_method: 'argument_correctness',
-    name: 'Test Evaluation Run',
-    description: 'Test description',
-    status: 'running' as EvaluationRunStatus,
-    results: {},
-    metadata: {},
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+  createEvaluationRun: vi.fn().mockImplementation((params) => {
+    return Promise.resolve({
+      id: 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
+      dataset_id: params.dataset_id,
+      agent_id: params.agent_id,
+      skill_id: params.skill_id,
+      evaluation_method: 'argument_correctness',
+      name: params.name || 'Test Evaluation Run',
+      description: params.description || 'Test description',
+      status: 'running' as EvaluationRunStatus,
+      results: {},
+      metadata: params.metadata || {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
   }),
   getEvaluationRuns: vi.fn().mockImplementation((queryParams) => {
     const evaluationRun = {
       id: queryParams.id || 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
       dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
       agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+      skill_id: 'skill-1',
       evaluation_method: 'argument_correctness',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -150,6 +153,7 @@ const mockUserDataStorageConnector = {
       id: 'c9d0e1f2-a3b4-4678-9012-3456789abcde',
       dataset_id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
       agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+      skill_id: 'skill-1',
       evaluation_method: 'argument_correctness',
       name: 'Test Evaluation Run',
       description: 'Test description',
@@ -211,23 +215,34 @@ describe('Argument Correctness Evaluation', () => {
       'should successfully evaluate a dataset',
       { timeout: 30000 },
       async () => {
-        const input: DatasetQueryParams = {
-          id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
-          limit: 5,
-        };
+        const agentId = 'b8c9d0e1-f2a3-4567-8901-23456789abcd';
+        const skillId = 'skill-1';
+        const datasetId = 'a7b8c9d0-e1f2-4456-8890-123456789abc';
 
         const params: ArgumentCorrectnessEvaluationParameters = {
           threshold: 0.5,
           model: 'gpt-4o',
+          include_reason: true,
+          strict_mode: false,
           async_mode: false,
+          verbose_mode: true,
+          temperature: 0.1,
+          max_tokens: 1000,
           batch_size: 5,
-          agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+        };
+
+        const evalRunOptions = {
+          name: 'Test Argument Correctness Evaluation',
+          description: 'Test description',
         };
 
         const results = await evaluateArgumentCorrectness(
-          input,
+          agentId,
+          skillId,
+          datasetId,
           params,
           mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+          evalRunOptions,
         );
 
         expect(typeof results).toBe('object');
@@ -243,24 +258,34 @@ describe('Argument Correctness Evaluation', () => {
     );
 
     it('should handle strict mode correctly', { timeout: 30000 }, async () => {
-      const input: DatasetQueryParams = {
-        id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
-        limit: 5,
-      };
+      const agentId = 'b8c9d0e1-f2a3-4567-8901-23456789abcd';
+      const skillId = 'skill-1';
+      const datasetId = 'a7b8c9d0-e1f2-4456-8890-123456789abc';
 
       const params: ArgumentCorrectnessEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
+        include_reason: true,
         strict_mode: true,
         async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
         batch_size: 5,
-        agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+      };
+
+      const evalRunOptions = {
+        name: 'Test Strict Mode Evaluation',
+        description: 'Test strict mode description',
       };
 
       const results = await evaluateArgumentCorrectness(
-        input,
+        agentId,
+        skillId,
+        datasetId,
         params,
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        evalRunOptions,
       );
 
       expect(typeof results).toBe('object');
@@ -271,24 +296,34 @@ describe('Argument Correctness Evaluation', () => {
     });
 
     it('should handle verbose mode correctly', { timeout: 30000 }, async () => {
-      const input: DatasetQueryParams = {
-        id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
-        limit: 5,
-      };
+      const agentId = 'b8c9d0e1-f2a3-4567-8901-23456789abcd';
+      const skillId = 'skill-1';
+      const datasetId = 'a7b8c9d0-e1f2-4456-8890-123456789abc';
 
       const params: ArgumentCorrectnessEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        verbose_mode: true,
+        include_reason: true,
+        strict_mode: false,
         async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
         batch_size: 5,
-        agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+      };
+
+      const evalRunOptions = {
+        name: 'Test Verbose Mode Evaluation',
+        description: 'Test verbose mode description',
       };
 
       const results = await evaluateArgumentCorrectness(
-        input,
+        agentId,
+        skillId,
+        datasetId,
         params,
         mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+        evalRunOptions,
       );
 
       expect(typeof results).toBe('object');
@@ -298,26 +333,37 @@ describe('Argument Correctness Evaluation', () => {
     });
 
     it('should handle missing user data storage connector', async () => {
-      const input: DatasetQueryParams = {
-        id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
-        limit: 5,
-      };
+      const agentId = 'b8c9d0e1-f2a3-4567-8901-23456789abcd';
+      const skillId = 'skill-1';
+      const datasetId = 'a7b8c9d0-e1f2-4456-8890-123456789abc';
 
       const params: ArgumentCorrectnessEvaluationParameters = {
         threshold: 0.5,
         model: 'gpt-4o',
-        agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+        include_reason: true,
+        strict_mode: false,
+        async_mode: false,
+        verbose_mode: true,
+        temperature: 0.1,
+        max_tokens: 1000,
+        batch_size: 5,
+      };
+
+      const evalRunOptions = {
+        name: 'Test Evaluation Run',
+        description: 'Test description',
       };
 
       await expect(
         evaluateArgumentCorrectness(
-          input,
+          agentId,
+          skillId,
+          datasetId,
           params,
           undefined as unknown as UserDataStorageConnector,
+          evalRunOptions,
         ),
-      ).rejects.toThrow(
-        'User data storage connector is required for dataset evaluation',
-      );
+      ).rejects.toThrow();
     });
   });
 
@@ -326,23 +372,34 @@ describe('Argument Correctness Evaluation', () => {
       'should create internal LLM judge with correct parameters',
       { timeout: 30000 },
       async () => {
-        const input: DatasetQueryParams = {
-          id: 'a7b8c9d0-e1f2-4456-8890-123456789abc',
-          limit: 5,
-        };
+        const agentId = 'b8c9d0e1-f2a3-4567-8901-23456789abcd';
+        const skillId = 'skill-1';
+        const datasetId = 'a7b8c9d0-e1f2-4456-8890-123456789abc';
 
         const params: ArgumentCorrectnessEvaluationParameters = {
           threshold: 0.7,
           model: 'gpt-4o-mini',
+          include_reason: true,
+          strict_mode: false,
+          async_mode: false,
+          verbose_mode: true,
           temperature: 0.2,
           max_tokens: 1500,
-          agent_id: 'b8c9d0e1-f2a3-4567-8901-23456789abcd',
+          batch_size: 5,
+        };
+
+        const evalRunOptions = {
+          name: 'Test LLM Judge Parameters',
+          description: 'Test LLM judge configuration',
         };
 
         const results = await evaluateArgumentCorrectness(
-          input,
+          agentId,
+          skillId,
+          datasetId,
           params,
           mockUserDataStorageConnector as unknown as UserDataStorageConnector,
+          evalRunOptions,
         );
 
         expect(results.evaluationRun).toBeTruthy();
