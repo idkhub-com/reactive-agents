@@ -198,10 +198,8 @@ describe('Realtime Evaluations Integration', () => {
         skill_id: 'skill-789',
         status: EvaluationRunStatus.RUNNING,
       });
-      // Verify that getDatasets was called during realtime dataset size limit handling
-      expect(userDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        id: 'dataset-789',
-      });
+      // For realtime datasets, logs are determined dynamically, so addLogsToDataset should not be called
+      expect(userDataStorageConnector.addLogsToDataset).not.toHaveBeenCalled();
       expect(evaluationConnector.evaluateOneLog).toHaveBeenCalledWith(
         'eval-run-123',
         mockIdkRequestLog,
@@ -299,11 +297,13 @@ describe('Realtime Evaluations Integration', () => {
         userDataStorageConnector,
       );
 
-      // Verify dataset size management was handled (realtime datasets don't use bridge table)
-      // Instead, verify that getDatasets was called to check the dataset properties
-      expect(userDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        id: 'dataset-789',
-      });
+      // For realtime datasets, logs are determined dynamically by getDatasetLogs
+      // based on agent_id and skill_id, not stored in a bridge table
+      // So addLogsToDataset and removeLogsFromDataset should not be called
+      expect(userDataStorageConnector.addLogsToDataset).not.toHaveBeenCalled();
+      expect(
+        userDataStorageConnector.removeLogsFromDataset,
+      ).not.toHaveBeenCalled();
 
       // Verify evaluation was still triggered
       expect(evaluationConnector.evaluateOneLog).toHaveBeenCalled();
