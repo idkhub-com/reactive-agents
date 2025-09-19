@@ -11,21 +11,9 @@ on:
     types: [submitted]
 
 jobs:
-  optimize_ci:
-    runs-on: ubuntu-latest
-    outputs:
-      skip: ${{ steps.check_skip.outputs.skip }}
-    steps:
-      - name: Optimize CI
-        id: check_skip
-        uses: withgraphite/graphite-ci-action@main
-        with:
-          graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
-
   claude:
-    needs: optimize_ci
     if: |
-      needs.optimize_ci.outputs.skip == 'false' && !contains(github.event.pull_request.title, 'WIP') && (
+      !contains(github.event.pull_request.title, 'WIP') && (
         (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
         (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
         (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
