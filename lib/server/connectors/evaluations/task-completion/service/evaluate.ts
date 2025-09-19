@@ -15,7 +15,8 @@ import type {
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
-import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
+import { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 /**
  * Extract task and outcome from LLM response
@@ -398,6 +399,81 @@ async function processLogsInBatches(
   }
 
   return results;
+}
+
+export async function evaluateOneLogForTaskCompletion(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  // Get the evaluation run to access parameters
+  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
+    id: evaluationRunId,
+  });
+  const evaluationRun = evaluationRuns[0];
+  if (!evaluationRun) {
+    throw new Error(`Evaluation run ${evaluationRunId} not found`);
+  }
+
+  const params = TaskCompletionEvaluationParameters.parse(
+    evaluationRun.metadata?.parameters || {},
+  );
+
+  // Convert IdkRequestLog to Log format for compatibility
+  const logForEvaluation: Log = log as Log;
+
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
+
+  // Evaluate the single log
+  await evaluateSingleLog(
+    logForEvaluation,
+    params,
+    llmJudge,
+    evaluationRunId,
+    userDataStorageConnector,
+  );
+
+  // Get all log outputs for this evaluation run to calculate new average
+  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
+    evaluationRunId,
+    {},
+  );
+
+  // Recalculate the evaluation run statistics
+  const scores = allLogOutputs.map((output) => output.score || 0);
+  const averageScore = scores.length
+    ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+    : 0;
+
+  const thresholdUsed = params.strict_mode ? 1.0 : params.threshold || 0.5;
+  const passedCount = scores.filter((score) => score >= thresholdUsed).length;
+  const failedCount = scores.length - passedCount;
+
+  // Update the evaluation run with new statistics
+  await userDataStorageConnector.updateEvaluationRun(evaluationRunId, {
+    results: {
+      ...(evaluationRun.results || {}),
+      total_logs: allLogOutputs.length,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      average_score: averageScore,
+      threshold_used: thresholdUsed,
+      evaluation_outputs: allLogOutputs.map((o) => o.id),
+    },
+    metadata: {
+      ...evaluationRun.metadata,
+      total_logs: allLogOutputs.length,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      average_score: averageScore,
+      threshold_used: thresholdUsed,
+      evaluation_outputs: allLogOutputs.map((o) => o.id),
+    },
+  });
 }
 
 /**

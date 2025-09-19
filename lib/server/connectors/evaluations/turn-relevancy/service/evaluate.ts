@@ -14,7 +14,8 @@ import type {
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
-import type { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
+import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { v4 as uuidv4 } from 'uuid';
 
 function isRetryableError(error: unknown): boolean {
@@ -250,6 +251,100 @@ async function processLogsInBatches(
   }
 
   return results;
+}
+
+export async function evaluateOneLogForTurnRelevancy(
+  evaluationRunId: string,
+  log: IdkRequestLog,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<void> {
+  // Get the evaluation run to access parameters
+  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
+    id: evaluationRunId,
+  });
+  const evaluationRun = evaluationRuns[0];
+  if (!evaluationRun) {
+    throw new Error(`Evaluation run ${evaluationRunId} not found`);
+  }
+
+  const params = TurnRelevancyEvaluationParameters.parse(
+    evaluationRun.metadata?.parameters || {},
+  );
+
+  // Convert IdkRequestLog to Log format for compatibility
+  const logForEvaluation: Log = log as Log;
+
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
+
+  // Evaluate the single log
+  await evaluateSingleLog(
+    logForEvaluation,
+    params,
+    evaluationRunId,
+    llmJudge,
+    userDataStorageConnector,
+  );
+
+  // Get all log outputs for this evaluation run to calculate new average
+  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
+    evaluationRunId,
+    {},
+  );
+
+  // Recalculate the evaluation run statistics
+  const validResults = allLogOutputs.filter((r) => !r.metadata?.error);
+  const scores = validResults.map((r) => r.score || 0);
+  const averageScore = scores.length
+    ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+    : 0;
+
+  const thresholdUsed = params.threshold || 0.5;
+  const passedCount = validResults.filter(
+    (r) => (r.score || 0) >= thresholdUsed,
+  ).length;
+  const failedCount = validResults.length - passedCount;
+
+  // Calculate additional statistics
+  const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+  const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
+  const medianScore =
+    scores.length > 0
+      ? scores.sort((a, b) => a - b)[Math.floor(scores.length / 2)]
+      : 0;
+
+  // Update the evaluation run with new statistics
+  await userDataStorageConnector.updateEvaluationRun(evaluationRunId, {
+    results: {
+      ...(evaluationRun.results || {}),
+      total_logs: allLogOutputs.length,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      average_score: averageScore,
+      threshold_used: thresholdUsed,
+      min_score: minScore,
+      max_score: maxScore,
+      median_score: medianScore,
+      valid_results_count: validResults.length,
+      error_results_count: allLogOutputs.length - validResults.length,
+    },
+    metadata: {
+      ...evaluationRun.metadata,
+      total_logs: allLogOutputs.length,
+      passed_count: passedCount,
+      failed_count: failedCount,
+      average_score: averageScore,
+      threshold_used: thresholdUsed,
+      min_score: minScore,
+      max_score: maxScore,
+      median_score: medianScore,
+      valid_results_count: validResults.length,
+      error_results_count: allLogOutputs.length - validResults.length,
+    },
+  });
 }
 
 export async function evaluateTurnRelevancyDataset(

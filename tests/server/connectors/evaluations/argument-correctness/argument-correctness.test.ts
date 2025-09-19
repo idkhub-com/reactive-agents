@@ -1,11 +1,18 @@
-import { evaluateArgumentCorrectness } from '@server/connectors/evaluations/argument-correctness/service/evaluate';
+import {
+  evaluateArgumentCorrectness,
+  evaluateOneLogForArgumentCorrectness,
+} from '@server/connectors/evaluations/argument-correctness/service/evaluate';
 
 import type { UserDataStorageConnector } from '@server/types/connector';
 import { HttpMethod } from '@server/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
-import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import {
+  type EvaluationRun,
+  EvaluationRunStatus,
+} from '@shared/types/data/evaluation-run';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -28,6 +35,7 @@ const mockUserDataStorageConnector = {
   createLogOutput: vi.fn(),
   updateEvaluationRun: vi.fn(),
   getEvaluationRuns: vi.fn(),
+  getLogOutputs: vi.fn(),
   getAgents: vi.fn(),
 } as unknown as UserDataStorageConnector;
 
@@ -47,6 +55,9 @@ const mockedUpdateEvaluationRun = vi.mocked(
 );
 const mockedGetEvaluationRuns = vi.mocked(
   mockUserDataStorageConnector.getEvaluationRuns,
+);
+const mockedGetLogOutputs = vi.mocked(
+  mockUserDataStorageConnector.getLogOutputs,
 );
 
 describe('Argument Correctness Evaluator', () => {
@@ -628,7 +639,15 @@ describe('Argument Correctness Evaluator', () => {
     });
 
     it('should handle argument correctness evaluation errors gracefully', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          text: async () => 'Network error',
+          json: async () => ({}),
+        } as Response);
+      });
 
       // Mock storage connector calls
       mockedCreateEvaluationRun.mockResolvedValue({
@@ -781,6 +800,304 @@ describe('Argument Correctness Evaluator', () => {
 
       expect(result.averageResult.average_score).toBe(0.5); // Fallback score
       expect(result.averageResult.total_logs).toBe(1);
+    }, 10000);
+  });
+
+  describe('evaluateOneLogForArgumentCorrectness', () => {
+    it('should evaluate a single log and update evaluation run statistics', async () => {
+      const evaluationRunId = 'test-evaluation-run-id';
+      const mockLog = {
+        id: 'test-log-id',
+        input: 'Find user by email',
+        output: 'User found successfully',
+        tools_used: [
+          {
+            name: 'database_query',
+            purpose: 'Execute SQL query',
+            success: true,
+          },
+        ],
+      } as unknown as IdkRequestLog;
+
+      // Mock LLM judge response
+      const mockLLMResponse = {
+        output: [
+          {
+            type: 'message',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  score: 0.8,
+                  reasoning: 'Tool arguments are mostly correct',
+                  perTool: [
+                    {
+                      tool: 'database_query',
+                      correct: true,
+                      reasoning: 'SQL query is properly formatted',
+                    },
+                  ],
+                }),
+              },
+            ],
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockLLMResponse),
+      });
+
+      // Mock evaluation run retrieval
+      mockedGetEvaluationRuns.mockResolvedValue([
+        {
+          id: evaluationRunId,
+          dataset_id: 'test-dataset-id',
+          agent_id: 'test-agent-id',
+          skill_id: 'test-skill-id',
+          evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
+          name: 'Test Evaluation Run',
+          description: 'Test description',
+          status: EvaluationRunStatus.RUNNING,
+          results: {
+            total_logs: 1,
+            passed_count: 1,
+            failed_count: 0,
+            average_score: 0.9,
+            threshold_used: 0.5,
+            evaluation_outputs: ['existing-output-id'],
+          },
+          metadata: {
+            parameters: {
+              threshold: 0.5,
+              model: 'gpt-4o',
+              temperature: 0.1,
+              max_tokens: 1000,
+              strict_mode: false,
+            },
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      // Mock log output creation
+      mockedCreateLogOutput.mockResolvedValue({
+        id: 'new-output-id',
+        log_id: 'test-log-id',
+        output: {
+          score: 0.8,
+          reasoning: 'Tool arguments are mostly correct',
+        },
+        score: 0.8,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      });
+
+      // Mock existing log outputs retrieval
+      mockedGetLogOutputs.mockResolvedValue([
+        {
+          id: 'existing-output-id',
+          log_id: 'existing-log-id',
+          output: {},
+          score: 0.9,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'new-output-id',
+          log_id: 'test-log-id',
+          output: {},
+          score: 0.8,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      // Mock evaluation run update
+      mockedUpdateEvaluationRun.mockResolvedValue({
+        id: evaluationRunId,
+        dataset_id: 'test-dataset-id',
+        agent_id: 'test-agent-id',
+        skill_id: 'test-skill-id',
+        evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
+        name: 'Test Evaluation Run',
+        description: 'Test description',
+        status: EvaluationRunStatus.RUNNING,
+        results: {
+          total_logs: 2,
+          passed_count: 2,
+          failed_count: 0,
+          average_score: 0.85,
+          threshold_used: 0.5,
+          evaluation_outputs: ['existing-output-id', 'new-output-id'],
+        },
+        metadata: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      await evaluateOneLogForArgumentCorrectness(
+        evaluationRunId,
+        mockLog,
+        mockUserDataStorageConnector,
+      );
+
+      // Verify evaluation run was retrieved
+      expect(mockedGetEvaluationRuns).toHaveBeenCalledWith({
+        id: evaluationRunId,
+      });
+
+      // Verify log output was created
+      expect(mockedCreateLogOutput).toHaveBeenCalledWith(
+        evaluationRunId,
+        expect.objectContaining({
+          log_id: 'test-log-id',
+          score: 0.8,
+        }),
+      );
+
+      // Verify log outputs were retrieved for recalculation
+      expect(mockedGetLogOutputs).toHaveBeenCalledWith(evaluationRunId, {});
+
+      // Verify evaluation run was updated with new statistics
+      expect(mockedUpdateEvaluationRun).toHaveBeenCalledWith(
+        evaluationRunId,
+        expect.objectContaining({
+          results: expect.objectContaining({
+            total_logs: 2,
+            passed_count: 2,
+            failed_count: 0,
+            average_score: expect.closeTo(0.85, 0.01), // Account for floating point precision
+            threshold_used: 0.5,
+          }),
+          metadata: expect.objectContaining({
+            total_logs: 2,
+            passed_count: 2,
+            failed_count: 0,
+            average_score: expect.closeTo(0.85, 0.01), // Account for floating point precision
+            threshold_used: 0.5,
+          }),
+        }),
+      );
+    });
+
+    it('should handle strict mode correctly in single log evaluation', async () => {
+      const evaluationRunId = 'test-evaluation-run-id';
+      const mockLog = {
+        id: 'test-log-id',
+        input: 'Find user',
+        output: 'User found',
+        tools_used: [{ name: 'database_query', success: true }],
+      } as unknown as IdkRequestLog;
+
+      const mockLLMResponse = {
+        output: [
+          {
+            type: 'message',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  score: 0.7,
+                  reasoning: 'Tool arguments are acceptable',
+                }),
+              },
+            ],
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockLLMResponse),
+      });
+
+      // Mock evaluation run with strict mode enabled
+      mockedGetEvaluationRuns.mockResolvedValue([
+        {
+          id: evaluationRunId,
+          dataset_id: 'test-dataset-id',
+          agent_id: 'test-agent-id',
+          skill_id: 'test-skill-id',
+          evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
+          name: 'Test Evaluation Run',
+          description: 'Test description',
+          status: EvaluationRunStatus.RUNNING,
+          results: {},
+          metadata: {
+            parameters: {
+              threshold: 0.5,
+              model: 'gpt-4o',
+              strict_mode: true, // Enable strict mode
+            },
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      mockedCreateLogOutput.mockResolvedValue({
+        id: 'new-output-id',
+        log_id: 'test-log-id',
+        output: {},
+        score: 0.7,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      });
+
+      mockedGetLogOutputs.mockResolvedValue([
+        {
+          id: 'new-output-id',
+          log_id: 'test-log-id',
+          output: {},
+          score: 0.7,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      mockedUpdateEvaluationRun.mockResolvedValue(
+        {} as unknown as EvaluationRun,
+      );
+
+      await evaluateOneLogForArgumentCorrectness(
+        evaluationRunId,
+        mockLog,
+        mockUserDataStorageConnector,
+      );
+
+      // Verify that strict mode threshold (1.0) was used
+      expect(mockedUpdateEvaluationRun).toHaveBeenCalledWith(
+        evaluationRunId,
+        expect.objectContaining({
+          results: expect.objectContaining({
+            threshold_used: 1.0, // Should be 1.0 in strict mode
+            failed_count: 1, // Score 0.7 fails strict threshold
+            passed_count: 0,
+          }),
+        }),
+      );
+    });
+
+    it('should handle evaluation run not found error', async () => {
+      const evaluationRunId = 'non-existent-run-id';
+      const mockLog = {
+        id: 'test-log-id',
+        input: 'test input',
+        output: 'test output',
+      } as unknown as IdkRequestLog;
+
+      mockedGetEvaluationRuns.mockResolvedValue([]);
+
+      await expect(
+        evaluateOneLogForArgumentCorrectness(
+          evaluationRunId,
+          mockLog,
+          mockUserDataStorageConnector,
+        ),
+      ).rejects.toThrow(`Evaluation run ${evaluationRunId} not found`);
     });
   });
 });
