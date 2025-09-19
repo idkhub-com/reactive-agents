@@ -42,7 +42,7 @@ export class AgentErrorBoundary extends Component<Props, State> {
     });
 
     // Track error metrics
-    if (typeof window !== 'undefined' && window.performance) {
+    if (window?.performance) {
       performance.mark(`agent-error-${this.props.sectionName || 'unknown'}`);
     }
 
