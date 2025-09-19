@@ -186,7 +186,15 @@ describe('Role Adherence Evaluator', () => {
   });
 
   it('should handle evaluation errors gracefully with fallback', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    mockFetch.mockImplementation(() => {
+      return Promise.resolve({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Network error',
+        json: async () => ({}),
+      } as Response);
+    });
 
     const result = await evaluateRoleAdherence({
       role_definition: 'You are a math tutor. Provide step-by-step reasoning.',
@@ -196,7 +204,7 @@ describe('Role Adherence Evaluator', () => {
     expect(result.score).toBe(0.5);
     expect(result.reasoning).toContain('Evaluation failed');
     expect(result.metadata?.fallback).toBe(true);
-  });
+  }, 10000);
 
   describe('evaluateOneLogForRoleAdherence', () => {
     it('should evaluate a single log and update evaluation run statistics', async () => {

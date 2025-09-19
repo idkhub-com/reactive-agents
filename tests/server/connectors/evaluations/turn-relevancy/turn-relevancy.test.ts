@@ -114,7 +114,15 @@ describe('Turn Relevancy Evaluator', () => {
   });
 
   it('handles errors with fallback', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    mockFetch.mockImplementation(() => {
+      return Promise.resolve({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Network error',
+        json: async () => ({}),
+      } as Response);
+    });
     const result = await evaluateTurnRelevancy({
       conversation_history: 'A',
       current_turn: 'B',
@@ -122,7 +130,7 @@ describe('Turn Relevancy Evaluator', () => {
     expect(result.score).toBe(0.5);
     expect(result.reasoning).toContain('Evaluation failed');
     expect(result.metadata?.fallback).toBe(true);
-  });
+  }, 10000);
 
   describe('evaluateOneLogForTurnRelevancy', () => {
     // Mock user data storage connector

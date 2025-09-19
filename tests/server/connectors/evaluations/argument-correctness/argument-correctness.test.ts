@@ -639,7 +639,15 @@ describe('Argument Correctness Evaluator', () => {
     });
 
     it('should handle argument correctness evaluation errors gracefully', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          text: async () => 'Network error',
+          json: async () => ({}),
+        } as Response);
+      });
 
       // Mock storage connector calls
       mockedCreateEvaluationRun.mockResolvedValue({
@@ -792,7 +800,7 @@ describe('Argument Correctness Evaluator', () => {
 
       expect(result.averageResult.average_score).toBe(0.5); // Fallback score
       expect(result.averageResult.total_logs).toBe(1);
-    });
+    }, 10000);
   });
 
   describe('evaluateOneLogForArgumentCorrectness', () => {

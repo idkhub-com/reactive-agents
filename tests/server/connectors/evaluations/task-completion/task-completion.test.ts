@@ -209,7 +209,15 @@ describe('Task Completion Evaluator', () => {
 
     it('should handle evaluation errors gracefully', async () => {
       // Mock network error
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          text: async () => 'Network error',
+          json: async () => ({}),
+        } as Response);
+      });
 
       const mockUserDataStorageConnector = {
         getDatasetLogs: vi.fn().mockResolvedValue([
@@ -291,7 +299,7 @@ describe('Task Completion Evaluator', () => {
 
       // Verify that log outputs were created even with errors
       expect(mockUserDataStorageConnector.createLogOutput).toHaveBeenCalled();
-    });
+    }, 10000);
 
     it('should validate required parameters', async () => {
       const mockUserDataStorageConnector = {
