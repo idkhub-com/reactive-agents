@@ -86,12 +86,15 @@ idk
 | Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ✅            |
 | Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ✅            |
 | OpenAI           | ✅       | ✅         | ✅          | ✅                | ✅            |
-| Gemini (Google)  | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
-| XAI              | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
+
+### Embeddings API
+
+| AI Provider      | Text     | Batch Text |
+| ---------------- | -------- | ---------- |
+| OpenAI           | ✅       | ✅         |
 
 - ✅: Supported
 - ⬛: Not yet implemented
-- 🔴: Not supported by the provider
 
 ## 📚 Learn More
 - [Supabase Documentation](https://supabase.com/docs)

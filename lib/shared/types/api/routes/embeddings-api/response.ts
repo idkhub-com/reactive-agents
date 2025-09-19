@@ -8,8 +8,9 @@ export const EmbeddingData = z.object({
 
   /**
    * The embedding vector, which is a list of floats. The length of vector depends on the model as listed in the embedding guide.
+   * The embedding can be in string format when base64 encoding is requested.
    */
-  embedding: z.array(z.number()),
+  embedding: z.union([z.array(z.number()), z.string()]),
 
   /**
    * The index of the embedding in the list of embeddings.

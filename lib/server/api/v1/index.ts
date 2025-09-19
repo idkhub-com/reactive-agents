@@ -1,5 +1,6 @@
 import { chatRouter } from '@server/api/v1/chat';
 import { completionsRouter } from '@server/api/v1/completions';
+import { embeddingsRouter } from '@server/api/v1/embeddings';
 import { idkRouter } from '@server/api/v1/idk';
 import { responsesRouter } from '@server/api/v1/responses';
 import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
@@ -82,6 +83,7 @@ app.use(toolMiddleware);
 app.route('/chat', chatRouter);
 app.route('/completions', completionsRouter);
 app.route('/responses', responsesRouter);
+app.route('/embeddings', embeddingsRouter);
 const idkRoute = app.route('/idk', idkRouter);
 
 export type IdkRoute = typeof idkRoute;
