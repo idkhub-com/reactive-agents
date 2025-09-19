@@ -40,6 +40,12 @@ import type {
   SkillUpdateParams,
 } from '@shared/types/data/skill';
 import type {
+  SkillConfiguration,
+  SkillConfigurationCreateParams,
+  SkillConfigurationQueryParams,
+  SkillConfigurationUpdateParams,
+} from '@shared/types/data/skill-configuration';
+import type {
   Tool,
   ToolCreateParams,
   ToolQueryParams,
@@ -84,6 +90,19 @@ export interface UserDataStorageConnector {
   createSkill(skill: SkillCreateParams): Promise<Skill> | Skill;
   updateSkill(id: string, update: SkillUpdateParams): Promise<Skill> | Skill;
   deleteSkill(id: string): Promise<void> | void;
+
+  // Skill Configurations
+  getSkillConfigurations(
+    queryParams: SkillConfigurationQueryParams,
+  ): Promise<SkillConfiguration[]> | SkillConfiguration[];
+  createSkillConfiguration(
+    skillConfiguration: SkillConfigurationCreateParams,
+  ): Promise<SkillConfiguration> | SkillConfiguration;
+  updateSkillConfiguration(
+    id: string,
+    update: SkillConfigurationUpdateParams,
+  ): Promise<SkillConfiguration> | SkillConfiguration;
+  deleteSkillConfiguration(id: string): Promise<void> | void;
 
   // Tools
   getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];

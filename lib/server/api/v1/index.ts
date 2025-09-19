@@ -21,6 +21,7 @@ import { authenticatedMiddleware } from '@server/middlewares/auth';
 import { cacheMiddleware } from '@server/middlewares/cache';
 import { evaluationMethodConnectors } from '@server/middlewares/evaluations';
 import { hooksMiddleware } from '@server/middlewares/hooks';
+import { idkHubConfigurationInjectorMiddleware } from '@server/middlewares/idkhub-configuration';
 import { logsMiddleware } from '@server/middlewares/logs';
 import { toolMiddleware } from '@server/middlewares/tool';
 import { userDataMiddleware } from '@server/middlewares/user-data';
@@ -42,14 +43,11 @@ app.use('*', prettyJSON());
 
 // Keep this middleware before the other middlewares
 // so that the common variables are available to the other middlewares
-app.use('*', commonVariablesMiddleware(factory));
+app.use('*', commonVariablesMiddleware);
 
 // Keep this middleware before agent and skill middleware
 // Use user data middleware for all routes
 app.use('*', userDataMiddleware(factory, supabaseUserDataStorageConnector));
-
-// Use agent and skill middleware for all routes
-app.use('*', agentAndSkillMiddleware);
 
 // Use logs middleware for all routes
 app.use('*', logsMiddleware(factory, supabaseLogsStorageConnector));
@@ -76,6 +74,12 @@ app.use('*', cacheMiddleware(factory, supabaseCacheStorageConnector));
 
 // Use authenticated middleware for all routes
 app.use('*', authenticatedMiddleware(factory));
+
+// Use IdkHub configuration injector middleware for all routes
+app.use('*', idkHubConfigurationInjectorMiddleware);
+
+// Use agent and skill middleware for all routes
+app.use('*', agentAndSkillMiddleware);
 
 // Use tool middleware for all routes
 app.use(toolMiddleware);

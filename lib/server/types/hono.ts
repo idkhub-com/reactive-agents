@@ -6,7 +6,10 @@ import type {
   UserDataStorageConnector,
 } from '@server/types/connector';
 import type { IdkRequestData } from '@shared/types/api/request';
-import type { IdkConfig } from '@shared/types/api/request/headers';
+import type {
+  IdkConfig,
+  IdkConfigPreProcessed,
+} from '@shared/types/api/request/headers';
 import type { IdkResponseBody } from '@shared/types/api/response';
 import type { Agent } from '@shared/types/data/agent';
 import type { LogsClient } from '@shared/types/data/log';
@@ -26,6 +29,7 @@ import type { Context, Hono } from 'hono';
 export interface AppEnv {
   Variables: {
     idk_config: IdkConfig;
+    idk_config_pre_processed: IdkConfigPreProcessed;
     idk_request_data: IdkRequestData;
     agent: Agent;
     skill: Skill;

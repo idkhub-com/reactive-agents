@@ -16,6 +16,7 @@ import {
   type CreateResponseOptions,
   createResponse,
 } from '@server/utils/idkhub/response';
+
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 import type {
@@ -80,10 +81,65 @@ export async function tryPost(
 ): Promise<Response> {
   const overrideParams = idkConfig?.override_params || {};
 
-  const overriddenIdkRequestBody: IdkRequestBody = {
+  let overriddenIdkRequestBody: IdkRequestBody = {
     ...(idkRequestData.requestBody as Record<string, unknown>),
     ...overrideParams,
   };
+
+  // Apply configuration params as defaults (before override params)
+  const configDefaults: Record<string, unknown> = {};
+
+  // Apply configuration if specified
+  // Only copy over fields that exist in the request body interface
+  if (idkTarget.configuration.temperature !== null)
+    configDefaults.temperature = idkTarget.configuration.temperature;
+  if (idkTarget.configuration.max_tokens !== null)
+    configDefaults.max_tokens = idkTarget.configuration.max_tokens;
+  if (idkTarget.configuration.top_p !== null)
+    configDefaults.top_p = idkTarget.configuration.top_p;
+  if (idkTarget.configuration.frequency_penalty !== null)
+    configDefaults.frequency_penalty =
+      idkTarget.configuration.frequency_penalty;
+  if (idkTarget.configuration.presence_penalty !== null)
+    configDefaults.presence_penalty = idkTarget.configuration.presence_penalty;
+  if (idkTarget.configuration.stop !== null)
+    configDefaults.stop = idkTarget.configuration.stop;
+  if (idkTarget.configuration.seed !== null)
+    configDefaults.seed = idkTarget.configuration.seed;
+
+  // Merge: base request body -> config defaults -> override params
+  overriddenIdkRequestBody = {
+    ...(idkRequestData.requestBody as Record<string, unknown>),
+    ...configDefaults,
+    ...overrideParams,
+  } as IdkRequestBody;
+
+  // Handle system prompt with template variables
+  if (
+    idkTarget.configuration.system_prompt &&
+    'messages' in overriddenIdkRequestBody
+  ) {
+    const systemPrompt = idkTarget.configuration.system_prompt;
+
+    const messages = overriddenIdkRequestBody.messages as Array<{
+      role: string;
+      content: string;
+    }>;
+
+    // Find existing system message or add new one at the beginning
+    const systemMessageIndex = messages.findIndex(
+      (msg) => msg.role === 'system',
+    );
+    const systemMessage = { role: 'system', content: systemPrompt };
+
+    if (systemMessageIndex >= 0) {
+      // Replace existing system message
+      messages[systemMessageIndex] = systemMessage;
+    } else {
+      // Add system message at the beginning
+      messages.unshift(systemMessage);
+    }
+  }
 
   let isStreamingMode = false;
   if ('stream' in overriddenIdkRequestBody) {
@@ -102,11 +158,12 @@ export async function tryPost(
   }
 
   // Mapping providers to corresponding URLs
-  const internalProviderConfig = providerConfigs[idkTarget.provider];
+  const internalProviderConfig =
+    providerConfigs[idkTarget.configuration.ai_provider];
 
   if (!internalProviderConfig) {
     throw new Error(
-      `Provider config not found for provider: ${idkTarget.provider}`,
+      `Provider config not found for provider: ${idkTarget.configuration.ai_provider}`,
     );
   }
 
@@ -131,7 +188,7 @@ export async function tryPost(
     overriddenIdkRequestData.functionName === FunctionName.PROXY
       ? getProxyPath(
           overriddenIdkRequestData.url,
-          idkTarget.provider,
+          idkTarget.configuration.ai_provider,
           overriddenIdkRequestData.url.indexOf('/v1/proxy') > -1
             ? '/v1/proxy'
             : '/v1',
@@ -150,7 +207,7 @@ export async function tryPost(
     idkRequestData: overriddenIdkRequestData,
     aiProviderRequestURL: url,
     isStreamingMode,
-    provider: idkTarget.provider,
+    provider: idkTarget.configuration.ai_provider,
     strictOpenAiCompliance,
     areSyncHooksAvailable: outputSyncHooks?.length > 0,
     currentIndex,
@@ -197,7 +254,7 @@ export async function tryPost(
     aiProviderRequestBody =
       overriddenIdkRequestData.method === HttpMethod.POST
         ? transformToProviderRequest(
-            idkTarget.provider,
+            idkTarget.configuration.ai_provider,
             idkTarget,
             overriddenIdkRequestData,
           )
@@ -468,10 +525,11 @@ export async function recursiveOutputHookHandler(
 
   const { retry } = idkTarget;
 
-  const provider = idkTarget.provider || AIProvider.OPENAI;
-  const providerConfig = providerConfigs[provider];
+  const providerConfig = providerConfigs[idkTarget.configuration.ai_provider];
   if (!providerConfig) {
-    throw new Error(`Provider ${provider} not found`);
+    throw new Error(
+      `Provider ${idkTarget.configuration.ai_provider} not found`,
+    );
   }
   const requestHandlers = providerConfig.requestHandlers;
   let requestHandler: (() => Promise<Response>) | undefined;
@@ -511,7 +569,7 @@ export async function recursiveOutputHookHandler(
   } = await responseHandler(
     response,
     isStreamingMode,
-    provider,
+    idkTarget.configuration.ai_provider,
     idkRequestData.functionName,
     aiProviderRequestURL,
     CacheStatus.MISS,

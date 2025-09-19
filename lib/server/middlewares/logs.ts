@@ -12,8 +12,8 @@ import {
 } from '@server/utils/realtime-evaluations';
 import type { FunctionName } from '@shared/types/api/request';
 import {
-  BaseIdkConfig,
   type IdkConfig,
+  NonPrivateIdkConfig,
 } from '@shared/types/api/request/headers';
 import type { Agent } from '@shared/types/data/agent';
 import type { LogMessage, LogsClient } from '@shared/types/data/log';
@@ -116,7 +116,7 @@ async function processLogs({
   const endTime = Date.now();
   const duration = endTime - startTime;
 
-  const baseIdkConfig = BaseIdkConfig.parse(idkConfig);
+  const baseIdkConfig = NonPrivateIdkConfig.parse(idkConfig);
 
   if (!('model' in aiProviderLog.request_body)) {
     console.error('No model found in request body');

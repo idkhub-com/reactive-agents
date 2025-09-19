@@ -14,5 +14,7 @@ export * from './log';
 export * from './log-output';
 // Skill types
 export * from './skill';
+// Skill Configuration types
+export * from './skill-configuration';
 // Tool types
 export * from './tool';

@@ -105,6 +105,12 @@ export function NavigationProvider({
       if (datasetId) return 'dataset-detail';
       return 'datasets';
     }
+    if (subPath === 'configurations') {
+      if (pathSegments[4] === 'create') return 'create-configuration';
+      if (pathSegments[4] && pathSegments[4] !== 'create')
+        return 'edit-configuration';
+      return 'configurations';
+    }
 
     return 'skills-list';
   }, [pathname, params]);
@@ -279,6 +285,15 @@ export function NavigationProvider({
           breadcrumbs.push({
             label: 'Datasets',
             path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/datasets`,
+          });
+        } else if (
+          currentView === 'configurations' ||
+          currentView === 'create-configuration' ||
+          currentView === 'edit-configuration'
+        ) {
+          breadcrumbs.push({
+            label: 'Configurations',
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/configurations`,
           });
         }
       } else if (newState.selectedAgent && currentView === 'skills-list') {

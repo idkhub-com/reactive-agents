@@ -9,6 +9,7 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
+import { JinjaHighlight } from './jinja-highlight';
 
 export const defaultExtensions = (): (Extension | Node | Mark)[] => [
   StarterKit.configure({
@@ -110,5 +111,39 @@ export const defaultExtensions = (): (Extension | Node | Mark)[] => [
     breaks: false, // New lines (\n) in markdown input are converted to <br>
     transformPastedText: true, // Allow to paste markdown text in the editor
     transformCopiedText: false, // Copied text is transformed to markdown
+  }),
+];
+
+export const jinjaExtensions = (): (Extension | Node | Mark)[] => [
+  StarterKit.configure({
+    paragraph: {
+      HTMLAttributes: {
+        class: 'tiptap-paragraph',
+      },
+    },
+    bulletList: false, // Disable lists for system prompts
+    orderedList: false,
+    listItem: false,
+    blockquote: false, // Disable blockquotes for system prompts
+    horizontalRule: false,
+    heading: false, // Disable headings for system prompts
+    code: {
+      HTMLAttributes: {
+        class: 'rounded-md px-1.5 py-1 font-mono font-medium text-stone-900',
+        spellcheck: 'false',
+      },
+    },
+    codeBlock: false, // Disable code blocks for system prompts
+    dropcursor: {
+      color: '#DBEAFE',
+      width: 4,
+    },
+    gapcursor: false, // Keep consistent with existing config
+  }),
+  TextStyle,
+  JinjaHighlight.configure({
+    variableClass: 'jinja-variable',
+    blockClass: 'jinja-block',
+    commentClass: 'jinja-comment',
   }),
 ];

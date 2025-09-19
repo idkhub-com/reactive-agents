@@ -350,3 +350,33 @@ CREATE TABLE IF NOT EXISTS cache (
 ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ================================================
+-- Skill configurations table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_configurations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  data JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE(agent_id, skill_id, name)
+);
+
+CREATE TRIGGER update_skill_configurations_updated_at BEFORE UPDATE ON skill_configurations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_skill_configurations_agent_id ON skill_configurations(agent_id);
+
+CREATE INDEX idx_skill_configurations_skill_id ON skill_configurations(skill_id);
+
+CREATE INDEX idx_skill_configurations_name ON skill_configurations(name);
+
+ALTER TABLE skill_configurations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_configurations FOR ALL TO service_role USING (true) WITH CHECK (true);

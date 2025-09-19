@@ -102,6 +102,15 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
     [router],
   );
 
+  const navigateToConfigurations = useCallback(
+    (agentName: string, skillName: string) => {
+      router.push(
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/configurations`,
+      );
+    },
+    [router],
+  );
+
   return {
     navigateToSkillDashboard,
     navigateToLogs,
@@ -114,5 +123,6 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
     replaceToDatasets,
     navigateToDatasetDetail,
     navigateToCreateDataset,
+    navigateToConfigurations,
   };
 }

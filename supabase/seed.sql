@@ -21,7 +21,15 @@ VALUES (
     '{}',
     '2025-06-24 00:15:56.646',
     '2025-06-24 00:15:56.646'
-  );
+  ),
+	(
+	  '80b38e36-b42d-4cdd-b546-6ff83b667f64'::uuid,
+	  'Captain Code',
+	  NULL,
+	  '{}',
+	  '2025-09-12 03:03:12.244',
+	  '2025-09-12 03:03:12.244'
+	);
 
 INSERT INTO public.skills (
     id,
@@ -49,7 +57,16 @@ VALUES (
     '{}',
     '2025-06-24 00:15:56.646',
     '2025-06-24 00:15:56.646'
-  );
+  ),
+	(
+	  '1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
+	  '80b38e36-b42d-4cdd-b546-6ff83b667f64'::uuid,
+	  'JavaScript',
+	  NULL,
+	  '{}',
+	  '2025-09-12 03:03:12.268',
+	  '2025-09-12 03:03:12.268'
+	);
 
 INSERT INTO public.logs (
     id,
@@ -541,3 +558,24 @@ VALUES (
     'd94aa048-d7c2-42ec-9358-354c5723fa3b'::uuid,
     '2025-01-15 10:15:00.000'
   );
+  
+INSERT INTO public.skill_configurations (
+    id,
+    agent_id,
+    skill_id,
+    "name",
+    description,
+    "data",
+    created_at,
+    updated_at
+  )
+VALUES (
+		'01d4eff0-bc00-4581-a0de-b3c4d929487c'::uuid,
+		'80b38e36-b42d-4cdd-b546-6ff83b667f64'::uuid,
+		'1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
+		'Main',
+		NULL,
+		'{"09c44f": {"hash": "09c44f", "params": {"seed": null, "stop": null, "model": "grok-4-mini", "top_p": null, "max_tokens": null, "ai_provider": "xai", "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }}", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:23:43.069Z"}, "f590b9": {"hash": "f590b9", "params": {"seed": null, "stop": null, "model": "grok-4-mini", "top_p": null, "max_tokens": null, "ai_provider": "xai", "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }} .", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:30:18.360Z"}, "current": {"hash": "09c44f", "params": {"seed": null, "stop": null, "model": "grok-4-mini", "top_p": null, "max_tokens": null, "ai_provider": "xai", "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }}", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:30:53.396Z"}}',
+		'2025-09-12 03:23:43.069',
+		'2025-09-12 03:30:53.418'
+	);

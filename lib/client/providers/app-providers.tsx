@@ -8,6 +8,7 @@ import { EvaluationRunsProvider } from './evaluation-runs';
 import { LogsProvider } from './logs';
 import { NavigationProvider } from './navigation';
 import { ReactQueryProvider } from './query-client';
+import { SkillConfigurationsProvider } from './skill-configurations';
 import { SkillsProvider } from './skills';
 
 interface AppProvidersProps {
@@ -44,11 +45,13 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
         <NavigationProvider>
           <AgentsProvider>
             <SkillsProvider>
-              <LogsProvider>
-                <DatasetsProvider>
-                  <EvaluationRunsProvider>{children}</EvaluationRunsProvider>
-                </DatasetsProvider>
-              </LogsProvider>
+              <SkillConfigurationsProvider>
+                <LogsProvider>
+                  <DatasetsProvider>
+                    <EvaluationRunsProvider>{children}</EvaluationRunsProvider>
+                  </DatasetsProvider>
+                </LogsProvider>
+              </SkillConfigurationsProvider>
             </SkillsProvider>
           </AgentsProvider>
         </NavigationProvider>

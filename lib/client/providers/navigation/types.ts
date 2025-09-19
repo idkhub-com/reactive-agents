@@ -19,8 +19,11 @@ export interface NavigationState {
     | 'logs'
     | 'evaluations'
     | 'datasets'
+    | 'configurations'
     | 'create-evaluation'
     | 'create-dataset'
+    | 'create-configuration'
+    | 'edit-configuration'
     | 'log-detail'
     | 'evaluation-detail'
     | 'dataset-detail';
@@ -63,6 +66,7 @@ export interface NavigationContextType {
     datasetId: string,
   ) => void;
   navigateToCreateDataset: (agentName: string, skillName: string) => void;
+  navigateToConfigurations: (agentName: string, skillName: string) => void;
   navigateBack: (targetSegmentIndex: number) => void;
   updateBreadcrumbs: (segments: BreadcrumbSegment[]) => void;
 }

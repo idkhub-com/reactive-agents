@@ -28,6 +28,18 @@ describe('getOrCreateAgent', () => {
       updateSkill: vi.fn(),
       deleteSkill: vi.fn(),
 
+      // System prompt methods
+      getSystemPrompts: vi.fn(),
+      createSystemPrompt: vi.fn(),
+      updateSystemPrompt: vi.fn(),
+      deleteSystemPrompt: vi.fn(),
+
+      // Skill configuration methods
+      getSkillConfigurations: vi.fn(),
+      createSkillConfiguration: vi.fn(),
+      updateSkillConfiguration: vi.fn(),
+      deleteSkillConfiguration: vi.fn(),
+
       // Feedback methods
       getFeedback: vi.fn(),
       createFeedback: vi.fn(),

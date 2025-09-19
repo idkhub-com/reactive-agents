@@ -93,6 +93,12 @@ describe('toolMiddleware', () => {
       updateSkill: vi.fn(),
       deleteSkill: vi.fn(),
 
+      // Skill configuration methods
+      getSkillConfigurations: vi.fn(),
+      createSkillConfiguration: vi.fn(),
+      updateSkillConfiguration: vi.fn(),
+      deleteSkillConfiguration: vi.fn(),
+
       // Tool methods
       getTools: vi.fn(),
       createTool: mockCreateTool,
