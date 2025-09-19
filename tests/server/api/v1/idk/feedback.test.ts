@@ -63,6 +63,11 @@ const mockUserDataStorageConnector: UserDataStorageConnector = {
   getLogOutputs: vi.fn(),
   createLogOutput: vi.fn(),
   deleteLogOutput: vi.fn(),
+  // AI Provider API Key methods
+  getAIProviderAPIKeys: vi.fn(),
+  createAIProviderAPIKey: vi.fn(),
+  updateAIProviderAPIKey: vi.fn(),
+  deleteAIProviderAPIKey: vi.fn(),
 };
 
 // Type the mocked functions

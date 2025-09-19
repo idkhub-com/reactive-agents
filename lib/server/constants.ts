@@ -34,3 +34,12 @@ export const API_URL =
 export const BEARER_TOKEN = process.env.BEARER_TOKEN ?? 'idk';
 
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'demo-key';
+
+/**
+ * Encryption key for AI provider API keys.
+ *
+ * You should absolutely change this in production!
+ */
+export const AI_PROVIDER_API_KEY_ENCRYPTION_KEY =
+  process.env.AI_PROVIDER_API_KEY_ENCRYPTION_KEY ??
+  'default-32-byte-key-change-in-prod';

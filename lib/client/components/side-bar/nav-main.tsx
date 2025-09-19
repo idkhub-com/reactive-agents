@@ -30,7 +30,7 @@ import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import { BotIcon, Plus } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React from 'react';
 
 const createAgentAvatar = (agentName: string) => {
@@ -71,13 +71,28 @@ export function NavMain({
   const { setSection } = useNavigation();
   const { agents, isLoading, selectedAgent, setSelectedAgent } = useAgents();
   const router = useRouter();
+  const pathname = usePathname();
   const modifierKey = useModifierKey();
   const [isAgentsOpen, setIsAgentsOpen] = React.useState(true);
 
-  const handleSectionClick = (sectionTitle: string) => {
-    if (sectionTitle === 'Documentation') {
+  const isSectionActive = (section: NavigationSection): boolean => {
+    if (section.url && section.url !== '#') {
+      return pathname.startsWith(section.url);
+    }
+    return false;
+  };
+
+  const handleSectionClick = (section: NavigationSection) => {
+    // Clear selected agent when navigating away from agents
+    if (section.title !== 'Agents') {
+      setSelectedAgent(null);
+    }
+
+    if (section.url && section.url !== '#') {
+      router.push(section.url);
+    } else if (section.title === 'Documentation') {
       setSection('documentation');
-    } else if (sectionTitle === 'Settings') {
+    } else if (section.title === 'Settings') {
       setSection('settings');
     }
   };
@@ -195,7 +210,8 @@ export function NavMain({
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               tooltip={item.title}
-              onClick={() => handleSectionClick(item.title)}
+              onClick={() => handleSectionClick(item)}
+              isActive={isSectionActive(item)}
               className="cursor-pointer"
             >
               {item.icon && <item.icon />}

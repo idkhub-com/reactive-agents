@@ -4,7 +4,12 @@ import type {
   AgentQueryParams,
   AgentUpdateParams,
 } from '@shared/types/data/agent';
-
+import type {
+  AIProviderAPIKey,
+  AIProviderAPIKeyCreateParams,
+  AIProviderAPIKeyQueryParams,
+  AIProviderAPIKeyUpdateParams,
+} from '@shared/types/data/ai-provider-api-key';
 import type {
   Dataset,
   DatasetCreateParams,
@@ -155,6 +160,19 @@ export interface UserDataStorageConnector {
     logOutput: LogOutputCreateParams,
   ): Promise<LogOutput> | LogOutput;
   deleteLogOutput(evaluationRunId: string, id: string): Promise<void> | void;
+
+  // AI Provider API Keys
+  getAIProviderAPIKeys(
+    queryParams: AIProviderAPIKeyQueryParams,
+  ): Promise<AIProviderAPIKey[]> | AIProviderAPIKey[];
+  createAIProviderAPIKey(
+    apiKey: AIProviderAPIKeyCreateParams,
+  ): Promise<AIProviderAPIKey> | AIProviderAPIKey;
+  updateAIProviderAPIKey(
+    id: string,
+    update: AIProviderAPIKeyUpdateParams,
+  ): Promise<AIProviderAPIKey> | AIProviderAPIKey;
+  deleteAIProviderAPIKey(id: string): Promise<void> | void;
 }
 
 export interface LogsStorageConnector {

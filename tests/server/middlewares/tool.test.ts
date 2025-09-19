@@ -126,6 +126,11 @@ describe('toolMiddleware', () => {
       getLogOutputs: vi.fn(),
       createLogOutput: vi.fn(),
       deleteLogOutput: vi.fn(),
+      // AI Provider API Key methods
+      getAIProviderAPIKeys: vi.fn(),
+      createAIProviderAPIKey: vi.fn(),
+      updateAIProviderAPIKey: vi.fn(),
+      deleteAIProviderAPIKey: vi.fn(),
     };
 
     // Mock crypto.subtle.digest to return our mock digest

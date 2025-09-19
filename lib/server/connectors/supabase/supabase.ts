@@ -1,4 +1,6 @@
+import crypto from 'node:crypto';
 import {
+  AI_PROVIDER_API_KEY_ENCRYPTION_KEY,
   SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY,
   SUPABASE_URL,
@@ -8,14 +10,18 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
-
 import {
   Agent,
   type AgentCreateParams,
   type AgentQueryParams,
   type AgentUpdateParams,
 } from '@shared/types/data/agent';
-
+import {
+  AIProviderAPIKey,
+  type AIProviderAPIKeyCreateParams,
+  type AIProviderAPIKeyQueryParams,
+  type AIProviderAPIKeyUpdateParams,
+} from '@shared/types/data/ai-provider-api-key';
 import {
   Dataset,
   type DatasetCreateParams,
@@ -76,6 +82,51 @@ const checkEnvironmentVariables = (): void => {
   if (!SUPABASE_ANON_KEY) {
     throw new Error('SUPABASE_ANON_KEY is not set');
   }
+};
+
+const encryptAPIKey = (plaintext: string): string => {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto
+    .createHash('sha256')
+    .update(AI_PROVIDER_API_KEY_ENCRYPTION_KEY)
+    .digest();
+  const iv = crypto.randomBytes(16);
+
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  cipher.setAAD(Buffer.from('api-key'));
+
+  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+
+  const authTag = cipher.getAuthTag();
+
+  // Format: iv:authTag:encrypted
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+};
+
+const decryptAPIKey = (encryptedData: string): string => {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto
+    .createHash('sha256')
+    .update(AI_PROVIDER_API_KEY_ENCRYPTION_KEY)
+    .digest();
+
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+  if (!ivHex || !authTagHex || !encrypted) {
+    throw new Error('Invalid encrypted data format');
+  }
+
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  decipher.setAAD(Buffer.from('api-key'));
+  decipher.setAuthTag(authTag);
+
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+
+  return decrypted;
 };
 
 const selectFromSupabase = async <T extends z.ZodType>(
@@ -1056,6 +1107,91 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       id: `eq.${id}`,
       evaluation_run_id: `eq.${evaluationRunId}`,
     });
+  },
+
+  // AI Provider API Keys
+  getAIProviderAPIKeys: async (
+    queryParams: AIProviderAPIKeyQueryParams,
+  ): Promise<AIProviderAPIKey[]> => {
+    const postgrestParams: Record<string, string> = {};
+
+    if (queryParams.id) {
+      postgrestParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.ai_provider) {
+      postgrestParams.ai_provider = `eq.${queryParams.ai_provider}`;
+    }
+    if (queryParams.name) {
+      postgrestParams.name = `eq.${queryParams.name}`;
+    }
+    if (queryParams.limit) {
+      postgrestParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgrestParams.offset = queryParams.offset.toString();
+    }
+
+    const encryptedAPIKeys = await selectFromSupabase(
+      'ai_provider_api_keys',
+      postgrestParams,
+      z.array(AIProviderAPIKey),
+    );
+
+    // Decrypt the API keys before returning
+    return encryptedAPIKeys.map((key) => ({
+      ...key,
+      api_key: decryptAPIKey(key.api_key),
+    }));
+  },
+
+  createAIProviderAPIKey: async (
+    apiKey: AIProviderAPIKeyCreateParams,
+  ): Promise<AIProviderAPIKey> => {
+    const encryptedAPIKey = {
+      ...apiKey,
+      api_key: encryptAPIKey(apiKey.api_key),
+    };
+
+    const insertedAPIKey = await insertIntoSupabase(
+      'ai_provider_api_keys',
+      encryptedAPIKey,
+      z.array(AIProviderAPIKey),
+    );
+
+    // Decrypt before returning
+    return {
+      ...insertedAPIKey[0],
+      api_key: decryptAPIKey(insertedAPIKey[0].api_key),
+    };
+  },
+
+  updateAIProviderAPIKey: async (
+    id: string,
+    update: AIProviderAPIKeyUpdateParams,
+  ): Promise<AIProviderAPIKey> => {
+    const updateData = { ...update };
+
+    // Encrypt the API key if it's being updated
+    if (update.api_key) {
+      updateData.api_key = encryptAPIKey(update.api_key);
+    }
+
+    const updatedAPIKey = await updateInSupabase(
+      'ai_provider_api_keys',
+      id,
+      updateData,
+      z.array(AIProviderAPIKey),
+    );
+
+    // Decrypt before returning
+    return {
+      ...updatedAPIKey[0],
+      api_key: decryptAPIKey(updatedAPIKey[0].api_key),
+    };
+  },
+
+  deleteAIProviderAPIKey: async (id: string): Promise<void> => {
+    await deleteFromSupabase('ai_provider_api_keys', { id: `eq.${id}` });
   },
 };
 

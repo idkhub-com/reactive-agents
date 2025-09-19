@@ -70,6 +70,11 @@ const mockUserDataStorageConnector = {
   getLogOutputs: vi.fn(),
   createLogOutput: vi.fn(),
   deleteLogOutput: vi.fn(),
+  // AI Provider API Key methods
+  getAIProviderAPIKeys: vi.fn(),
+  createAIProviderAPIKey: vi.fn(),
+  updateAIProviderAPIKey: vi.fn(),
+  deleteAIProviderAPIKey: vi.fn(),
 };
 
 // Mock for crypto.randomUUID

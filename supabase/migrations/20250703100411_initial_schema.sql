@@ -380,3 +380,27 @@ CREATE INDEX idx_skill_configurations_name ON skill_configurations(name);
 ALTER TABLE skill_configurations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON skill_configurations FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ================================================
+-- AI Provider API Keys
+-- ================================================
+CREATE TABLE IF NOT EXISTS ai_provider_api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ai_provider TEXT NOT NULL,
+  name TEXT NOT NULL,
+  api_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(ai_provider, name)
+);
+
+CREATE TRIGGER ai_provider_api_keys_updated_at BEFORE UPDATE ON ai_provider_api_keys
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_ai_provider_api_keys_ai_provider ON ai_provider_api_keys(ai_provider);
+
+CREATE INDEX idx_ai_provider_api_keys_name ON ai_provider_api_keys(name);
+
+ALTER TABLE ai_provider_api_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);

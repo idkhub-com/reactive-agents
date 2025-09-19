@@ -62,6 +62,10 @@ describe('Connector Interfaces', () => {
       createSkill: vi.fn(),
       updateSkill: vi.fn(),
       deleteSkill: vi.fn(),
+      getSkillConfigurations: vi.fn(),
+      createSkillConfiguration: vi.fn(),
+      updateSkillConfiguration: vi.fn(),
+      deleteSkillConfiguration: vi.fn(),
       getTools: vi.fn(),
       createTool: vi.fn(),
       deleteTool: vi.fn(),
@@ -102,6 +106,11 @@ describe('Connector Interfaces', () => {
         score: 0.9,
       } as LogOutput),
       deleteLogOutput: vi.fn(),
+      // AI Provider API Key methods
+      getAIProviderAPIKeys: vi.fn(),
+      createAIProviderAPIKey: vi.fn(),
+      updateAIProviderAPIKey: vi.fn(),
+      deleteAIProviderAPIKey: vi.fn(),
     };
 
     it('should have all required methods', () => {

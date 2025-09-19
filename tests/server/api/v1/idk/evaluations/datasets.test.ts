@@ -61,6 +61,11 @@ const mockUserDataStorageConnector = {
   getLogOutputs: vi.fn(),
   createLogOutput: vi.fn(),
   deleteLogOutput: vi.fn(),
+  // AI Provider API Key methods
+  getAIProviderAPIKeys: vi.fn(),
+  createAIProviderAPIKey: vi.fn(),
+  updateAIProviderAPIKey: vi.fn(),
+  deleteAIProviderAPIKey: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector
