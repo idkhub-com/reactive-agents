@@ -116,9 +116,6 @@ export const PrettyAIProvider: Record<AIProvider, string> = {
   [AIProvider.ZHIPU]: 'Zhipu',
 };
 
-// Zod schema for AIProvider enum
-export const AIProviderSchema = z.nativeEnum(AIProvider);
-
 export const MAX_RETRY_LIMIT_MS = 60 * 1000; // 60 seconds
 
 export const POSSIBLE_RETRY_STATUS_HEADERS = [

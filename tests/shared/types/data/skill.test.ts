@@ -347,6 +347,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'A test skill',
         metadata: { type: 'completion' },
+        max_configurations: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -363,6 +364,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: null,
         metadata: {},
+        max_configurations: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -378,6 +380,7 @@ describe('Skill Data Transforms and Validation', () => {
         agent_id: testAgentId,
         name: 'Test Skill',
         metadata: {},
+        max_configurations: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -393,6 +396,7 @@ describe('Skill Data Transforms and Validation', () => {
         agent_id: testAgentId,
         name: 'Test Skill',
         metadata: {},
+        max_configurations: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -406,6 +410,7 @@ describe('Skill Data Transforms and Validation', () => {
         agent_id: testAgentId,
         name: '',
         metadata: {},
+        max_configurations: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -419,6 +424,7 @@ describe('Skill Data Transforms and Validation', () => {
         agent_id: testAgentId,
         name: 'Test Skill',
         metadata: {},
+        max_configurations: 10,
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -432,6 +438,7 @@ describe('Skill Data Transforms and Validation', () => {
         agent_id: testAgentId,
         name: 'Test Skill',
         metadata: {},
+        max_configurations: 10,
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
       };

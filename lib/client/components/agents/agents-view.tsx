@@ -16,6 +16,7 @@ import { CreateEvaluationRunView } from './skills/evaluation-runs/create-evaluat
 import { EvaluationRunDetailsView } from './skills/evaluation-runs/evaluation-run-details-view';
 import { EvaluationRunsView } from './skills/evaluation-runs/evaluation-runs-view';
 import { LogDetailsView, LogsView } from './skills/logs';
+import { ModelsView } from './skills/models/models-view';
 
 export function AgentsView(): ReactElement {
   const { navigationState } = useNavigation();
@@ -116,6 +117,12 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Edit Configuration">
             <EditConfigurationView />
+          </AgentErrorBoundary>
+        );
+      case 'models':
+        return (
+          <AgentErrorBoundary sectionName="Models">
+            <ModelsView />
           </AgentErrorBoundary>
         );
       default:

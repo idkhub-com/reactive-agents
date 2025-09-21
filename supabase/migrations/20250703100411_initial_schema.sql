@@ -26,6 +26,7 @@ CREATE TABLE if not exists skills (
   name TEXT NOT NULL,
   description TEXT,
   metadata JSONB NOT NULL DEFAULT '{}',
+  max_configurations INTEGER NOT NULL DEFAULT 10,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -404,3 +405,51 @@ CREATE INDEX idx_ai_provider_api_keys_name ON ai_provider_api_keys(name);
 ALTER TABLE ai_provider_api_keys ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ================================================
+-- Models table
+-- ================================================
+CREATE TABLE IF NOT EXISTS models (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ai_provider_api_key_id UUID NOT NULL,
+  model_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ai_provider_api_key_id) REFERENCES ai_provider_api_keys(id) ON DELETE CASCADE,
+  UNIQUE(ai_provider_api_key_id, model_name)
+);
+
+CREATE TRIGGER update_models_updated_at BEFORE UPDATE ON models
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_models_ai_provider_api_key_id ON models(ai_provider_api_key_id);
+CREATE INDEX idx_models_model_name ON models(model_name);
+
+ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON models FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ================================================
+-- Skill Models bridge table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_models (
+  skill_id UUID NOT NULL,
+  model_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (skill_id, model_id),
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_skill_models_skill_id ON skill_models(skill_id);
+CREATE INDEX idx_skill_models_model_id ON skill_models(model_id);
+
+ALTER TABLE skill_models ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_models FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+COMMENT ON TABLE models IS 'AI models tied to specific API keys';
+COMMENT ON COLUMN models.ai_provider_api_key_id IS 'The API key that enables access to this model';
+COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-4, claude-3-opus)';
+COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they can use';
+COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations allowed for this skill';

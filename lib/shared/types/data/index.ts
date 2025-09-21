@@ -12,6 +12,8 @@ export * from './improved-response';
 export * from './log';
 // Log Output types
 export * from './log-output';
+// Model types
+export * from './model';
 // Skill types
 export * from './skill';
 // Skill Configuration types

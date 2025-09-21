@@ -6,6 +6,7 @@ export const Skill = z.object({
   name: z.string().min(1),
   description: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()),
+  max_configurations: z.number().int().positive().default(10),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -29,6 +30,7 @@ export const SkillCreateParams = z
     name: z.string().min(1),
     description: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).default({}),
+    max_configurations: z.number().int().positive().default(10),
   })
   .strict();
 
@@ -38,18 +40,19 @@ export const SkillUpdateParams = z
   .object({
     description: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
+    max_configurations: z.number().int().positive().optional(),
   })
   .strict()
   .refine(
     (data) => {
-      const updateFields = ['description', 'metadata'];
+      const updateFields = ['description', 'metadata', 'max_configurations'];
       return updateFields.some(
         (field) => data[field as keyof typeof data] !== undefined,
       );
     },
     {
       message: 'At least one field must be provided for update',
-      path: ['description', 'metadata'],
+      path: ['description', 'metadata', 'max_configurations'],
     },
   );
 

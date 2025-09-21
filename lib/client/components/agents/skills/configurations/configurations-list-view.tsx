@@ -134,9 +134,9 @@ export function ConfigurationsListView({
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Model:</span>
+                        <span className="text-muted-foreground">Model ID:</span>
                         <span className="font-medium">
-                          {configuration.data.current.params.model}
+                          {configuration.data.current.params.model_id}
                         </span>
                       </div>
                       {configuration.data.current.params.temperature && (

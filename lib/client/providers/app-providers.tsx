@@ -3,9 +3,11 @@
 import { ErrorBoundary } from '@client/components/error-boundary';
 import type { ReactElement, ReactNode } from 'react';
 import { AgentsProvider } from './agents';
+import { AIProviderAPIKeysProvider } from './ai-provider-api-keys';
 import { DatasetsProvider } from './datasets';
 import { EvaluationRunsProvider } from './evaluation-runs';
 import { LogsProvider } from './logs';
+import { ModelsProvider } from './models';
 import { NavigationProvider } from './navigation';
 import { ReactQueryProvider } from './query-client';
 import { SkillConfigurationsProvider } from './skill-configurations';
@@ -45,13 +47,19 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
         <NavigationProvider>
           <AgentsProvider>
             <SkillsProvider>
-              <SkillConfigurationsProvider>
-                <LogsProvider>
-                  <DatasetsProvider>
-                    <EvaluationRunsProvider>{children}</EvaluationRunsProvider>
-                  </DatasetsProvider>
-                </LogsProvider>
-              </SkillConfigurationsProvider>
+              <AIProviderAPIKeysProvider>
+                <SkillConfigurationsProvider>
+                  <ModelsProvider>
+                    <LogsProvider>
+                      <DatasetsProvider>
+                        <EvaluationRunsProvider>
+                          {children}
+                        </EvaluationRunsProvider>
+                      </DatasetsProvider>
+                    </LogsProvider>
+                  </ModelsProvider>
+                </SkillConfigurationsProvider>
+              </AIProviderAPIKeysProvider>
             </SkillsProvider>
           </AgentsProvider>
         </NavigationProvider>

@@ -82,9 +82,21 @@ describe('getOrCreateSkill', () => {
       deleteLogOutput: vi.fn(),
       // AI Provider API Key methods
       getAIProviderAPIKeys: vi.fn(),
+      getAIProviderAPIKeyById: vi.fn(),
       createAIProviderAPIKey: vi.fn(),
       updateAIProviderAPIKey: vi.fn(),
       deleteAIProviderAPIKey: vi.fn(),
+      // Model methods
+      getModels: vi.fn(),
+      getModelById: vi.fn(),
+      createModel: vi.fn(),
+      updateModel: vi.fn(),
+      deleteModel: vi.fn(),
+      // Skill-Model relationship methods
+      getModelsBySkillId: vi.fn(),
+      getSkillsByModelId: vi.fn(),
+      addModelsToSkill: vi.fn(),
+      removeModelsFromSkill: vi.fn(),
     } as UserDataStorageConnector;
   });
 
@@ -96,6 +108,7 @@ describe('getOrCreateSkill', () => {
         name: 'existing-skill',
         description: 'Existing skill description',
         metadata: { type: 'chat-completion' },
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -124,6 +137,7 @@ describe('getOrCreateSkill', () => {
           name: 'duplicate-skill',
           description: 'First skill',
           metadata: { version: '1.0' },
+          max_configurations: 5,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
         },
@@ -133,6 +147,7 @@ describe('getOrCreateSkill', () => {
           name: 'duplicate-skill',
           description: 'Second skill',
           metadata: { version: '2.0' },
+          max_configurations: 5,
           created_at: '2023-01-02T00:00:00.000Z',
           updated_at: '2023-01-02T00:00:00.000Z',
         },
@@ -159,6 +174,7 @@ describe('getOrCreateSkill', () => {
         name: 'new-skill',
         description: null,
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -181,6 +197,7 @@ describe('getOrCreateSkill', () => {
         agent_id: testAgentId,
         name: 'new-skill',
         metadata: {},
+        max_configurations: 10,
       } as SkillCreateParams);
       expect(console.log).not.toHaveBeenCalledWith(
         expect.stringContaining('Skill already exists'),
@@ -194,6 +211,7 @@ describe('getOrCreateSkill', () => {
         name: 'test-skill',
         description: null,
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -207,6 +225,7 @@ describe('getOrCreateSkill', () => {
         agent_id: testAgentId,
         name: 'test-skill',
         metadata: {},
+        max_configurations: 10,
       });
     });
   });
@@ -240,6 +259,7 @@ describe('getOrCreateSkill', () => {
         name: '',
         description: null,
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -258,6 +278,7 @@ describe('getOrCreateSkill', () => {
         agent_id: testAgentId,
         name: '',
         metadata: {},
+        max_configurations: 10,
       });
     });
 
@@ -269,6 +290,7 @@ describe('getOrCreateSkill', () => {
         name: specialName,
         description: null,
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -297,6 +319,7 @@ describe('getOrCreateSkill', () => {
         name: longName,
         description: null,
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -327,6 +350,7 @@ describe('getOrCreateSkill', () => {
         name: skillName,
         description: null,
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -372,6 +396,7 @@ describe('getOrCreateSkill', () => {
         name: 'image-skill',
         description: 'Image generation skill',
         metadata: complexMetadata,
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -390,6 +415,7 @@ describe('getOrCreateSkill', () => {
         agent_id: testAgentId,
         name: 'image-skill',
         metadata: {},
+        max_configurations: 10,
       });
     });
 
@@ -410,6 +436,7 @@ describe('getOrCreateSkill', () => {
           name: `${skillType}-skill`,
           description: `${skillType} skill`,
           metadata: { type: skillType },
+          max_configurations: 5,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
         };

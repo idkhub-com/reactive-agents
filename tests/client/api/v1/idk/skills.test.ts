@@ -88,6 +88,7 @@ describe('Skills API functions', () => {
     name: 'test-skill',
     description: 'Test skill description',
     metadata: { test: true },
+    max_configurations: 10,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };
@@ -109,6 +110,7 @@ describe('Skills API functions', () => {
         name: 'test-skill',
         description: 'Test skill description',
         metadata: { test: true },
+        max_configurations: 10,
       };
 
       const result = await createSkill(params);
@@ -130,6 +132,7 @@ describe('Skills API functions', () => {
           agent_id: 'agent-456',
           name: 'test-skill',
           metadata: {},
+          max_configurations: 10,
         }),
       ).rejects.toThrow('Failed to create skill');
     });

@@ -72,9 +72,21 @@ const mockUserDataStorageConnector = {
   deleteLogOutput: vi.fn(),
   // AI Provider API Key methods
   getAIProviderAPIKeys: vi.fn(),
+  getAIProviderAPIKeyById: vi.fn(),
   createAIProviderAPIKey: vi.fn(),
   updateAIProviderAPIKey: vi.fn(),
   deleteAIProviderAPIKey: vi.fn(),
+  // Model methods
+  getModels: vi.fn(),
+  getModelById: vi.fn(),
+  createModel: vi.fn(),
+  updateModel: vi.fn(),
+  deleteModel: vi.fn(),
+  // Skill-Model relationship methods
+  getModelsBySkillId: vi.fn(),
+  getSkillsByModelId: vi.fn(),
+  addModelsToSkill: vi.fn(),
+  removeModelsFromSkill: vi.fn(),
 };
 
 // Mock for crypto.randomUUID

@@ -93,6 +93,7 @@ export function CreateSkillView(): React.ReactElement {
         name: sanitizeUserInput(data.name),
         description: sanitizeDescription(data.description || ''),
         metadata: {},
+        max_configurations: 10,
       };
 
       await createSkill(skillParams);

@@ -17,6 +17,7 @@ export async function getOrCreateSkill(
       agent_id: agentId,
       name: skillName,
       metadata: {},
+      max_configurations: 10,
     });
     return newSkill;
   }

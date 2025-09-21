@@ -70,4 +70,59 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ error: 'Failed to delete skill' }, 500);
       }
     },
+  )
+  .get(
+    '/:skillId/models',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const models = await connector.getModelsBySkillId(skillId);
+
+        return c.json(models);
+      } catch (error) {
+        console.error('Error fetching models for skill:', error);
+        return c.json({ error: 'Failed to fetch models for skill' }, 500);
+      }
+    },
+  )
+  .post(
+    '/:skillId/models',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    zValidator('json', z.object({ modelIds: z.array(z.string().uuid()) })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const { modelIds } = c.req.valid('json');
+        const connector = c.get('user_data_storage_connector');
+
+        await connector.addModelsToSkill(skillId, modelIds);
+
+        return c.json({ success: true }, 201);
+      } catch (error) {
+        console.error('Error adding models to skill:', error);
+        return c.json({ error: 'Failed to add models to skill' }, 500);
+      }
+    },
+  )
+  .delete(
+    '/:skillId/models',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    zValidator('json', z.object({ modelIds: z.array(z.string().uuid()) })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const { modelIds } = c.req.valid('json');
+        const connector = c.get('user_data_storage_connector');
+
+        await connector.removeModelsFromSkill(skillId, modelIds);
+
+        return c.json({ success: true });
+      } catch (error) {
+        console.error('Error removing models from skill:', error);
+        return c.json({ error: 'Failed to remove models from skill' }, 500);
+      }
+    },
   );

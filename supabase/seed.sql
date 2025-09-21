@@ -37,6 +37,7 @@ INSERT INTO public.skills (
     name,
     description,
     metadata,
+    max_configurations,
     created_at,
     updated_at
   )
@@ -46,6 +47,7 @@ VALUES (
     'general-chat',
     NULL,
     '{}',
+    5,
     '2025-06-24 00:15:56.646',
     '2025-06-24 00:15:56.646'
   ),
@@ -55,6 +57,7 @@ VALUES (
     'battery-creation',
     NULL,
     '{}',
+    3,
     '2025-06-24 00:15:56.646',
     '2025-06-24 00:15:56.646'
   ),
@@ -64,6 +67,7 @@ VALUES (
 	  'JavaScript',
 	  NULL,
 	  '{}',
+	  10,
 	  '2025-09-12 03:03:12.268',
 	  '2025-09-12 03:03:12.268'
 	);
@@ -575,7 +579,157 @@ VALUES (
 		'1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
 		'Main',
 		NULL,
-		'{"09c44f": {"hash": "09c44f", "params": {"seed": null, "stop": null, "model": "grok-4-mini", "top_p": null, "max_tokens": null, "ai_provider": "xai", "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }}", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:23:43.069Z"}, "f590b9": {"hash": "f590b9", "params": {"seed": null, "stop": null, "model": "grok-4-mini", "top_p": null, "max_tokens": null, "ai_provider": "xai", "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }} .", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:30:18.360Z"}, "current": {"hash": "09c44f", "params": {"seed": null, "stop": null, "model": "grok-4-mini", "top_p": null, "max_tokens": null, "ai_provider": "xai", "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }}", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:30:53.396Z"}}',
+		'{"09c44f": {"hash": "09c44f", "params": {"seed": null, "stop": null, "model_id": "b266977c-2365-4cc0-b510-b8ef016f8836", "top_p": null, "max_tokens": null, "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }}", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:23:43.069Z"}, "f590b9": {"hash": "f590b9", "params": {"seed": null, "stop": null, "model_id": "b266977c-2365-4cc0-b510-b8ef016f8836", "top_p": null, "max_tokens": null, "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }} .", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:30:18.360Z"}, "current": {"hash": "09c44f", "params": {"seed": null, "stop": null, "model_id": "b266977c-2365-4cc0-b510-b8ef016f8836", "top_p": null, "max_tokens": null, "temperature": null, "system_prompt": "You are a coding assistant that talks like a {{ persona }}", "presence_penalty": null, "additional_params": null, "frequency_penalty": null}, "created_at": "2025-09-12T10:30:53.396Z"}}',
 		'2025-09-12 03:23:43.069',
 		'2025-09-12 03:30:53.418'
 	);
+
+-- ================================================
+-- AI Provider API Keys
+-- ================================================
+INSERT INTO public.ai_provider_api_keys (
+    id,
+    ai_provider,
+    name,
+    api_key,
+    created_at,
+    updated_at
+  )
+VALUES (
+    '1a2b3c4d-5e6f-7890-abcd-ef1234567890'::uuid,
+    'openai',
+    'openai-main',
+    'sk-placeholder-key-main-1234567890abcdef',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '2b3c4d5e-6f78-90ab-cdef-123456789012'::uuid,
+    'openai',
+    'openai-dev',
+    'sk-placeholder-key-dev-abcdef1234567890',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '3c4d5e6f-7890-abcd-ef12-34567890abcd'::uuid,
+    'anthropic',
+    'anthropic-prod',
+    'sk-ant-placeholder-prod-1234567890abcdefghij',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '4d5e6f78-90ab-cdef-1234-567890abcdef'::uuid,
+    'xai',
+    'xai-key',
+    'xai-placeholder-key-1234567890abcdef',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  );
+
+-- ================================================
+-- Models
+-- ================================================
+INSERT INTO public.models (
+    id,
+    ai_provider_api_key_id,
+    model_name,
+    created_at,
+    updated_at
+  )
+VALUES (
+    '872f1832-9750-4d1f-b18b-06d4ded3b00a'::uuid,
+    '1a2b3c4d-5e6f-7890-abcd-ef1234567890'::uuid,
+    'gpt-4',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '0fbb601c-d01d-46a2-ab10-7980e5fad7fb'::uuid,
+    '1a2b3c4d-5e6f-7890-abcd-ef1234567890'::uuid,
+    'gpt-4-turbo',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    'efa07d88-23d1-48f0-8b12-8dde123534df'::uuid,
+    '1a2b3c4d-5e6f-7890-abcd-ef1234567890'::uuid,
+    'gpt-4o',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '1e13e585-ac10-4518-bf9d-79ccff5aa887'::uuid,
+    '3c4d5e6f-7890-abcd-ef12-34567890abcd'::uuid,
+    'claude-3-opus',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '35edeeea-d306-4b66-bfef-fbc9a725b3be'::uuid,
+    '3c4d5e6f-7890-abcd-ef12-34567890abcd'::uuid,
+    'claude-3.5-sonnet',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    'b266977c-2365-4cc0-b510-b8ef016f8836'::uuid,
+    '4d5e6f78-90ab-cdef-1234-567890abcdef'::uuid,
+    'grok-4-mini',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '755a75e9-aa74-415a-9f5a-1211d3a19fb7'::uuid,
+    '4d5e6f78-90ab-cdef-1234-567890abcdef'::uuid,
+    'grok-4-turbo',
+    '2025-09-19 17:00:00.000',
+    '2025-09-19 17:00:00.000'
+  );
+
+-- ================================================
+-- Skill Model Relationships
+-- ================================================
+INSERT INTO public.skill_models (
+    skill_id,
+    model_id,
+    created_at
+  )
+VALUES (
+    -- general-chat skill
+    '69df6071-6dab-4986-bb16-780e2471ce5f'::uuid,
+    '872f1832-9750-4d1f-b18b-06d4ded3b00a'::uuid,  -- gpt-4
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '69df6071-6dab-4986-bb16-780e2471ce5f'::uuid,
+    '0fbb601c-d01d-46a2-ab10-7980e5fad7fb'::uuid,  -- gpt-4-turbo
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '69df6071-6dab-4986-bb16-780e2471ce5f'::uuid,
+    '1e13e585-ac10-4518-bf9d-79ccff5aa887'::uuid,  -- claude-3-opus
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    -- JavaScript skill
+    '1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
+    'b266977c-2365-4cc0-b510-b8ef016f8836'::uuid,  -- grok-4-mini
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
+    '755a75e9-aa74-415a-9f5a-1211d3a19fb7'::uuid,  -- grok-4-turbo
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
+    '872f1832-9750-4d1f-b18b-06d4ded3b00a'::uuid,  -- gpt-4
+    '2025-09-19 17:00:00.000'
+  ),
+  (
+    '1fabf9ac-7b3d-45cb-9d71-c65bd5573e9c'::uuid,
+    '35edeeea-d306-4b66-bfef-fbc9a725b3be'::uuid,  -- claude-3.5-sonnet
+    '2025-09-19 17:00:00.000'
+  );

@@ -111,6 +111,9 @@ export function NavigationProvider({
         return 'edit-configuration';
       return 'configurations';
     }
+    if (subPath === 'models') {
+      return 'models';
+    }
 
     return 'skills-list';
   }, [pathname, params]);
@@ -294,6 +297,11 @@ export function NavigationProvider({
           breadcrumbs.push({
             label: 'Configurations',
             path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/configurations`,
+          });
+        } else if (currentView === 'models') {
+          breadcrumbs.push({
+            label: 'Models',
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/models`,
           });
         }
       } else if (newState.selectedAgent && currentView === 'skills-list') {

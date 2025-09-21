@@ -49,6 +49,12 @@ import {
   type LogOutputCreateParams,
   type LogOutputQueryParams,
 } from '@shared/types/data/log-output';
+import {
+  Model,
+  type ModelCreateParams,
+  type ModelQueryParams,
+  type ModelUpdateParams,
+} from '@shared/types/data/model';
 import type { SkillQueryParams } from '@shared/types/data/skill';
 import {
   Skill,
@@ -1144,6 +1150,36 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }));
   },
 
+  getAIProviderAPIKeyById: async (
+    id: string,
+  ): Promise<AIProviderAPIKey | null> => {
+    const encryptedAPIKeys = await selectFromSupabase(
+      'ai_provider_api_keys',
+      { id: `eq.${id}` },
+      z.array(
+        z.object({
+          id: z.string(),
+          ai_provider: z.string(),
+          name: z.string(),
+          api_key: z.string(),
+          created_at: z.string(),
+          updated_at: z.string(),
+        }),
+      ),
+    );
+
+    if (encryptedAPIKeys.length === 0) {
+      return null;
+    }
+
+    // Decrypt the API key before returning
+    const encryptedKey = encryptedAPIKeys[0];
+    return {
+      ...encryptedKey,
+      api_key: decryptAPIKey(encryptedKey.api_key),
+    };
+  },
+
   createAIProviderAPIKey: async (
     apiKey: AIProviderAPIKeyCreateParams,
   ): Promise<AIProviderAPIKey> => {
@@ -1192,6 +1228,107 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   deleteAIProviderAPIKey: async (id: string): Promise<void> => {
     await deleteFromSupabase('ai_provider_api_keys', { id: `eq.${id}` });
+  },
+
+  // Models
+  getModels: async (queryParams: ModelQueryParams): Promise<Model[]> => {
+    const postgrestParams: Record<string, string> = {};
+    if (queryParams.id) {
+      postgrestParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.ai_provider_api_key_id) {
+      postgrestParams.ai_provider_api_key_id = `eq.${queryParams.ai_provider_api_key_id}`;
+    }
+    if (queryParams.model_name) {
+      postgrestParams.model_name = `eq.${queryParams.model_name}`;
+    }
+    if (queryParams.limit) {
+      postgrestParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgrestParams.offset = queryParams.offset.toString();
+    }
+
+    return await selectFromSupabase('models', postgrestParams, z.array(Model));
+  },
+
+  getModelById: async (id: string): Promise<Model | null> => {
+    const models = await selectFromSupabase(
+      'models',
+      { id: `eq.${id}` },
+      z.array(Model),
+    );
+    return models.length > 0 ? models[0] : null;
+  },
+
+  createModel: async (model: ModelCreateParams): Promise<Model> => {
+    const newModels = await insertIntoSupabase(
+      'models',
+      [model],
+      z.array(Model),
+    );
+    return newModels[0];
+  },
+
+  updateModel: async (
+    id: string,
+    update: ModelUpdateParams,
+  ): Promise<Model> => {
+    const updatedModels = await updateInSupabase(
+      'models',
+      `id=eq.${id}`,
+      update,
+      z.array(Model),
+    );
+    return updatedModels[0];
+  },
+
+  deleteModel: async (id: string): Promise<void> => {
+    await deleteFromSupabase('models', { id: `eq.${id}` });
+  },
+
+  // Skill-Model Relationships
+  getModelsBySkillId: async (skillId: string): Promise<Model[]> => {
+    // Join skill_models bridge table with models table
+    const models = await selectFromSupabase(
+      'skill_models',
+      { skill_id: `eq.${skillId}`, select: 'models(*)' },
+      z.array(z.object({ models: Model })),
+    );
+    return models.map((item) => item.models);
+  },
+
+  getSkillsByModelId: async (modelId: string): Promise<Skill[]> => {
+    // Join skill_models bridge table with skills table
+    const skills = await selectFromSupabase(
+      'skill_models',
+      { model_id: `eq.${modelId}`, select: 'skills(*)' },
+      z.array(z.object({ skills: Skill })),
+    );
+    return skills.map((item) => item.skills);
+  },
+
+  addModelsToSkill: async (
+    skillId: string,
+    modelIds: string[],
+  ): Promise<void> => {
+    const bridgeEntries = modelIds.map((modelId) => ({
+      skill_id: skillId,
+      model_id: modelId,
+    }));
+    await insertIntoSupabase('skill_models', bridgeEntries, z.array(z.any()));
+  },
+
+  removeModelsFromSkill: async (
+    skillId: string,
+    modelIds: string[],
+  ): Promise<void> => {
+    for (const modelId of modelIds) {
+      await deleteFromSupabase('skill_models', {
+        skill_id: `eq.${skillId}`,
+        model_id: `eq.${modelId}`,
+      });
+    }
   },
 };
 

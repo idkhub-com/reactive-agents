@@ -1,10 +1,8 @@
-import { AIProviderSchema } from '@shared/types/constants';
 import { z } from 'zod';
 
 // Configuration parameters - the AI parameters for a specific version
 export const SkillConfigurationParams = z.object({
-  ai_provider: AIProviderSchema,
-  model: z.string().min(1),
+  model_id: z.uuid(),
   system_prompt: z.string().min(1).nullable(),
   temperature: z.number().min(0).max(2).nullable(),
   max_tokens: z.number().int().positive().nullable(),

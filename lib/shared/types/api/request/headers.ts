@@ -1,6 +1,5 @@
 import { IdkRequestBody } from '@shared/types/api/request/body';
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
-import { SkillConfigurationParams } from '@shared/types/data';
 import { CacheMode, CacheSettings } from '@shared/types/middleware/cache';
 import { Hook } from '@shared/types/middleware/hooks';
 import { removeEndingPath, removeTrailingSlash } from '@shared/utils/url';
@@ -67,6 +66,13 @@ export const IdkTargetBase = z.object({
     .string()
     .optional()
     .describe('The API key for the provider if not defined through the UI'),
+
+  // Reference to stored API key - alternative to direct api_key
+  api_key_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('Reference to stored API key ID from ai_provider_api_keys table'),
 
   // Anthropic specific
   anthropic_beta: z.string().optional(),
@@ -205,12 +211,31 @@ export const IdkTargetPreProcessed = IdkTargetBase.extend({
 
 export type IdkTargetPreProcessed = z.infer<typeof IdkTargetPreProcessed>;
 
+// Configuration parameters - the AI parameters for a specific version
+export const TargetConfigurationParams = z.object({
+  ai_provider: z.enum(AIProvider),
+  model: z.string().min(1),
+  system_prompt: z.string().min(1).nullable(),
+  temperature: z.number().min(0).max(2).nullable(),
+  max_tokens: z.number().int().positive().nullable(),
+  top_p: z.number().min(0).max(1).nullable(),
+  frequency_penalty: z.number().min(-2).max(2).nullable(),
+  presence_penalty: z.number().min(-2).max(2).nullable(),
+  stop: z.array(z.string()).nullable(),
+  seed: z.number().int().nullable(),
+  // Additional provider-specific parameters can be added here
+  additional_params: z.record(z.string(), z.unknown()).nullable(),
+});
+export type TargetConfigurationParams = z.infer<
+  typeof TargetConfigurationParams
+>;
+
 /** IdkHub Target with configuration name and version validated and processed.
  * The configuration options have already been applied to the target.
  *
  * For example, the `provider` and `model` fields have already been set to the value of the configuration. */
 export const IdkTarget = IdkTargetBase.extend({
-  configuration: SkillConfigurationParams,
+  configuration: TargetConfigurationParams,
   api_key: z.string().describe('The API key for the provider'),
 });
 

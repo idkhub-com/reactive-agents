@@ -39,6 +39,12 @@ import type {
   LogOutputQueryParams,
 } from '@shared/types/data/log-output';
 import type {
+  Model,
+  ModelCreateParams,
+  ModelQueryParams,
+  ModelUpdateParams,
+} from '@shared/types/data/model';
+import type {
   Skill,
   SkillCreateParams,
   SkillQueryParams,
@@ -165,6 +171,9 @@ export interface UserDataStorageConnector {
   getAIProviderAPIKeys(
     queryParams: AIProviderAPIKeyQueryParams,
   ): Promise<AIProviderAPIKey[]> | AIProviderAPIKey[];
+  getAIProviderAPIKeyById(
+    id: string,
+  ): Promise<AIProviderAPIKey | null> | AIProviderAPIKey | null;
   createAIProviderAPIKey(
     apiKey: AIProviderAPIKeyCreateParams,
   ): Promise<AIProviderAPIKey> | AIProviderAPIKey;
@@ -173,6 +182,22 @@ export interface UserDataStorageConnector {
     update: AIProviderAPIKeyUpdateParams,
   ): Promise<AIProviderAPIKey> | AIProviderAPIKey;
   deleteAIProviderAPIKey(id: string): Promise<void> | void;
+
+  // Models
+  getModels(queryParams: ModelQueryParams): Promise<Model[]> | Model[];
+  getModelById(id: string): Promise<Model | null> | Model | null;
+  createModel(model: ModelCreateParams): Promise<Model> | Model;
+  updateModel(id: string, update: ModelUpdateParams): Promise<Model> | Model;
+  deleteModel(id: string): Promise<void> | void;
+
+  // Skill-Model Relationships
+  getModelsBySkillId(skillId: string): Promise<Model[]> | Model[];
+  getSkillsByModelId(modelId: string): Promise<Skill[]> | Skill[];
+  addModelsToSkill(skillId: string, modelIds: string[]): Promise<void> | void;
+  removeModelsFromSkill(
+    skillId: string,
+    modelIds: string[],
+  ): Promise<void> | void;
 }
 
 export interface LogsStorageConnector {

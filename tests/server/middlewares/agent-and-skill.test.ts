@@ -97,6 +97,7 @@ describe('agentAndSkillMiddleware', () => {
         name: 'test-skill',
         description: null,
         metadata: {},
+        max_configurations: 1,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -170,6 +171,7 @@ describe('agentAndSkillMiddleware', () => {
           name: 'test-skill',
           description: null,
           metadata: {},
+          max_configurations: 1,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
         };

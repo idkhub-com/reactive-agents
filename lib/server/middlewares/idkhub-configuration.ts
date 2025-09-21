@@ -6,8 +6,9 @@ import {
   type IdkConfig,
   IdkTarget,
   type IdkTargetPreProcessed,
+  type TargetConfigurationParams,
 } from '@shared/types/api/request';
-import type { SkillConfigurationParams } from '@shared/types/data';
+import type { AIProvider } from '@shared/types/constants';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
@@ -16,7 +17,8 @@ async function validateIdkHubConfiguration(
   userDataStorageConnector: UserDataStorageConnector,
   idkTargetPreProcessed: IdkTargetPreProcessed,
 ): Promise<IdkTarget | Response> {
-  let idkTargetConfiguration: SkillConfigurationParams;
+  let idkTargetConfiguration: TargetConfigurationParams;
+  let resolvedApiKey: string | undefined;
 
   // Apply configuration if specified
   if (idkTargetPreProcessed.configuration_name) {
@@ -59,7 +61,50 @@ async function validateIdkHubConfiguration(
         idkTargetPreProcessed.system_prompt_variables || {},
       );
 
-      idkTargetConfiguration = configVersion.params;
+      // Resolve model_id to get model name and provider
+      const modelRecord = await userDataStorageConnector.getModelById(
+        configVersion.params.model_id,
+      );
+
+      if (!modelRecord) {
+        return c.json(
+          {
+            error: `Model with ID '${configVersion.params.model_id}' not found`,
+          },
+          422,
+        );
+      }
+
+      // Get the provider from the associated API key
+      const apiKeyRecord =
+        await userDataStorageConnector.getAIProviderAPIKeyById(
+          modelRecord.ai_provider_api_key_id,
+        );
+
+      if (!apiKeyRecord) {
+        return c.json(
+          {
+            error: `API key with ID '${modelRecord.ai_provider_api_key_id}' not found for model`,
+          },
+          422,
+        );
+      }
+
+      resolvedApiKey = apiKeyRecord.api_key;
+
+      idkTargetConfiguration = {
+        ai_provider: apiKeyRecord.ai_provider as AIProvider,
+        model: modelRecord.model_name,
+        system_prompt: configVersion.params.system_prompt,
+        temperature: configVersion.params.temperature,
+        max_tokens: configVersion.params.max_tokens,
+        top_p: configVersion.params.top_p,
+        frequency_penalty: configVersion.params.frequency_penalty,
+        presence_penalty: configVersion.params.presence_penalty,
+        stop: configVersion.params.stop,
+        seed: configVersion.params.seed,
+        additional_params: configVersion.params.additional_params,
+      };
     } catch (error) {
       return c.json(
         {
@@ -103,9 +148,24 @@ async function validateIdkHubConfiguration(
     );
   }
 
+  if (idkTargetPreProcessed.api_key) {
+    resolvedApiKey = idkTargetPreProcessed.api_key;
+  }
+
+  // Ensure we have an API key after resolution
+  if (!resolvedApiKey) {
+    return c.json(
+      {
+        error: `No API key available. Either provide an api_key directly or use a skill configuration.`,
+      },
+      422,
+    );
+  }
+
   const rawData = {
     ...idkTargetPreProcessed,
     configuration: idkTargetConfiguration,
+    api_key: resolvedApiKey,
     provider: undefined,
     configuration_name: undefined,
     configuration_version: undefined,

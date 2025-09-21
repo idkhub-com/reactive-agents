@@ -20,25 +20,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@client/components/ui/select';
+import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillConfigurations } from '@client/providers/skill-configurations';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { Model } from '@shared/types/data/model';
 import { SkillConfigurationCreateParams } from '@shared/types/data/skill-configuration';
 import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export function CreateConfigurationView(): ReactElement {
   const { createSkillConfiguration } = useSkillConfigurations();
+  const { models, setQueryParams } = useModels();
   const { navigationState } = useNavigation();
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [activeFields, setActiveFields] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const { selectedAgent, selectedSkill } = navigationState;
+
+  // Initialize models fetch
+  useEffect(() => {
+    setQueryParams({});
+  }, [setQueryParams]);
 
   // Define advanced field configurations
   const advancedFields = useMemo(
@@ -113,9 +120,8 @@ export function CreateConfigurationView(): ReactElement {
       name: '',
       description: undefined,
       data: {
-        ai_provider: AIProvider.OPENAI,
+        model_id: '',
         system_prompt: '',
-        model: 'gpt-4',
         temperature: null,
         max_tokens: null,
         top_p: null,
@@ -229,54 +235,33 @@ export function CreateConfigurationView(): ReactElement {
                 />
               </div>
 
-              {/* AI Provider and Model */}
-              <div className="grid grid-cols-2 gap-6">
+              {/* Model Selection */}
+              <div className="grid grid-cols-1 gap-6">
                 <FormField
                   control={form.control}
-                  name="data.ai_provider"
+                  name="data.model_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>AI Provider</FormLabel>
+                      <FormLabel>Model</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an AI provider" />
+                            <SelectValue placeholder="Select a Model" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(AIProvider).map((provider) => (
-                            <SelectItem key={provider} value={provider}>
-                              {PrettyAIProvider[provider]}
+                          {models.map((model: Model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                              {model.model_name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        The AI provider to use for this configuration
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="data.model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="Enter a model name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The AI model to use for this configuration
+                        Select the model to use for this configuration
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

@@ -14,9 +14,11 @@ import { Skeleton } from '@client/components/ui/skeleton';
 import { useDatasets } from '@client/providers/datasets';
 import { useEvaluationRuns } from '@client/providers/evaluation-runs';
 import { useLogs } from '@client/providers/logs';
+import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import {
   ArrowRightIcon,
+  CpuIcon,
   DatabaseIcon,
   FileTextIcon,
   MessageSquareIcon,
@@ -35,6 +37,7 @@ export function SkillDashboardView(): ReactElement {
     navigateToEvaluations,
     navigateToDatasets,
     navigateToConfigurations,
+    navigateToModels,
   } = useNavigation();
 
   const { selectedSkill, selectedAgent } = navigationState;
@@ -58,6 +61,9 @@ export function SkillDashboardView(): ReactElement {
     refetch: refetchLogs,
     setQueryParams: setLogsQueryParams,
   } = useLogs();
+
+  // Models via provider
+  const { skillModels, isLoadingSkillModels, setSkillId } = useModels();
 
   // Update evaluation runs query params
   useEffect(() => {
@@ -90,6 +96,15 @@ export function SkillDashboardView(): ReactElement {
       offset: 0,
     });
   }, [selectedAgent, selectedSkill, setLogsQueryParams]);
+
+  // Update models query params
+  useEffect(() => {
+    if (!selectedSkill) {
+      setSkillId(null);
+      return;
+    }
+    setSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillId]);
 
   // Use provider data directly
   const recentEvaluations = evaluationRuns.slice(0, 10);
@@ -129,7 +144,7 @@ export function SkillDashboardView(): ReactElement {
         }
       />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
           {/* Recent Logs Card */}
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -380,6 +395,69 @@ export function SkillDashboardView(): ReactElement {
                 <Button variant="ghost" size="sm">
                   <PlusIcon className="h-3 w-3 mr-1" />
                   Create
+                </Button>
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRightIcon className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Models Card */}
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() =>
+              navigateToModels(selectedAgent.name, selectedSkill.name)
+            }
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-medium">Models</CardTitle>
+                <CardDescription>Available AI models</CardDescription>
+              </div>
+              <CpuIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingSkillModels ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map(() => (
+                    <Skeleton key={nanoid()} className="h-4 w-full" />
+                  ))}
+                </div>
+              ) : skillModels.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No models configured
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {skillModels.slice(0, 3).map((model) => (
+                    <div
+                      key={model.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="truncate flex-1">
+                        {model.model_name}
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        Model
+                      </Badge>
+                    </div>
+                  ))}
+                  {skillModels.length > 3 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        +{skillModels.length - 3} more
+                      </span>
+                      <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-4">
+                <Button variant="ghost" size="sm">
+                  <PlusIcon className="h-3 w-3 mr-1" />
+                  Add
                 </Button>
                 <Button variant="ghost" size="sm">
                   View All

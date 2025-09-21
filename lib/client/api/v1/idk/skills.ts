@@ -1,6 +1,7 @@
 import { API_URL } from '@client/constants';
 import type { IdkRoute } from '@server/api/v1';
 import {
+  Model,
   Skill,
   type SkillCreateParams,
   type SkillQueryParams,
@@ -67,5 +68,51 @@ export async function deleteSkill(id: string): Promise<void> {
 
   if (!response.ok) {
     throw new Error('Failed to delete skill');
+  }
+}
+
+export async function getModelsBySkillId(skillId: string): Promise<Model[]> {
+  const response = await client.v1.idk.skills[':skillId'].models.$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch models for skill');
+  }
+
+  return Model.array().parse(await response.json());
+}
+
+export async function addModelsToSkill(
+  skillId: string,
+  modelIds: string[],
+): Promise<void> {
+  const response = await client.v1.idk.skills[':skillId'].models.$post({
+    param: {
+      skillId,
+    },
+    json: { modelIds },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to add models to skill');
+  }
+}
+
+export async function removeModelsFromSkill(
+  skillId: string,
+  modelIds: string[],
+): Promise<void> {
+  const response = await client.v1.idk.skills[':skillId'].models.$delete({
+    param: {
+      skillId,
+    },
+    json: { modelIds },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to remove models from skill');
   }
 }

@@ -59,6 +59,7 @@ const createMockUserDataStorageConnector = () =>
     deleteLogOutput: vi.fn(),
     // AI Provider API Key methods
     getAIProviderAPIKeys: vi.fn(),
+    getAIProviderAPIKeyById: vi.fn(),
     createAIProviderAPIKey: vi.fn(),
     updateAIProviderAPIKey: vi.fn(),
     deleteAIProviderAPIKey: vi.fn(),

@@ -20,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@client/components/ui/select';
+import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillConfigurations } from '@client/providers/skill-configurations';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { Model } from '@shared/types/data/model';
 import { SkillConfigurationUpdateParams } from '@shared/types/data/skill-configuration';
 import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
@@ -34,6 +35,7 @@ import { useForm } from 'react-hook-form';
 export function EditConfigurationView(): ReactElement {
   const { updateSkillConfiguration, skillConfigurations } =
     useSkillConfigurations();
+  const { models, setQueryParams } = useModels();
   const { navigationState } = useNavigation();
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [activeFields, setActiveFields] = useState<Set<string>>(new Set());
@@ -44,6 +46,11 @@ export function EditConfigurationView(): ReactElement {
 
   const { selectedAgent, selectedSkill } = navigationState;
   const configurationName = params.configurationName as string;
+
+  // Initialize models fetch
+  useEffect(() => {
+    setQueryParams({});
+  }, [setQueryParams]);
 
   // Define advanced field configurations
   const advancedFields = useMemo(
@@ -123,8 +130,7 @@ export function EditConfigurationView(): ReactElement {
       name: '',
       description: '',
       data: {
-        ai_provider: AIProvider.OPENAI,
-        model: 'gpt-4',
+        model_id: '',
         system_prompt: '',
         temperature: 0.7,
         max_tokens: 2048,
@@ -146,9 +152,8 @@ export function EditConfigurationView(): ReactElement {
         name: configuration.name,
         description: configuration.description,
         data: {
-          ai_provider: currentParams.ai_provider,
+          model_id: currentParams.model_id,
           system_prompt: currentParams.system_prompt,
-          model: currentParams.model,
           temperature: currentParams.temperature,
           max_tokens: currentParams.max_tokens,
           top_p: currentParams.top_p,
@@ -308,9 +313,8 @@ export function EditConfigurationView(): ReactElement {
                               name: configuration.name,
                               description: configuration.description,
                               data: {
-                                ai_provider: version.params.ai_provider,
+                                model_id: version.params.model_id,
                                 system_prompt: version.params.system_prompt,
-                                model: version.params.model,
                                 temperature: version.params.temperature,
                                 max_tokens: version.params.max_tokens,
                                 top_p: version.params.top_p,
@@ -366,7 +370,7 @@ export function EditConfigurationView(): ReactElement {
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {version.params.model}
+                            {version.params.model_id}
                           </span>
                         </button>
                       ))}
@@ -391,9 +395,8 @@ export function EditConfigurationView(): ReactElement {
                           name: configuration.name,
                           description: configuration.description,
                           data: {
-                            ai_provider: currentParams.ai_provider,
+                            model_id: currentParams.model_id,
                             system_prompt: currentParams.system_prompt,
-                            model: currentParams.model,
                             temperature: currentParams.temperature,
                             max_tokens: currentParams.max_tokens,
                             top_p: currentParams.top_p,
@@ -439,21 +442,21 @@ export function EditConfigurationView(): ReactElement {
                         </span>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {configuration.data.current.params.model}
+                        {configuration.data.current.params.model_id}
                       </span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* AI Provider and Model */}
-              <div className="grid grid-cols-2 gap-6">
+              {/* Model Selection */}
+              <div className="grid grid-cols-1 gap-6">
                 <FormField
                   control={form.control}
-                  name="data.ai_provider"
+                  name="data.model_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>AI Provider</FormLabel>
+                      <FormLabel>Model</FormLabel>
                       <Select
                         key={`${configuration?.id}-${field.value}`}
                         onValueChange={field.onChange}
@@ -461,40 +464,19 @@ export function EditConfigurationView(): ReactElement {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an AI provider" />
+                            <SelectValue placeholder="Select a Model" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(AIProvider).map((provider) => (
-                            <SelectItem key={provider} value={provider}>
-                              {PrettyAIProvider[provider]}
+                          {models.map((model: Model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                              {model.model_name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        The AI provider to use for this configuration
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="data.model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="Enter a model name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The AI model to use for this configuration
+                        Select the model to use for this configuration
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
