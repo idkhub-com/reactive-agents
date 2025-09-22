@@ -66,8 +66,15 @@ export async function proxyHandler(c: AppContext): Promise<Response> {
 
     return new Response(
       JSON.stringify({
-        status: 'failure',
-        message: errorMessage,
+        error: {
+          message: errorMessage,
+          type:
+            statusCode >= 400 && statusCode < 500
+              ? 'invalid_request_error'
+              : 'api_error',
+          code: null,
+          param: null,
+        },
       }),
       {
         status: statusCode,

@@ -89,6 +89,14 @@ export const embeddingsRouter = new Hono<AppEnv>()
         errorMessage = err.response.body || err.message || 'Request failed';
       } else if (err instanceof Error) {
         errorMessage = err.message || 'Something went wrong';
+        // Check if this is a configuration error that should return 400
+        if (
+          err.message.includes('is required in target') ||
+          err.message.includes('is required') ||
+          err.message.includes('Content-Type header is required')
+        ) {
+          statusCode = 400;
+        }
       }
 
       return new Response(

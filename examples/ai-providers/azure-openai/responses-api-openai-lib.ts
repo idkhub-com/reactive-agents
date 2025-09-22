@@ -25,9 +25,9 @@ const idkhubConfig = {
       provider: 'azure-openai',
       model: 'gpt-5-mini',
       api_key: process.env.AZURE_OPENAI_API_KEY,
-      azure_openai_config: {
-        url: process.env.AZURE_OPENAI_URL,
-      },
+      // azure_openai_config: {
+      //   url: process.env.AZURE_OPENAI_URL,
+      // },
     },
   ],
   agent_name: 'Captain Code',

@@ -4,6 +4,26 @@ import { tryTargets } from '@server/handlers/handler-utils';
 import type { AppEnv } from '@server/types/hono';
 import { Hono } from 'hono';
 
+/**
+ * Sanitizes error messages to prevent exposure of sensitive information
+ */
+function sanitizeErrorMessage(message: string): string {
+  // Remove potential API keys, tokens, and other sensitive data
+  return message
+    .replace(
+      /api[_-]?key["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi,
+      'api_key: [REDACTED]',
+    )
+    .replace(/token["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi, 'token: [REDACTED]')
+    .replace(/password["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi, 'password: [REDACTED]')
+    .replace(/secret["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi, 'secret: [REDACTED]')
+    .replace(/bearer["\s]+[a-zA-Z0-9_-]+/gi, 'Bearer [REDACTED]')
+    .replace(
+      /authorization["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi,
+      'Authorization: [REDACTED]',
+    );
+}
+
 export const responsesRouter = new Hono<AppEnv>()
 
   /**
@@ -90,7 +110,18 @@ export const responsesRouter = new Hono<AppEnv>()
         errorMessage = err.response.body || err.message || 'Request failed';
       } else if (err instanceof Error) {
         errorMessage = err.message || 'Something went wrong';
+        // Check if this is a configuration error that should return 400
+        if (
+          err.message.includes('is required in target') ||
+          err.message.includes('is required') ||
+          err.message.includes('Content-Type header is required')
+        ) {
+          statusCode = 400;
+        }
       }
+
+      // Sanitize error message to prevent exposure of sensitive information
+      errorMessage = sanitizeErrorMessage(errorMessage);
 
       return new Response(
         JSON.stringify({

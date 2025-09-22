@@ -2,6 +2,26 @@ import { responseHandler } from '@server/handlers/response-handler';
 import type { AppContext } from '@server/types/hono';
 import type { FunctionName } from '@shared/types/api/request';
 
+/**
+ * Sanitizes error messages to prevent exposure of sensitive information
+ */
+function sanitizeErrorMessage(message: string): string {
+  // Remove potential API keys, tokens, and other sensitive data
+  return message
+    .replace(
+      /api[_-]?key["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi,
+      'api_key: [REDACTED]',
+    )
+    .replace(/token["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi, 'token: [REDACTED]')
+    .replace(/password["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi, 'password: [REDACTED]')
+    .replace(/secret["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi, 'secret: [REDACTED]')
+    .replace(/bearer["\s]+[a-zA-Z0-9_-]+/gi, 'Bearer [REDACTED]')
+    .replace(
+      /authorization["\s]*[:=]["\s]*[a-zA-Z0-9_-]+/gi,
+      'Authorization: [REDACTED]',
+    );
+}
+
 import type { IdkRequestData } from '@shared/types/api/request/body';
 
 import type { AIProvider } from '@shared/types/constants';

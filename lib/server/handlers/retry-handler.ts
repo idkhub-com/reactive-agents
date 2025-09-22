@@ -151,8 +151,8 @@ export const retryRequest = async (
             // do nothing
           } else {
             // All error codes that aren't retried need to be returned directly
-            // Clone the response to avoid consuming the original body
-            const responseClone = response.clone();
+            // Clone the response to avoid consuming the original body (if clone method exists)
+            const responseClone = response.clone ? response.clone() : response;
             const responseBody = await responseClone.text();
             return {
               response: new Response(responseBody, {
@@ -184,7 +184,9 @@ export const retryRequest = async (
         retries: retryCount,
         onRetry: (error: Error, attempt: number): void => {
           lastAttempt = attempt;
-          console.warn(`Failed in Retry attempt ${attempt}. Error: ${error}`);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Failed in Retry attempt ${attempt}. Error: ${error}`);
+          }
         },
         randomize: false,
       },
@@ -196,7 +198,9 @@ export const retryRequest = async (
 
     return result;
   } catch (error) {
-    console.error(error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(error);
+    }
     let errorResponse: Response;
     if (
       error instanceof TypeError &&
