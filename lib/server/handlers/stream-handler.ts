@@ -308,8 +308,20 @@ export async function handleNonStreamingMode(
   }
 
   // Make sure that the response body is in the expected format.
+  // Skip validation for error responses (non-2xx status codes or error-like responses)
   let idkResponseBody: IdkResponseBody | null = null;
-  if (transformedBodyJson) {
+  const isErrorResponse =
+    transformedBodyJson &&
+    typeof transformedBodyJson === 'object' &&
+    'error' in transformedBodyJson &&
+    transformedBodyJson.error !== null;
+
+  if (
+    transformedBodyJson &&
+    aiProviderResponse.status >= 200 &&
+    aiProviderResponse.status < 300 &&
+    !isErrorResponse
+  ) {
     const idkResponseBodyParseResult =
       idkRequestData.responseSchema.safeParse(transformedBodyJson);
     if (!idkResponseBodyParseResult.success) {
@@ -318,6 +330,9 @@ export async function handleNonStreamingMode(
       );
     }
     idkResponseBody = idkResponseBodyParseResult.data as IdkResponseBody;
+  } else if (transformedBodyJson) {
+    // For error responses or non-2xx status codes, use the transformed body directly without schema validation
+    idkResponseBody = transformedBodyJson as IdkResponseBody;
   }
   if (!areSyncHooksAvailable) {
     return {

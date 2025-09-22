@@ -1,4 +1,3 @@
-import { HttpError } from '@server/errors/http';
 import { responseHandler } from '@server/handlers/response-handler';
 import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
@@ -185,7 +184,7 @@ describe('createResponse', () => {
   });
 
   describe('error handling', () => {
-    it('should throw HttpError when response is not ok', async () => {
+    it('should return error response directly without throwing', async () => {
       const errorResponse = {
         ok: false,
         status: 400,
@@ -206,12 +205,15 @@ describe('createResponse', () => {
         errorResponseClone as unknown as Response,
       );
 
-      await expect(
-        createResponse(mockContext, {
-          ...mockOptions,
-          response: errorResponse,
-        }),
-      ).rejects.toThrow(HttpError);
+      const result = await createResponse(mockContext, {
+        ...mockOptions,
+        response: errorResponse,
+      });
+
+      // Should return the error response directly, not throw
+      expect(result).toBe(errorResponse);
+      expect(result.status).toBe(400);
+      expect(result.ok).toBe(false);
 
       expect(mockContext.set).toHaveBeenCalledWith(
         'ai_provider_log',
@@ -244,12 +246,29 @@ describe('createResponse', () => {
         textResponseClone as unknown as Response,
       );
 
-      await expect(
-        createResponse(mockContext, {
-          ...mockOptions,
-          response: textResponse,
-        }),
-      ).rejects.toThrow('Unexpected token');
+      const result = await createResponse(mockContext, {
+        ...mockOptions,
+        response: textResponse,
+      });
+
+      expect(result).toBe(textResponse);
+      expect(mockContext.set).toHaveBeenCalledWith('ai_provider_log', {
+        provider: 'openai',
+        function_name: 'chat_complete',
+        method: 'POST',
+        request_url: 'https://api.openai.com/v1/chat/completions',
+        status: 200,
+        request_body: {
+          model: 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: 'Hello' }],
+        },
+        response_body: { message: 'Plain text response' },
+        raw_request_body:
+          '{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"Hello"}]}',
+        raw_response_body: 'Plain text response',
+        cache_status: 'miss',
+        cache_mode: 'disabled',
+      });
     });
   });
 
@@ -262,9 +281,26 @@ describe('createResponse', () => {
         emptyResponseClone as unknown as Response,
       );
 
-      await expect(createResponse(mockContext, mockOptions)).rejects.toThrow(
-        'Unexpected end of JSON input',
-      );
+      const result = await createResponse(mockContext, mockOptions);
+
+      expect(result).toBe(mockResponse);
+      expect(mockContext.set).toHaveBeenCalledWith('ai_provider_log', {
+        provider: 'openai',
+        function_name: 'chat_complete',
+        method: 'POST',
+        request_url: 'https://api.openai.com/v1/chat/completions',
+        status: 200,
+        request_body: {
+          model: 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: 'Hello' }],
+        },
+        response_body: { message: '' },
+        raw_request_body:
+          '{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"Hello"}]}',
+        raw_response_body: '',
+        cache_status: 'miss',
+        cache_mode: 'disabled',
+      });
     });
 
     it('should handle null response body', async () => {

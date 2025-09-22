@@ -16,26 +16,40 @@ export const completionsRouter = new Hono<AppEnv>()
 
       return tryTargetsResponse;
     } catch (err) {
-      if (err instanceof Error) {
-        console.error(`chatCompletion error: ${err.message}`);
-      } else {
-        console.error(`chatCompletion error: ${err}`);
-      }
-      let statusCode = 500;
-      let errorMessage = 'Something went wrong';
+      console.error('chatCompletion error:', err);
 
+      // Only handle genuine exceptions, not HTTP responses
       if (err instanceof RouterError) {
-        statusCode = 400;
-        errorMessage = err.message;
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: err.message,
+              type: 'invalid_request_error',
+              code: null,
+              param: null,
+            },
+          }),
+          {
+            status: 400,
+            headers: {
+              'content-type': 'application/json',
+            },
+          },
+        );
       }
 
+      // For any other exceptions, return a generic server error
       return new Response(
         JSON.stringify({
-          status: 'failure',
-          message: errorMessage,
+          error: {
+            message: 'Internal server error',
+            type: 'api_error',
+            code: null,
+            param: null,
+          },
         }),
         {
-          status: statusCode,
+          status: 500,
           headers: {
             'content-type': 'application/json',
           },
