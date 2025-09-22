@@ -8,6 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Next.js router and params before importing component
@@ -82,6 +83,46 @@ vi.mock('@client/api/v1/idk/skills', () => ({
   }),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
+}));
+
+// Mock the skills provider
+const mockCreateSkill = vi.fn().mockResolvedValue({
+  id: 'new-skill-id',
+  agent_id: 'agent-1',
+  name: 'New Skill',
+  description: 'New skill description',
+  metadata: {},
+  max_configurations: 10,
+  created_at: '2023-01-01T00:00:00Z',
+  updated_at: '2023-01-01T00:00:00Z',
+});
+
+vi.mock('@client/providers/skills', () => ({
+  SkillsProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSkills: () => ({
+    skills: [],
+    createSkill: mockCreateSkill,
+    isCreating: false,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    queryParams: {},
+    setQueryParams: vi.fn(),
+    selectedSkill: null,
+    setSelectedSkill: vi.fn(),
+    updateSkill: vi.fn(),
+    deleteSkill: vi.fn(),
+    isUpdating: false,
+    isDeleting: false,
+    createError: null,
+    updateError: null,
+    deleteError: null,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    getSkillById: vi.fn(),
+    refreshSkills: vi.fn(),
+  }),
 }));
 
 vi.mock('@client/hooks/use-toast', () => ({
@@ -222,6 +263,96 @@ describe('CreateSkillView', () => {
 
     // Marked as required in the schema
     expect(screen.getByText('Skill Name *')).toBeInTheDocument();
+  });
+
+  it('renders max configurations field with default value', async () => {
+    renderCreateSkillView();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+    });
+
+    const maxConfigInput = screen.getByLabelText('Max Configurations');
+    expect(maxConfigInput).toHaveValue(10); // Default value
+    expect(maxConfigInput).toHaveAttribute('type', 'number');
+    expect(maxConfigInput).toHaveAttribute('min', '1');
+    expect(maxConfigInput).toHaveAttribute('max', '100');
+  });
+
+  it('validates max configurations field', async () => {
+    // Ensure an agent is selected so submit is enabled
+    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    renderCreateSkillView();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+    });
+
+    const maxConfigInput = screen.getByLabelText('Max Configurations');
+
+    // Test that the field has the correct validation attributes
+    expect(maxConfigInput).toHaveAttribute('type', 'number');
+    expect(maxConfigInput).toHaveAttribute('min', '1');
+    expect(maxConfigInput).toHaveAttribute('max', '100');
+
+    // Test default value
+    expect(maxConfigInput).toHaveValue(10);
+
+    // Test that we can change the value within valid range
+    act(() => {
+      fireEvent.change(maxConfigInput, { target: { value: '25' } });
+    });
+    expect(maxConfigInput).toHaveValue(25);
+
+    // Test that we can change to minimum valid value
+    act(() => {
+      fireEvent.change(maxConfigInput, { target: { value: '1' } });
+    });
+    expect(maxConfigInput).toHaveValue(1);
+
+    // Test that we can change to maximum valid value
+    act(() => {
+      fireEvent.change(maxConfigInput, { target: { value: '100' } });
+    });
+    expect(maxConfigInput).toHaveValue(100);
+  });
+
+  it('allows editing max configurations field', async () => {
+    // Ensure an agent is selected so submit is enabled
+    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    renderCreateSkillView();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+    });
+
+    const maxConfigInput = screen.getByLabelText('Max Configurations');
+
+    // Test that field can be edited
+    fireEvent.change(maxConfigInput, { target: { value: '50' } });
+    expect(maxConfigInput).toHaveValue(50);
+
+    // Test clearing field - number inputs default to 0 when cleared
+    fireEvent.change(maxConfigInput, { target: { value: '' } });
+    expect(maxConfigInput).toHaveValue(0);
+  });
+
+  it('has correct max configurations field description', async () => {
+    renderCreateSkillView();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+    });
+
+    // Check that the description text is present
+    expect(
+      screen.getByText(/maximum number of configurations allowed/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /each configuration represents a unique ai model setup/i,
+      ),
+    ).toBeInTheDocument();
   });
 
   it('accepts skill name input', () => {

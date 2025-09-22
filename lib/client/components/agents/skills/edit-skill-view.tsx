@@ -20,33 +20,19 @@ import {
 import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
-import { useAgents } from '@client/providers/agents';
+import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { SkillCreateParams } from '@shared/types/data/skill';
-import { sanitizeDescription, sanitizeUserInput } from '@shared/utils/security';
-import { Bot, Wrench } from 'lucide-react';
+import type { SkillUpdateParams } from '@shared/types/data/skill';
+import { sanitizeDescription } from '@shared/utils/security';
+import { Bot, Settings, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-const CreateSkillFormSchema = z
+const EditSkillFormSchema = z
   .object({
-    name: z
-      .string()
-      .min(1, 'Skill name is required')
-      .max(100, 'Skill name must be less than 100 characters')
-      .refine(
-        (name) => {
-          // Basic validation for potentially dangerous content
-          const sanitized = sanitizeUserInput(name);
-          return sanitized.length > 0 && sanitized === name;
-        },
-        {
-          message: 'Skill name contains invalid characters',
-        },
-      ),
     description: z
       .string()
       .max(2000, 'Description must be less than 2000 characters')
@@ -56,120 +42,156 @@ const CreateSkillFormSchema = z
       .int()
       .positive('Max configurations must be a positive number')
       .min(1, 'Max configurations must be at least 1')
-      .max(100, 'Max configurations cannot exceed 100')
-      .default(10)
-      .optional(),
+      .max(100, 'Max configurations cannot exceed 100'),
   })
   .strict();
 
-type CreateSkillFormData = z.infer<typeof CreateSkillFormSchema>;
+type EditSkillFormData = z.infer<typeof EditSkillFormSchema>;
 
-export function CreateSkillView(): React.ReactElement {
-  const { agents, selectedAgent } = useAgents();
-  const { createSkill, isCreating } = useSkills();
+export function EditSkillView(): React.ReactElement {
+  const { navigationState } = useNavigation();
+  const { updateSkill, isUpdating } = useSkills();
   const router = useRouter();
   const params = useParams();
   const agentName = params.agentName as string;
+  const skillName = params.skillName as string;
 
-  // Find agent by name from URL parameter
-  const agentFromUrl = React.useMemo(() => {
-    if (!agentName || !agents.length) return null;
-    const decodedAgentName = decodeURIComponent(agentName);
-    return agents.find((agent) => agent.name === decodedAgentName) || null;
-  }, [agentName, agents]);
+  // Get current agent and skill from navigation state
+  const currentAgent = navigationState.selectedAgent;
+  const currentSkill = navigationState.selectedSkill;
 
-  // Use agent from URL if available, otherwise use selected agent
-  const currentAgent = agentFromUrl || selectedAgent;
-
-  const form = useForm<CreateSkillFormData>({
-    resolver: zodResolver(CreateSkillFormSchema),
+  const form = useForm<EditSkillFormData>({
+    resolver: zodResolver(EditSkillFormSchema),
     defaultValues: {
-      name: '',
       description: '',
       max_configurations: 10,
     },
   });
 
-  const onSubmit = async (data: CreateSkillFormData) => {
-    if (!currentAgent) {
-      console.error('No agent selected');
+  // Update form defaults when skill data is available
+  React.useEffect(() => {
+    if (currentSkill) {
+      form.reset({
+        description: currentSkill.description || '',
+        max_configurations: currentSkill.max_configurations,
+      });
+    }
+  }, [currentSkill, form]);
+
+  const onSubmit = async (data: EditSkillFormData) => {
+    if (!currentSkill) {
+      console.error('No skill selected');
       return;
     }
 
     try {
-      const skillParams: SkillCreateParams = {
-        agent_id: currentAgent.id,
-        name: sanitizeUserInput(data.name),
+      const updateParams: SkillUpdateParams = {
         description: sanitizeDescription(data.description || ''),
-        metadata: {},
-        max_configurations: data.max_configurations || 10,
+        max_configurations: data.max_configurations,
       };
 
-      await createSkill(skillParams);
+      await updateSkill(currentSkill.id, updateParams);
 
-      // Reset form after successful creation
-      form.reset();
-
-      // Navigate back to agent's agent page
-      if (agentName) {
-        router.push(`/agents/${encodeURIComponent(agentName)}`);
+      // Navigate back to skill dashboard
+      if (agentName && skillName) {
+        router.push(
+          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}`,
+        );
       } else {
         router.push('/agents');
       }
     } catch (error) {
-      console.error('Error creating skill:', error);
+      console.error('Error updating skill:', error);
       // Error is already handled by the skills provider
     }
   };
 
-  // No need to update form since agent is fixed
-
-  return (
-    <>
-      <PageHeader
-        title="Create New Skill"
-        description={
-          currentAgent
-            ? `Define a new capability for ${currentAgent.name}`
-            : 'Define a new capability for this agent'
-        }
-      />
-      <div className="container mx-auto py-6 max-w-2xl">
-        {/* Agent Context Card */}
-        {currentAgent && (
-          <Card className="mb-6 border-primary/20 bg-primary/5">
+  if (!currentAgent || !currentSkill) {
+    return (
+      <>
+        <PageHeader title="Edit Skill" description="Skill not found" />
+        <div className="container mx-auto py-6 max-w-2xl">
+          <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-2 rounded-lg">
-                  <Bot className="h-5 w-5 text-primary" />
-                </div>
+              <div className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                 <div>
-                  <div className="text-sm text-muted-foreground">
-                    Creating skill for
-                  </div>
-                  <div className="font-semibold text-lg">
-                    {currentAgent.name}
-                  </div>
-                  {currentAgent.description && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {currentAgent.description}
-                    </div>
-                  )}
+                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    Skill not found
+                  </h4>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    Unable to find the specified skill. Please ensure the skill
+                    exists and try again.
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Edit Skill"
+        description={`Update settings for ${currentSkill.name}`}
+      />
+      <div className="container mx-auto py-6 max-w-2xl">
+        {/* Agent Context Card */}
+        <Card className="mb-6 border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Bot className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">
+                  Editing skill for
+                </div>
+                <div className="font-semibold text-lg">{currentAgent.name}</div>
+                {currentAgent.description && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {currentAgent.description}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skill Info Card */}
+        <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 dark:bg-blue-800 p-2 rounded-lg">
+                <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">
+                  Skill Name (Read-only)
+                </div>
+                <div className="font-semibold text-lg text-blue-800 dark:text-blue-200">
+                  {currentSkill.name}
+                </div>
+                <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  The skill name cannot be changed after creation
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Main Form Card */}
         <Card className="shadow-lg">
           <CardHeader className="pb-6">
             <div className="flex items-center gap-3">
-              <Wrench className="h-5 w-5 text-primary" />
+              <Settings className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle>Skill Configuration</CardTitle>
+                <CardTitle>Skill Settings</CardTitle>
                 <CardDescription>
-                  Define your skill's basic information and purpose
+                  Update your skill's description and configuration limits
                 </CardDescription>
               </div>
             </div>
@@ -183,31 +205,6 @@ export function CreateSkillView(): React.ReactElement {
               >
                 <FormField
                   control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-medium">
-                        Skill Name *
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Data Analysis, Email Templates, Code Review"
-                          className="h-11"
-                          {...field}
-                          disabled={isCreating}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Choose a descriptive name that reflects the skill's
-                        specific capability or function.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -219,7 +216,7 @@ export function CreateSkillView(): React.ReactElement {
                           placeholder="Describe what this skill does, how it works, and when to use it. For example: 'Analyzes datasets and generates statistical reports with visualizations. Useful for data-driven decision making and trend analysis.'"
                           className="resize-none min-h-[120px]"
                           {...field}
-                          disabled={isCreating}
+                          disabled={isUpdating}
                         />
                       </FormControl>
                       <FormDescription>
@@ -251,7 +248,7 @@ export function CreateSkillView(): React.ReactElement {
                           onChange={(e) =>
                             field.onChange(Number(e.target.value))
                           }
-                          disabled={isCreating}
+                          disabled={isUpdating}
                         />
                       </FormControl>
                       <FormDescription>
@@ -271,7 +268,7 @@ export function CreateSkillView(): React.ReactElement {
                     variant="outline"
                     size="lg"
                     onClick={() => router.back()}
-                    disabled={isCreating}
+                    disabled={isUpdating}
                     className="flex-1"
                   >
                     Cancel
@@ -279,18 +276,18 @@ export function CreateSkillView(): React.ReactElement {
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={isCreating || !currentAgent}
+                    disabled={isUpdating}
                     className="flex-1"
                   >
-                    {isCreating ? (
+                    {isUpdating ? (
                       <>
-                        <Wrench className="mr-2 h-4 w-4 animate-pulse" />
-                        Creating Skill...
+                        <Settings className="mr-2 h-4 w-4 animate-pulse" />
+                        Updating Skill...
                       </>
                     ) : (
                       <>
-                        <Wrench className="mr-2 h-4 w-4" />
-                        Create Skill
+                        <Settings className="mr-2 h-4 w-4" />
+                        Update Skill
                       </>
                     )}
                   </Button>
@@ -304,8 +301,8 @@ export function CreateSkillView(): React.ReactElement {
         <Card className="mt-6 border-primary/20 bg-primary/5">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-primary" />
-              Tips for Creating Effective Skills
+              <Settings className="h-5 w-5 text-primary" />
+              Tips for Configuring Skills
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -313,47 +310,27 @@ export function CreateSkillView(): React.ReactElement {
               <p className="flex items-start gap-2">
                 <span className="text-primary font-medium">•</span>
                 <span>
-                  Use specific, actionable names that clearly describe what the
-                  skill accomplishes
+                  The skill name is permanent and cannot be changed to maintain
+                  consistency across configurations and evaluations
                 </span>
               </p>
               <p className="flex items-start gap-2">
                 <span className="text-primary font-medium">•</span>
                 <span>
-                  Include implementation details, required inputs, and expected
-                  outputs in the description
+                  Set max configurations based on how many different AI model
+                  setups you anticipate needing for this skill
                 </span>
               </p>
               <p className="flex items-start gap-2">
                 <span className="text-primary font-medium">•</span>
                 <span>
-                  You can always edit these details later from the skills
-                  management page
+                  Update the description as your skill evolves to help team
+                  members understand its current capabilities
                 </span>
               </p>
             </div>
           </CardContent>
         </Card>
-
-        {/* No Agent Warning */}
-        {!currentAgent && (
-          <Card className="mt-6 border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                <div>
-                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                    Agent not found
-                  </h4>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    Unable to find the specified agent. Please ensure the agent
-                    exists and try again.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </>
   );

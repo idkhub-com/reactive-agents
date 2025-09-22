@@ -114,6 +114,9 @@ export function NavigationProvider({
     if (subPath === 'models') {
       return 'models';
     }
+    if (subPath === 'edit') {
+      return 'edit-skill';
+    }
 
     return 'skills-list';
   }, [pathname, params]);

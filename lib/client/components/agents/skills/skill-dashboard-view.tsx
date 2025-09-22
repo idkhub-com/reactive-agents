@@ -25,8 +25,10 @@ import {
   PlayIcon,
   PlusIcon,
   RefreshCwIcon,
+  Settings,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
@@ -39,6 +41,7 @@ export function SkillDashboardView(): ReactElement {
     navigateToConfigurations,
     navigateToModels,
   } = useNavigation();
+  const router = useRouter();
 
   const { selectedSkill, selectedAgent } = navigationState;
 
@@ -133,14 +136,27 @@ export function SkillDashboardView(): ReactElement {
         title={selectedSkill.name}
         description={selectedSkill.description || 'No description available'}
         actions={
-          <Button
-            onClick={() =>
-              navigateToEvaluations(selectedAgent.name, selectedSkill.name)
-            }
-          >
-            <PlayIcon className="h-4 w-4 mr-2" />
-            Run Evaluation
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/edit`,
+                )
+              }
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Edit Skill
+            </Button>
+            <Button
+              onClick={() =>
+                navigateToEvaluations(selectedAgent.name, selectedSkill.name)
+              }
+            >
+              <PlayIcon className="h-4 w-4 mr-2" />
+              Run Evaluation
+            </Button>
+          </div>
         }
       />
       <div className="p-6 space-y-6">

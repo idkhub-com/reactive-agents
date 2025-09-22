@@ -16,6 +16,7 @@ export interface NavigationState {
   currentView:
     | 'skills-list'
     | 'skill-dashboard'
+    | 'edit-skill'
     | 'logs'
     | 'evaluations'
     | 'datasets'

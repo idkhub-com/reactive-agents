@@ -43,6 +43,10 @@ vi.mock('./skills/skill-dashboard-view', () => ({
   ),
 }));
 
+vi.mock('./skills/edit-skill-view', () => ({
+  EditSkillView: () => <div data-testid="edit-skill-view">Edit Skill</div>,
+}));
+
 vi.mock('./skills/logs/logs-view', () => ({
   LogsView: () => <div data-testid="logs-view">Logs View</div>,
 }));
@@ -142,6 +146,17 @@ describe('AgentsView', () => {
     await renderWithProviders(<AgentsView />);
 
     expect(screen.getByTestId('skill-dashboard-view')).toBeInTheDocument();
+  });
+
+  it('renders edit skill view when current view is edit-skill', async () => {
+    mockParams.agentName = 'Test Agent';
+    mockParams.skillName = 'Test Skill';
+    mockPathname = '/agents/Test%20Agent/Test%20Skill/edit';
+
+    await renderWithProviders(<AgentsView />);
+
+    expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
+    expect(screen.getByText('Edit Skill')).toBeInTheDocument();
   });
 
   it('renders logs view when current view is logs', async () => {

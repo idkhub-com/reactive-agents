@@ -5,7 +5,7 @@ import { useNavigation } from '@client/providers/navigation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';
-import { SkillDashboardView, SkillsListView } from './skills';
+import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
 import { ConfigurationsView } from './skills/configurations';
 import { CreateConfigurationView } from './skills/configurations/create-configuration-view';
 import { EditConfigurationView } from './skills/configurations/edit-configuration-view';
@@ -51,6 +51,12 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Skill Dashboard">
             <SkillDashboardView />
+          </AgentErrorBoundary>
+        );
+      case 'edit-skill':
+        return (
+          <AgentErrorBoundary sectionName="Edit Skill">
+            <EditSkillView />
           </AgentErrorBoundary>
         );
       case 'logs':
