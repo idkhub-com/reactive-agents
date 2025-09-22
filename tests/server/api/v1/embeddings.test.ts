@@ -118,14 +118,18 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(400);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        'Invalid input parameters',
+        'embeddings error:',
+        expect.any(RouterError),
       );
 
       const responseData = await res.json();
       expect(responseData).toEqual({
-        status: 'failure',
-        message: 'Invalid input parameters',
+        error: {
+          message: 'Invalid input parameters',
+          type: 'invalid_request_error',
+          code: null,
+          param: null,
+        },
       });
     });
 
@@ -137,14 +141,18 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        'Network connection failed',
+        'embeddings error:',
+        expect.any(Error),
       );
 
       const responseData = await res.json();
       expect(responseData).toEqual({
-        status: 'failure',
-        message: 'Something went wrong',
+        error: {
+          message: 'Network connection failed',
+          type: 'api_error',
+          code: null,
+          param: null,
+        },
       });
     });
 
@@ -156,14 +164,18 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
+        'embeddings error:',
         'string error',
       );
 
       const responseData = await res.json();
       expect(responseData).toEqual({
-        status: 'failure',
-        message: 'Something went wrong',
+        error: {
+          message: 'Something went wrong',
+          type: 'api_error',
+          code: null,
+          param: null,
+        },
       });
     });
 
@@ -215,12 +227,16 @@ describe('Embeddings API', () => {
       const res = await client.index.$post();
 
       expect(res.status).toBe(500);
-      expect(consoleSpy.error).toHaveBeenCalledWith('embeddings error', null);
+      expect(consoleSpy.error).toHaveBeenCalledWith('embeddings error:', null);
 
       const responseData = await res.json();
       expect(responseData).toEqual({
-        status: 'failure',
-        message: 'Something went wrong',
+        error: {
+          message: 'Something went wrong',
+          type: 'api_error',
+          code: null,
+          param: null,
+        },
       });
     });
 
@@ -231,14 +247,18 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
+        'embeddings error:',
         undefined,
       );
 
       const responseData = await res.json();
       expect(responseData).toEqual({
-        status: 'failure',
-        message: 'Something went wrong',
+        error: {
+          message: 'Something went wrong',
+          type: 'api_error',
+          code: null,
+          param: null,
+        },
       });
     });
 
@@ -252,15 +272,19 @@ describe('Embeddings API', () => {
       const res = await client.index.$post();
 
       expect(res.status).toBe(500);
-      expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        objectError,
-      );
+      expect(consoleSpy.error).toHaveBeenCalledWith('embeddings error:', {
+        code: 'UNKNOWN_ERROR',
+        details: 'Something failed',
+      });
 
       const responseData = await res.json();
       expect(responseData).toEqual({
-        status: 'failure',
-        message: 'Something went wrong',
+        error: {
+          message: 'Something went wrong',
+          type: 'api_error',
+          code: null,
+          param: null,
+        },
       });
     });
   });

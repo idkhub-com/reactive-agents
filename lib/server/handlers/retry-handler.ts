@@ -97,10 +97,11 @@ export const retryRequest = async (
           }
 
           if (statusCodesToRetry.includes(response.status)) {
-            const errorObj = new HttpError(await response.text(), {
+            const responseBody = await response.text();
+            const errorObj = new HttpError(responseBody, {
               status: response.status,
               statusText: response.statusText,
-              body: await response.text(),
+              body: responseBody,
             });
 
             if (response.status === 429 && followProviderRetry) {
@@ -149,14 +150,20 @@ export const retryRequest = async (
           } else if (response.status >= 200 && response.status <= 204) {
             // do nothing
           } else {
-            // All error codes that aren't retried need to be propagated up
-            const errorObj = new HttpError(await response.clone().text(), {
-              status: response.status,
-              statusText: response.statusText,
-              body: await response.text(),
-            });
-            bail(errorObj);
-            return;
+            // All error codes that aren't retried need to be returned directly
+            // Clone the response to avoid consuming the original body
+            const responseClone = response.clone();
+            const responseBody = await responseClone.text();
+            return {
+              response: new Response(responseBody, {
+                status: response.status,
+                statusText: response.statusText,
+                headers: response.headers,
+              }),
+              attempt: lastAttempt,
+              createdAt: start,
+              skip: retrySkipped,
+            };
           }
 
           return {
@@ -203,7 +210,12 @@ export const retryRequest = async (
         status: 503,
       });
     } else if (error instanceof HttpError) {
-      errorResponse = new Response(error.response.body, {
+      // This should only happen for retryable errors that exhausted all retries
+      // Preserve the original error response body exactly as provided
+      const errorBody =
+        error.response.body || error.message || 'Request failed';
+
+      errorResponse = new Response(errorBody, {
         status: error.response.status,
         statusText: error.response.statusText,
       });

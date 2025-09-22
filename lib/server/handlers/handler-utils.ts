@@ -1,6 +1,5 @@
 import { providerConfigs } from '@server/ai-providers';
 import { GatewayError } from '@server/errors/gateway';
-import { HttpError } from '@server/errors/http';
 import { RouterError } from '@server/errors/router';
 import { responseHandler } from '@server/handlers/response-handler';
 import { retryRequest } from '@server/handlers/retry-handler';
@@ -404,12 +403,13 @@ export async function tryTargets(
           0,
         );
       } catch (e) {
-        // tryPost always returns a Response.
-        // TypeError will check for all unhandled exceptions.
-        // GatewayError will check for all handled exceptions which cannot allow the request to proceed.
+        // Only handle actual exceptions, not HTTP error responses
+        // HTTP error responses are now returned directly from tryPost
         if (e instanceof TypeError || e instanceof GatewayError) {
           const errorMessage =
-            e instanceof GatewayError ? e.message : 'Something went wrong';
+            e instanceof GatewayError
+              ? e.message
+              : e.message || 'Something went wrong';
           response = new Response(
             JSON.stringify({
               status: 'failure',
@@ -425,13 +425,24 @@ export async function tryTargets(
             },
           );
         } else {
-          if (e instanceof HttpError) {
-            response = new Response(e.response.body, {
-              status: e.response.status,
-              statusText: e.response.statusText,
-            });
-          }
-          console.error(e);
+          // Log unexpected errors but don't process HttpError here anymore
+          console.error('Unexpected error in tryTargets:', e);
+          response = new Response(
+            JSON.stringify({
+              error: {
+                message: 'Internal server error',
+                type: 'api_error',
+                code: null,
+                param: null,
+              },
+            }),
+            {
+              status: 500,
+              headers: {
+                'content-type': 'application/json',
+              },
+            },
+          );
         }
       }
       break;
@@ -503,6 +514,16 @@ export async function recursiveOutputHookHandler(
     requestHandler,
     retry?.use_retry_after_header || false,
   ));
+
+  // Check if this is an error response - if so, return it directly without processing
+  if (!response.ok) {
+    return {
+      mappedResponse: response,
+      retryCount: 0,
+      createdAt: new Date(),
+      originalResponseJson: null,
+    };
+  }
 
   const {
     response: mappedResponse,

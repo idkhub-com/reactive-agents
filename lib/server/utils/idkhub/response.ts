@@ -1,4 +1,3 @@
-import { HttpError } from '@server/errors/http';
 import { responseHandler } from '@server/handlers/response-handler';
 import type { AppContext } from '@server/types/hono';
 import type { FunctionName } from '@shared/types/api/request';
@@ -56,7 +55,13 @@ export async function createResponse(
 
   const mappedResponseClone = mappedResponse.clone();
   const mappedResponseCloneText = await mappedResponseClone.text();
-  const mappedResponseCloneJson = JSON.parse(mappedResponseCloneText);
+  let mappedResponseCloneJson: unknown;
+  try {
+    mappedResponseCloneJson = JSON.parse(mappedResponseCloneText);
+  } catch {
+    // If JSON parsing fails, use the text as the response body
+    mappedResponseCloneJson = { message: mappedResponseCloneText };
+  }
   if (options.idkRequestData.requestBody instanceof ReadableStream) {
     throw new Error('ReadableStream is not supported');
   } else if (options.idkRequestData.requestBody instanceof FormData) {
@@ -72,7 +77,7 @@ export async function createResponse(
     request_url: options.idkRequestData.url,
     status: mappedResponse.status,
     request_body: options.idkRequestData.requestBody,
-    response_body: mappedResponseCloneJson,
+    response_body: mappedResponseCloneJson as Record<string, unknown>,
     raw_request_body: JSON.stringify(options.idkRequestData.requestBody),
     raw_response_body: mappedResponseCloneText,
     cache_status: options.cacheStatus,
@@ -81,15 +86,7 @@ export async function createResponse(
 
   c.set('ai_provider_log', aiProviderLog);
 
-  // If the response was not ok, throw an error
-  if (!mappedResponse.ok) {
-    const errorObj = new HttpError(await mappedResponse.clone().text(), {
-      status: mappedResponse.status,
-      statusText: mappedResponse.statusText,
-      body: await mappedResponse.text(),
-    });
-    throw errorObj;
-  }
-
+  // Return the response directly, whether it's successful or an error
+  // Error responses should be returned to the client, not thrown as exceptions
   return mappedResponse;
 }

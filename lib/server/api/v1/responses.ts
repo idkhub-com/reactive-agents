@@ -1,3 +1,5 @@
+import { HttpError } from '@server/errors/http';
+import { RouterError } from '@server/errors/router';
 import { tryTargets } from '@server/handlers/handler-utils';
 import type { AppEnv } from '@server/types/hono';
 import { Hono } from 'hono';
@@ -15,20 +17,95 @@ export const responsesRouter = new Hono<AppEnv>()
 
       const tryTargetsResponse = await tryTargets(c, idkConfig, idkRequestData);
 
-      return tryTargetsResponse;
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error({ message: `${c.req.path} error ${err.message}` });
-      } else {
-        console.error({ message: `${c.req.path} error ${err}` });
+      // Check if the response contains an error message even with 200 status
+      if (tryTargetsResponse.ok) {
+        const responseText = await tryTargetsResponse.clone().text();
+        try {
+          const responseJson = JSON.parse(responseText);
+          if (responseJson.error || responseJson.message?.includes('error')) {
+            // This is an error response with 200 status, treat it as an error
+            const errorMessage =
+              responseJson.error?.message ||
+              responseJson.message ||
+              'Request failed';
+            const statusCode = responseJson.error?.status || 400;
+
+            return new Response(
+              JSON.stringify({
+                error: {
+                  message: errorMessage,
+                  type: 'api_error',
+                  code: null,
+                  param: null,
+                },
+              }),
+              {
+                status: statusCode,
+                headers: {
+                  'content-type': 'application/json',
+                },
+              },
+            );
+          }
+        } catch {
+          // If JSON parsing fails, check if it's a plain text error response
+          if (
+            responseText.includes('Message:') &&
+            responseText.includes('Cause:') &&
+            responseText.includes('Name:')
+          ) {
+            // This is a plain text error response from the retry handler
+            return new Response(
+              JSON.stringify({
+                error: {
+                  message: responseText,
+                  type: 'api_error',
+                  code: null,
+                  param: null,
+                },
+              }),
+              {
+                status: 500,
+                headers: {
+                  'content-type': 'application/json',
+                },
+              },
+            );
+          }
+        }
       }
+
+      return tryTargetsResponse;
+    } catch (err) {
+      console.error('responses error:', err);
+
+      let statusCode = 500;
+      let errorMessage = 'Something went wrong';
+
+      if (err instanceof RouterError) {
+        statusCode = 400;
+        errorMessage = err.message;
+      } else if (err instanceof HttpError) {
+        statusCode = err.response.status;
+        errorMessage = err.response.body || err.message || 'Request failed';
+      } else if (err instanceof Error) {
+        errorMessage = err.message || 'Something went wrong';
+      }
+
       return new Response(
         JSON.stringify({
-          status: 'failure',
-          message: 'Something went wrong',
+          error: {
+            message: errorMessage,
+            type:
+              statusCode >= 400 && statusCode < 500
+                ? 'invalid_request_error'
+                : 'api_error',
+            code: null,
+            param: null,
+          },
         }),
         {
-          status: 500,
+          status: statusCode,
           headers: {
             'content-type': 'application/json',
           },
