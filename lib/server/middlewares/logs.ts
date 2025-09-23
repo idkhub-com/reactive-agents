@@ -90,6 +90,7 @@ interface ProcessLogsParams {
   skill: Skill;
   startTime: number;
   aiProviderLog: AIProviderRequestLog;
+  embedding: number[] | null;
   hookLogs: HookLog[];
   logsStorageConnector: LogsStorageConnector;
   userDataStorageConnector?: UserDataStorageConnector;
@@ -108,6 +109,7 @@ async function processLogs({
   skill,
   startTime,
   aiProviderLog,
+  embedding,
   hookLogs,
   logsStorageConnector,
   userDataStorageConnector,
@@ -138,6 +140,7 @@ async function processLogs({
     hook_logs: hookLogs,
     function_name: functionName,
     ai_provider_request_log: aiProviderLog,
+    embedding: embedding,
     endpoint: url.pathname,
     base_idk_config: baseIdkConfig,
     ai_provider: aiProviderLog.provider,
@@ -260,6 +263,7 @@ export const logsMiddleware = (
       skill: c.get('skill'),
       startTime,
       aiProviderLog,
+      embedding: c.get('embedding'),
       hookLogs,
       logsStorageConnector: c.get('logs_storage_connector'),
       userDataStorageConnector: c.get('user_data_storage_connector'),

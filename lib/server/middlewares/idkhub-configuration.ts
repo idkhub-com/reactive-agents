@@ -12,7 +12,7 @@ import type { AIProvider } from '@shared/types/constants';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
-async function validateIdkHubConfiguration(
+async function validateTargetConfiguration(
   c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   idkTargetPreProcessed: IdkTargetPreProcessed,
@@ -199,7 +199,7 @@ export const idkHubConfigurationInjectorMiddleware = createMiddleware(
 
         const idkTargetsOrResponses = await Promise.all(
           idkConfigPreProcessed.targets.map((target) =>
-            validateIdkHubConfiguration(
+            validateTargetConfiguration(
               c,
               c.get('user_data_storage_connector'),
               target,

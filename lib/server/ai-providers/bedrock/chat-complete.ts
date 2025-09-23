@@ -502,11 +502,11 @@ export const bedrockChatCompleteResponseTransform: ResponseTransformFunction = (
     const toolCalls = bedrockResponse.output.message.content
       .filter((content) => content.toolUse)
       .map((content) => ({
-        id: content?.toolUse?.toolUseId,
+        id: content.toolUse!.toolUseId,
         type: 'function',
         function: {
-          name: content?.toolUse?.name,
-          arguments: JSON.stringify(content?.toolUse?.input),
+          name: content.toolUse!.name,
+          arguments: JSON.stringify(content.toolUse!.input),
         },
       }));
     if (toolCalls.length > 0)

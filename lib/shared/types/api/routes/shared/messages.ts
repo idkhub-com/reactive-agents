@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ChatCompletionToolCall } from './tools';
 
 export enum ChatCompletionMessageRole {
   SYSTEM = 'system',
@@ -105,7 +106,7 @@ export const ChatCompletionMessage = z.object({
   name: z.string().optional(),
   /** The function call to make, if any. */
   function_call: z.any().optional(),
-  tool_calls: z.any().optional(),
+  tool_calls: z.array(ChatCompletionToolCall).optional(),
   tool_call_id: z.string().optional(),
   citation_metadata: z.any().optional(),
 });

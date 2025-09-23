@@ -102,6 +102,7 @@ export async function getDatasetLogs(
       function_name: queryParams.function_name,
       status: queryParams.status?.toString(),
       cache_status: queryParams.cache_status,
+      embedding_not_null: queryParams.embedding_not_null ? 'true' : 'false',
       limit: queryParams.limit?.toString(),
       offset: queryParams.offset?.toString(),
     },

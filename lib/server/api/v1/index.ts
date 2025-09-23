@@ -16,13 +16,16 @@ import {
   supabaseLogsStorageConnector,
   supabaseUserDataStorageConnector,
 } from '@server/connectors/supabase';
+import { supabaseEmbeddingsStorageConnector } from '@server/connectors/supabase/embeddings';
 import { agentAndSkillMiddleware } from '@server/middlewares/agent-and-skill';
 import { authenticatedMiddleware } from '@server/middlewares/auth';
 import { cacheMiddleware } from '@server/middlewares/cache';
+import { embeddingsMiddleware } from '@server/middlewares/embeddings';
 import { evaluationMethodConnectors } from '@server/middlewares/evaluations';
 import { hooksMiddleware } from '@server/middlewares/hooks';
 import { idkHubConfigurationInjectorMiddleware } from '@server/middlewares/idkhub-configuration';
 import { logsMiddleware } from '@server/middlewares/logs';
+import { optimizerMiddleware } from '@server/middlewares/optimizer';
 import { toolMiddleware } from '@server/middlewares/tool';
 import { userDataMiddleware } from '@server/middlewares/user-data';
 import { commonVariablesMiddleware } from '@server/middlewares/variables';
@@ -51,6 +54,12 @@ app.use('*', userDataMiddleware(factory, supabaseUserDataStorageConnector));
 
 // Use logs middleware for all routes
 app.use('*', logsMiddleware(factory, supabaseLogsStorageConnector));
+
+// Use embeddings middleware for all routes
+app.use('*', embeddingsMiddleware(factory, supabaseEmbeddingsStorageConnector));
+
+// Use optimizer middleware for all routes
+app.use('*', optimizerMiddleware);
 
 // Use hooks middleware for all routes
 app.use('*', hooksMiddleware(factory, []));

@@ -1,11 +1,19 @@
 import { z } from 'zod';
 
+export const SkillMetadata = z.object({
+  last_trained_at: z.iso.datetime({ offset: true }).optional(),
+  /** The timestamp of the most recent log used in the last training batch.
+   *
+   * We will query the logs from this timestamp to the current time to find the most recent logs. */
+  last_trained_log_start_time: z.number().optional(),
+});
+
 export const Skill = z.object({
   id: z.uuid(),
   agent_id: z.uuid(),
   name: z.string().min(1),
   description: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()),
+  metadata: SkillMetadata,
   max_configurations: z.number().int().positive().default(10),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),

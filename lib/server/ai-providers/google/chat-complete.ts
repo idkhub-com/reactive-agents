@@ -39,7 +39,7 @@ import type {
   ChatCompletionToolFunction,
 } from '@shared/types/api/routes/shared/tools';
 import { AIProvider } from '@shared/types/constants';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import { buildGoogleSearchRetrievalTool } from '../google-vertex-ai/chat-complete';
 import {
   derefer,
@@ -476,7 +476,7 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
       aiProviderResponseBody as unknown as GoogleGenerateContentResponse;
 
     const responseBody: ChatCompletionResponseBody = {
-      id: `idk-${uuidv4()}`,
+      id: nanoid(4),
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
       model: googleResponse.modelVersion,
@@ -488,7 +488,7 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
           for (const part of generation.content?.parts ?? []) {
             if (part.functionCall) {
               toolCalls.push({
-                id: `idk-${uuidv4()}`,
+                id: nanoid(4),
                 type: 'function',
                 function: {
                   name: part.functionCall.name,
@@ -621,20 +621,22 @@ export const googleChatCompleteStreamChunkTransform: ResponseChunkStreamTransfor
           } else if (generation.content.parts[0]?.functionCall) {
             message = {
               role: ChatCompletionMessageRole.ASSISTANT,
-              tool_calls: generation.content.parts.map((part, idx) => {
-                if (part.functionCall) {
-                  return {
-                    index: idx,
-                    id: `idk-${uuidv4()}`,
-                    type: 'function',
-                    function: {
-                      name: part.functionCall.name,
-                      arguments: JSON.stringify(part.functionCall.args),
-                    },
-                  };
-                }
-                return undefined;
-              }),
+              tool_calls: generation.content.parts
+                .map((part) => {
+                  if (part.functionCall) {
+                    const toolCall: ChatCompletionToolCall = {
+                      id: nanoid(4),
+                      type: 'function',
+                      function: {
+                        name: part.functionCall.name,
+                        arguments: JSON.stringify(part.functionCall.args),
+                      },
+                    };
+                    return toolCall;
+                  }
+                  return undefined;
+                })
+                .filter((message) => message !== undefined),
               content: '',
             };
           }

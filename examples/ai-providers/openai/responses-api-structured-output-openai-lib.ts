@@ -41,7 +41,7 @@ const idkhubConfig = {
     },
   ],
   agent_name: 'Calendar Event Planner',
-  skill_name: 'Third Person View',
+  skill_name: 'generate',
 };
 
 const CalendarEvent = z.object({

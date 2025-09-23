@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS logs (
   ai_provider_request_log JSONB NOT NULL,
   hook_logs JSONB NOT NULL,
   metadata JSONB NOT NULL,
+  embedding FLOAT[] DEFAULT NULL,
   -- Cache info
   cache_status cache_status_enum NOT NULL,
   -- Tracing info

@@ -144,7 +144,7 @@ export const ResponsesAPIFunctionCall = z.object({
   /**
    * The type of the function tool call.
    */
-  type: z.string(),
+  type: z.string('function'),
 
   /**
    * The unique ID of the function tool call.

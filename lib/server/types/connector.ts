@@ -57,6 +57,12 @@ import type {
   SkillConfigurationUpdateParams,
 } from '@shared/types/data/skill-configuration';
 import type {
+  SkillConfigurationEmbedding,
+  SkillConfigurationEmbeddingQueryParams,
+  SkillConfigurationEmbeddingSearchParams,
+  SkillConfigurationEmbeddingWithScore,
+} from '@shared/types/data/skill-configuration-embedding';
+import type {
   Tool,
   ToolCreateParams,
   ToolQueryParams,
@@ -206,6 +212,21 @@ export interface LogsStorageConnector {
   ): Promise<IdkRequestLog[]> | IdkRequestLog[];
   createLog(log: IdkRequestLog): Promise<IdkRequestLog> | IdkRequestLog;
   deleteLog(id: string): Promise<void> | void;
+}
+
+export interface EmbeddingsStorageConnector {
+  getSkillConfigurationEmbeddings(
+    queryParams: SkillConfigurationEmbeddingQueryParams,
+  ): Promise<SkillConfigurationEmbedding[]> | SkillConfigurationEmbedding[];
+  searchSimilarSkillConfigurationEmbeddings(
+    searchParams: SkillConfigurationEmbeddingSearchParams,
+  ):
+    | Promise<SkillConfigurationEmbeddingWithScore[]>
+    | SkillConfigurationEmbeddingWithScore[];
+  createSkillConfigurationEmbedding(
+    embedding: SkillConfigurationEmbedding,
+  ): Promise<SkillConfigurationEmbedding> | SkillConfigurationEmbedding;
+  deleteEmbedding(id: string): Promise<void> | void;
 }
 
 export interface CacheStorageConnector {

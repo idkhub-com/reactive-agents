@@ -23,7 +23,7 @@ const idkhubConfig = {
     },
   ],
   agent_name: 'Captain Code',
-  skill_name: 'JavaScript',
+  skill_name: 'Programming',
 };
 
 const userMessage1 = 'Are semicolons optional in JavaScript?';

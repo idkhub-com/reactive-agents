@@ -1,5 +1,6 @@
 import type {
   CacheStorageConnector,
+  EmbeddingsStorageConnector,
   EvaluationMethodConnector,
   HooksConnector,
   LogsStorageConnector,
@@ -31,12 +32,14 @@ export interface AppEnv {
     idk_config: IdkConfig;
     idk_config_pre_processed: IdkConfigPreProcessed;
     idk_request_data: IdkRequestData;
+    embedding: number[] | null;
     agent: Agent;
     skill: Skill;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     cache_storage_connector: CacheStorageConnector;
     logs_storage_connector: LogsStorageConnector;
+    embeddings_storage_connector: EmbeddingsStorageConnector;
     user_data_storage_connector: UserDataStorageConnector;
     websocket_error?: boolean;
     addLogsClient: (clientId: string, client: LogsClient) => void;
