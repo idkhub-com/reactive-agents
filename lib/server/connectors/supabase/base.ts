@@ -3,6 +3,7 @@ import {
   SUPABASE_SERVICE_ROLE_KEY,
   SUPABASE_URL,
 } from '@server/constants';
+import { debug } from '@shared/console-logging';
 import type { z } from 'zod';
 
 const checkEnvironmentVariables = (): void => {
@@ -36,7 +37,7 @@ export const selectFromSupabase = async <T extends z.ZodType>(
     method: 'GET',
     headers: {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
+      apiKey: SUPABASE_ANON_KEY!,
     },
   });
 
@@ -91,7 +92,7 @@ export const insertIntoSupabase = async <
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
+      apiKey: SUPABASE_ANON_KEY!,
       Prefer: prefer,
     },
     body: JSON.stringify(data),
@@ -142,7 +143,7 @@ export const updateInSupabase = async <
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
+      apiKey: SUPABASE_ANON_KEY!,
       Prefer: 'return=representation',
     },
     body: JSON.stringify(data),
@@ -188,7 +189,7 @@ export const deleteFromSupabase = async (
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
+      apiKey: SUPABASE_ANON_KEY!,
     },
   });
 
@@ -208,7 +209,7 @@ export const rpcFunction = async (
 ): Promise<void> => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rpc/${functionName}`);
+  const url = new URL(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`);
 
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
@@ -220,7 +221,7 @@ export const rpcFunction = async (
     method: 'POST',
     headers: {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
+      apiKey: SUPABASE_ANON_KEY!,
     },
   });
 
@@ -241,13 +242,18 @@ export const rpcFunctionWithResponse = async <T extends z.ZodType>(
 ): Promise<z.Infer<T>> => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rpc/${functionName}`);
+  const url = new URL(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`);
+
+  debug(
+    `Calling RPC function ${functionName} with params ${JSON.stringify(params)}`,
+  );
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
+      apiKey: SUPABASE_ANON_KEY!,
     },
     body: JSON.stringify(params),
   });

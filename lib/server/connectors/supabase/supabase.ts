@@ -5,6 +5,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
+import { debug } from '@shared/console-logging';
 import {
   Agent,
   type AgentCreateParams,
@@ -73,6 +74,7 @@ import { z } from 'zod';
 import {
   deleteFromSupabase,
   insertIntoSupabase,
+  rpcFunctionWithResponse,
   selectFromSupabase,
   updateInSupabase,
 } from './base';
@@ -1133,6 +1135,56 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
         model_id: `eq.${modelId}`,
       });
     }
+  },
+
+  // Skill Optimization Lock
+  tryAcquireOptimizationLock: async (
+    skillId: string,
+    lockTimeoutHours = 6,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    current_lock_time: number | null;
+  }> => {
+    debug('tryAcquireOptimizationLock', skillId, lockTimeoutHours);
+
+    const result = await rpcFunctionWithResponse(
+      'try_acquire_optimization_lock',
+      {
+        skill_id_param: skillId,
+        lock_timeout_hours: lockTimeoutHours,
+      },
+      z.array(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+          current_lock_time: z.number().nullable(),
+        }),
+      ),
+    );
+
+    return result[0];
+  },
+
+  releaseOptimizationLock: async (
+    skillId: string,
+    updatedMetadata = {},
+  ): Promise<{ success: boolean; message: string }> => {
+    const result = await rpcFunctionWithResponse(
+      'release_optimization_lock',
+      {
+        skill_id_param: skillId,
+        updated_metadata_param: updatedMetadata,
+      },
+      z.array(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+        }),
+      ),
+    );
+
+    return result[0];
   },
 };
 

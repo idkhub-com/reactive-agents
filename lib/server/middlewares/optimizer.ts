@@ -1,9 +1,10 @@
-import type { AppContext } from '@server/types/hono';
+import type {
+  LogsStorageConnector,
+  UserDataStorageConnector,
+} from '@server/types/connector';
 import { debug } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
 import type { Log, Skill } from '@shared/types/data';
-import type { Next } from 'hono';
-import { createMiddleware } from 'hono/factory';
 
 interface ClusterResult {
   clusters: number[];
@@ -158,6 +159,60 @@ function kMeansClustering(
   return { clusters, centroids, iterations: maxIterations };
 }
 
+async function tryAcquireOptimizationLock(
+  skillId: string,
+  userDataStorageConnector: UserDataStorageConnector,
+): Promise<boolean> {
+  try {
+    const result =
+      await userDataStorageConnector.tryAcquireOptimizationLock(skillId);
+
+    if (result.success) {
+      console.log(
+        `[OPTIMIZER] Successfully acquired optimization lock for skill ${skillId}`,
+      );
+    } else {
+      console.log(`[OPTIMIZER] ${result.message} for skill ${skillId}`);
+    }
+
+    return result.success;
+  } catch (error) {
+    console.error(
+      `[OPTIMIZER] Failed to acquire optimization lock for skill ${skillId}:`,
+      error,
+    );
+    return false;
+  }
+}
+
+async function releaseOptimizationLock(
+  skillId: string,
+  userDataStorageConnector: UserDataStorageConnector,
+  updatedMetadata: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const result = await userDataStorageConnector.releaseOptimizationLock(
+      skillId,
+      updatedMetadata,
+    );
+
+    if (result.success) {
+      console.log(
+        `[OPTIMIZER] Released optimization lock for skill ${skillId}`,
+      );
+    } else {
+      console.error(
+        `[OPTIMIZER] Failed to release optimization lock for skill ${skillId}: ${result.message}`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      `[OPTIMIZER] Error releasing optimization lock for skill ${skillId}:`,
+      error,
+    );
+  }
+}
+
 export function runOptimizer(skill: Skill, logs: Log[]): ClusterResult | null {
   const numberOfClusters = skill.max_configurations;
 
@@ -206,71 +261,99 @@ export function runOptimizer(skill: Skill, logs: Log[]): ClusterResult | null {
   }
 }
 
-export const optimizerMiddleware = createMiddleware(
-  async (c: AppContext, next: Next) => {
-    await next();
+export async function optimizeSkill(
+  functionName: FunctionName,
+  userDataStorageConnector: UserDataStorageConnector,
+  logsStorageConnector: LogsStorageConnector,
+  skill: Skill,
+) {
+  // Only attempt to optimize for specific endpoints
+  if (
+    !(
+      functionName === FunctionName.CHAT_COMPLETE ||
+      functionName === FunctionName.STREAM_CHAT_COMPLETE ||
+      functionName === FunctionName.CREATE_MODEL_RESPONSE
+    )
+  ) {
+    return;
+  }
 
-    const idkRequestData = c.get('idk_request_data');
+  const trainEveryN = 10;
 
-    // Only attempt to optimize for specific endpoints
-    if (
-      !idkRequestData ||
-      !(
-        idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-        idkRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE ||
-        idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
-      )
-    ) {
+  const logs = await logsStorageConnector.getLogs({
+    skill_id: skill.id,
+    after: skill.metadata.last_trained_log_start_time,
+    embedding_not_null: true,
+  });
+
+  debug(`Found ${logs.length} logs in optimizer`);
+
+  if (logs.length >= trainEveryN) {
+    // Try to acquire the optimization lock
+    const lockAcquired = await tryAcquireOptimizationLock(
+      skill.id,
+      userDataStorageConnector,
+    );
+
+    if (!lockAcquired) {
+      // Another process is optimizing this skill, exit gracefully
+      debug(
+        `[OPTIMIZER] Skipping optimization for skill ${skill.id} - lock held by another process`,
+      );
       return;
     }
 
-    const idkConfig = c.get('idk_config');
-    const userDataStorageConnector = c.get('user_data_storage_connector');
-    const logsStorageConnector = c.get('logs_storage_connector');
-    const skill = c.get('skill');
-
-    if (!idkConfig) {
-      return;
-    }
-
-    const trainEveryN = 10;
-
-    const logs = await logsStorageConnector.getLogs({
-      skill_id: skill.id,
-      after: skill.metadata.last_trained_log_start_time,
-      embedding_not_null: true,
-    });
-
-    debug(`Found ${logs.length} logs in optimizer`);
-
-    if (logs.length >= trainEveryN) {
+    try {
       const clusterResult = runOptimizer(skill, logs);
 
       if (clusterResult) {
-        // Update skill metadata with training information
+        // Update skill metadata with training information and release the lock
         const mostRecentLogTime = Math.max(
           ...logs.map((log) => log.start_time),
         );
 
-        try {
-          await userDataStorageConnector.updateSkill(skill.id, {
-            metadata: {
-              ...skill.metadata,
-              last_trained_at: new Date().toISOString(),
-              last_trained_log_start_time: mostRecentLogTime,
-            },
-          });
+        const updatedMetadata = {
+          ...skill.metadata,
+          last_trained_at: new Date().toISOString(),
+          last_trained_log_start_time: mostRecentLogTime,
+        };
 
-          console.log(
-            `[OPTIMIZER] Updated skill ${skill.id} metadata after clustering`,
-          );
-        } catch (error) {
-          console.error(
-            `[OPTIMIZER] Failed to update skill metadata for ${skill.id}:`,
-            error,
-          );
-        }
+        await releaseOptimizationLock(
+          skill.id,
+          userDataStorageConnector,
+          updatedMetadata,
+        );
+
+        console.log(
+          `[OPTIMIZER] Updated skill ${skill.id} metadata after clustering`,
+        );
+      } else {
+        // Release the lock even if optimization failed
+        await releaseOptimizationLock(
+          skill.id,
+          userDataStorageConnector,
+          skill.metadata,
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[OPTIMIZER] Error during optimization for skill ${skill.id}:`,
+        error,
+      );
+
+      // Release the lock on error
+      try {
+        await releaseOptimizationLock(
+          skill.id,
+          userDataStorageConnector,
+          skill.metadata,
+        );
+      } catch (releaseError) {
+        console.error(
+          `[OPTIMIZER] Failed to release lock after error for skill ${skill.id}:`,
+          releaseError,
+        );
       }
     }
-  },
-);
+  }
+}

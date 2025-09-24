@@ -26,7 +26,7 @@ const mockNavigationState = {
     name: 'Test Skill 1',
     description: 'Test skill description',
     metadata: {},
-    max_configurations: 10,
+    max_configurations: 3,
     created_at: '2023-01-01T10:30:00Z',
     updated_at: '2023-01-01T10:30:00Z',
   },

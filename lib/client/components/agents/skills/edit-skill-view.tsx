@@ -64,7 +64,7 @@ export function EditSkillView(): React.ReactElement {
     resolver: zodResolver(EditSkillFormSchema),
     defaultValues: {
       description: '',
-      max_configurations: 10,
+      max_configurations: 3,
     },
   });
 

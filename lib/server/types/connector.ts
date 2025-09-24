@@ -108,6 +108,20 @@ export interface UserDataStorageConnector {
   updateSkill(id: string, update: SkillUpdateParams): Promise<Skill> | Skill;
   deleteSkill(id: string): Promise<void> | void;
 
+  // Skill Optimization Lock
+  tryAcquireOptimizationLock(
+    skillId: string,
+    lockTimeoutHours?: number,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    current_lock_time: number | null;
+  }>;
+  releaseOptimizationLock(
+    skillId: string,
+    updatedMetadata?: Record<string, unknown>,
+  ): Promise<{ success: boolean; message: string }>;
+
   // Skill Configurations
   getSkillConfigurations(
     queryParams: SkillConfigurationQueryParams,

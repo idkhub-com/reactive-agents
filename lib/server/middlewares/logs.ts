@@ -1,3 +1,4 @@
+import { optimizeSkill } from '@server/middlewares/optimizer';
 import type {
   EvaluationMethodConnector,
   LogsStorageConnector,
@@ -93,7 +94,7 @@ interface ProcessLogsParams {
   embedding: number[] | null;
   hookLogs: HookLog[];
   logsStorageConnector: LogsStorageConnector;
-  userDataStorageConnector?: UserDataStorageConnector;
+  userDataStorageConnector: UserDataStorageConnector;
   evaluationConnectorsMap?: Partial<
     Record<EvaluationMethodName, EvaluationMethodConnector>
   >;
@@ -221,6 +222,18 @@ const shouldLogRequest = (url: URL): boolean => {
   return true;
 };
 
+async function processLogsAndOptimizeSkill(
+  processLogsParams: ProcessLogsParams,
+) {
+  await processLogs(processLogsParams);
+  await optimizeSkill(
+    processLogsParams.functionName,
+    processLogsParams.userDataStorageConnector,
+    processLogsParams.logsStorageConnector,
+    processLogsParams.skill,
+  );
+}
+
 export const logsMiddleware = (
   factory: Factory<AppEnv>,
   connector: LogsStorageConnector,
@@ -271,8 +284,8 @@ export const logsMiddleware = (
     };
 
     if (getRuntimeKey() === 'workerd') {
-      c.executionCtx.waitUntil(processLogs(processLogsParams));
+      c.executionCtx.waitUntil(processLogsAndOptimizeSkill(processLogsParams));
     } else {
-      processLogs(processLogsParams);
+      processLogsAndOptimizeSkill(processLogsParams);
     }
   });

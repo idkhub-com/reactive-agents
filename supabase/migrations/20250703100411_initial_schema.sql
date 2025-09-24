@@ -26,7 +26,7 @@ CREATE TABLE if not exists skills (
   name TEXT NOT NULL,
   description TEXT,
   metadata JSONB NOT NULL DEFAULT '{}',
-  max_configurations INTEGER NOT NULL DEFAULT 10,
+  max_configurations INTEGER NOT NULL DEFAULT 3,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -454,3 +454,99 @@ COMMENT ON COLUMN models.ai_provider_api_key_id IS 'The API key that enables acc
 COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-4, claude-3-opus)';
 COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they can use';
 COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations allowed for this skill';
+
+
+-- ================================================
+-- Optimization lock function for preventing concurrent skill optimization
+-- ================================================
+
+-- Function: Try to acquire optimization lock for a skill
+CREATE OR REPLACE FUNCTION try_acquire_optimization_lock(
+  skill_id_param uuid,
+  lock_timeout_hours integer DEFAULT 6
+)
+RETURNS TABLE (
+  success boolean,
+  message text,
+  current_lock_time bigint
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  current_time timestamptz := CURRENT_TIMESTAMP;
+  existing_lock_time timestamptz;
+  lock_age_hours numeric;
+  skill_record RECORD;
+BEGIN
+  -- Lock the skill row to prevent concurrent modifications
+  SELECT * INTO skill_record
+  FROM skills
+  WHERE id = skill_id_param
+  FOR UPDATE;
+
+  -- Check if skill exists
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT false, 'Skill not found'::text, NULL::bigint;
+    RETURN;
+  END IF;
+
+  -- Extract existing optimization_started_at from metadata JSONB
+  existing_lock_time := (skill_record.metadata->>'optimization_started_at')::timestamptz;
+
+  -- If there's an existing lock, check if it's stale
+  IF existing_lock_time IS NOT NULL THEN
+    lock_age_hours := EXTRACT(EPOCH FROM (current_time - existing_lock_time)) / 3600;
+
+    -- If lock is not stale, return failure
+    IF lock_age_hours < lock_timeout_hours THEN
+      RETURN QUERY SELECT
+        false,
+        format('Lock held by another process (age: %s hours)', ROUND(lock_age_hours, 2)),
+        EXTRACT(EPOCH FROM existing_lock_time)::bigint;
+      RETURN;
+    END IF;
+  END IF;
+
+  -- Acquire the lock by updating the optimization_started_at timestamp
+  UPDATE skills
+  SET metadata = metadata || jsonb_build_object('optimization_started_at', current_time)
+  WHERE id = skill_id_param;
+
+  -- Return success
+  RETURN QUERY SELECT
+    true,
+    'Lock acquired successfully'::text,
+    EXTRACT(EPOCH FROM current_time)::bigint;
+END;
+$$;
+
+-- Function: Release optimization lock for a skill
+CREATE OR REPLACE FUNCTION release_optimization_lock(
+  skill_id_param uuid,
+  updated_metadata_param jsonb DEFAULT '{}'::jsonb
+)
+RETURNS TABLE (
+  success boolean,
+  message text
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Update the skill metadata, removing the optimization_started_at field
+  -- and merging any additional metadata updates
+  UPDATE skills
+  SET metadata = (metadata || updated_metadata_param) - 'optimization_started_at'
+  WHERE id = skill_id_param;
+
+  -- Check if the update affected any rows
+  IF FOUND THEN
+    RETURN QUERY SELECT true, 'Lock released successfully'::text;
+  ELSE
+    RETURN QUERY SELECT false, 'Skill not found'::text;
+  END IF;
+END;
+$$;
+
+-- Add comments for documentation
+COMMENT ON FUNCTION try_acquire_optimization_lock IS 'Atomically tries to acquire an optimization lock for a skill, preventing concurrent optimization processes';
+COMMENT ON FUNCTION release_optimization_lock IS 'Releases an optimization lock and updates skill metadata atomically';

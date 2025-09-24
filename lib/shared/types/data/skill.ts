@@ -6,6 +6,10 @@ export const SkillMetadata = z.object({
    *
    * We will query the logs from this timestamp to the current time to find the most recent logs. */
   last_trained_log_start_time: z.number().optional(),
+  /** Timestamp when optimization was started. Used as a lock to prevent concurrent optimization.
+   *
+   * If this timestamp is more than 6 hours old, it's considered stale and can be overwritten. */
+  optimization_started_at: z.iso.datetime({ offset: true }).optional(),
 });
 
 export const Skill = z.object({
@@ -14,7 +18,7 @@ export const Skill = z.object({
   name: z.string().min(1),
   description: z.string().nullable().optional(),
   metadata: SkillMetadata,
-  max_configurations: z.number().int().positive().default(10),
+  max_configurations: z.number().int().positive().default(3),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -38,7 +42,7 @@ export const SkillCreateParams = z
     name: z.string().min(1),
     description: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).default({}),
-    max_configurations: z.number().int().positive().default(10),
+    max_configurations: z.number().int().positive().default(3),
   })
   .strict();
 
