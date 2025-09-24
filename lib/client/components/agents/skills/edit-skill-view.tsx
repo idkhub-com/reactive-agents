@@ -24,7 +24,7 @@ import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillUpdateParams } from '@shared/types/data/skill';
-import { sanitizeDescription } from '@shared/utils/security';
+import { sanitizeUserInput } from '@shared/utils/security';
 import { Bot, Settings, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -35,14 +35,13 @@ const EditSkillFormSchema = z
   .object({
     description: z
       .string()
-      .max(2000, 'Description must be less than 2000 characters')
-      .optional(),
+      .min(25)
+      .max(10000, 'Description must be less than 10000 characters'),
     max_configurations: z
       .number()
       .int()
-      .positive('Max configurations must be a positive number')
-      .min(1, 'Max configurations must be at least 1')
-      .max(100, 'Max configurations cannot exceed 100'),
+      .min(0, 'Max configurations must be at least 0')
+      .max(25, 'Max configurations cannot exceed 25'),
   })
   .strict();
 
@@ -86,7 +85,7 @@ export function EditSkillView(): React.ReactElement {
 
     try {
       const updateParams: SkillUpdateParams = {
-        description: sanitizeDescription(data.description || ''),
+        description: sanitizeUserInput(data.description),
         max_configurations: data.max_configurations,
       };
 
@@ -240,9 +239,6 @@ export function EditSkillView(): React.ReactElement {
                       <FormControl>
                         <Input
                           type="number"
-                          min="1"
-                          max="100"
-                          placeholder="10"
                           className="h-11"
                           {...field}
                           onChange={(e) =>

@@ -9,7 +9,7 @@ import { feedbacksRouter } from './feedbacks';
 import { improvedResponsesRouter } from './improved-responses';
 import { modelsRouter } from './models';
 import { observabilityRouter } from './observability';
-import { skillConfigurationsRouter } from './skill-configurations';
+import { skillOptimizationsRouter } from './skill-optimizations';
 import { skillsRouter } from './skills';
 
 export const idkRouter = new Hono<AppEnv>()
@@ -19,7 +19,7 @@ export const idkRouter = new Hono<AppEnv>()
   .route('/evaluations', evaluationsRouter)
   .route('/agents', agentsRouter)
   .route('/skills', skillsRouter)
-  .route('/skill-configurations', skillConfigurationsRouter)
+  .route('/skill-optimizations', skillOptimizationsRouter)
   .route('/models', modelsRouter)
   .route('/feedbacks', feedbacksRouter)
   .route('/improved-responses', improvedResponsesRouter)

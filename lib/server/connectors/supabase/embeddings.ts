@@ -1,11 +1,11 @@
 import type { EmbeddingsStorageConnector } from '@server/types/connector';
 
 import {
-  SkillConfigurationEmbedding,
-  type SkillConfigurationEmbeddingQueryParams,
-  type SkillConfigurationEmbeddingSearchParams,
-  SkillConfigurationEmbeddingWithScore,
-} from '@shared/types/data/skill-configuration-embedding';
+  SkillOptimizationEmbedding,
+  type SkillOptimizationEmbeddingQueryParams,
+  type SkillOptimizationEmbeddingSearchParams,
+  SkillOptimizationEmbeddingWithScore,
+} from '@shared/types/data/skill-optimization-embedding';
 import { z } from 'zod';
 import {
   deleteFromSupabase,
@@ -16,8 +16,8 @@ import {
 
 export const supabaseEmbeddingsStorageConnector: EmbeddingsStorageConnector = {
   getSkillConfigurationEmbeddings: async (
-    queryParams: SkillConfigurationEmbeddingQueryParams,
-  ): Promise<SkillConfigurationEmbedding[]> => {
+    queryParams: SkillOptimizationEmbeddingQueryParams,
+  ): Promise<SkillOptimizationEmbedding[]> => {
     const postgRESTQuery: Record<string, string> = {
       order: 'start_time.desc',
     };
@@ -25,8 +25,8 @@ export const supabaseEmbeddingsStorageConnector: EmbeddingsStorageConnector = {
     if (queryParams.ids) {
       postgRESTQuery.id = `in.(${queryParams.ids.join(',')})`;
     }
-    if (queryParams.skill_configuration_ids) {
-      postgRESTQuery.skill_configuration_ids = `in.(${queryParams.skill_configuration_ids.join(',')})`;
+    if (queryParams.skill_optimization_ids) {
+      postgRESTQuery.skill_optimization_ids = `in.(${queryParams.skill_optimization_ids.join(',')})`;
     }
     if (queryParams.limit) {
       postgRESTQuery.limit = queryParams.limit.toString();
@@ -36,9 +36,9 @@ export const supabaseEmbeddingsStorageConnector: EmbeddingsStorageConnector = {
     }
 
     const embeddings = await selectFromSupabase(
-      'skill_configuration_embeddings',
+      'skill_optimization_embeddings',
       postgRESTQuery,
-      z.array(SkillConfigurationEmbedding),
+      z.array(SkillOptimizationEmbedding),
     );
 
     return embeddings;
@@ -48,8 +48,8 @@ export const supabaseEmbeddingsStorageConnector: EmbeddingsStorageConnector = {
    * Search for logs with similar embeddings using k-nearest neighbor
    */
   searchSimilarSkillConfigurationEmbeddings: async (
-    searchParams: SkillConfigurationEmbeddingSearchParams,
-  ): Promise<SkillConfigurationEmbeddingWithScore[]> => {
+    searchParams: SkillOptimizationEmbeddingSearchParams,
+  ): Promise<SkillOptimizationEmbeddingWithScore[]> => {
     const skillConfigurationEmbeddings = await rpcFunctionWithResponse(
       'search_similar_configurations',
       {
@@ -57,24 +57,24 @@ export const supabaseEmbeddingsStorageConnector: EmbeddingsStorageConnector = {
         similarity_limit: searchParams.limit,
         distance_metric: searchParams.distance_metric,
       },
-      z.array(SkillConfigurationEmbeddingWithScore),
+      z.array(SkillOptimizationEmbeddingWithScore),
     );
 
     return skillConfigurationEmbeddings;
   },
 
   createSkillConfigurationEmbedding: async (
-    embedding: SkillConfigurationEmbedding,
-  ): Promise<SkillConfigurationEmbedding> => {
+    embedding: SkillOptimizationEmbedding,
+  ): Promise<SkillOptimizationEmbedding> => {
     const insertedEmbedding = await insertIntoSupabase(
-      'skill_configuration_embeddings',
+      'skill_optimization_embeddings',
       embedding,
-      z.array(SkillConfigurationEmbedding),
+      z.array(SkillOptimizationEmbedding),
     );
     return insertedEmbedding[0];
   },
   deleteEmbedding: async (id: string) => {
-    await deleteFromSupabase('skill_configuration_embeddings', {
+    await deleteFromSupabase('skill_optimization_embeddings', {
       id: `eq.${id}`,
     });
   },

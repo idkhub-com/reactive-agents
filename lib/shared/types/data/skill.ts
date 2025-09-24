@@ -15,10 +15,18 @@ export const SkillMetadata = z.object({
 export const Skill = z.object({
   id: z.uuid(),
   agent_id: z.uuid(),
-  name: z.string().min(1),
-  description: z.string().nullable().optional(),
+
+  /** Name of the skill. Unique within the agent. */
+  name: z.string(),
+
+  /** Description of the skill. This will be used by IdkHub to automatically optimize the skill. */
+  description: z.string(),
+
+  /** Internal metadata for the skill. */
   metadata: SkillMetadata,
-  max_configurations: z.number().int().positive().default(3),
+
+  /** Maximum number of configurations for the skill. */
+  max_configurations: z.number().int().default(3),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -39,10 +47,10 @@ export type SkillQueryParams = z.infer<typeof SkillQueryParams>;
 export const SkillCreateParams = z
   .object({
     agent_id: z.uuid(),
-    name: z.string().min(1),
-    description: z.string().nullable().optional(),
+    name: z.string().min(1).max(255),
+    description: z.string().min(25).max(10000),
     metadata: z.record(z.string(), z.unknown()).default({}),
-    max_configurations: z.number().int().positive().default(3),
+    max_configurations: z.number().int().min(0).max(25).default(3),
   })
   .strict();
 
@@ -50,9 +58,9 @@ export type SkillCreateParams = z.infer<typeof SkillCreateParams>;
 
 export const SkillUpdateParams = z
   .object({
-    description: z.string().nullable().optional(),
+    description: z.string().min(25).max(10000).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
-    max_configurations: z.number().int().positive().optional(),
+    max_configurations: z.number().int().min(0).max(25).optional(),
   })
   .strict()
   .refine(

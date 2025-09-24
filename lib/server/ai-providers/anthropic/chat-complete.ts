@@ -42,8 +42,6 @@ const transformAssistantMessage = (
   const transformedContent: AnthropicContentItem[] = [];
   const inputContent: ChatCompletionContentType[] | string | undefined =
     msg.content_blocks ?? msg.content ?? undefined;
-  const containsToolCalls = msg.tool_calls?.length;
-
   if (inputContent && typeof inputContent === 'string') {
     transformedContent.push({
       type: 'text',
@@ -60,7 +58,7 @@ const transformAssistantMessage = (
       }
     });
   }
-  if (containsToolCalls) {
+  if (msg.tool_calls && msg.tool_calls.length > 0) {
     msg.tool_calls.forEach((toolCall: ChatCompletionToolCall) => {
       transformedContent.push({
         type: 'tool_use',

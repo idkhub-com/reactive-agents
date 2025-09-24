@@ -51,17 +51,16 @@ import type {
   SkillUpdateParams,
 } from '@shared/types/data/skill';
 import type {
-  SkillConfiguration,
-  SkillConfigurationCreateParams,
-  SkillConfigurationQueryParams,
-  SkillConfigurationUpdateParams,
-} from '@shared/types/data/skill-configuration';
+  SkillOptimization,
+  SkillOptimizationCreateParams,
+  SkillOptimizationQueryParams,
+} from '@shared/types/data/skill-optimization';
 import type {
-  SkillConfigurationEmbedding,
-  SkillConfigurationEmbeddingQueryParams,
-  SkillConfigurationEmbeddingSearchParams,
-  SkillConfigurationEmbeddingWithScore,
-} from '@shared/types/data/skill-configuration-embedding';
+  SkillOptimizationEmbedding,
+  SkillOptimizationEmbeddingQueryParams,
+  SkillOptimizationEmbeddingSearchParams,
+  SkillOptimizationEmbeddingWithScore,
+} from '@shared/types/data/skill-optimization-embedding';
 import type {
   Tool,
   ToolCreateParams,
@@ -122,18 +121,14 @@ export interface UserDataStorageConnector {
     updatedMetadata?: Record<string, unknown>,
   ): Promise<{ success: boolean; message: string }>;
 
-  // Skill Configurations
-  getSkillConfigurations(
-    queryParams: SkillConfigurationQueryParams,
-  ): Promise<SkillConfiguration[]> | SkillConfiguration[];
-  createSkillConfiguration(
-    skillConfiguration: SkillConfigurationCreateParams,
-  ): Promise<SkillConfiguration> | SkillConfiguration;
-  updateSkillConfiguration(
-    id: string,
-    update: SkillConfigurationUpdateParams,
-  ): Promise<SkillConfiguration> | SkillConfiguration;
-  deleteSkillConfiguration(id: string): Promise<void> | void;
+  // Skill Optimization
+  getSkillOptimizations(
+    queryParams: SkillOptimizationQueryParams,
+  ): Promise<SkillOptimization[]> | SkillOptimization[];
+  createSkillOptimization(
+    skillOptimization: SkillOptimizationCreateParams,
+  ): Promise<SkillOptimization> | SkillOptimization;
+  deleteSkillOptimization(id: string): Promise<void> | void;
 
   // Tools
   getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];
@@ -230,16 +225,16 @@ export interface LogsStorageConnector {
 
 export interface EmbeddingsStorageConnector {
   getSkillConfigurationEmbeddings(
-    queryParams: SkillConfigurationEmbeddingQueryParams,
-  ): Promise<SkillConfigurationEmbedding[]> | SkillConfigurationEmbedding[];
+    queryParams: SkillOptimizationEmbeddingQueryParams,
+  ): Promise<SkillOptimizationEmbedding[]> | SkillOptimizationEmbedding[];
   searchSimilarSkillConfigurationEmbeddings(
-    searchParams: SkillConfigurationEmbeddingSearchParams,
+    searchParams: SkillOptimizationEmbeddingSearchParams,
   ):
-    | Promise<SkillConfigurationEmbeddingWithScore[]>
-    | SkillConfigurationEmbeddingWithScore[];
+    | Promise<SkillOptimizationEmbeddingWithScore[]>
+    | SkillOptimizationEmbeddingWithScore[];
   createSkillConfigurationEmbedding(
-    embedding: SkillConfigurationEmbedding,
-  ): Promise<SkillConfigurationEmbedding> | SkillConfigurationEmbedding;
+    embedding: SkillOptimizationEmbedding,
+  ): Promise<SkillOptimizationEmbedding> | SkillOptimizationEmbedding;
   deleteEmbedding(id: string): Promise<void> | void;
 }
 

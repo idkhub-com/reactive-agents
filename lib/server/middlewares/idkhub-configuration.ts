@@ -6,6 +6,7 @@ import {
   type IdkConfig,
   IdkTarget,
   type IdkTargetPreProcessed,
+  OptimizationType,
   type TargetConfigurationParams,
 } from '@shared/types/api/request';
 import type { AIProvider } from '@shared/types/constants';
@@ -21,55 +22,42 @@ async function validateTargetConfiguration(
   let resolvedApiKey: string | undefined;
 
   // Apply configuration if specified
-  if (idkTargetPreProcessed.configuration_name) {
+  if (idkTargetPreProcessed.optimization === OptimizationType.AUTO) {
     try {
-      // Fetch configuration by name
-      const configurations =
-        await userDataStorageConnector.getSkillConfigurations({
-          name: idkTargetPreProcessed.configuration_name,
+      // Fetch optimizations by version, if available. Otherwise, the latest optimization is returned.
+      const optimizations =
+        await userDataStorageConnector.getSkillOptimizations({
+          version: idkTargetPreProcessed.optimization_version,
           limit: 1,
         });
 
-      if (configurations.length === 0) {
+      if (optimizations.length === 0) {
         return c.json(
           {
             error:
-              'IdkHub configuration not found. Check your configuration name and ensure it exists.',
+              'IdkHub optimization not found. Check your optimization version and ensure it exists.',
           },
           422,
         );
       }
 
-      const configuration = configurations[0];
+      const optimization = optimizations[0];
+      const optimizationModelParams = optimization.data.model_params;
 
-      // Get the specific version or default to 'current'
-      const versionKey =
-        idkTargetPreProcessed.configuration_version || 'current';
-      const configVersion = configuration.data[versionKey];
-
-      if (!configVersion) {
-        return c.json(
-          {
-            error: `Configuration version '${versionKey}' not found for '${idkTargetPreProcessed.configuration_name}'`,
-          },
-          422,
-        );
-      }
-
-      configVersion.params.system_prompt = renderTemplate(
-        configVersion.params.system_prompt!,
+      optimizationModelParams.system_prompt = renderTemplate(
+        optimizationModelParams.system_prompt!,
         idkTargetPreProcessed.system_prompt_variables || {},
       );
 
       // Resolve model_id to get model name and provider
       const modelRecord = await userDataStorageConnector.getModelById(
-        configVersion.params.model_id,
+        optimizationModelParams.model_id,
       );
 
       if (!modelRecord) {
         return c.json(
           {
-            error: `Model with ID '${configVersion.params.model_id}' not found`,
+            error: `Model with ID '${optimizationModelParams.model_id}' not found`,
           },
           422,
         );
@@ -95,20 +83,20 @@ async function validateTargetConfiguration(
       idkTargetConfiguration = {
         ai_provider: apiKeyRecord.ai_provider as AIProvider,
         model: modelRecord.model_name,
-        system_prompt: configVersion.params.system_prompt,
-        temperature: configVersion.params.temperature,
-        max_tokens: configVersion.params.max_tokens,
-        top_p: configVersion.params.top_p,
-        frequency_penalty: configVersion.params.frequency_penalty,
-        presence_penalty: configVersion.params.presence_penalty,
-        stop: configVersion.params.stop,
-        seed: configVersion.params.seed,
-        additional_params: configVersion.params.additional_params,
+        system_prompt: optimizationModelParams.system_prompt,
+        temperature: optimizationModelParams.temperature,
+        max_tokens: optimizationModelParams.max_tokens,
+        top_p: optimizationModelParams.top_p,
+        frequency_penalty: optimizationModelParams.frequency_penalty,
+        presence_penalty: optimizationModelParams.presence_penalty,
+        stop: optimizationModelParams.stop,
+        seed: optimizationModelParams.seed,
+        additional_params: optimizationModelParams.additional_params,
       };
     } catch (error) {
       return c.json(
         {
-          error: `Failed to load configuration '${idkTargetPreProcessed.configuration_name}': ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: `Failed to load optimization parameters: ${error instanceof Error ? error.message : 'Unknown error'}`,
         },
         500,
       );

@@ -58,11 +58,10 @@ import {
   type SkillUpdateParams,
 } from '@shared/types/data/skill';
 import {
-  SkillConfiguration,
-  type SkillConfigurationCreateParams,
-  type SkillConfigurationQueryParams,
-  type SkillConfigurationUpdateParams,
-} from '@shared/types/data/skill-configuration';
+  SkillOptimization,
+  type SkillOptimizationCreateParams,
+  type SkillOptimizationQueryParams,
+} from '@shared/types/data/skill-optimization';
 import {
   Tool,
   type ToolCreateParams,
@@ -332,10 +331,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     await deleteFromSupabase('skills', { id: `eq.${id}` });
   },
 
-  getSkillConfigurations: async (
-    queryParams: SkillConfigurationQueryParams,
-  ): Promise<SkillConfiguration[]> => {
-    const postgrestParams: Record<string, string> = {};
+  getSkillOptimizations: async (
+    queryParams: SkillOptimizationQueryParams,
+  ): Promise<SkillOptimization[]> => {
+    const postgrestParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
 
     if (queryParams.id) {
       postgrestParams.id = `eq.${queryParams.id}`;
@@ -346,8 +347,8 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     if (queryParams.skill_id) {
       postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
     }
-    if (queryParams.name) {
-      postgrestParams.name = `eq.${queryParams.name}`;
+    if (queryParams.version) {
+      postgrestParams.version = `eq.${queryParams.version}`;
     }
     if (queryParams.limit) {
       postgrestParams.limit = queryParams.limit.toString();
@@ -357,129 +358,27 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const skillConfigurations = await selectFromSupabase(
-      'skill_configurations',
+      'skill_optimizations',
       postgrestParams,
-      z.array(SkillConfiguration),
+      z.array(SkillOptimization),
     );
 
     return skillConfigurations;
   },
 
-  createSkillConfiguration: async (
-    skillConfiguration: SkillConfigurationCreateParams,
-  ): Promise<SkillConfiguration> => {
-    const now = new Date().toISOString();
-
-    // Generate 6-character unique hash (content + timestamp to ensure uniqueness)
-    const dataString = JSON.stringify(skillConfiguration.data) + now;
-    const hashBuffer = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(dataString),
-    );
-    const hash = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-      .substring(0, 6);
-
-    // Create versioned data structure with 'current' key
-    const versionedData = {
-      current: {
-        hash,
-        created_at: now,
-        params: skillConfiguration.data,
-      },
-    };
-
-    const skillConfigWithTimestamps = {
-      id: crypto.randomUUID(),
-      agent_id: skillConfiguration.agent_id,
-      skill_id: skillConfiguration.skill_id,
-      name: skillConfiguration.name,
-      description: skillConfiguration.description,
-      data: versionedData,
-      created_at: now,
-      updated_at: now,
-    };
-
+  createSkillOptimization: async (
+    params: SkillOptimizationCreateParams,
+  ): Promise<SkillOptimization> => {
     const insertedSkillConfiguration = await insertIntoSupabase(
-      'skill_configurations',
-      skillConfigWithTimestamps,
-      z.array(SkillConfiguration),
+      'skill_optimizations',
+      params,
+      z.array(SkillOptimization),
     );
     return insertedSkillConfiguration[0];
   },
 
-  updateSkillConfiguration: async (
-    id: string,
-    update: SkillConfigurationUpdateParams,
-  ): Promise<SkillConfiguration> => {
-    const now = new Date().toISOString();
-    let updateWithTimestamp: Record<string, unknown> = {
-      ...update,
-      updated_at: now,
-    };
-
-    // If we're updating the data, we need to handle versioning
-    if (update.data) {
-      // First, get the current configuration to access existing data
-      const existing = await selectFromSupabase(
-        'skill_configurations',
-        { id: `eq.${id}` },
-        z.array(SkillConfiguration),
-      );
-
-      if (existing.length === 0) {
-        throw new Error(`Skill configuration with id ${id} not found`);
-      }
-
-      const currentConfig = existing[0];
-      const dataString = JSON.stringify(update.data) + now;
-      const hashBuffer = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(dataString),
-      );
-      const newHash = Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')
-        .substring(0, 6);
-
-      // Get the current hash to preserve history
-      const currentVersion = currentConfig.data.current;
-      const currentHash = currentVersion.hash;
-
-      // Create new versioned data structure
-      const newVersionedData = {
-        ...currentConfig.data, // Keep all existing versions
-        current: {
-          hash: newHash,
-          created_at: now,
-          params: update.data,
-        },
-      };
-
-      // If the hash is different, store the previous version
-      if (newHash !== currentHash) {
-        (newVersionedData as Record<string, unknown>)[currentHash] =
-          currentVersion;
-      }
-
-      updateWithTimestamp = {
-        ...updateWithTimestamp,
-        data: newVersionedData,
-      };
-    }
-
-    const updatedSkillConfiguration = await updateInSupabase(
-      'skill_configurations',
-      id,
-      updateWithTimestamp,
-      z.array(SkillConfiguration),
-    );
-    return updatedSkillConfiguration[0];
-  },
-
-  deleteSkillConfiguration: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skill_configurations', { id: `eq.${id}` });
+  deleteSkillOptimization: async (id: string): Promise<void> => {
+    await deleteFromSupabase('skill_optimizations', { id: `eq.${id}` });
   },
 
   getTools: async (queryParams: ToolQueryParams): Promise<Tool[]> => {

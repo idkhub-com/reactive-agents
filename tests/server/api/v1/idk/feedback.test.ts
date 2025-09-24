@@ -34,10 +34,10 @@ const mockUserDataStorageConnector: UserDataStorageConnector = {
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
   // Skill configuration methods
-  getSkillConfigurations: vi.fn(),
-  createSkillConfiguration: vi.fn(),
+  getSkillOptimizations: vi.fn(),
+  createSkillOptimization: vi.fn(),
   updateSkillConfiguration: vi.fn(),
-  deleteSkillConfiguration: vi.fn(),
+  deleteSkillOptimization: vi.fn(),
   // Tool methods (required by interface)
   getTools: vi.fn(),
   createTool: vi.fn(),

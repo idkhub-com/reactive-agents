@@ -1,7 +1,7 @@
 import { CreateConfigurationView } from '@client/components/agents/skills/configurations/create-configuration-view';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
-import { useSkillConfigurations } from '@client/providers/skill-configurations';
+import { useSkillOptimizations } from '@client/providers/skill-optimizations';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
@@ -15,7 +15,7 @@ vi.mock('@client/providers/navigation', () => ({
   useNavigation: vi.fn(),
 }));
 
-vi.mock('@client/providers/skill-configurations', () => ({
+vi.mock('@client/providers/skill-optimizations', () => ({
   useSkillConfigurations: vi.fn(),
 }));
 
@@ -117,7 +117,7 @@ describe('CreateConfigurationView', () => {
       },
     });
 
-    (useSkillConfigurations as Mock).mockReturnValue({
+    (useSkillOptimizations as Mock).mockReturnValue({
       createSkillConfiguration: mockCreateSkillConfiguration,
     });
   });

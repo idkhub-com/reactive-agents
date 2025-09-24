@@ -16,7 +16,7 @@ export * from './log-output';
 export * from './model';
 // Skill types
 export * from './skill';
-// Skill Configuration types
-export * from './skill-configuration';
+// Skill Optimization types
+export * from './skill-optimization';
 // Tool types
 export * from './tool';

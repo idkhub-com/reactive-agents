@@ -5,15 +5,14 @@ import { Button } from '@client/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
-import { useSkillConfigurations } from '@client/providers/skill-configurations';
-import type { SkillConfiguration } from '@shared/types/data/skill-configuration';
-import { PlusIcon, SettingsIcon, TrashIcon } from 'lucide-react';
+import { useSkillOptimizations } from '@client/providers/skill-optimizations';
+import type { SkillOptimization } from '@shared/types/data/skill-optimization';
+import { SettingsIcon, TrashIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
@@ -33,11 +32,11 @@ export function ConfigurationsListView({
   skillName,
 }: ConfigurationsListViewProps): ReactElement {
   const {
-    skillConfigurations,
+    skillOptimizations,
     isLoading,
-    deleteSkillConfiguration,
+    deleteSkillOptimization,
     setQueryParams,
-  } = useSkillConfigurations();
+  } = useSkillOptimizations();
 
   const router = useRouter();
 
@@ -53,32 +52,21 @@ export function ConfigurationsListView({
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this configuration?')) {
-      await deleteSkillConfiguration(id);
+      await deleteSkillOptimization(id);
     }
   };
 
-  const handleCreateConfiguration = () => {
-    router.push(`/agents/${agentName}/${skillName}/configurations/create`);
-  };
-
-  const handleEditConfiguration = (configuration: SkillConfiguration) => {
-    const encodedName = encodeURIComponent(configuration.name);
+  const handleEditOptimization = (configuration: SkillOptimization) => {
     router.push(
-      `/agents/${agentName}/${skillName}/configurations/${encodedName}`,
+      `/agents/${agentName}/${skillName}/configurations/${configuration.version}`,
     );
   };
 
   return (
     <>
       <PageHeader
-        title={`Configurations - ${skillName}`}
-        description="Manage AI configurations for this skill"
-        actions={
-          <Button onClick={handleCreateConfiguration}>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create Configuration
-          </Button>
-        }
+        title={`Optimizations - ${skillName}`}
+        description="Manage optimizations for this skill"
       />
 
       <div className="p-6">
@@ -96,34 +84,27 @@ export function ConfigurationsListView({
               </Card>
             ))}
           </div>
-        ) : skillConfigurations.length === 0 ? (
+        ) : skillOptimizations.length === 0 ? (
           <div className="text-center py-12">
             <SettingsIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <div className="text-muted-foreground mb-4">
               No configurations found for this skill.
             </div>
-            <Button onClick={handleCreateConfiguration}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Create your first configuration
-            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {skillConfigurations.map((configuration) => (
+            {skillOptimizations.map((optimization) => (
               <Card
-                key={configuration.id}
+                key={optimization.id}
                 className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleEditConfiguration(configuration)}
+                onClick={() => handleEditOptimization(optimization)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg">
-                        {configuration.name}
+                        {optimization.version}
                       </CardTitle>
-                      <CardDescription className="mt-1">
-                        {configuration.description}
-                      </CardDescription>
                     </div>
                     <Badge variant="outline" className="ml-2">
                       Active
@@ -136,26 +117,26 @@ export function ConfigurationsListView({
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Model ID:</span>
                         <span className="font-medium">
-                          {configuration.data.current.params.model_id}
+                          {optimization.data.model_params.model_id}
                         </span>
                       </div>
-                      {configuration.data.current.params.temperature && (
+                      {optimization.data.model_params.temperature && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Temperature:
                           </span>
                           <span className="font-medium">
-                            {configuration.data.current.params.temperature}
+                            {optimization.data.model_params.temperature}
                           </span>
                         </div>
                       )}
-                      {configuration.data.current.params.max_tokens && (
+                      {optimization.data.model_params.max_tokens && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Max Tokens:
                           </span>
                           <span className="font-medium">
-                            {configuration.data.current.params.max_tokens}
+                            {optimization.data.model_params.max_tokens}
                           </span>
                         </div>
                       )}
@@ -167,23 +148,14 @@ export function ConfigurationsListView({
                           System Prompt Preview:
                         </div>
                         <div className="bg-muted rounded p-2 text-xs font-mono line-clamp-3">
-                          {configuration.data.current.params.system_prompt}
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground">
-                        <div className="flex items-center justify-between">
-                          <span>Version Hash:</span>
-                          <code className="bg-muted px-1 rounded">
-                            {configuration.data.current.hash}
-                          </code>
+                          {optimization.data.model_params.system_prompt}
                         </div>
                       </div>
                     </div>
 
                     <div className="text-xs text-muted-foreground">
                       Created:{' '}
-                      {new Date(configuration.created_at).toLocaleDateString()}
+                      {new Date(optimization.created_at).toLocaleDateString()}
                     </div>
 
                     <div className="flex justify-end">
@@ -192,7 +164,7 @@ export function ConfigurationsListView({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(configuration.id);
+                          handleDelete(optimization.id);
                         }}
                         className="text-destructive hover:text-destructive"
                       >

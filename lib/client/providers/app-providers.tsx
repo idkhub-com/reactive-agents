@@ -10,7 +10,7 @@ import { LogsProvider } from './logs';
 import { ModelsProvider } from './models';
 import { NavigationProvider } from './navigation';
 import { ReactQueryProvider } from './query-client';
-import { SkillConfigurationsProvider } from './skill-configurations';
+import { SkillOptimizationsProvider } from './skill-optimizations';
 import { SkillsProvider } from './skills';
 
 interface AppProvidersProps {
@@ -48,7 +48,7 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
           <AgentsProvider>
             <SkillsProvider>
               <AIProviderAPIKeysProvider>
-                <SkillConfigurationsProvider>
+                <SkillOptimizationsProvider>
                   <ModelsProvider>
                     <LogsProvider>
                       <DatasetsProvider>
@@ -58,7 +58,7 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
                       </DatasetsProvider>
                     </LogsProvider>
                   </ModelsProvider>
-                </SkillConfigurationsProvider>
+                </SkillOptimizationsProvider>
               </AIProviderAPIKeysProvider>
             </SkillsProvider>
           </AgentsProvider>

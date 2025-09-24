@@ -1,7 +1,7 @@
 import { EditConfigurationView } from '@client/components/agents/skills/configurations/edit-configuration-view';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
-import { useSkillConfigurations } from '@client/providers/skill-configurations';
+import { useSkillOptimizations } from '@client/providers/skill-optimizations';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useParams, useRouter } from 'next/navigation';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
@@ -15,7 +15,7 @@ vi.mock('@client/providers/navigation', () => ({
   useNavigation: vi.fn(),
 }));
 
-vi.mock('@client/providers/skill-configurations', () => ({
+vi.mock('@client/providers/skill-optimizations', () => ({
   useSkillConfigurations: vi.fn(),
 }));
 
@@ -150,7 +150,7 @@ describe('EditConfigurationView', () => {
       },
     });
 
-    (useSkillConfigurations as Mock).mockReturnValue({
+    (useSkillOptimizations as Mock).mockReturnValue({
       updateSkillConfiguration: mockUpdateSkillConfiguration,
       skillConfigurations: [mockConfiguration],
     });
@@ -216,7 +216,7 @@ describe('EditConfigurationView', () => {
       },
     };
 
-    (useSkillConfigurations as Mock).mockReturnValue({
+    (useSkillOptimizations as Mock).mockReturnValue({
       updateSkillConfiguration: mockUpdateSkillConfiguration,
       skillConfigurations: [configWithHistory],
     });
@@ -284,7 +284,7 @@ describe('EditConfigurationView', () => {
       },
     };
 
-    (useSkillConfigurations as Mock).mockReturnValue({
+    (useSkillOptimizations as Mock).mockReturnValue({
       updateSkillConfiguration: mockUpdateSkillConfiguration,
       skillConfigurations: [configWithHistory],
     });
@@ -301,7 +301,7 @@ describe('EditConfigurationView', () => {
   });
 
   it('shows error message when configuration is not found', () => {
-    (useSkillConfigurations as Mock).mockReturnValue({
+    (useSkillOptimizations as Mock).mockReturnValue({
       updateSkillConfiguration: mockUpdateSkillConfiguration,
       skillConfigurations: [],
     });

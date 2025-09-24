@@ -6,9 +6,6 @@ import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';
 import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
-import { ConfigurationsView } from './skills/configurations';
-import { CreateConfigurationView } from './skills/configurations/create-configuration-view';
-import { EditConfigurationView } from './skills/configurations/edit-configuration-view';
 import { DatasetDetailsView } from './skills/datasets';
 import { CreateDatasetView } from './skills/datasets/create-dataset-view';
 import { DatasetsView } from './skills/datasets/datasets-view';
@@ -17,6 +14,7 @@ import { EvaluationRunDetailsView } from './skills/evaluation-runs/evaluation-ru
 import { EvaluationRunsView } from './skills/evaluation-runs/evaluation-runs-view';
 import { LogDetailsView, LogsView } from './skills/logs';
 import { ModelsView } from './skills/models/models-view';
+import { ConfigurationsView } from './skills/optimizations';
 
 export function AgentsView(): ReactElement {
   const { navigationState } = useNavigation();
@@ -111,18 +109,6 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Configurations">
             <ConfigurationsView />
-          </AgentErrorBoundary>
-        );
-      case 'create-configuration':
-        return (
-          <AgentErrorBoundary sectionName="Create Configuration">
-            <CreateConfigurationView />
-          </AgentErrorBoundary>
-        );
-      case 'edit-configuration':
-        return (
-          <AgentErrorBoundary sectionName="Edit Configuration">
-            <EditConfigurationView />
           </AgentErrorBoundary>
         );
       case 'models':

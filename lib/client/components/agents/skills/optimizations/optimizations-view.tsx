@@ -2,7 +2,7 @@
 
 import { useNavigation } from '@client/providers/navigation';
 import type { ReactElement } from 'react';
-import { ConfigurationsListView } from './configurations-list-view';
+import { ConfigurationsListView } from './optimizations-list-view';
 
 export function ConfigurationsView(): ReactElement {
   const { navigationState } = useNavigation();

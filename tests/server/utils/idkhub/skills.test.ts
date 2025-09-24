@@ -36,10 +36,10 @@ describe('getOrCreateSkill', () => {
       deleteSystemPrompt: vi.fn(),
 
       // Skill configuration methods
-      getSkillConfigurations: vi.fn(),
-      createSkillConfiguration: vi.fn(),
+      getSkillOptimizations: vi.fn(),
+      createSkillOptimization: vi.fn(),
       updateSkillConfiguration: vi.fn(),
-      deleteSkillConfiguration: vi.fn(),
+      deleteSkillOptimization: vi.fn(),
 
       // Feedback methods
       getFeedback: vi.fn(),

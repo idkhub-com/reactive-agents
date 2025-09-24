@@ -24,7 +24,7 @@ import { useAgents } from '@client/providers/agents';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillCreateParams } from '@shared/types/data/skill';
-import { sanitizeDescription, sanitizeUserInput } from '@shared/utils/security';
+import { sanitizeUserInput } from '@shared/utils/security';
 import { Bot, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -36,7 +36,7 @@ const CreateSkillFormSchema = z
     name: z
       .string()
       .min(1, 'Skill name is required')
-      .max(100, 'Skill name must be less than 100 characters')
+      .max(255, 'Skill name must be less than 255 characters')
       .refine(
         (name) => {
           // Basic validation for potentially dangerous content
@@ -49,16 +49,13 @@ const CreateSkillFormSchema = z
       ),
     description: z
       .string()
-      .max(2000, 'Description must be less than 2000 characters')
-      .optional(),
+      .min(25)
+      .max(10000, 'Description must be less than 10000 characters'),
     max_configurations: z
       .number()
       .int()
-      .positive('Max configurations must be a positive number')
-      .min(1, 'Max configurations must be at least 1')
-      .max(100, 'Max configurations cannot exceed 100')
-      .default(10)
-      .optional(),
+      .min(0, 'Max configurations must be at least 0')
+      .max(25, 'Max configurations cannot exceed 25'),
   })
   .strict();
 
@@ -100,7 +97,7 @@ export function CreateSkillView(): React.ReactElement {
       const skillParams: SkillCreateParams = {
         agent_id: currentAgent.id,
         name: sanitizeUserInput(data.name),
-        description: sanitizeDescription(data.description || ''),
+        description: sanitizeUserInput(data.description),
         metadata: {},
         max_configurations: data.max_configurations || 3,
       };
@@ -167,7 +164,7 @@ export function CreateSkillView(): React.ReactElement {
             <div className="flex items-center gap-3">
               <Wrench className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle>Skill Configuration</CardTitle>
+                <CardTitle>Skill Optimization</CardTitle>
                 <CardDescription>
                   Define your skill's basic information and purpose
                 </CardDescription>
@@ -243,9 +240,6 @@ export function CreateSkillView(): React.ReactElement {
                       <FormControl>
                         <Input
                           type="number"
-                          min="1"
-                          max="100"
-                          placeholder="10"
                           className="h-11"
                           {...field}
                           onChange={(e) =>
