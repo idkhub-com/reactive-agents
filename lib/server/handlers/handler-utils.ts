@@ -16,6 +16,7 @@ import {
   type CreateResponseOptions,
   createResponse,
 } from '@server/utils/idkhub/response';
+import { debug } from '@shared/console-logging';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 import type {
@@ -78,224 +79,238 @@ export async function tryPost(
   idkRequestData: IdkRequestData,
   currentIndex: number,
 ): Promise<Response> {
-  const overrideParams = idkConfig?.override_params || {};
+  try {
+    const overrideParams = idkConfig?.override_params || {};
 
-  const overriddenIdkRequestBody: IdkRequestBody = {
-    ...(idkRequestData.requestBody as Record<string, unknown>),
-    ...overrideParams,
-  };
+    const overriddenIdkRequestBody: IdkRequestBody = {
+      ...(idkRequestData.requestBody as Record<string, unknown>),
+      ...overrideParams,
+    };
 
-  let isStreamingMode = false;
-  if ('stream' in overriddenIdkRequestBody) {
-    isStreamingMode = overriddenIdkRequestBody.stream
-      ? (overriddenIdkRequestBody.stream as boolean)
-      : false;
-  }
+    let isStreamingMode = false;
+    if ('stream' in overriddenIdkRequestBody) {
+      isStreamingMode = overriddenIdkRequestBody.stream
+        ? (overriddenIdkRequestBody.stream as boolean)
+        : false;
+    }
 
-  const overriddenIdkRequestData = cloneDeep(idkRequestData);
-  overriddenIdkRequestData.requestBody = overriddenIdkRequestBody;
+    const overriddenIdkRequestData = cloneDeep(idkRequestData);
+    overriddenIdkRequestData.requestBody = overriddenIdkRequestBody;
 
-  let strictOpenAiCompliance = true;
+    let strictOpenAiCompliance = true;
 
-  if (idkConfig.strict_open_ai_compliance === false) {
-    strictOpenAiCompliance = false;
-  }
+    if (idkConfig.strict_open_ai_compliance === false) {
+      strictOpenAiCompliance = false;
+    }
 
-  // Mapping providers to corresponding URLs
-  const internalProviderConfig = providerConfigs[idkTarget.provider];
+    // Mapping providers to corresponding URLs
+    const internalProviderConfig = providerConfigs[idkTarget.provider];
 
-  if (!internalProviderConfig) {
-    throw new Error(
-      `Provider config not found for provider: ${idkTarget.provider}`,
-    );
-  }
+    if (!internalProviderConfig) {
+      throw new Error(
+        `Provider config not found for provider: ${idkTarget.provider}`,
+      );
+    }
 
-  const apiConfig: InternalProviderAPIConfig = internalProviderConfig.api;
+    const apiConfig: InternalProviderAPIConfig = internalProviderConfig.api;
 
-  const customHost = idkTarget.custom_host || '';
+    const customHost = idkTarget.custom_host || '';
 
-  const baseUrl =
-    customHost ||
-    (await apiConfig.getBaseURL({
+    const baseUrl =
+      customHost ||
+      (await apiConfig.getBaseURL({
+        c,
+        idkTarget,
+        idkRequestData: overriddenIdkRequestData,
+      }));
+    const endpoint = apiConfig.getEndpoint({
       c,
       idkTarget,
       idkRequestData: overriddenIdkRequestData,
-    }));
-  const endpoint = apiConfig.getEndpoint({
-    c,
-    idkTarget,
-    idkRequestData: overriddenIdkRequestData,
-  });
+    });
 
-  const url =
-    overriddenIdkRequestData.functionName === FunctionName.PROXY
-      ? getProxyPath(
-          overriddenIdkRequestData.url,
-          idkTarget.provider,
-          overriddenIdkRequestData.url.indexOf('/v1/proxy') > -1
-            ? '/v1/proxy'
-            : '/v1',
-          baseUrl,
-          idkTarget,
-        )
-      : `${baseUrl}${endpoint}`;
+    const url =
+      overriddenIdkRequestData.functionName === FunctionName.PROXY
+        ? getProxyPath(
+            overriddenIdkRequestData.url,
+            idkTarget.provider,
+            overriddenIdkRequestData.url.indexOf('/v1/proxy') > -1
+              ? '/v1/proxy'
+              : '/v1',
+            baseUrl,
+            idkTarget,
+          )
+        : `${baseUrl}${endpoint}`;
 
-  let fetchConfig: RequestInit = {};
+    let fetchConfig: RequestInit = {};
 
-  const outputSyncHooks = idkConfig.hooks?.filter(
-    (hook) => hook.type === HookType.OUTPUT_HOOK && hook.await === true,
-  );
+    const outputSyncHooks = idkConfig.hooks?.filter(
+      (hook) => hook.type === HookType.OUTPUT_HOOK && hook.await === true,
+    );
 
-  const commonRequestOptions: CommonRequestOptions = {
-    idkRequestData: overriddenIdkRequestData,
-    aiProviderRequestURL: url,
-    isStreamingMode,
-    provider: idkTarget.provider,
-    strictOpenAiCompliance,
-    areSyncHooksAvailable: outputSyncHooks?.length > 0,
-    currentIndex,
-    fetchOptions: fetchConfig,
-    cacheSettings: idkTarget.cache,
-  };
+    const commonRequestOptions: CommonRequestOptions = {
+      idkRequestData: overriddenIdkRequestData,
+      aiProviderRequestURL: url,
+      isStreamingMode,
+      provider: idkTarget.provider,
+      strictOpenAiCompliance,
+      areSyncHooksAvailable: outputSyncHooks?.length > 0,
+      currentIndex,
+      fetchOptions: fetchConfig,
+      cacheSettings: idkTarget.cache,
+    };
 
-  const { errorResponse: inputHooksErrorResponse, transformedIdkBody } =
-    await inputHookHandler(c, overriddenIdkRequestData);
+    const { errorResponse: inputHooksErrorResponse, transformedIdkBody } =
+      await inputHookHandler(c, overriddenIdkRequestData);
 
-  if (inputHooksErrorResponse) {
+    if (inputHooksErrorResponse) {
+      const createResponseOptions: CreateResponseOptions = {
+        response: inputHooksErrorResponse,
+        responseTransformerFunctionName: undefined,
+        cacheStatus: CacheStatus.MISS,
+        retryCount: undefined,
+        aiProviderRequestBody: {},
+        ...commonRequestOptions,
+      };
+
+      return createResponse(c, createResponseOptions);
+    }
+
+    if (transformedIdkBody) {
+      overriddenIdkRequestData.requestBody = transformedIdkBody;
+    }
+
+    let aiProviderRequestBody:
+      | Record<string, unknown>
+      | ReadableStream
+      | ArrayBuffer
+      | FormData = overriddenIdkRequestBody as
+      | Record<string, unknown>
+      | ReadableStream
+      | ArrayBuffer
+      | FormData;
+
+    // Attach the body of the request
+    if (
+      !internalProviderConfig?.requestHandlers?.[
+        overriddenIdkRequestData.functionName
+      ]
+    ) {
+      aiProviderRequestBody =
+        overriddenIdkRequestData.method === HttpMethod.POST
+          ? transformToProviderRequest(
+              idkTarget.provider,
+              idkTarget,
+              overriddenIdkRequestData,
+            )
+          : overriddenIdkRequestBody;
+    }
+
+    const apiConfigHeaders = await apiConfig.headers({
+      c,
+      idkTarget,
+      idkRequestData: overriddenIdkRequestData,
+    });
+
+    // Construct the base object for the POST request
+    fetchConfig = constructRequest(
+      overriddenIdkRequestData,
+      apiConfigHeaders as Record<string, string>,
+      {},
+      {},
+    );
+
+    let apiConfigContentTypeHeader = apiConfigHeaders[HeaderKey.CONTENT_TYPE] as
+      | string
+      | undefined;
+
+    if (!apiConfigContentTypeHeader) {
+      apiConfigContentTypeHeader =
+        overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
+          ';',
+        )[0];
+      if (!apiConfigContentTypeHeader) {
+        console.warn(
+          'No Content-Type header found in request. Using application/json as default.',
+        );
+
+        apiConfigContentTypeHeader = 'application/json';
+      }
+    }
+
+    const requestContentType =
+      overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
+        ';',
+      )[0];
+
+    if (
+      apiConfigContentTypeHeader === ContentTypeName.MULTIPART_FORM_DATA ||
+      (overriddenIdkRequestData.functionName === 'proxy' &&
+        requestContentType === ContentTypeName.MULTIPART_FORM_DATA)
+    ) {
+      fetchConfig.body = aiProviderRequestBody as FormData;
+    } else if (aiProviderRequestBody instanceof ReadableStream) {
+      fetchConfig.body = aiProviderRequestBody;
+    } else if (
+      overriddenIdkRequestData.functionName === 'proxy' &&
+      requestContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)
+    ) {
+      fetchConfig.body = aiProviderRequestBody as ArrayBuffer;
+    } else if (requestContentType) {
+      fetchConfig.body = JSON.stringify(aiProviderRequestBody);
+    }
+
+    if (['GET', 'DELETE'].includes(overriddenIdkRequestData.method)) {
+      delete fetchConfig.body;
+    }
+
+    // Return cached response if it exists
+    const cachedResponse = await getCachedResponse(
+      c,
+      commonRequestOptions,
+      aiProviderRequestBody,
+    );
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Request handler (Including retries, recursion and hooks)
+    const handlerResult = await recursiveOutputHookHandler(
+      c,
+      commonRequestOptions,
+      url,
+      fetchConfig,
+      idkTarget,
+      isStreamingMode,
+      overriddenIdkRequestData,
+      0,
+      strictOpenAiCompliance,
+    );
+
     const createResponseOptions: CreateResponseOptions = {
-      response: inputHooksErrorResponse,
+      response: handlerResult.mappedResponse,
       responseTransformerFunctionName: undefined,
       cacheStatus: CacheStatus.MISS,
       retryCount: undefined,
-      aiProviderRequestBody: {},
+      aiProviderRequestBody,
       ...commonRequestOptions,
     };
 
     return createResponse(c, createResponseOptions);
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: `${error}`,
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
-
-  if (transformedIdkBody) {
-    overriddenIdkRequestData.requestBody = transformedIdkBody;
-  }
-
-  let aiProviderRequestBody:
-    | Record<string, unknown>
-    | ReadableStream
-    | ArrayBuffer
-    | FormData = overriddenIdkRequestBody as
-    | Record<string, unknown>
-    | ReadableStream
-    | ArrayBuffer
-    | FormData;
-
-  // Attach the body of the request
-  if (
-    !internalProviderConfig?.requestHandlers?.[
-      overriddenIdkRequestData.functionName
-    ]
-  ) {
-    aiProviderRequestBody =
-      overriddenIdkRequestData.method === HttpMethod.POST
-        ? transformToProviderRequest(
-            idkTarget.provider,
-            idkTarget,
-            overriddenIdkRequestData,
-          )
-        : overriddenIdkRequestBody;
-  }
-
-  const apiConfigHeaders = await apiConfig.headers({
-    c,
-    idkTarget,
-    idkRequestData: overriddenIdkRequestData,
-  });
-
-  // Construct the base object for the POST request
-  fetchConfig = constructRequest(
-    overriddenIdkRequestData,
-    apiConfigHeaders as Record<string, string>,
-    {},
-    {},
-  );
-
-  let apiConfigContentTypeHeader = apiConfigHeaders[HeaderKey.CONTENT_TYPE] as
-    | string
-    | undefined;
-
-  if (!apiConfigContentTypeHeader) {
-    apiConfigContentTypeHeader =
-      overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
-        ';',
-      )[0];
-    if (!apiConfigContentTypeHeader) {
-      console.warn(
-        'No Content-Type header found in request. Using application/json as default.',
-      );
-
-      apiConfigContentTypeHeader = 'application/json';
-    }
-  }
-
-  const requestContentType =
-    overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
-      ';',
-    )[0];
-
-  if (
-    apiConfigContentTypeHeader === ContentTypeName.MULTIPART_FORM_DATA ||
-    (overriddenIdkRequestData.functionName === 'proxy' &&
-      requestContentType === ContentTypeName.MULTIPART_FORM_DATA)
-  ) {
-    fetchConfig.body = aiProviderRequestBody as FormData;
-  } else if (aiProviderRequestBody instanceof ReadableStream) {
-    fetchConfig.body = aiProviderRequestBody;
-  } else if (
-    overriddenIdkRequestData.functionName === 'proxy' &&
-    requestContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)
-  ) {
-    fetchConfig.body = aiProviderRequestBody as ArrayBuffer;
-  } else if (requestContentType) {
-    fetchConfig.body = JSON.stringify(aiProviderRequestBody);
-  }
-
-  if (['GET', 'DELETE'].includes(overriddenIdkRequestData.method)) {
-    delete fetchConfig.body;
-  }
-
-  // Return cached response if it exists
-  const cachedResponse = await getCachedResponse(
-    c,
-    commonRequestOptions,
-    aiProviderRequestBody,
-  );
-
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-
-  // Request handler (Including retries, recursion and hooks)
-  const handlerResult = await recursiveOutputHookHandler(
-    c,
-    commonRequestOptions,
-    url,
-    fetchConfig,
-    idkTarget,
-    isStreamingMode,
-    overriddenIdkRequestData,
-    0,
-    strictOpenAiCompliance,
-  );
-
-  const createResponseOptions: CreateResponseOptions = {
-    response: handlerResult.mappedResponse,
-    responseTransformerFunctionName: undefined,
-    cacheStatus: CacheStatus.MISS,
-    retryCount: undefined,
-    aiProviderRequestBody,
-    ...commonRequestOptions,
-  };
-
-  return createResponse(c, createResponseOptions);
 }
 
 export async function tryTarget(
