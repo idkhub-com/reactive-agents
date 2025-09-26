@@ -114,7 +114,7 @@ function getRandomConfigurationModelParams(
   return modelParams;
 }
 
-function backPropagation(
+function banditAlgorithm(
   cluster: number[][],
   embeddingsLogMap: Map<number[], Log>,
   skillEvaluations: SkillEvaluation[],

@@ -91,7 +91,7 @@ export const skillsRouter = new Hono<AppEnv>()
   .post(
     '/:skillId/models',
     zValidator('param', z.object({ skillId: z.uuid() })),
-    zValidator('json', z.object({ modelIds: z.array(z.string().uuid()) })),
+    zValidator('json', z.object({ modelIds: z.array(z.uuid()) })),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');
@@ -110,7 +110,7 @@ export const skillsRouter = new Hono<AppEnv>()
   .delete(
     '/:skillId/models',
     zValidator('param', z.object({ skillId: z.uuid() })),
-    zValidator('json', z.object({ modelIds: z.array(z.string().uuid()) })),
+    zValidator('json', z.object({ modelIds: z.array(z.uuid()) })),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');
@@ -123,6 +123,24 @@ export const skillsRouter = new Hono<AppEnv>()
       } catch (error) {
         console.error('Error removing models from skill:', error);
         return c.json({ error: 'Failed to remove models from skill' }, 500);
+      }
+    },
+  )
+  .post(
+    '/:skillId/generate-arms',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const skillConfiguration =
+          await connector.createSkillOptimization(skillId);
+
+        return c.json(skillConfiguration, 201);
+      } catch (error) {
+        console.error('Error creating skill configuration:', error);
+        return c.json({ error: 'Failed to create skill configuration' }, 500);
       }
     },
   );

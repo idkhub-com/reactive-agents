@@ -2,15 +2,27 @@ import { z } from 'zod';
 
 // Model Configuration parameters
 // All fields are normalized 0 to 1.
-export const SkillOptimizationConfigurationModelParams = z.object({
+export const BaseArm = z.object({
+  temperature_min: z.number().min(0).max(1),
+  temperature_max: z.number().min(0).max(1),
+  top_p_min: z.number().min(0).max(1),
+  top_p_max: z.number().min(0).max(1),
+  top_k_min: z.number().min(0).max(1),
+  top_k_max: z.number().min(0).max(1),
+  frequency_penalty_min: z.number().min(0).max(1),
+  frequency_penalty_max: z.number().min(0).max(1),
+  presence_penalty_min: z.number().min(0).max(1),
+  presence_penalty_max: z.number().min(0).max(1),
+  thinking_min: z.number().min(0).max(1),
+  thinking_max: z.number().min(0).max(1),
+});
+export type BaseArm = z.infer<typeof BaseArm>;
+
+// Model Configuration parameters
+// All fields are normalized 0 to 1.
+export const SkillOptimizationConfigurationModelParams = BaseArm.extend({
   model_id: z.uuid(),
   system_prompt: z.string().min(1),
-  temperature: z.number().min(0).max(1),
-  top_k: z.number().min(0).max(1),
-  top_p: z.number().min(0).max(1),
-  frequency_penalty: z.number().min(0).max(1),
-  presence_penalty: z.number().min(0).max(1),
-  thinking: z.number().min(0).max(1),
   // stop: z.array(z.string()),
   // seed: z.number().int(),
   // Additional provider-specific parameters can be added here
