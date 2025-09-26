@@ -148,7 +148,7 @@ describe('Embeddings API', () => {
       const responseData = await res.json();
       expect(responseData).toEqual({
         error: {
-          message: 'Network connection failed',
+          message: 'Internal server error',
           type: 'api_error',
           code: null,
           param: null,
@@ -171,7 +171,7 @@ describe('Embeddings API', () => {
       const responseData = await res.json();
       expect(responseData).toEqual({
         error: {
-          message: 'Something went wrong',
+          message: 'Internal server error',
           type: 'api_error',
           code: null,
           param: null,
@@ -232,7 +232,7 @@ describe('Embeddings API', () => {
       const responseData = await res.json();
       expect(responseData).toEqual({
         error: {
-          message: 'Something went wrong',
+          message: 'Internal server error',
           type: 'api_error',
           code: null,
           param: null,
@@ -254,7 +254,7 @@ describe('Embeddings API', () => {
       const responseData = await res.json();
       expect(responseData).toEqual({
         error: {
-          message: 'Something went wrong',
+          message: 'Internal server error',
           type: 'api_error',
           code: null,
           param: null,
@@ -280,7 +280,7 @@ describe('Embeddings API', () => {
       const responseData = await res.json();
       expect(responseData).toEqual({
         error: {
-          message: 'Something went wrong',
+          message: 'Internal server error',
           type: 'api_error',
           code: null,
           param: null,
