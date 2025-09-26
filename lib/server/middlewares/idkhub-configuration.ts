@@ -1,8 +1,11 @@
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
+import { generateEmbeddingForRequest } from '@server/utils/embeddings';
+import { cosineSimilarity } from '@server/utils/math';
 import { renderTemplate } from '@server/utils/templates';
 import { error } from '@shared/console-logging';
 import {
+  FunctionName,
   type IdkConfig,
   IdkTarget,
   type IdkTargetPreProcessed,
@@ -10,19 +13,55 @@ import {
   type TargetConfigurationParams,
 } from '@shared/types/api/request';
 import type { AIProvider } from '@shared/types/constants';
+import type { SkillOptimizationConfiguration } from '@shared/types/data';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
+
+function getOptimalConfiguration(
+  embedding: number[],
+  configurations: SkillOptimizationConfiguration[],
+): SkillOptimizationConfiguration {
+  if (configurations.length === 0) {
+    throw new Error('No configurations provided');
+  }
+
+  if (configurations.length === 1) {
+    return configurations[0];
+  }
+
+  let bestConfiguration = configurations[0];
+  let bestSimilarity = -1;
+
+  for (const config of configurations) {
+    if (!config.cluster_center || config.cluster_center.length === 0) {
+      continue;
+    }
+
+    const similarity = cosineSimilarity(embedding, config.cluster_center);
+    if (similarity > bestSimilarity) {
+      bestSimilarity = similarity;
+      bestConfiguration = config;
+    }
+  }
+
+  return bestConfiguration;
+}
 
 async function validateTargetConfiguration(
   c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   idkTargetPreProcessed: IdkTargetPreProcessed,
+  embedding: number[] | null,
 ): Promise<IdkTarget | Response> {
   let idkTargetConfiguration: TargetConfigurationParams;
   let resolvedApiKey: string | undefined;
 
-  // Apply configuration if specified
-  if (idkTargetPreProcessed.optimization === OptimizationType.AUTO) {
+  // Apply optimization if specified
+  // Optimizations can only be applied if the embedding is provided
+  if (
+    embedding &&
+    idkTargetPreProcessed.optimization === OptimizationType.AUTO
+  ) {
     try {
       // Fetch optimizations by version, if available. Otherwise, the latest optimization is returned.
       const optimizations =
@@ -42,22 +81,30 @@ async function validateTargetConfiguration(
       }
 
       const optimization = optimizations[0];
-      const optimizationModelParams = optimization.data.model_params;
 
-      optimizationModelParams.system_prompt = renderTemplate(
-        optimizationModelParams.system_prompt!,
+      c.set('skill_optimization', optimization);
+
+      const configurations = optimization.configurations;
+
+      const optimalConfiguration = getOptimalConfiguration(
+        embedding,
+        configurations,
+      );
+
+      optimalConfiguration.model_params.system_prompt = renderTemplate(
+        optimalConfiguration.model_params.system_prompt!,
         idkTargetPreProcessed.system_prompt_variables || {},
       );
 
       // Resolve model_id to get model name and provider
       const modelRecord = await userDataStorageConnector.getModelById(
-        optimizationModelParams.model_id,
+        optimalConfiguration.model_params.model_id,
       );
 
       if (!modelRecord) {
         return c.json(
           {
-            error: `Model with ID '${optimizationModelParams.model_id}' not found`,
+            error: `Model with ID '${optimalConfiguration.model_params.model_id}' not found`,
           },
           422,
         );
@@ -83,15 +130,15 @@ async function validateTargetConfiguration(
       idkTargetConfiguration = {
         ai_provider: apiKeyRecord.ai_provider as AIProvider,
         model: modelRecord.model_name,
-        system_prompt: optimizationModelParams.system_prompt,
-        temperature: optimizationModelParams.temperature,
-        max_tokens: optimizationModelParams.max_tokens,
-        top_p: optimizationModelParams.top_p,
-        frequency_penalty: optimizationModelParams.frequency_penalty,
-        presence_penalty: optimizationModelParams.presence_penalty,
-        stop: optimizationModelParams.stop,
-        seed: optimizationModelParams.seed,
-        additional_params: optimizationModelParams.additional_params,
+        system_prompt: optimalConfiguration.model_params.system_prompt,
+        temperature: optimalConfiguration.model_params.temperature,
+        max_tokens: optimalConfiguration.model_params.max_tokens,
+        top_p: optimalConfiguration.model_params.top_p,
+        frequency_penalty: optimalConfiguration.model_params.frequency_penalty,
+        presence_penalty: optimalConfiguration.model_params.presence_penalty,
+        stop: optimalConfiguration.model_params.stop,
+        seed: optimalConfiguration.model_params.seed,
+        additional_params: optimalConfiguration.model_params.additional_params,
       };
     } catch (error) {
       return c.json(
@@ -184,6 +231,24 @@ export const idkHubConfigurationInjectorMiddleware = createMiddleware(
       // Don't set variables for IDK API requests
       if (!url.pathname.startsWith('/v1/idk')) {
         const idkConfigPreProcessed = c.get('idk_config_pre_processed');
+        const idkRequestData = c.get('idk_request_data');
+
+        // Generate embeddings for specific endpoints
+        // The embedding will be saved with the log after the request is completed
+        let embedding = null;
+        if (
+          idkRequestData &&
+          (idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+            idkRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE ||
+            idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE)
+        ) {
+          try {
+            embedding = await generateEmbeddingForRequest(idkRequestData);
+          } catch {
+            embedding = null;
+          }
+          c.set('embedding', embedding);
+        }
 
         const idkTargetsOrResponses = await Promise.all(
           idkConfigPreProcessed.targets.map((target) =>
@@ -191,6 +256,7 @@ export const idkHubConfigurationInjectorMiddleware = createMiddleware(
               c,
               c.get('user_data_storage_connector'),
               target,
+              embedding,
             ),
           ),
         );

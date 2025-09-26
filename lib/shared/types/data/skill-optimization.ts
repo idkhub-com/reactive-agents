@@ -1,41 +1,59 @@
 import { z } from 'zod';
 
 // Model Configuration parameters
-export const SkillOptimizationModelParams = z.object({
+// All fields are normalized 0 to 1.
+export const SkillOptimizationConfigurationModelParams = z.object({
   model_id: z.uuid(),
   system_prompt: z.string().min(1),
-  temperature: z.number().min(0).max(2),
-  max_tokens: z.number().int().positive(),
+  temperature: z.number().min(0).max(1),
+  top_k: z.number().min(0).max(1),
   top_p: z.number().min(0).max(1),
-  frequency_penalty: z.number().min(-2).max(2),
-  presence_penalty: z.number().min(-2).max(2),
-  stop: z.array(z.string()),
-  seed: z.number().int(),
+  frequency_penalty: z.number().min(0).max(1),
+  presence_penalty: z.number().min(0).max(1),
+  thinking: z.number().min(0).max(1),
+  // stop: z.array(z.string()),
+  // seed: z.number().int(),
   // Additional provider-specific parameters can be added here
-  additional_params: z.record(z.string(), z.unknown()),
+  // additional_params: z.record(z.string(), z.unknown()),
 });
-export type SkillOptimizationModelParams = z.infer<
-  typeof SkillOptimizationModelParams
+export type SkillOptimizationConfigurationModelParams = z.infer<
+  typeof SkillOptimizationConfigurationModelParams
 >;
 
-export const SkillOptimizationEvaluationResult = z.object({
+export const SkillOptimizationConfigurationEvaluationResult = z.object({
   evaluation_name: z.string().min(1),
   evaluation_score: z.number().min(0).max(1),
   extra_data: z.record(z.string(), z.unknown()),
 });
-export type SkillOptimizationEvaluationResult = z.infer<
-  typeof SkillOptimizationEvaluationResult
+export type SkillOptimizationConfigurationEvaluationResult = z.infer<
+  typeof SkillOptimizationConfigurationEvaluationResult
 >;
 
-export const SkillOptimizationData = z.object({
+/** An optimized configuration used for AI inference.
+ *
+ * A group of logs were generated using a clustering algorithm
+ * to group similar logs together.
+ * Then this **optimal** configuration was generated to produce
+ * the best results on one of the clusters.
+ * We assume this configuration is also optimal
+ * for any future requests that are similar to any of the
+ * logs in the cluster. */
+export const SkillOptimizationConfiguration = z.object({
   /** The parameters used for this configuration. These are sent to the
    * ai provider when generating completions */
-  model_params: SkillOptimizationModelParams,
+  model_params: SkillOptimizationConfigurationModelParams,
 
   /** The final results of when this configuration was evaluated */
-  results: z.array(SkillOptimizationEvaluationResult),
+  results: z.array(SkillOptimizationConfigurationEvaluationResult),
+
+  /** An array representing the center of the cluster of the logs
+   * that this cluster was generated to perform best on.
+   */
+  cluster_center: z.array(z.number()),
 });
-export type SkillOptimizationData = z.infer<typeof SkillOptimizationData>;
+export type SkillOptimizationConfiguration = z.infer<
+  typeof SkillOptimizationConfiguration
+>;
 
 export const SkillOptimization = z.object({
   id: z.uuid(),
@@ -47,8 +65,11 @@ export const SkillOptimization = z.object({
   /** Auto-generated incrementing version number */
   version: z.number(),
 
-  /** The optimized data and its results */
-  data: SkillOptimizationData,
+  /** An array of configurations for this optimization.
+   * The length of the array is equal to the max number
+   * of configurations set for the skill.
+   */
+  configurations: z.array(SkillOptimizationConfiguration),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -73,7 +94,7 @@ export const SkillOptimizationCreateParams = z
   .object({
     agent_id: z.uuid(),
     skill_id: z.uuid(),
-    data: SkillOptimizationData, // Just the params, we'll create the versioned structure
+    data: SkillOptimizationConfiguration, // Just the params, we'll create the versioned structure
   })
   .strict();
 
@@ -83,7 +104,7 @@ export type SkillOptimizationCreateParams = z.infer<
 
 export const SkillOptimizationUpdateParams = z
   .object({
-    data: SkillOptimizationData,
+    data: SkillOptimizationConfiguration,
   })
   .strict();
 

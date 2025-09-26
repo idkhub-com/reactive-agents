@@ -117,26 +117,32 @@ export function ConfigurationsListView({
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Model ID:</span>
                         <span className="font-medium">
-                          {optimization.data.model_params.model_id}
+                          {optimization.configurations.model_params.model_id}
                         </span>
                       </div>
-                      {optimization.data.model_params.temperature && (
+                      {optimization.configurations.model_params.temperature && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Temperature:
                           </span>
                           <span className="font-medium">
-                            {optimization.data.model_params.temperature}
+                            {
+                              optimization.configurations.model_params
+                                .temperature
+                            }
                           </span>
                         </div>
                       )}
-                      {optimization.data.model_params.max_tokens && (
+                      {optimization.configurations.model_params.max_tokens && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Max Tokens:
                           </span>
                           <span className="font-medium">
-                            {optimization.data.model_params.max_tokens}
+                            {
+                              optimization.configurations.model_params
+                                .max_tokens
+                            }
                           </span>
                         </div>
                       )}
@@ -148,7 +154,10 @@ export function ConfigurationsListView({
                           System Prompt Preview:
                         </div>
                         <div className="bg-muted rounded p-2 text-xs font-mono line-clamp-3">
-                          {optimization.data.model_params.system_prompt}
+                          {
+                            optimization.configurations.model_params
+                              .system_prompt
+                          }
                         </div>
                       </div>
                     </div>

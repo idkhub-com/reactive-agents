@@ -16,11 +16,9 @@ import {
   supabaseLogsStorageConnector,
   supabaseUserDataStorageConnector,
 } from '@server/connectors/supabase';
-import { supabaseEmbeddingsStorageConnector } from '@server/connectors/supabase/embeddings';
 import { agentAndSkillMiddleware } from '@server/middlewares/agent-and-skill';
 import { authenticatedMiddleware } from '@server/middlewares/auth';
 import { cacheMiddleware } from '@server/middlewares/cache';
-import { embeddingsMiddleware } from '@server/middlewares/embeddings';
 import { evaluationMethodConnectors } from '@server/middlewares/evaluations';
 import { hooksMiddleware } from '@server/middlewares/hooks';
 import { idkHubConfigurationInjectorMiddleware } from '@server/middlewares/idkhub-configuration';
@@ -54,9 +52,6 @@ app.use('*', userDataMiddleware(factory, supabaseUserDataStorageConnector));
 // Use logs middleware for all routes
 // Runs skill optimizer after processing logs
 app.use('*', logsMiddleware(factory, supabaseLogsStorageConnector));
-
-// Use embeddings middleware for all routes
-app.use('*', embeddingsMiddleware(factory, supabaseEmbeddingsStorageConnector));
 
 // Use hooks middleware for all routes
 app.use('*', hooksMiddleware(factory, []));

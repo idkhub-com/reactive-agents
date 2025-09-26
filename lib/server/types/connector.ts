@@ -56,12 +56,6 @@ import type {
   SkillOptimizationQueryParams,
 } from '@shared/types/data/skill-optimization';
 import type {
-  SkillOptimizationEmbedding,
-  SkillOptimizationEmbeddingQueryParams,
-  SkillOptimizationEmbeddingSearchParams,
-  SkillOptimizationEmbeddingWithScore,
-} from '@shared/types/data/skill-optimization-embedding';
-import type {
   Tool,
   ToolCreateParams,
   ToolQueryParams,
@@ -221,21 +215,6 @@ export interface LogsStorageConnector {
   ): Promise<IdkRequestLog[]> | IdkRequestLog[];
   createLog(log: IdkRequestLog): Promise<IdkRequestLog> | IdkRequestLog;
   deleteLog(id: string): Promise<void> | void;
-}
-
-export interface EmbeddingsStorageConnector {
-  getSkillConfigurationEmbeddings(
-    queryParams: SkillOptimizationEmbeddingQueryParams,
-  ): Promise<SkillOptimizationEmbedding[]> | SkillOptimizationEmbedding[];
-  searchSimilarSkillConfigurationEmbeddings(
-    searchParams: SkillOptimizationEmbeddingSearchParams,
-  ):
-    | Promise<SkillOptimizationEmbeddingWithScore[]>
-    | SkillOptimizationEmbeddingWithScore[];
-  createSkillConfigurationEmbedding(
-    embedding: SkillOptimizationEmbedding,
-  ): Promise<SkillOptimizationEmbedding> | SkillOptimizationEmbedding;
-  deleteEmbedding(id: string): Promise<void> | void;
 }
 
 export interface CacheStorageConnector {

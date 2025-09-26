@@ -1,4 +1,4 @@
-import { API_URL } from '@server/constants';
+import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
 import {
   type ChatCompletionRequestData,
   FunctionName,
@@ -197,7 +197,7 @@ export async function generateEmbeddingForRequest(
     | ResponsesRequestData,
 ): Promise<number[]> {
   // Check if OpenAI API key is available
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
       `[EMBEDDING] can't generate embedding - No OPENAI_API_KEY found`,
@@ -215,7 +215,7 @@ export async function generateEmbeddingForRequest(
     }
 
     const client = new OpenAI({
-      apiKey: process.env.BEARER_TOKEN ?? 'idk',
+      apiKey: BEARER_TOKEN,
       baseURL: `${API_URL}/v1`,
     });
 
@@ -228,7 +228,7 @@ export async function generateEmbeddingForRequest(
         },
       ],
       agent_name: 'IdkHub Embeddings Agent',
-      skill_name: 'Embeddings',
+      skill_name: 'embeddings',
     };
 
     const response = await client

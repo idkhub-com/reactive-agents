@@ -26,6 +26,9 @@ export const EvaluationRun = z.object({
 });
 export type EvaluationRun = z.infer<typeof EvaluationRun>;
 
+export const SkillEvaluation = EvaluationRun;
+export type SkillEvaluation = z.infer<typeof SkillEvaluation>;
+
 export const EvaluationRunQueryParams = z
   .object({
     id: z.uuid().optional(),
