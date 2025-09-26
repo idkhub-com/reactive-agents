@@ -152,309 +152,325 @@ export async function tryPost(
   idkRequestData: IdkRequestData,
   currentIndex: number,
 ): Promise<Response> {
-  const hyperParamDefaults = getHyperParamDefaults(
-    idkRequestData.functionName,
-    idkTarget,
-  );
+  try {
+    const hyperParamDefaults = getHyperParamDefaults(
+      idkRequestData.functionName,
+      idkTarget,
+    );
 
-  const overrideParams = idkConfig?.override_params || {};
-  // Merge: base request body -> config defaults -> override params
-  const overriddenIdkRequestBody: IdkRequestBody = {
-    ...(idkRequestData.requestBody as Record<string, unknown>),
-    ...hyperParamDefaults,
-    ...overrideParams,
-  } as IdkRequestBody;
+    const overrideParams = idkConfig?.override_params || {};
+    // Merge: base request body -> config defaults -> override params
+    const overriddenIdkRequestBody: IdkRequestBody = {
+      ...(idkRequestData.requestBody as Record<string, unknown>),
+      ...hyperParamDefaults,
+      ...overrideParams,
+    } as IdkRequestBody;
 
-  if (
-    idkTarget.configuration.system_prompt &&
-    (idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE ||
-      idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-      idkRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
-  ) {
-    // Handle system prompt with template variables
-    const systemPrompt = idkTarget.configuration.system_prompt;
+    if (
+      idkTarget.configuration.system_prompt &&
+      (idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE ||
+        idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+        idkRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
+    ) {
+      // Handle system prompt with template variables
+      const systemPrompt = idkTarget.configuration.system_prompt;
 
-    // Add system prompt if not overridden by the user
-    switch (idkRequestData.functionName) {
-      case FunctionName.CHAT_COMPLETE:
-      case FunctionName.STREAM_CHAT_COMPLETE: {
-        const messages = (overriddenIdkRequestBody as ChatCompletionRequestBody)
-          .messages;
+      // Add system prompt if not overridden by the user
+      switch (idkRequestData.functionName) {
+        case FunctionName.CHAT_COMPLETE:
+        case FunctionName.STREAM_CHAT_COMPLETE: {
+          const messages = (
+            overriddenIdkRequestBody as ChatCompletionRequestBody
+          ).messages;
 
-        // Find existing system message or add new one at the beginning
-        const systemMessageIndex = messages.findIndex(
-          (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
-        );
-        const systemMessage = {
-          role: ChatCompletionMessageRole.SYSTEM,
-          content: systemPrompt,
-        };
+          // Find existing system message or add new one at the beginning
+          const systemMessageIndex = messages.findIndex(
+            (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
+          );
+          const systemMessage = {
+            role: ChatCompletionMessageRole.SYSTEM,
+            content: systemPrompt,
+          };
 
-        if (systemMessageIndex >= 0) {
-          // Replace existing system message
-          messages[systemMessageIndex] = systemMessage;
-        } else {
-          // Add system message at the beginning
-          messages.unshift(systemMessage);
+          if (systemMessageIndex >= 0) {
+            // Replace existing system message
+            messages[systemMessageIndex] = systemMessage;
+          } else {
+            // Add system message at the beginning
+            messages.unshift(systemMessage);
+          }
+
+          (overriddenIdkRequestBody as ChatCompletionRequestBody).messages =
+            messages;
+          break;
         }
+        case FunctionName.CREATE_MODEL_RESPONSE: {
+          const inputPreview = (
+            overriddenIdkRequestBody as ResponsesRequestBody
+          ).input;
 
-        (overriddenIdkRequestBody as ChatCompletionRequestBody).messages =
-          messages;
-        break;
-      }
-      case FunctionName.CREATE_MODEL_RESPONSE: {
-        const inputPreview = (overriddenIdkRequestBody as ResponsesRequestBody)
-          .input;
+          let input: Record<string, unknown>[] = [];
+          // If inputPreview is not an array, convert it to an array so that we can add the system prompt
+          if (!Array.isArray(inputPreview)) {
+            input = [
+              {
+                role: ChatCompletionMessageRole.USER,
+                content: inputPreview,
+              },
+            ];
+          } else {
+            input = inputPreview;
+          }
 
-        let input: Record<string, unknown>[] = [];
-        // If inputPreview is not an array, convert it to an array so that we can add the system prompt
-        if (!Array.isArray(inputPreview)) {
-          input = [
-            {
-              role: ChatCompletionMessageRole.USER,
-              content: inputPreview,
-            },
-          ];
-        } else {
-          input = inputPreview;
+          // Find existing system message or add new one at the beginning
+          const systemMessageIndex = input.findIndex(
+            (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
+          );
+          const systemMessage = {
+            role: ChatCompletionMessageRole.SYSTEM,
+            content: systemPrompt,
+          };
+
+          if (systemMessageIndex >= 0) {
+            // Replace existing system message
+            input[systemMessageIndex] = systemMessage;
+          } else {
+            // Add system message at the beginning
+            input.unshift(systemMessage);
+          }
+
+          (overriddenIdkRequestBody as Record<string, unknown>).input = input;
         }
-
-        // Find existing system message or add new one at the beginning
-        const systemMessageIndex = input.findIndex(
-          (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
-        );
-        const systemMessage = {
-          role: ChatCompletionMessageRole.SYSTEM,
-          content: systemPrompt,
-        };
-
-        if (systemMessageIndex >= 0) {
-          // Replace existing system message
-          input[systemMessageIndex] = systemMessage;
-        } else {
-          // Add system message at the beginning
-          input.unshift(systemMessage);
-        }
-
-        (overriddenIdkRequestBody as Record<string, unknown>).input = input;
       }
     }
-  }
 
-  let isStreamingMode = false;
-  if ('stream' in overriddenIdkRequestBody) {
-    isStreamingMode = overriddenIdkRequestBody.stream
-      ? (overriddenIdkRequestBody.stream as boolean)
-      : false;
-  }
+    let isStreamingMode = false;
+    if ('stream' in overriddenIdkRequestBody) {
+      isStreamingMode = overriddenIdkRequestBody.stream
+        ? (overriddenIdkRequestBody.stream as boolean)
+        : false;
+    }
 
-  const overriddenIdkRequestData = cloneDeep(idkRequestData);
-  overriddenIdkRequestData.requestBody = overriddenIdkRequestBody;
+    const overriddenIdkRequestData = cloneDeep(idkRequestData);
+    overriddenIdkRequestData.requestBody = overriddenIdkRequestBody;
 
-  let strictOpenAiCompliance = true;
+    let strictOpenAiCompliance = true;
 
-  if (idkConfig.strict_open_ai_compliance === false) {
-    strictOpenAiCompliance = false;
-  }
+    if (idkConfig.strict_open_ai_compliance === false) {
+      strictOpenAiCompliance = false;
+    }
 
-  // Mapping providers to corresponding URLs
-  const internalProviderConfig =
-    providerConfigs[idkTarget.configuration.ai_provider];
+    // Mapping providers to corresponding URLs
+    const internalProviderConfig =
+      providerConfigs[idkTarget.configuration.ai_provider];
 
-  if (!internalProviderConfig) {
-    throw new Error(
-      `Provider config not found for provider: ${idkTarget.configuration.ai_provider}`,
-    );
-  }
+    if (!internalProviderConfig) {
+      throw new Error(
+        `Provider config not found for provider: ${idkTarget.configuration.ai_provider}`,
+      );
+    }
 
-  const apiConfig: InternalProviderAPIConfig = internalProviderConfig.api;
+    const apiConfig: InternalProviderAPIConfig = internalProviderConfig.api;
 
-  const customHost = idkTarget.custom_host || '';
+    const customHost = idkTarget.custom_host || '';
 
-  const baseUrl =
-    customHost ||
-    (await apiConfig.getBaseURL({
+    const baseUrl =
+      customHost ||
+      (await apiConfig.getBaseURL({
+        c,
+        idkTarget,
+        idkRequestData: overriddenIdkRequestData,
+      }));
+    const endpoint = apiConfig.getEndpoint({
       c,
       idkTarget,
       idkRequestData: overriddenIdkRequestData,
-    }));
-  const endpoint = apiConfig.getEndpoint({
-    c,
-    idkTarget,
-    idkRequestData: overriddenIdkRequestData,
-  });
+    });
 
-  const url =
-    overriddenIdkRequestData.functionName === FunctionName.PROXY
-      ? getProxyPath(
-          overriddenIdkRequestData.url,
-          idkTarget.configuration.ai_provider,
-          overriddenIdkRequestData.url.indexOf('/v1/proxy') > -1
-            ? '/v1/proxy'
-            : '/v1',
-          baseUrl,
-          idkTarget,
-        )
-      : `${baseUrl}${endpoint}`;
+    const url =
+      overriddenIdkRequestData.functionName === FunctionName.PROXY
+        ? getProxyPath(
+            overriddenIdkRequestData.url,
+            idkTarget.configuration.ai_provider,
+            overriddenIdkRequestData.url.indexOf('/v1/proxy') > -1
+              ? '/v1/proxy'
+              : '/v1',
+            baseUrl,
+            idkTarget,
+          )
+        : `${baseUrl}${endpoint}`;
 
-  let fetchConfig: RequestInit = {};
+    let fetchConfig: RequestInit = {};
 
-  const outputSyncHooks = idkConfig.hooks?.filter(
-    (hook) => hook.type === HookType.OUTPUT_HOOK && hook.await === true,
-  );
+    const outputSyncHooks = idkConfig.hooks?.filter(
+      (hook) => hook.type === HookType.OUTPUT_HOOK && hook.await === true,
+    );
 
-  c.set('idk_request_data', overriddenIdkRequestData);
+    c.set('idk_request_data', overriddenIdkRequestData);
 
-  const commonRequestOptions: CommonRequestOptions = {
-    idkRequestData: overriddenIdkRequestData,
-    aiProviderRequestURL: url,
-    isStreamingMode,
-    provider: idkTarget.configuration.ai_provider,
-    strictOpenAiCompliance,
-    areSyncHooksAvailable: outputSyncHooks?.length > 0,
-    currentIndex,
-    fetchOptions: fetchConfig,
-    cacheSettings: idkTarget.cache,
-  };
+    const commonRequestOptions: CommonRequestOptions = {
+      idkRequestData: overriddenIdkRequestData,
+      aiProviderRequestURL: url,
+      isStreamingMode,
+      provider: idkTarget.configuration.ai_provider,
+      strictOpenAiCompliance,
+      areSyncHooksAvailable: outputSyncHooks?.length > 0,
+      currentIndex,
+      fetchOptions: fetchConfig,
+      cacheSettings: idkTarget.cache,
+    };
 
-  const { errorResponse: inputHooksErrorResponse, transformedIdkBody } =
-    await inputHookHandler(c, overriddenIdkRequestData);
+    const { errorResponse: inputHooksErrorResponse, transformedIdkBody } =
+      await inputHookHandler(c, overriddenIdkRequestData);
 
-  if (inputHooksErrorResponse) {
+    if (inputHooksErrorResponse) {
+      const createResponseOptions: CreateResponseOptions = {
+        response: inputHooksErrorResponse,
+        responseTransformerFunctionName: undefined,
+        cacheStatus: CacheStatus.MISS,
+        retryCount: undefined,
+        aiProviderRequestBody: {},
+        ...commonRequestOptions,
+      };
+
+      return createResponse(c, createResponseOptions);
+    }
+
+    if (transformedIdkBody) {
+      overriddenIdkRequestData.requestBody = transformedIdkBody;
+    }
+
+    let aiProviderRequestBody:
+      | Record<string, unknown>
+      | ReadableStream
+      | ArrayBuffer
+      | FormData = overriddenIdkRequestBody as
+      | Record<string, unknown>
+      | ReadableStream
+      | ArrayBuffer
+      | FormData;
+
+    // Attach the body of the request
+    if (
+      !internalProviderConfig?.requestHandlers?.[
+        overriddenIdkRequestData.functionName
+      ]
+    ) {
+      aiProviderRequestBody =
+        overriddenIdkRequestData.method === HttpMethod.POST
+          ? transformToProviderRequest(
+              idkTarget.configuration.ai_provider,
+              idkTarget,
+              overriddenIdkRequestData,
+            )
+          : overriddenIdkRequestBody;
+    }
+
+    const apiConfigHeaders = await apiConfig.headers({
+      c,
+      idkTarget,
+      idkRequestData: overriddenIdkRequestData,
+    });
+
+    // Construct the base object for the POST request
+    fetchConfig = constructRequest(
+      overriddenIdkRequestData,
+      apiConfigHeaders as Record<string, string>,
+      {},
+      {},
+    );
+
+    let apiConfigContentTypeHeader = apiConfigHeaders[HeaderKey.CONTENT_TYPE] as
+      | string
+      | undefined;
+
+    if (!apiConfigContentTypeHeader) {
+      apiConfigContentTypeHeader =
+        overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
+          ';',
+        )[0];
+      if (!apiConfigContentTypeHeader) {
+        console.warn(
+          'No Content-Type header found in request. Using application/json as default.',
+        );
+
+        apiConfigContentTypeHeader = 'application/json';
+      }
+    }
+
+    const requestContentType =
+      overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
+        ';',
+      )[0];
+
+    if (
+      apiConfigContentTypeHeader === ContentTypeName.MULTIPART_FORM_DATA ||
+      (overriddenIdkRequestData.functionName === 'proxy' &&
+        requestContentType === ContentTypeName.MULTIPART_FORM_DATA)
+    ) {
+      fetchConfig.body = aiProviderRequestBody as FormData;
+    } else if (aiProviderRequestBody instanceof ReadableStream) {
+      fetchConfig.body = aiProviderRequestBody;
+    } else if (
+      overriddenIdkRequestData.functionName === 'proxy' &&
+      requestContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)
+    ) {
+      fetchConfig.body = aiProviderRequestBody as ArrayBuffer;
+    } else if (requestContentType) {
+      fetchConfig.body = JSON.stringify(aiProviderRequestBody);
+    }
+
+    if (['GET', 'DELETE'].includes(overriddenIdkRequestData.method)) {
+      delete fetchConfig.body;
+    }
+
+    // Return cached response if it exists
+    const cachedResponse = await getCachedResponse(
+      c,
+      commonRequestOptions,
+      aiProviderRequestBody,
+    );
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Request handler (Including retries, recursion and hooks)
+    const handlerResult = await recursiveOutputHookHandler(
+      c,
+      commonRequestOptions,
+      url,
+      fetchConfig,
+      idkTarget,
+      isStreamingMode,
+      overriddenIdkRequestData,
+      0,
+      strictOpenAiCompliance,
+    );
+
     const createResponseOptions: CreateResponseOptions = {
-      response: inputHooksErrorResponse,
+      response: handlerResult.mappedResponse,
       responseTransformerFunctionName: undefined,
       cacheStatus: CacheStatus.MISS,
       retryCount: undefined,
-      aiProviderRequestBody: {},
+      aiProviderRequestBody,
       ...commonRequestOptions,
     };
 
     return createResponse(c, createResponseOptions);
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: `${error}`,
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
-
-  if (transformedIdkBody) {
-    overriddenIdkRequestData.requestBody = transformedIdkBody;
-  }
-
-  let aiProviderRequestBody:
-    | Record<string, unknown>
-    | ReadableStream
-    | ArrayBuffer
-    | FormData = overriddenIdkRequestBody as
-    | Record<string, unknown>
-    | ReadableStream
-    | ArrayBuffer
-    | FormData;
-
-  // Attach the body of the request
-  if (
-    !internalProviderConfig?.requestHandlers?.[
-      overriddenIdkRequestData.functionName
-    ]
-  ) {
-    aiProviderRequestBody =
-      overriddenIdkRequestData.method === HttpMethod.POST
-        ? transformToProviderRequest(
-            idkTarget.configuration.ai_provider,
-            idkTarget,
-            overriddenIdkRequestData,
-          )
-        : overriddenIdkRequestBody;
-  }
-
-  const apiConfigHeaders = await apiConfig.headers({
-    c,
-    idkTarget,
-    idkRequestData: overriddenIdkRequestData,
-  });
-
-  // Construct the base object for the POST request
-  fetchConfig = constructRequest(
-    overriddenIdkRequestData,
-    apiConfigHeaders as Record<string, string>,
-    {},
-    {},
-  );
-
-  let apiConfigContentTypeHeader = apiConfigHeaders[HeaderKey.CONTENT_TYPE] as
-    | string
-    | undefined;
-
-  if (!apiConfigContentTypeHeader) {
-    apiConfigContentTypeHeader =
-      overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
-        ';',
-      )[0];
-    if (!apiConfigContentTypeHeader) {
-      console.warn(
-        'No Content-Type header found in request. Using application/json as default.',
-      );
-
-      apiConfigContentTypeHeader = 'application/json';
-    }
-  }
-
-  const requestContentType =
-    overriddenIdkRequestData.requestHeaders[HeaderKey.CONTENT_TYPE]?.split(
-      ';',
-    )[0];
-
-  if (
-    apiConfigContentTypeHeader === ContentTypeName.MULTIPART_FORM_DATA ||
-    (overriddenIdkRequestData.functionName === 'proxy' &&
-      requestContentType === ContentTypeName.MULTIPART_FORM_DATA)
-  ) {
-    fetchConfig.body = aiProviderRequestBody as FormData;
-  } else if (aiProviderRequestBody instanceof ReadableStream) {
-    fetchConfig.body = aiProviderRequestBody;
-  } else if (
-    overriddenIdkRequestData.functionName === 'proxy' &&
-    requestContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)
-  ) {
-    fetchConfig.body = aiProviderRequestBody as ArrayBuffer;
-  } else if (requestContentType) {
-    fetchConfig.body = JSON.stringify(aiProviderRequestBody);
-  }
-
-  if (['GET', 'DELETE'].includes(overriddenIdkRequestData.method)) {
-    delete fetchConfig.body;
-  }
-
-  // Return cached response if it exists
-  const cachedResponse = await getCachedResponse(
-    c,
-    commonRequestOptions,
-    aiProviderRequestBody,
-  );
-
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-
-  // Request handler (Including retries, recursion and hooks)
-  const handlerResult = await recursiveOutputHookHandler(
-    c,
-    commonRequestOptions,
-    url,
-    fetchConfig,
-    idkTarget,
-    isStreamingMode,
-    overriddenIdkRequestData,
-    0,
-    strictOpenAiCompliance,
-  );
-
-  const createResponseOptions: CreateResponseOptions = {
-    response: handlerResult.mappedResponse,
-    responseTransformerFunctionName: undefined,
-    cacheStatus: CacheStatus.MISS,
-    retryCount: undefined,
-    aiProviderRequestBody,
-    ...commonRequestOptions,
-  };
-
-  return createResponse(c, createResponseOptions);
 }
 
 export async function tryTarget(
