@@ -16,7 +16,6 @@ import {
   type CreateResponseOptions,
   createResponse,
 } from '@server/utils/idkhub/response';
-import { debug } from '@shared/console-logging';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 import type {
