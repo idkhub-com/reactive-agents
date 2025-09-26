@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { UnifiedLLMJudgeResult } from './llm-judge-unified';
 
 /**
  * Configuration for LLM Judge
@@ -13,7 +14,7 @@ export const LLMJudgeConfigSchema = z.object({
 export type LLMJudgeConfig = z.infer<typeof LLMJudgeConfigSchema>;
 
 /**
- * Result from LLM Judge evaluation
+ * Result from LLM Judge evaluation - backward compatible
  */
 export const LLMJudgeResultSchema = z.object({
   score: z.number().min(0).max(1),
@@ -40,6 +41,16 @@ export const EvaluationInputSchema = z.object({
   text: z.string(),
   evaluationCriteria: EvaluationCriteriaSchema.optional(),
   outputFormat: z.literal('json').optional(),
+  evaluationType: z
+    .enum([
+      'task_completion',
+      'argument_correctness',
+      'role_adherence',
+      'turn_relevancy',
+      'knowledge_retention',
+      'conversation_completeness',
+    ])
+    .optional(),
 });
 
 export type EvaluationInput = z.infer<typeof EvaluationInputSchema>;
@@ -49,5 +60,6 @@ export type EvaluationInput = z.infer<typeof EvaluationInputSchema>;
  */
 export interface LLMJudge {
   evaluate(input: EvaluationInput): Promise<LLMJudgeResult>;
+  evaluateUnified(input: EvaluationInput): Promise<UnifiedLLMJudgeResult>;
   config: LLMJudgeConfig;
 }

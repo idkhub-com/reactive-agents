@@ -17,6 +17,67 @@ import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluatio
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 /**
+ * Extract response text from log's AI provider request log
+ */
+function extractResponseFromLog(log: IdkRequestLog): string | null {
+  const aiProviderLog = log.ai_provider_request_log as Record<string, unknown>;
+
+  // Direct string response
+  if (typeof aiProviderLog?.response_body === 'string') {
+    return aiProviderLog.response_body;
+  }
+
+  // Object response - try different formats
+  if (
+    typeof aiProviderLog?.response_body === 'object' &&
+    aiProviderLog.response_body
+  ) {
+    const responseBody = aiProviderLog.response_body as Record<string, unknown>;
+
+    // Try OpenAI-style response structure
+    if (
+      typeof responseBody?.output === 'object' &&
+      Array.isArray(responseBody.output)
+    ) {
+      const output = responseBody.output as Record<string, unknown>[];
+      const messageOutput = output.find((item) => item.type === 'message');
+      if (
+        messageOutput &&
+        typeof messageOutput.content === 'object' &&
+        Array.isArray(messageOutput.content)
+      ) {
+        const content = messageOutput.content as Record<string, unknown>[];
+        const textContent = content.find((item) => item.type === 'output_text');
+        if (textContent && typeof textContent.text === 'string') {
+          return textContent.text;
+        }
+      }
+    }
+
+    // Try standard OpenAI choices format
+    if (
+      typeof responseBody?.choices === 'object' &&
+      Array.isArray(responseBody.choices)
+    ) {
+      const firstChoice = responseBody.choices[0] as Record<string, unknown>;
+      if (typeof firstChoice?.message === 'object' && firstChoice.message) {
+        const message = firstChoice.message as Record<string, unknown>;
+        if (typeof message?.content === 'string') {
+          return message.content;
+        }
+      }
+    }
+
+    // Try direct text field
+    if (typeof responseBody?.text === 'string') {
+      return responseBody.text;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Evaluate conversation completeness for a single log
  */
 export async function evaluateConversationCompleteness(
@@ -51,24 +112,62 @@ export async function evaluateConversationCompleteness(
   }
 
   // Try to extract response from various possible fields
-  const groundTruth = log.metadata?.ground_truth as Record<string, unknown>;
-  if (typeof groundTruth?.text === 'string') {
-    response = groundTruth.text;
-  } else if (typeof groundTruth?.response === 'string') {
-    response = groundTruth.response;
-  } else if (typeof groundTruth?.output === 'string') {
-    response = groundTruth.output;
-  } else if (typeof groundTruth?.result === 'string') {
-    response = groundTruth.result;
-  } else if (typeof log.metadata?.response === 'string') {
-    response = log.metadata.response;
-  } else {
-    response = JSON.stringify(groundTruth);
+  response = extractResponseFromLog(log) || '';
+
+  // Fallback to ground_truth if available
+  if (!response) {
+    const groundTruth = log.metadata?.ground_truth as Record<string, unknown>;
+    if (typeof groundTruth?.text === 'string') {
+      response = groundTruth.text;
+    } else if (typeof groundTruth?.response === 'string') {
+      response = groundTruth.response;
+    } else if (typeof groundTruth?.output === 'string') {
+      response = groundTruth.output;
+    } else if (typeof groundTruth?.result === 'string') {
+      response = groundTruth.result;
+    } else if (typeof log.metadata?.response === 'string') {
+      response = log.metadata.response;
+    } else if (groundTruth) {
+      response = JSON.stringify(groundTruth);
+    }
   }
 
   // Validate that we have both context and response
   if (!context || !response) {
-    throw new Error('Missing context or response in log');
+    console.error(
+      `Conversation completeness evaluation failed for log ${log.id}:`,
+      {
+        hasContext: !!context,
+        hasResponse: !!response,
+        contextLength: context?.length || 0,
+        responseLength: response?.length || 0,
+        logStructure: {
+          hasAiProviderRequestLog: !!log.ai_provider_request_log,
+          hasMetadata: !!log.metadata,
+          hasGroundTruth: !!log.metadata?.ground_truth,
+          requestLogStructure: log.ai_provider_request_log
+            ? {
+                hasResponseBody: !!(
+                  log.ai_provider_request_log as Record<string, unknown>
+                )?.response_body,
+                responseBodyType: typeof (
+                  log.ai_provider_request_log as Record<string, unknown>
+                )?.response_body,
+                responseBodyKeys:
+                  log.ai_provider_request_log &&
+                  typeof log.ai_provider_request_log === 'object'
+                    ? Object.keys(
+                        log.ai_provider_request_log as Record<string, unknown>,
+                      )
+                    : [],
+              }
+            : null,
+        },
+      },
+    );
+    throw new Error(
+      `Missing context or response in log ${log.id}. Context: ${!!context}, Response: ${!!response}`,
+    );
   }
 
   // Create a simple evaluation prompt that won't trigger template-based evaluation
@@ -258,59 +357,75 @@ export async function evaluateOneLogForConversationCompleteness(
   log: IdkRequestLog,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<void> {
-  // Get the evaluation run to access parameters
-  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
-    id: evaluationRunId,
-  });
-  const evaluationRun = evaluationRuns[0];
-  if (!evaluationRun) {
-    throw new Error(`Evaluation run ${evaluationRunId} not found`);
-  }
-
-  const params = (evaluationRun.metadata?.parameters ||
-    {}) as ConversationCompletenessEvaluationParameters;
-
-  // Convert IdkRequestLog to Log format for compatibility
-  const logForEvaluation: Log = log as Log;
-
-  // Evaluate the single log
-  const result = await evaluateConversationCompleteness(
-    logForEvaluation,
-    params,
+  console.log(
+    `Starting conversation completeness evaluation for log ${log.id} in run ${evaluationRunId}`,
   );
 
-  // Create log output
-  await userDataStorageConnector.createLogOutput(evaluationRunId, {
-    log_id: log.id,
-    score: result.score,
-    output: {
+  try {
+    // Get the evaluation run to access parameters
+    const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
+      id: evaluationRunId,
+    });
+    const evaluationRun = evaluationRuns[0];
+    if (!evaluationRun) {
+      throw new Error(`Evaluation run ${evaluationRunId} not found`);
+    }
+
+    const params = (evaluationRun.metadata?.parameters ||
+      {}) as ConversationCompletenessEvaluationParameters;
+
+    // Convert IdkRequestLog to Log format for compatibility
+    const logForEvaluation: Log = log as Log;
+
+    // Evaluate the single log
+    const result = await evaluateConversationCompleteness(
+      logForEvaluation,
+      params,
+    );
+
+    // Create log output
+    await userDataStorageConnector.createLogOutput(evaluationRunId, {
+      log_id: log.id,
       score: result.score,
-      reasoning: result.reasoning,
-      passed: result.score >= (params.threshold || 0.5),
-      threshold: params.threshold || 0.5,
-      execution_time_ms: 0,
-      evaluated_at: new Date().toISOString(),
-      evaluation_run_id: evaluationRunId,
-    },
-    metadata: result.metadata || {},
-  });
+      output: {
+        score: result.score,
+        reasoning: result.reasoning,
+        passed: result.score >= (params.threshold || 0.5),
+        threshold: params.threshold || 0.5,
+        execution_time_ms: 0,
+        evaluated_at: new Date().toISOString(),
+        evaluation_run_id: evaluationRunId,
+      },
+      metadata: result.metadata || {},
+    });
 
-  // Get all log outputs for this evaluation run to calculate new average
-  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
-    evaluationRunId,
-    {},
-  );
+    // Get all log outputs for this evaluation run to calculate new average
+    const allLogOutputs = await userDataStorageConnector.getLogOutputs(
+      evaluationRunId,
+      {},
+    );
 
-  // Calculate statistics and update evaluation run using shared utilities
-  const threshold = params.threshold || 0.5;
-  const statistics = calculateEvaluationStatistics(allLogOutputs, threshold);
-  const evaluationOutputIds = extractEvaluationOutputIds(allLogOutputs);
+    // Calculate statistics and update evaluation run using shared utilities
+    const threshold = params.threshold || 0.5;
+    const statistics = calculateEvaluationStatistics(allLogOutputs, threshold);
+    const evaluationOutputIds = extractEvaluationOutputIds(allLogOutputs);
 
-  await updateEvaluationRunWithStatistics({
-    evaluationRunId,
-    statistics,
-    threshold,
-    evaluationOutputIds,
-    userDataStorageConnector,
-  });
+    await updateEvaluationRunWithStatistics({
+      evaluationRunId,
+      statistics,
+      threshold,
+      evaluationOutputIds,
+      userDataStorageConnector,
+    });
+
+    console.log(
+      `Completed conversation completeness evaluation for log ${log.id} in run ${evaluationRunId}`,
+    );
+  } catch (error) {
+    console.error(
+      `Error in conversation completeness evaluation for log ${log.id} in run ${evaluationRunId}:`,
+      error,
+    );
+    throw error;
+  }
 }

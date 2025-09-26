@@ -10,6 +10,7 @@ import type {
   LLMJudgeResult,
 } from '@shared/types/idkhub/evaluations/llm-judge';
 import { LLMJudgeResultSchema } from '@shared/types/idkhub/evaluations/llm-judge';
+import type { UnifiedLLMJudgeResult } from '@shared/types/idkhub/evaluations/llm-judge-unified';
 import { CacheMode } from '@shared/types/middleware/cache';
 import {
   evaluationCriteria,
@@ -271,8 +272,63 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
     return getFallbackResult('unknown_error', String(lastError), retryInfo);
   }
 
+  /**
+   * Unified evaluation method with type-safe results
+   */
+  async function evaluateUnified(
+    input: EvaluationInput,
+  ): Promise<UnifiedLLMJudgeResult> {
+    const api_key = OPENAI_API_KEY;
+
+    if (!api_key || api_key === 'demo-key' || api_key.trim() === '') {
+      return createErrorResult('no_api_key', 'OpenAI API key not configured');
+    }
+
+    let lastError: unknown;
+    let retryCount = 0;
+
+    for (let i = 0; i < LLM_JUDGE_MAX_RETRIES; i++) {
+      try {
+        const prompt = generateEvaluationPrompt(input);
+        const response_data = await callIDKHubOpenAIResponsesAPI(
+          prompt,
+          judgeConfig,
+          api_key,
+        );
+        return parseUnifiedResponseData(response_data, input.evaluationType);
+      } catch (error) {
+        lastError = error;
+        if (i < LLM_JUDGE_MAX_RETRIES - 1 && isRetryableLLMJudgeError(error)) {
+          const delay = LLM_JUDGE_RETRY_DELAY_BASE * 2 ** i;
+          console.warn(
+            `LLM Judge evaluation failed (attempt ${i + 1}/${LLM_JUDGE_MAX_RETRIES}). Retrying in ${delay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          retryCount++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    console.error(
+      'LLM Judge evaluation failed after multiple retries:',
+      lastError,
+    );
+
+    return createErrorResult(
+      'api_error',
+      lastError instanceof Error ? lastError.message : String(lastError),
+      {
+        retryCount,
+        maxRetries: LLM_JUDGE_MAX_RETRIES,
+      },
+    );
+  }
+
   return {
     evaluate,
+    evaluateUnified,
     config: judgeConfig,
   };
 }
@@ -421,6 +477,210 @@ function parseResponseData(
 
   // For regular evaluation, use the standard schema
   return LLMJudgeResultSchema.parse(parsed);
+}
+
+/**
+ * Parse OpenAI Response data to UnifiedLLMJudgeResult with type-safe parsing
+ */
+function parseUnifiedResponseData(
+  response_data: ResponsesResponseBody,
+  evaluationType?: string,
+): UnifiedLLMJudgeResult {
+  const output = response_data.output?.[0];
+  if (!output || output.type !== 'message' || !('content' in output)) {
+    throw new Error('No valid message output in LLM evaluation response');
+  }
+
+  const textContent = output.content?.[0];
+  if (!textContent || textContent.type !== 'output_text') {
+    throw new Error('No valid text content in LLM evaluation response');
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(textContent.text);
+  } catch (error) {
+    throw new Error(
+      `Failed to parse LLM evaluation response: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+
+  // Helper function to get value with fallback - type safe
+  const getValue = <T>(key: string, fallback: T): T => {
+    return (
+      (parsed[key] as T) ||
+      ((parsed.metadata as Record<string, unknown>)?.[key] as T) ||
+      fallback
+    );
+  };
+
+  // Type guard for evaluation type
+  const isValidEvaluationType = (
+    type: string | undefined,
+  ): type is keyof typeof evaluationTypeMap => {
+    return type !== undefined && type in evaluationTypeMap;
+  };
+
+  // Evaluation type mapping for better type safety
+  const evaluationTypeMap = {
+    task_completion: 'task_completion',
+    argument_correctness: 'argument_correctness',
+    role_adherence: 'role_adherence',
+    turn_relevancy: 'turn_relevancy',
+    knowledge_retention: 'knowledge_retention',
+    conversation_completeness: 'conversation_completeness',
+  } as const;
+
+  // Parse based on evaluation type with type safety
+  if (!isValidEvaluationType(evaluationType)) {
+    return {
+      evaluation_type: 'error',
+      score: getValue('score', 0.5),
+      reasoning: getValue('reasoning', 'Evaluation completed'),
+      metadata: {
+        fallback: true,
+        error_type: 'unknown_error',
+        error_details: `Unknown evaluation type: ${evaluationType}`,
+      },
+    };
+  }
+
+  switch (evaluationType) {
+    case 'task_completion':
+      return {
+        evaluation_type: 'task_completion',
+        score: getValue('score', 1.0),
+        reasoning: getValue(
+          'reasoning',
+          'Task completion evaluation completed',
+        ),
+        metadata: {
+          task: getValue('task', ''),
+          outcome: getValue('outcome', ''),
+          tools_used: getValue('tools_used', []),
+          extraction_method: getValue('extraction_method', 'structured'),
+        },
+      };
+
+    case 'argument_correctness':
+      return {
+        evaluation_type: 'argument_correctness',
+        score: getValue('score', 0.5),
+        reasoning: getValue(
+          'reasoning',
+          'Argument correctness evaluation completed',
+        ),
+        metadata: {
+          per_tool: getValue('per_tool', []),
+          total_tools: getValue('total_tools', 0),
+          correct_tools: getValue('correct_tools', 0),
+        },
+      };
+
+    case 'role_adherence':
+      return {
+        evaluation_type: 'role_adherence',
+        score: getValue('score', 0.5),
+        reasoning: getValue('reasoning', 'Role adherence evaluation completed'),
+        metadata: {
+          violations: getValue('violations', []),
+          adherence_level: getValue('adherence_level', 0.5),
+          strict_mode: getValue('strict_mode', false),
+        },
+      };
+
+    case 'turn_relevancy':
+      return {
+        evaluation_type: 'turn_relevancy',
+        score: getValue('score', 0.5),
+        reasoning: getValue('reasoning', 'Turn relevancy evaluation completed'),
+        metadata: {
+          relevant: getValue('relevant', false),
+          relevance_reasons: getValue('relevance_reasons', []),
+          strict_mode: getValue('strict_mode', false),
+        },
+      };
+
+    case 'knowledge_retention':
+      return {
+        evaluation_type: 'knowledge_retention',
+        score: getValue('score', 0.5),
+        reasoning: getValue(
+          'reasoning',
+          'Knowledge retention evaluation completed',
+        ),
+        metadata: {
+          extracted_knowledge: getValue('extracted_knowledge', []),
+          assistant_turns_without_attrition: getValue(
+            'assistant_turns_without_attrition',
+            0,
+          ),
+          total_assistant_turns: getValue('total_assistant_turns', 0),
+          retention_accuracy: getValue('retention_accuracy', 0.5),
+          context_consistency: getValue('context_consistency', 0.5),
+        },
+      };
+
+    case 'conversation_completeness':
+      return {
+        evaluation_type: 'conversation_completeness',
+        score: getValue('score', 0.5),
+        reasoning: getValue(
+          'reasoning',
+          'Conversation completeness evaluation completed',
+        ),
+        metadata: {
+          user_intentions: getValue('user_intentions', []),
+          satisfied_intentions: getValue('satisfied_intentions', []),
+          completeness_score: getValue('completeness_score', 0.5),
+        },
+      };
+
+    default:
+      // Fallback to standard evaluation result
+      return {
+        evaluation_type: 'error',
+        score: getValue('score', 0.5),
+        reasoning: getValue('reasoning', 'Evaluation completed'),
+        metadata: {
+          fallback: true,
+          error_type: 'unknown_error',
+          error_details: `Unknown evaluation type: ${evaluationType}`,
+        },
+      };
+  }
+}
+
+/**
+ * Create error result for unified evaluation
+ */
+function createErrorResult(
+  errorType:
+    | 'no_api_key'
+    | 'network_error'
+    | 'parse_error'
+    | 'timeout_error'
+    | 'api_error'
+    | 'unknown_error',
+  errorDetails: string,
+  retryInfo?: { retryCount: number; maxRetries: number },
+): UnifiedLLMJudgeResult {
+  return {
+    evaluation_type: 'error',
+    score: 0.5,
+    reasoning: `Evaluation failed: ${errorDetails}`,
+    metadata: {
+      fallback: true,
+      error_type: errorType,
+      error_details: errorDetails,
+      ...(retryInfo && {
+        retry_info: {
+          retry_count: retryInfo.retryCount,
+          max_retries: retryInfo.maxRetries,
+        },
+      }),
+    },
+  };
 }
 
 /**
