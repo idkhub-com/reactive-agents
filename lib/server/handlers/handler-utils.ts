@@ -298,6 +298,12 @@ export async function tryPost(
 
     return createResponse(c, createResponseOptions);
   } catch (error) {
+    if (error instanceof HttpError) {
+      return new Response(error.response.body, {
+        status: error.response.status,
+        statusText: error.response.statusText,
+      });
+    }
     return new Response(
       JSON.stringify({
         error: `${error}`,
@@ -533,6 +539,15 @@ export async function recursiveOutputHookHandler(
     strictOpenAiCompliance,
     commonRequestOptions.areSyncHooksAvailable,
   );
+
+  if (!mappedResponse.ok) {
+    const errorBody = await mappedResponse.text();
+    throw new HttpError(errorBody, {
+      status: mappedResponse.status,
+      statusText: mappedResponse.statusText,
+      body: errorBody,
+    });
+  }
 
   if (!idkResponseBody) {
     throw new GatewayError('No response body from target');
