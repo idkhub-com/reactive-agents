@@ -1,0 +1,103 @@
+{
+  "examples": [
+    {
+      "id": "en-001",
+      "correct": false,
+      "target_language": "en",
+      "learner_text": "I goed to the store yesterday and buyed some bread.",
+      "meta": {
+        "level": "A2",
+        "topic": "daily activities",
+        "grammar_focus": "irregular past tense"
+      }
+    },
+    {
+      "id": "en-002",
+      "correct": false,
+      "target_language": "en",
+      "learner_text": "She don't like coffee but I likes it very much.",
+      "meta": {
+        "level": "A2",
+        "topic": "preferences",
+        "grammar_focus": "subject-verb agreement"
+      }
+    },
+    {
+      "id": "en-003",
+      "correct": true,
+      "target_language": "en",
+      "learner_text": "I went to the library and borrowed three books about history.",
+      "meta": {
+        "level": "B1",
+        "topic": "education",
+        "grammar_focus": "past tense and compound sentences"
+      }
+    },
+    {
+      "id": "es-001",
+      "correct": false,
+      "target_language": "es",
+      "learner_text": "Yo voy al tienda ayer y compro pan.",
+      "meta": {
+        "level": "A2",
+        "topic": "shopping",
+        "grammar_focus": "past tense and gender agreement"
+      }
+    },
+    {
+      "id": "es-002",
+      "correct": false,
+      "target_language": "es",
+      "learner_text": "Mi hermana es muy inteligente y estudia en la universidad pero no le gusta las matemáticas.",
+      "meta": {
+        "level": "B1",
+        "topic": "family and education",
+        "grammar_focus": "gender and number agreement"
+      }
+    },
+    {
+      "id": "es-003",
+      "correct": true,
+      "target_language": "es",
+      "learner_text": "Ayer fui al mercado y compré frutas frescas para la cena.",
+      "meta": {
+        "level": "B1",
+        "topic": "food and shopping",
+        "grammar_focus": "past tense and adjective agreement"
+      }
+    },
+    {
+      "id": "ne-001",
+      "correct": false,
+      "target_language": "ne",
+      "learner_text": "म माछा खान्छु र तिमीले पानी पिउँछौं।",
+      "meta": {
+        "level": "A2",
+        "topic": "food and drink",
+        "grammar_focus": "verb conjugation and subject agreement"
+      }
+    },
+    {
+      "id": "ne-002",
+      "correct": false,
+      "target_language": "ne",
+      "learner_text": "मेरो बुबा काम गर्छिन् र आमा घरमा बस्छे।",
+      "meta": {
+        "level": "A2",
+        "topic": "family",
+        "grammar_focus": "gender agreement in verbs"
+      }
+    },
+    {
+      "id": "ne-003",
+      "correct": true,
+      "target_language": "ne",
+      "learner_text": "म हिजो बजारमा गएँ र फलफूल किनेँ।",
+      "meta": {
+        "level": "B1",
+        "topic": "shopping",
+        "grammar_focus": "past tense conjugation"
+      }
+    }
+  ]
+}
