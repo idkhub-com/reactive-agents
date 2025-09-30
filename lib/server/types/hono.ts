@@ -11,7 +11,6 @@ import type {
   IdkConfigPreProcessed,
 } from '@shared/types/api/request/headers';
 import type { IdkResponseBody } from '@shared/types/api/response';
-import type { SkillOptimization } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
 import type { LogsClient } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
@@ -35,7 +34,6 @@ export interface AppEnv {
     embedding: number[] | null;
     agent: Agent;
     skill: Skill;
-    skill_optimization?: SkillOptimization;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     cache_storage_connector: CacheStorageConnector;

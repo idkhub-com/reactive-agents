@@ -1,4 +1,4 @@
-import { optimizeSkill } from '@server/middlewares/optimizer';
+import { autoClusterSkill } from '@server/middlewares/optimizer/clustering';
 import type {
   EvaluationMethodConnector,
   LogsStorageConnector,
@@ -16,7 +16,6 @@ import {
   type IdkConfig,
   NonPrivateIdkConfig,
 } from '@shared/types/api/request/headers';
-import type { SkillOptimization } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
 import type { LogMessage, LogsClient } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
@@ -225,15 +224,13 @@ const shouldLogRequest = (url: URL): boolean => {
 
 async function processLogsAndOptimizeSkill(
   processLogsParams: ProcessLogsParams,
-  skillOptimization?: SkillOptimization,
 ) {
   await processLogs(processLogsParams);
-  await optimizeSkill(
+  await autoClusterSkill(
     processLogsParams.functionName,
     processLogsParams.userDataStorageConnector,
     processLogsParams.logsStorageConnector,
     processLogsParams.skill,
-    skillOptimization,
   );
 }
 
@@ -286,13 +283,9 @@ export const logsMiddleware = (
       evaluationConnectorsMap: c.get('evaluation_connectors_map'),
     };
 
-    const skillOptimization = c.get('skill_optimization');
-
     if (getRuntimeKey() === 'workerd') {
-      c.executionCtx.waitUntil(
-        processLogsAndOptimizeSkill(processLogsParams, skillOptimization),
-      );
+      c.executionCtx.waitUntil(processLogsAndOptimizeSkill(processLogsParams));
     } else {
-      processLogsAndOptimizeSkill(processLogsParams, skillOptimization);
+      processLogsAndOptimizeSkill(processLogsParams);
     }
   });

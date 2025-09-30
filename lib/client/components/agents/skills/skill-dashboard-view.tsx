@@ -21,7 +21,6 @@ import {
   CpuIcon,
   DatabaseIcon,
   FileTextIcon,
-  MessageSquareIcon,
   PlayIcon,
   PlusIcon,
   RefreshCwIcon,
@@ -38,7 +37,6 @@ export function SkillDashboardView(): ReactElement {
     navigateToLogs,
     navigateToEvaluations,
     navigateToDatasets,
-    navigateToConfigurations,
     navigateToModels,
   } = useNavigation();
   const router = useRouter();
@@ -366,47 +364,6 @@ export function SkillDashboardView(): ReactElement {
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-between pt-4">
-                <Button variant="ghost" size="sm">
-                  <PlusIcon className="h-3 w-3 mr-1" />
-                  Create
-                </Button>
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRightIcon className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Configurations Card */}
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() =>
-              navigateToConfigurations(selectedAgent.name, selectedSkill.name)
-            }
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base font-medium">
-                  Configurations
-                </CardTitle>
-                <CardDescription>
-                  AI model and behavior settings
-                </CardDescription>
-              </div>
-              <MessageSquareIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">
-                  Configure AI models, prompts, and parameters for this skill
-                </div>
-                <div className="text-2xl font-bold">Configure</div>
-                <p className="text-xs text-muted-foreground">
-                  Set up AI configurations
-                </p>
-              </div>
               <div className="flex items-center justify-between pt-4">
                 <Button variant="ghost" size="sm">
                   <PlusIcon className="h-3 w-3 mr-1" />

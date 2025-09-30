@@ -23,7 +23,7 @@ import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { AgentCreateParams } from '@shared/types/data';
-import { sanitizeDescription, sanitizeUserInput } from '@shared/utils/security';
+import { sanitizeUserInput } from '@shared/utils/security';
 import { Bot, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
@@ -71,7 +71,7 @@ export function CreateAgentView(): React.ReactElement {
     try {
       const agentParams: AgentCreateParams = {
         name: sanitizeUserInput(data.name),
-        description: sanitizeDescription(data.description || ''),
+        description: sanitizeUserInput(data.description || ''),
         metadata: {},
       };
 

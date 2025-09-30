@@ -14,7 +14,6 @@ import { EvaluationRunDetailsView } from './skills/evaluation-runs/evaluation-ru
 import { EvaluationRunsView } from './skills/evaluation-runs/evaluation-runs-view';
 import { LogDetailsView, LogsView } from './skills/logs';
 import { ModelsView } from './skills/models/models-view';
-import { ConfigurationsView } from './skills/optimizations';
 
 export function AgentsView(): ReactElement {
   const { navigationState } = useNavigation();
@@ -103,12 +102,6 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Create Dataset">
             <CreateDatasetView />
-          </AgentErrorBoundary>
-        );
-      case 'configurations':
-        return (
-          <AgentErrorBoundary sectionName="Configurations">
-            <ConfigurationsView />
           </AgentErrorBoundary>
         );
       case 'models':
