@@ -65,7 +65,7 @@ async function validateTargetConfiguration(
     try {
       // Fetch optimizations by version, if available. Otherwise, the latest optimization is returned.
       const optimizations =
-        await userDataStorageConnector.getSkillOptimizations({
+        await userDataStorageConnector.getSkillOptimizationClusters({
           version: idkTargetPreProcessed.optimization_version,
           limit: 1,
         });

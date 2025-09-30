@@ -48,7 +48,7 @@ describe('Supabase Connector - Models', () => {
         ai_provider_api_key_id: testModel.ai_provider_api_key_id,
       };
 
-      const result = await connector.getModels(queryParams);
+      const result = await connector.getSkillModels(queryParams);
 
       expect(result).toEqual([testModel]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -64,7 +64,7 @@ describe('Supabase Connector - Models', () => {
         json: async () => [testModel],
       });
 
-      const result = await connector.getModels({});
+      const result = await connector.getSkillModels({});
 
       expect(result).toEqual([testModel]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -84,7 +84,7 @@ describe('Supabase Connector - Models', () => {
         model_name: 'gpt-4',
       };
 
-      const result = await connector.getModels(queryParams);
+      const result = await connector.getSkillModels(queryParams);
 
       expect(result).toEqual([testModel]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -105,7 +105,7 @@ describe('Supabase Connector - Models', () => {
         offset: 5,
       };
 
-      const result = await connector.getModels(queryParams);
+      const result = await connector.getSkillModels(queryParams);
 
       expect(result).toEqual([testModel]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -122,7 +122,7 @@ describe('Supabase Connector - Models', () => {
         text: async () => 'Internal Server Error',
       });
 
-      await expect(connector.getModels({})).rejects.toThrow();
+      await expect(connector.getSkillModels({})).rejects.toThrow();
     });
 
     it('should return empty array when no models found', async () => {
@@ -135,7 +135,7 @@ describe('Supabase Connector - Models', () => {
         json: async () => [],
       });
 
-      const result = await connector.getModels({});
+      const result = await connector.getSkillModels({});
 
       expect(result).toEqual([]);
     });
@@ -338,7 +338,9 @@ describe('Supabase Connector - Models', () => {
         }
       ).mockRejectedValueOnce(new Error('Network timeout'));
 
-      await expect(connector.getModels({})).rejects.toThrow('Network timeout');
+      await expect(connector.getSkillModels({})).rejects.toThrow(
+        'Network timeout',
+      );
     });
 
     it('should handle fetch rejections', async () => {

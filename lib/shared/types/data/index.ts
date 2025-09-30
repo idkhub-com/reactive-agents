@@ -16,7 +16,11 @@ export * from './log-output';
 export * from './model';
 // Skill types
 export * from './skill';
-// Skill Optimization types
-export * from './skill-optimization';
+// Skill Optimization Arm types
+export * from './skill-optimization-arm';
+// Skill Optimization Cluster State types
+export * from './skill-optimization-cluster-state';
+// Skill Optimization Evaluation Run types
+export * from './skill-optimization-evaluation-run';
 // Tool types
 export * from './tool';

@@ -1,4 +1,5 @@
 import { zValidator } from '@hono/zod-validator';
+import { handleGenerateArms } from '@server/handlers/idkhub/skill-optimizations';
 import type { AppEnv } from '@server/types/hono';
 import {
   SkillCreateParams,
@@ -79,7 +80,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const models = await connector.getModelsBySkillId(skillId);
+        const models = await connector.getSkillModels(skillId);
 
         return c.json(models);
       } catch (error) {
@@ -126,6 +127,46 @@ export const skillsRouter = new Hono<AppEnv>()
       }
     },
   )
+  .get(
+    '/:skillId/cluster-states',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const clusterStates = await connector.getSkillOptimizationClusterStates(
+          {
+            skill_id: skillId,
+          },
+        );
+
+        return c.json(clusterStates);
+      } catch (error) {
+        console.error('Error getting cluster states for skill:', error);
+        return c.json({ error: 'Failed to get cluster states for skill' }, 500);
+      }
+    },
+  )
+  .get(
+    '/:skillId/arms',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const arms = await connector.getSkillOptimizationArms({
+          skill_id: skillId,
+        });
+
+        return c.json(arms);
+      } catch (error) {
+        console.error('Error getting models for skill:', error);
+        return c.json({ error: 'Failed to get models for skill' }, 500);
+      }
+    },
+  )
   .post(
     '/:skillId/generate-arms',
     zValidator('param', z.object({ skillId: z.uuid() })),
@@ -134,13 +175,10 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const skillConfiguration =
-          await connector.createSkillOptimization(skillId);
-
-        return c.json(skillConfiguration, 201);
+        return await handleGenerateArms(c, connector, skillId);
       } catch (error) {
-        console.error('Error creating skill configuration:', error);
-        return c.json({ error: 'Failed to create skill configuration' }, 500);
+        console.error('Error generating arms:', error);
+        return c.json({ error: 'Failed to generate arms' }, 500);
       }
     },
   );

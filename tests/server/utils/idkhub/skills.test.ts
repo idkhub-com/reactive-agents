@@ -36,8 +36,8 @@ describe('getOrCreateSkill', () => {
       deleteSystemPrompt: vi.fn(),
 
       // Skill configuration methods
-      getSkillOptimizations: vi.fn(),
-      createSkillOptimization: vi.fn(),
+      getSkillOptimizationClusters: vi.fn(),
+      createSkillOptimizationCluster: vi.fn(),
       updateSkillConfiguration: vi.fn(),
       deleteSkillOptimization: vi.fn(),
 
@@ -87,13 +87,13 @@ describe('getOrCreateSkill', () => {
       updateAIProviderAPIKey: vi.fn(),
       deleteAIProviderAPIKey: vi.fn(),
       // Model methods
-      getModels: vi.fn(),
+      getSkillModels: vi.fn(),
       getModelById: vi.fn(),
       createModel: vi.fn(),
       updateModel: vi.fn(),
       deleteModel: vi.fn(),
       // Skill-Model relationship methods
-      getModelsBySkillId: vi.fn(),
+      getSkillModels: vi.fn(),
       getSkillsByModelId: vi.fn(),
       addModelsToSkill: vi.fn(),
       removeModelsFromSkill: vi.fn(),

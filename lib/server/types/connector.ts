@@ -51,10 +51,22 @@ import type {
   SkillUpdateParams,
 } from '@shared/types/data/skill';
 import type {
-  SkillOptimization,
-  SkillOptimizationCreateParams,
-  SkillOptimizationQueryParams,
-} from '@shared/types/data/skill-optimization';
+  SkillOptimizationArm,
+  SkillOptimizationArmCreateParams,
+  SkillOptimizationArmQueryParams,
+  SkillOptimizationArmUpdateParams,
+} from '@shared/types/data/skill-optimization-arm';
+import type {
+  SkillOptimizationClusterState,
+  SkillOptimizationClusterStateCreateParams,
+  SkillOptimizationClusterStateQueryParams,
+  SkillOptimizationClusterStateUpdateParams,
+} from '@shared/types/data/skill-optimization-cluster-state';
+import type {
+  SkillOptimizationEvaluationRun,
+  SkillOptimizationEvaluationRunCreateParams,
+  SkillOptimizationEvaluationRunQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation-run';
 import type {
   Tool,
   ToolCreateParams,
@@ -101,29 +113,6 @@ export interface UserDataStorageConnector {
   updateSkill(id: string, update: SkillUpdateParams): Promise<Skill> | Skill;
   deleteSkill(id: string): Promise<void> | void;
 
-  // Skill Optimization Lock
-  tryAcquireOptimizationLock(
-    skillId: string,
-    lockTimeoutHours?: number,
-  ): Promise<{
-    success: boolean;
-    message: string;
-    current_lock_time: number | null;
-  }>;
-  releaseOptimizationLock(
-    skillId: string,
-    updatedMetadata?: Record<string, unknown>,
-  ): Promise<{ success: boolean; message: string }>;
-
-  // Skill Optimization
-  getSkillOptimizations(
-    queryParams: SkillOptimizationQueryParams,
-  ): Promise<SkillOptimization[]> | SkillOptimization[];
-  createSkillOptimization(
-    skillOptimization: SkillOptimizationCreateParams,
-  ): Promise<SkillOptimization> | SkillOptimization;
-  deleteSkillOptimization(id: string): Promise<void> | void;
-
   // Tools
   getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];
   createTool(tool: ToolCreateParams): Promise<Tool> | Tool;
@@ -137,10 +126,6 @@ export interface UserDataStorageConnector {
     update: DatasetUpdateParams,
   ): Promise<Dataset> | Dataset;
   deleteDataset(id: string): Promise<void> | void;
-
-  // Logs
-  getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
-  deleteLog(id: string): Promise<void> | void;
 
   // Dataset-Log Bridge
   getDatasetLogs(
@@ -194,19 +179,54 @@ export interface UserDataStorageConnector {
 
   // Models
   getModels(queryParams: ModelQueryParams): Promise<Model[]> | Model[];
-  getModelById(id: string): Promise<Model | null> | Model | null;
   createModel(model: ModelCreateParams): Promise<Model> | Model;
   updateModel(id: string, update: ModelUpdateParams): Promise<Model> | Model;
   deleteModel(id: string): Promise<void> | void;
 
   // Skill-Model Relationships
-  getModelsBySkillId(skillId: string): Promise<Model[]> | Model[];
-  getSkillsByModelId(modelId: string): Promise<Skill[]> | Skill[];
+  getSkillModels(skillId: string): Promise<Model[]> | Model[];
   addModelsToSkill(skillId: string, modelIds: string[]): Promise<void> | void;
   removeModelsFromSkill(
     skillId: string,
     modelIds: string[],
   ): Promise<void> | void;
+
+  // Skill Optimization Cluster States
+  getSkillOptimizationClusterStates(
+    queryParams: SkillOptimizationClusterStateQueryParams,
+  ): Promise<SkillOptimizationClusterState[]> | SkillOptimizationClusterState[];
+  createSkillOptimizationClusterStates(
+    params_list: SkillOptimizationClusterStateCreateParams[],
+  ): Promise<SkillOptimizationClusterState[]> | SkillOptimizationClusterState[];
+  updateSkillOptimizationClusterState(
+    id: string,
+    update: SkillOptimizationClusterStateUpdateParams,
+  ): Promise<SkillOptimizationClusterState> | SkillOptimizationClusterState;
+  deleteSkillOptimizationClusterState(id: string): Promise<void> | void;
+
+  // Skill Optimization Arms
+  getSkillOptimizationArms(
+    queryParams: SkillOptimizationArmQueryParams,
+  ): Promise<SkillOptimizationArm[]> | SkillOptimizationArm[];
+  createSkillOptimizationArms(
+    params_list: SkillOptimizationArmCreateParams[],
+  ): Promise<SkillOptimizationArm[]> | SkillOptimizationArm[];
+  updateSkillOptimizationArm(
+    id: string,
+    update: SkillOptimizationArmUpdateParams,
+  ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
+  deleteSkillOptimizationArm(id: string): Promise<void> | void;
+
+  // Skill Optimization Evaluation Run
+  getSkillOptimizationEvaluationRuns(
+    queryParams: SkillOptimizationEvaluationRunQueryParams,
+  ):
+    | Promise<SkillOptimizationEvaluationRun[]>
+    | SkillOptimizationEvaluationRun[];
+  createSkillOptimizationEvaluationRun(
+    params: SkillOptimizationEvaluationRunCreateParams,
+  ): Promise<SkillOptimizationEvaluationRun> | SkillOptimizationEvaluationRun;
+  deleteSkillOptimizationEvaluationRun(id: string): Promise<void> | void;
 }
 
 export interface LogsStorageConnector {

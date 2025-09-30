@@ -340,18 +340,6 @@ ALTER TABLE log_outputs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON log_outputs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- ================================================
--- Cache table
--- ================================================
-CREATE TABLE IF NOT EXISTS cache (
-  key CHAR(64) PRIMARY KEY,
-  value TEXT NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL
-);
-
-ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
 -- Skill optimizations table
@@ -383,6 +371,20 @@ ALTER TABLE skill_optimizations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_optimizations FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
+-- Cache table
+-- ================================================
+CREATE TABLE IF NOT EXISTS cache (
+  key CHAR(64) PRIMARY KEY,
+  value TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
 -- AI Provider API Keys
 -- ================================================
 CREATE TABLE IF NOT EXISTS ai_provider_api_keys (
@@ -406,6 +408,7 @@ ALTER TABLE ai_provider_api_keys ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+
 -- ================================================
 -- Models table
 -- ================================================
@@ -428,6 +431,7 @@ CREATE INDEX idx_models_model_name ON models(model_name);
 ALTER TABLE models ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON models FOR ALL TO service_role USING (true) WITH CHECK (true);
+
 
 -- ================================================
 -- Skill Models bridge table
@@ -456,96 +460,77 @@ COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations
 
 
 -- ================================================
--- Optimization lock function for preventing concurrent skill optimization
+-- Skill optimization cluster states table
 -- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_cluster_states (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  total_steps BIGINT NOT NULL,
+  cluster_center FLOAT[] NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE(agent_id, skill_id, cluster_center)
+);
 
--- Function: Try to acquire optimization lock for a skill
-CREATE OR REPLACE FUNCTION try_acquire_optimization_lock(
-  skill_id_param uuid,
-  lock_timeout_hours integer DEFAULT 6
-)
-RETURNS TABLE (
-  success boolean,
-  message text,
-  current_lock_time bigint
-)
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  current_time timestamptz := CURRENT_TIMESTAMP;
-  existing_lock_time timestamptz;
-  lock_age_hours numeric;
-  skill_record RECORD;
-BEGIN
-  -- Lock the skill row to prevent concurrent modifications
-  SELECT * INTO skill_record
-  FROM skills
-  WHERE id = skill_id_param
-  FOR UPDATE;
+CREATE TRIGGER update_skill_optimization_cluster_states_updated_at BEFORE UPDATE ON skill_optimization_cluster_states
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-  -- Check if skill exists
-  IF NOT FOUND THEN
-    RETURN QUERY SELECT false, 'Skill not found'::text, NULL::bigint;
-    RETURN;
-  END IF;
+CREATE INDEX idx_skill_optimization_cluster_states_agent_id ON skill_optimization_cluster_states(agent_id);
 
-  -- Extract existing optimization_started_at from metadata JSONB
-  existing_lock_time := (skill_record.metadata->>'optimization_started_at')::timestamptz;
+CREATE INDEX idx_skill_optimization_cluster_states_skill_id ON skill_optimization_cluster_states(skill_id);
 
-  -- If there's an existing lock, check if it's stale
-  IF existing_lock_time IS NOT NULL THEN
-    lock_age_hours := EXTRACT(EPOCH FROM (current_time - existing_lock_time)) / 3600;
+ALTER TABLE skill_optimization_cluster_states ENABLE ROW LEVEL SECURITY;
 
-    -- If lock is not stale, return failure
-    IF lock_age_hours < lock_timeout_hours THEN
-      RETURN QUERY SELECT
-        false,
-        format('Lock held by another process (age: %s hours)', ROUND(lock_age_hours, 2)),
-        EXTRACT(EPOCH FROM existing_lock_time)::bigint;
-      RETURN;
-    END IF;
-  END IF;
+CREATE POLICY "service_role_full_access" ON skill_optimization_cluster_states FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-  -- Acquire the lock by updating the optimization_started_at timestamp
-  UPDATE skills
-  SET metadata = metadata || jsonb_build_object('optimization_started_at', current_time)
-  WHERE id = skill_id_param;
 
-  -- Return success
-  RETURN QUERY SELECT
-    true,
-    'Lock acquired successfully'::text,
-    EXTRACT(EPOCH FROM current_time)::bigint;
-END;
-$$;
+-- ================================================
+-- Skill Optimization Arms table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_arms (
+  id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  params JSONB NOT NULL,
+  stats JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
 
--- Function: Release optimization lock for a skill
-CREATE OR REPLACE FUNCTION release_optimization_lock(
-  skill_id_param uuid,
-  updated_metadata_param jsonb DEFAULT '{}'::jsonb
-)
-RETURNS TABLE (
-  success boolean,
-  message text
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  -- Update the skill metadata, removing the optimization_started_at field
-  -- and merging any additional metadata updates
-  UPDATE skills
-  SET metadata = (metadata || updated_metadata_param) - 'optimization_started_at'
-  WHERE id = skill_id_param;
+CREATE TRIGGER update_skill_optimization_arms_updated_at BEFORE UPDATE ON skill_optimization_arms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-  -- Check if the update affected any rows
-  IF FOUND THEN
-    RETURN QUERY SELECT true, 'Lock released successfully'::text;
-  ELSE
-    RETURN QUERY SELECT false, 'Skill not found'::text;
-  END IF;
-END;
-$$;
+CREATE INDEX idx_skill_optimization_arms_agent_id ON skill_optimization_arms(agent_id);
+CREATE INDEX idx_skill_optimization_arms_skill_id ON skill_optimization_arms(skill_id);
 
--- Add comments for documentation
-COMMENT ON FUNCTION try_acquire_optimization_lock IS 'Atomically tries to acquire an optimization lock for a skill, preventing concurrent optimization processes';
-COMMENT ON FUNCTION release_optimization_lock IS 'Releases an optimization lock and updates skill metadata atomically';
+ALTER TABLE skill_optimization_arms ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_arms FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Skill Optimization Evaluation Runs table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_run (
+  id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  results JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_skill_optimization_evaluation_run_agent_id ON skill_optimization_evaluation_run(agent_id);
+CREATE INDEX idx_skill_optimization_evaluation_run_skill_id ON skill_optimization_evaluation_run(skill_id);
+
+ALTER TABLE skill_optimization_evaluation_run ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_evaluation_run FOR ALL TO service_role USING (true) WITH CHECK (true);

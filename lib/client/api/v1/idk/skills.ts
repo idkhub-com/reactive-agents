@@ -4,6 +4,8 @@ import {
   Model,
   Skill,
   type SkillCreateParams,
+  SkillOptimizationArm,
+  SkillOptimizationClusterState,
   type SkillQueryParams,
   type SkillUpdateParams,
 } from '@shared/types/data';
@@ -71,7 +73,7 @@ export async function deleteSkill(id: string): Promise<void> {
   }
 }
 
-export async function getModelsBySkillId(skillId: string): Promise<Model[]> {
+export async function getSkillModels(skillId: string): Promise<Model[]> {
   const response = await client.v1.idk.skills[':skillId'].models.$get({
     param: {
       skillId,
@@ -115,4 +117,56 @@ export async function removeModelsFromSkill(
   if (!response.ok) {
     throw new Error('Failed to remove models from skill');
   }
+}
+
+export async function getSkillClusterStates(
+  skillId: string,
+): Promise<SkillOptimizationClusterState[]> {
+  const response = await client.v1.idk.skills[':skillId'][
+    'cluster-states'
+  ].$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch cluster states for skill');
+  }
+
+  return SkillOptimizationClusterState.array().parse(await response.json());
+}
+
+export async function getSkillArms(
+  skillId: string,
+): Promise<SkillOptimizationArm[]> {
+  const response = await client.v1.idk.skills[':skillId'].arms.$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill arms');
+  }
+
+  return SkillOptimizationArm.array().parse(await response.json());
+}
+
+export async function generateSkillArms(
+  skillId: string,
+): Promise<SkillOptimizationArm[]> {
+  const response = await client.v1.idk.skills[':skillId'][
+    'generate-arms'
+  ].$post({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate skill arms');
+  }
+
+  return SkillOptimizationArm.array().parse(await response.json());
 }

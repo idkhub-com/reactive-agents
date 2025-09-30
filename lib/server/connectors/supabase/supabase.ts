@@ -5,7 +5,6 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
-import { debug } from '@shared/console-logging';
 import {
   Agent,
   type AgentCreateParams,
@@ -58,10 +57,21 @@ import {
   type SkillUpdateParams,
 } from '@shared/types/data/skill';
 import {
-  SkillOptimization,
-  type SkillOptimizationCreateParams,
-  type SkillOptimizationQueryParams,
-} from '@shared/types/data/skill-optimization';
+  SkillOptimizationArm,
+  type SkillOptimizationArmCreateParams,
+  type SkillOptimizationArmQueryParams,
+  type SkillOptimizationArmUpdateParams,
+} from '@shared/types/data/skill-optimization-arm';
+import {
+  SkillOptimizationClusterState,
+  type SkillOptimizationClusterStateCreateParams,
+  type SkillOptimizationClusterStateQueryParams,
+  type SkillOptimizationClusterStateUpdateParams,
+} from '@shared/types/data/skill-optimization-cluster-state';
+import {
+  SkillOptimizationEvaluationRun,
+  type SkillOptimizationEvaluationRunQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation-run';
 import {
   Tool,
   type ToolCreateParams,
@@ -73,7 +83,6 @@ import { z } from 'zod';
 import {
   deleteFromSupabase,
   insertIntoSupabase,
-  rpcFunctionWithResponse,
   selectFromSupabase,
   updateInSupabase,
 } from './base';
@@ -331,56 +340,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     await deleteFromSupabase('skills', { id: `eq.${id}` });
   },
 
-  getSkillOptimizations: async (
-    queryParams: SkillOptimizationQueryParams,
-  ): Promise<SkillOptimization[]> => {
-    const postgrestParams: Record<string, string> = {
-      order: 'created_at.desc',
-    };
-
-    if (queryParams.id) {
-      postgrestParams.id = `eq.${queryParams.id}`;
-    }
-    if (queryParams.agent_id) {
-      postgrestParams.agent_id = `eq.${queryParams.agent_id}`;
-    }
-    if (queryParams.skill_id) {
-      postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
-    }
-    if (queryParams.version) {
-      postgrestParams.version = `eq.${queryParams.version}`;
-    }
-    if (queryParams.limit) {
-      postgrestParams.limit = queryParams.limit.toString();
-    }
-    if (queryParams.offset) {
-      postgrestParams.offset = queryParams.offset.toString();
-    }
-
-    const skillConfigurations = await selectFromSupabase(
-      'skill_optimizations',
-      postgrestParams,
-      z.array(SkillOptimization),
-    );
-
-    return skillConfigurations;
-  },
-
-  createSkillOptimization: async (
-    params: SkillOptimizationCreateParams,
-  ): Promise<SkillOptimization> => {
-    const insertedSkillConfiguration = await insertIntoSupabase(
-      'skill_optimizations',
-      params,
-      z.array(SkillOptimization),
-    );
-    return insertedSkillConfiguration[0];
-  },
-
-  deleteSkillOptimization: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skill_optimizations', { id: `eq.${id}` });
-  },
-
   getTools: async (queryParams: ToolQueryParams): Promise<Tool[]> => {
     const postgrestParams: Record<string, string> = {};
 
@@ -549,66 +508,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   deleteEvaluationRun: async (id: string): Promise<void> => {
     await deleteFromSupabase('evaluation_runs', { id: `eq.${id}` });
-  },
-
-  // Logs
-  getLogs: async (queryParams: LogsQueryParams): Promise<Log[]> => {
-    const postgrestParams: Record<string, string> = {};
-
-    if (queryParams.id) {
-      postgrestParams.id = `eq.${queryParams.id}`;
-    }
-    if (queryParams.ids) {
-      postgrestParams.id = `in.(${queryParams.ids.join(',')})`;
-    }
-    if (queryParams.agent_id) {
-      postgrestParams.agent_id = `eq.${queryParams.agent_id}`;
-    }
-    if (queryParams.skill_id) {
-      postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
-    }
-    if (queryParams.app_id) {
-      postgrestParams.app_id = `eq.${queryParams.app_id}`;
-    }
-    if (queryParams.method) {
-      postgrestParams.method = `eq.${queryParams.method}`;
-    }
-    if (queryParams.endpoint) {
-      postgrestParams.endpoint = `eq.${queryParams.endpoint}`;
-    }
-    if (queryParams.function_name) {
-      postgrestParams.function_name = `eq.${queryParams.function_name}`;
-    }
-    if (queryParams.status) {
-      postgrestParams.status = `eq.${queryParams.status}`;
-    }
-    if (queryParams.cache_status) {
-      postgrestParams.cache_status = `eq.${queryParams.cache_status}`;
-    }
-    if (queryParams.after) {
-      postgrestParams.start_time = `gte.${queryParams.after}`;
-    }
-    if (queryParams.before) {
-      postgrestParams.start_time = `lte.${queryParams.before}`;
-    }
-    if (queryParams.limit) {
-      postgrestParams.limit = queryParams.limit.toString();
-    }
-    if (queryParams.offset) {
-      postgrestParams.offset = queryParams.offset.toString();
-    }
-
-    const logs = await selectFromSupabase(
-      'logs',
-      postgrestParams,
-      z.array(Log),
-    );
-
-    return logs;
-  },
-
-  deleteLog: async (id: string): Promise<void> => {
-    await deleteFromSupabase('logs', { id: `eq.${id}` });
   },
 
   // Dataset-Log Bridge
@@ -981,7 +880,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   ): Promise<Model> => {
     const updatedModels = await updateInSupabase(
       'models',
-      `id=eq.${id}`,
+      id,
       update,
       z.array(Model),
     );
@@ -993,7 +892,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   // Skill-Model Relationships
-  getModelsBySkillId: async (skillId: string): Promise<Model[]> => {
+  getSkillModels: async (skillId: string): Promise<Model[]> => {
     // Join skill_models bridge table with models table
     const models = await selectFromSupabase(
       'skill_models',
@@ -1001,16 +900,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       z.array(z.object({ models: Model })),
     );
     return models.map((item) => item.models);
-  },
-
-  getSkillsByModelId: async (modelId: string): Promise<Skill[]> => {
-    // Join skill_models bridge table with skills table
-    const skills = await selectFromSupabase(
-      'skill_models',
-      { model_id: `eq.${modelId}`, select: 'skills(*)' },
-      z.array(z.object({ skills: Skill })),
-    );
-    return skills.map((item) => item.skills);
   },
 
   addModelsToSkill: async (
@@ -1036,54 +925,181 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
   },
 
-  // Skill Optimization Lock
-  tryAcquireOptimizationLock: async (
-    skillId: string,
-    lockTimeoutHours = 6,
-  ): Promise<{
-    success: boolean;
-    message: string;
-    current_lock_time: number | null;
-  }> => {
-    debug('tryAcquireOptimizationLock', skillId, lockTimeoutHours);
+  // SkillOptimizationClusterState
+  getSkillOptimizationClusterStates: async (
+    queryParams: SkillOptimizationClusterStateQueryParams,
+  ): Promise<SkillOptimizationClusterState[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
 
-    const result = await rpcFunctionWithResponse(
-      'try_acquire_optimization_lock',
-      {
-        skill_id_param: skillId,
-        lock_timeout_hours: lockTimeoutHours,
-      },
-      z.array(
-        z.object({
-          success: z.boolean(),
-          message: z.string(),
-          current_lock_time: z.number().nullable(),
-        }),
-      ),
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const skillConfigurations = await selectFromSupabase(
+      'skill_optimization_cluster_states',
+      postgRESTParams,
+      z.array(SkillOptimizationClusterState),
     );
 
-    return result[0];
+    return skillConfigurations;
   },
 
-  releaseOptimizationLock: async (
-    skillId: string,
-    updatedMetadata = {},
-  ): Promise<{ success: boolean; message: string }> => {
-    const result = await rpcFunctionWithResponse(
-      'release_optimization_lock',
-      {
-        skill_id_param: skillId,
-        updated_metadata_param: updatedMetadata,
-      },
-      z.array(
-        z.object({
-          success: z.boolean(),
-          message: z.string(),
-        }),
-      ),
+  createSkillOptimizationClusterStates: async (
+    params_list: SkillOptimizationClusterStateCreateParams[],
+  ): Promise<SkillOptimizationClusterState[]> => {
+    const insertedSkillConfigurations = await insertIntoSupabase(
+      'skill_optimization_cluster_states',
+      params_list,
+      z.array(SkillOptimizationClusterState),
+    );
+    return insertedSkillConfigurations;
+  },
+
+  updateSkillOptimizationClusterState: async (
+    id: string,
+    params: SkillOptimizationClusterStateUpdateParams,
+  ): Promise<SkillOptimizationClusterState> => {
+    const updatedSkillOptimizationClusterStates = await updateInSupabase(
+      'skill_optimization_cluster_states',
+      id,
+      params,
+      z.array(SkillOptimizationClusterState),
+    );
+    return updatedSkillOptimizationClusterStates[0];
+  },
+
+  deleteSkillOptimizationClusterState: async (id: string): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_cluster_states', {
+      id: `eq.${id}`,
+    });
+  },
+
+  //SkillOptimizationArm
+  getSkillOptimizationArms: async (
+    queryParams: SkillOptimizationArmQueryParams,
+  ): Promise<SkillOptimizationArm[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const skillConfigurations = await selectFromSupabase(
+      'skill_optimization_arms',
+      postgRESTParams,
+      z.array(SkillOptimizationArm),
     );
 
-    return result[0];
+    return skillConfigurations;
+  },
+
+  createSkillOptimizationArms: async (
+    params_list: SkillOptimizationArmCreateParams[],
+  ): Promise<SkillOptimizationArm[]> => {
+    const createdSkillOptimizationArms = await insertIntoSupabase(
+      'skill_optimization_arms',
+      params_list,
+      z.array(SkillOptimizationArm),
+    );
+
+    return createdSkillOptimizationArms;
+  },
+
+  updateSkillOptimizationArm: async (
+    id: string,
+    params: SkillOptimizationArmUpdateParams,
+  ): Promise<SkillOptimizationArm> => {
+    const updatedSkillOptimizationArms = await updateInSupabase(
+      'skill_optimization_arms',
+      id,
+      params,
+      z.array(SkillOptimizationArm),
+    );
+
+    return updatedSkillOptimizationArms[0];
+  },
+
+  deleteSkillOptimizationArm: async (id: string): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_arms', { id: `eq.${id}` });
+  },
+
+  // SkillOptimizationEvaluationRun
+  getSkillOptimizationEvaluationRuns: async (
+    queryParams: SkillOptimizationEvaluationRunQueryParams,
+  ): Promise<SkillOptimizationEvaluationRun[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const evaluationRuns = await selectFromSupabase(
+      'skill_optimization_evaluation_runs',
+      postgRESTParams,
+      z.array(SkillOptimizationEvaluationRun),
+    );
+
+    return evaluationRuns;
+  },
+
+  async createSkillOptimizationEvaluationRun(
+    params: SkillOptimizationEvaluationRun,
+  ): Promise<SkillOptimizationEvaluationRun> {
+    const createdEvaluationRuns = await insertIntoSupabase(
+      'skill_optimization_evaluation_runs',
+      params,
+      z.array(SkillOptimizationEvaluationRun),
+    );
+
+    return createdEvaluationRuns[0];
+  },
+
+  async deleteSkillOptimizationEvaluationRun(id: string): Promise<void> {
+    await deleteFromSupabase('skill_optimization_evaluation_runs', {
+      id: `eq.${id}`,
+    });
   },
 };
 

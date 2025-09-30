@@ -21,10 +21,10 @@ vi.mock('@client/api/v1/idk/skills', () => ({
 }));
 
 import { getModels } from '@client/api/v1/idk/models';
-import { getModelsBySkillId } from '@client/api/v1/idk/skills';
+import { getSkillModels } from '@client/api/v1/idk/skills';
 
 const mockGetModels = getModels as Mock;
-const mockGetModelsBySkillId = getModelsBySkillId as Mock;
+const mockGetModelsBySkillId = getSkillModels as Mock;
 
 describe('ModelsProvider', () => {
   const mockModels: Model[] = [

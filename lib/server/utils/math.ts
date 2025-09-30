@@ -1,6 +1,6 @@
 import type { ClusterResult } from '@shared/utils/math';
 
-function calculateDistance(a: number[], b: number[]): number {
+export function calculateDistance(a: number[], b: number[]): number {
   if (a.length !== b.length) {
     throw new Error('Vectors must have the same dimension');
   }

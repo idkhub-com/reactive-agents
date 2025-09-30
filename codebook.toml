@@ -20,6 +20,7 @@ words = [
     "lucide",
     "mcp",
     "openai",
+    "postg",
     "postgrest",
     "retryable",
     "sagemaker",
