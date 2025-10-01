@@ -1,4 +1,6 @@
 import { IdkRequestBody } from '@shared/types/api/request/body';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
+
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
 import { CacheMode, CacheSettings } from '@shared/types/middleware/cache';
 import { Hook } from '@shared/types/middleware/hooks';
@@ -233,6 +235,7 @@ export const TargetConfigurationParams = z.object({
   presence_penalty: z.number().min(-2).max(2).nullable(),
   stop: z.array(z.string()).nullable(),
   seed: z.number().int().nullable(),
+  reasoning_effort: z.enum(ReasoningEffort).nullable(),
   // Additional provider-specific parameters can be added here
   additional_params: z.record(z.string(), z.unknown()).nullable(),
 });

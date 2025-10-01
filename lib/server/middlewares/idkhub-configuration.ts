@@ -12,39 +12,65 @@ import {
   OptimizationType,
   type TargetConfigurationParams,
 } from '@shared/types/api/request';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import type { AIProvider } from '@shared/types/constants';
-import type { SkillOptimizationConfiguration } from '@shared/types/data';
+import type {
+  SkillOptimizationArm,
+  SkillOptimizationCluster,
+} from '@shared/types/data';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
-function getOptimalConfiguration(
+function getOptimalArm(arms: SkillOptimizationArm[]): SkillOptimizationArm {
+  // TODO: Implement armed bandit algorithm to find the optimal arm to pull
+  // export const SkillOptimizationArmStats = z.object({
+  //   n: z.number().min(0),
+  //   mean: z.number().min(0).max(1),
+  //   n2: z.number().min(0),
+  //   total_reward: z.number().min(0),
+  // });
+  // export const SkillOptimizationArm = z.object({
+  //   id: z.uuid(),
+  //   agent_id: z.uuid(),
+  //   skill_id: z.uuid(),
+  //   cluster_id: z.uuid(),
+  //   params: SkillOptimizationArmParams,
+  //   stats: SkillOptimizationArmStats,
+  //   created_at: z.iso.datetime({ offset: true }),
+  //   updated_at: z.iso.datetime({ offset: true }),
+  // });
+}
+
+function getOptimalCluster(
   embedding: number[],
-  configurations: SkillOptimizationConfiguration[],
-): SkillOptimizationConfiguration {
-  if (configurations.length === 0) {
-    throw new Error('No configurations provided');
-  }
+  clusters: SkillOptimizationCluster[],
+): SkillOptimizationCluster {
+  // TODO: Find the closest cluster to the embedding
+}
 
-  if (configurations.length === 1) {
-    return configurations[0];
-  }
+function getRandomValueInRange(min: number, max: number): number {
+  return Math.random() * (max - min) + min;
+}
 
-  let bestConfiguration = configurations[0];
-  let bestSimilarity = -1;
+const ReasoningMap: Record<number, ReasoningEffort | null> = {
+  0: null,
+  1: null,
+  2: ReasoningEffort.MINIMAL,
+  3: ReasoningEffort.MINIMAL,
+  4: ReasoningEffort.LOW,
+  5: ReasoningEffort.LOW,
+  6: ReasoningEffort.MEDIUM,
+  7: ReasoningEffort.MEDIUM,
+  8: ReasoningEffort.HIGH,
+  9: ReasoningEffort.HIGH,
+};
 
-  for (const config of configurations) {
-    if (!config.cluster_center || config.cluster_center.length === 0) {
-      continue;
-    }
-
-    const similarity = cosineSimilarity(embedding, config.cluster_center);
-    if (similarity > bestSimilarity) {
-      bestSimilarity = similarity;
-      bestConfiguration = config;
-    }
-  }
-
-  return bestConfiguration;
+function getRandomReasoningEffortFromRange(
+  min: number,
+  max: number,
+): ReasoningEffort | null {
+  const randomIndex = Math.floor(getRandomValueInRange(min, max)) * 10;
+  return ReasoningMap[randomIndex];
 }
 
 async function validateTargetConfiguration(
@@ -63,14 +89,14 @@ async function validateTargetConfiguration(
     idkTargetPreProcessed.optimization === OptimizationType.AUTO
   ) {
     try {
-      // Fetch optimizations by version, if available. Otherwise, the latest optimization is returned.
-      const optimizations =
+      const skill = c.get('skill');
+
+      const clusters =
         await userDataStorageConnector.getSkillOptimizationClusters({
-          version: idkTargetPreProcessed.optimization_version,
-          limit: 1,
+          skill_id: skill.id,
         });
 
-      if (optimizations.length === 0) {
+      if (clusters.length === 0) {
         return c.json(
           {
             error:
@@ -80,46 +106,46 @@ async function validateTargetConfiguration(
         );
       }
 
-      const optimization = optimizations[0];
+      const optimalCluster = getOptimalCluster(embedding, clusters);
 
-      c.set('skill_optimization', optimization);
+      const arms = await userDataStorageConnector.getSkillOptimizationArms({
+        skill_id: skill.id,
+        cluster_id: optimalCluster.id,
+      });
 
-      const configurations = optimization.configurations;
+      const optimalArm = getOptimalArm(arms);
 
-      const optimalConfiguration = getOptimalConfiguration(
-        embedding,
-        configurations,
-      );
-
-      optimalConfiguration.model_params.system_prompt = renderTemplate(
-        optimalConfiguration.model_params.system_prompt!,
+      const renderedSystemPrompt = renderTemplate(
+        optimalArm.params.system_prompt!,
         idkTargetPreProcessed.system_prompt_variables || {},
       );
 
       // Resolve model_id to get model name and provider
-      const modelRecord = await userDataStorageConnector.getModelById(
-        optimalConfiguration.model_params.model_id,
-      );
+      const models = await userDataStorageConnector.getModels({
+        id: optimalArm.params.model_id,
+      });
 
-      if (!modelRecord) {
+      if (models.length === 0) {
         return c.json(
           {
-            error: `Model with ID '${optimalConfiguration.model_params.model_id}' not found`,
+            error: `Model with ID '${optimalArm.params.model_id}' not found`,
           },
           422,
         );
       }
 
+      const model = models[0];
+
       // Get the provider from the associated API key
       const apiKeyRecord =
         await userDataStorageConnector.getAIProviderAPIKeyById(
-          modelRecord.ai_provider_api_key_id,
+          model.ai_provider_api_key_id,
         );
 
       if (!apiKeyRecord) {
         return c.json(
           {
-            error: `API key with ID '${modelRecord.ai_provider_api_key_id}' not found for model`,
+            error: `API key with ID '${model.ai_provider_api_key_id}' not found for model`,
           },
           422,
         );
@@ -127,18 +153,36 @@ async function validateTargetConfiguration(
 
       resolvedApiKey = apiKeyRecord.api_key;
 
+      const reasoningEffort = getRandomReasoningEffortFromRange(
+        optimalArm.params.thinking_min,
+        optimalArm.params.thinking_max,
+      );
+
       idkTargetConfiguration = {
         ai_provider: apiKeyRecord.ai_provider as AIProvider,
-        model: modelRecord.model_name,
-        system_prompt: optimalConfiguration.model_params.system_prompt,
-        temperature: optimalConfiguration.model_params.temperature,
-        max_tokens: optimalConfiguration.model_params.max_tokens,
-        top_p: optimalConfiguration.model_params.top_p,
-        frequency_penalty: optimalConfiguration.model_params.frequency_penalty,
-        presence_penalty: optimalConfiguration.model_params.presence_penalty,
-        stop: optimalConfiguration.model_params.stop,
-        seed: optimalConfiguration.model_params.seed,
-        additional_params: optimalConfiguration.model_params.additional_params,
+        model: model.model_name,
+        system_prompt: renderedSystemPrompt,
+        temperature: getRandomValueInRange(
+          optimalArm.params.temperature_min,
+          optimalArm.params.temperature_max,
+        ),
+        top_p: getRandomValueInRange(
+          optimalArm.params.top_p_min,
+          optimalArm.params.top_p_max,
+        ),
+        frequency_penalty: getRandomValueInRange(
+          optimalArm.params.frequency_penalty_min,
+          optimalArm.params.frequency_penalty_max,
+        ),
+        presence_penalty: getRandomValueInRange(
+          optimalArm.params.presence_penalty_min,
+          optimalArm.params.presence_penalty_max,
+        ),
+        reasoning_effort: reasoningEffort,
+        seed: null,
+        max_tokens: null,
+        additional_params: null,
+        stop: null,
       };
     } catch (error) {
       return c.json(
@@ -173,6 +217,7 @@ async function validateTargetConfiguration(
       stop: null,
       seed: null,
       additional_params: null,
+      reasoning_effort: null,
     };
   } else {
     return c.json(
