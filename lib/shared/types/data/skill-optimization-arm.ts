@@ -46,14 +46,15 @@ export type SkillOptimizationArmStats = z.infer<
   typeof SkillOptimizationArmStats
 >;
 
-export const SkillOptimizationArm = SkillOptimizationArmParams.extend({
+export const SkillOptimizationArm = z.object({
   id: z.uuid(),
   agent_id: z.uuid(),
   skill_id: z.uuid(),
+  cluster_id: z.uuid(),
   params: SkillOptimizationArmParams,
   stats: SkillOptimizationArmStats,
-  created_at: z.iso.date(),
-  updated_at: z.iso.date(),
+  created_at: z.iso.datetime({ offset: true }),
+  updated_at: z.iso.datetime({ offset: true }),
 });
 export type SkillOptimizationArm = z.infer<typeof SkillOptimizationArm>;
 
@@ -62,6 +63,7 @@ export const SkillOptimizationArmQueryParams = z
     id: z.uuid().optional(),
     agent_id: z.uuid().optional(),
     skill_id: z.uuid().optional(),
+    cluster_id: z.uuid().optional(),
     limit: z.coerce.number().min(1).max(100).default(100).optional(),
     offset: z.coerce.number().min(0).default(0).optional(),
   })
@@ -74,6 +76,7 @@ export const SkillOptimizationArmCreateParams = z
   .object({
     agent_id: z.uuid(),
     skill_id: z.uuid(),
+    cluster_id: z.uuid(),
     params: SkillOptimizationArmParams,
     stats: SkillOptimizationArmStats,
   })

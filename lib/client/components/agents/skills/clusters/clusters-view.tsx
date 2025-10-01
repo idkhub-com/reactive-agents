@@ -13,7 +13,7 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useNavigation } from '@client/providers/navigation';
-import { useClusterStates } from '@client/providers/skill-optimization-cluster-states';
+import { useClusterStates } from '@client/providers/skill-optimization-clusters';
 import { LayersIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
@@ -149,9 +149,7 @@ export function ClustersView(): ReactElement {
                       <span className="text-sm text-muted-foreground">
                         Dimensions
                       </span>
-                      <Badge variant="outline">
-                        {cluster.cluster_center.length}D
-                      </Badge>
+                      <Badge variant="outline">{cluster.center.length}D</Badge>
                     </div>
                   </div>
                 </CardContent>

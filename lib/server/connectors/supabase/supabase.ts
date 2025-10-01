@@ -63,11 +63,11 @@ import {
   type SkillOptimizationArmUpdateParams,
 } from '@shared/types/data/skill-optimization-arm';
 import {
-  SkillOptimizationClusterState,
-  type SkillOptimizationClusterStateCreateParams,
-  type SkillOptimizationClusterStateQueryParams,
-  type SkillOptimizationClusterStateUpdateParams,
-} from '@shared/types/data/skill-optimization-cluster-state';
+  SkillOptimizationCluster,
+  type SkillOptimizationClusterCreateParams,
+  type SkillOptimizationClusterQueryParams,
+  type SkillOptimizationClusterUpdateParams,
+} from '@shared/types/data/skill-optimization-cluster';
 import {
   SkillOptimizationEvaluationRun,
   type SkillOptimizationEvaluationRunQueryParams,
@@ -856,15 +856,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return await selectFromSupabase('models', postgrestParams, z.array(Model));
   },
 
-  getModelById: async (id: string): Promise<Model | null> => {
-    const models = await selectFromSupabase(
-      'models',
-      { id: `eq.${id}` },
-      z.array(Model),
-    );
-    return models.length > 0 ? models[0] : null;
-  },
-
   createModel: async (model: ModelCreateParams): Promise<Model> => {
     const newModels = await insertIntoSupabase(
       'models',
@@ -925,10 +916,10 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
   },
 
-  // SkillOptimizationClusterState
-  getSkillOptimizationClusterStates: async (
-    queryParams: SkillOptimizationClusterStateQueryParams,
-  ): Promise<SkillOptimizationClusterState[]> => {
+  // SkillOptimizationCluster
+  getSkillOptimizationClusters: async (
+    queryParams: SkillOptimizationClusterQueryParams,
+  ): Promise<SkillOptimizationCluster[]> => {
     const postgRESTParams: Record<string, string> = {
       order: 'created_at.desc',
     };
@@ -950,40 +941,40 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const skillConfigurations = await selectFromSupabase(
-      'skill_optimization_cluster_states',
+      'skill_optimization_clusters',
       postgRESTParams,
-      z.array(SkillOptimizationClusterState),
+      z.array(SkillOptimizationCluster),
     );
 
     return skillConfigurations;
   },
 
-  createSkillOptimizationClusterStates: async (
-    params_list: SkillOptimizationClusterStateCreateParams[],
-  ): Promise<SkillOptimizationClusterState[]> => {
+  createSkillOptimizationClusters: async (
+    params_list: SkillOptimizationClusterCreateParams[],
+  ): Promise<SkillOptimizationCluster[]> => {
     const insertedSkillConfigurations = await insertIntoSupabase(
-      'skill_optimization_cluster_states',
+      'skill_optimization_clusters',
       params_list,
-      z.array(SkillOptimizationClusterState),
+      z.array(SkillOptimizationCluster),
     );
     return insertedSkillConfigurations;
   },
 
-  updateSkillOptimizationClusterState: async (
+  updateSkillOptimizationCluster: async (
     id: string,
-    params: SkillOptimizationClusterStateUpdateParams,
-  ): Promise<SkillOptimizationClusterState> => {
+    params: SkillOptimizationClusterUpdateParams,
+  ): Promise<SkillOptimizationCluster> => {
     const updatedSkillOptimizationClusterStates = await updateInSupabase(
-      'skill_optimization_cluster_states',
+      'skill_optimization_clusters',
       id,
       params,
-      z.array(SkillOptimizationClusterState),
+      z.array(SkillOptimizationCluster),
     );
     return updatedSkillOptimizationClusterStates[0];
   },
 
-  deleteSkillOptimizationClusterState: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skill_optimization_cluster_states', {
+  deleteSkillOptimizationCluster: async (id: string): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_clusters', {
       id: `eq.${id}`,
     });
   },
@@ -1049,6 +1040,14 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   deleteSkillOptimizationArm: async (id: string): Promise<void> => {
     await deleteFromSupabase('skill_optimization_arms', { id: `eq.${id}` });
+  },
+
+  deleteSkillOptimizationArmsForSkill: async (
+    skillId: string,
+  ): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_arms', {
+      skill_id: `eq.${skillId}`,
+    });
   },
 
   // SkillOptimizationEvaluationRun

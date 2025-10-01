@@ -2,6 +2,7 @@ import { BaseArmsParams } from '@server/handlers/idkhub/base-arms';
 import { generateSystemPromptForSkill } from '@server/handlers/idkhub/system-prompt';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
+import { debug } from '@shared/console-logging';
 import type {
   SkillOptimizationArmCreateParams,
   SkillOptimizationArmParams,
@@ -23,6 +24,18 @@ export async function handleGenerateArms(
 
   const skill = skills[0];
 
+  // Remove all current arms for the skill
+  await userStorageConnector.deleteSkillOptimizationArmsForSkill(skill.id);
+
+  const skillModels = await userStorageConnector.getSkillModels(skill.id);
+  const skillClusters = await userStorageConnector.getSkillOptimizationClusters(
+    { skill_id: skill.id },
+  );
+
+  if (!skillModels || !skillClusters) {
+    return c.json({ error: 'Skill models or clusters not found' }, 404);
+  }
+
   const numberOfSystemPrompts = 3;
 
   const systemPrompts = [];
@@ -31,31 +44,32 @@ export async function handleGenerateArms(
     systemPrompts.push(systemPrompt);
   }
 
-  const skillModels = await userStorageConnector.getSkillModels(skillId);
-
   const createParamsList: SkillOptimizationArmCreateParams[] = [];
 
-  for (const model of skillModels) {
-    for (const systemPrompt of systemPrompts) {
-      for (const baseArm of BaseArmsParams) {
-        const armParams: SkillOptimizationArmParams = {
-          ...baseArm,
-          model_id: model.id,
-          system_prompt: systemPrompt,
-        };
-        const stats: SkillOptimizationArmStats = {
-          n: 0,
-          mean: 0,
-          n2: 0,
-          total_reward: 0,
-        };
-        const createParams: SkillOptimizationArmCreateParams = {
-          agent_id: skill.agent_id,
-          skill_id: skill.id,
-          params: armParams,
-          stats: stats,
-        };
-        createParamsList.push(createParams);
+  for (const cluster of skillClusters) {
+    for (const model of skillModels) {
+      for (const systemPrompt of systemPrompts) {
+        for (const baseArm of BaseArmsParams) {
+          const armParams: SkillOptimizationArmParams = {
+            ...baseArm,
+            model_id: model.id,
+            system_prompt: systemPrompt,
+          };
+          const stats: SkillOptimizationArmStats = {
+            n: 0,
+            mean: 0,
+            n2: 0,
+            total_reward: 0,
+          };
+          const createParams: SkillOptimizationArmCreateParams = {
+            agent_id: skill.agent_id,
+            skill_id: skill.id,
+            cluster_id: cluster.id,
+            params: armParams,
+            stats: stats,
+          };
+          createParamsList.push(createParams);
+        }
       }
     }
   }

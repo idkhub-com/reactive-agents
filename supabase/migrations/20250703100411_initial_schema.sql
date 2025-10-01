@@ -460,30 +460,30 @@ COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations
 
 
 -- ================================================
--- Skill optimization cluster states table
+-- Skill Optimization Clusters table
 -- ================================================
-CREATE TABLE IF NOT EXISTS skill_optimization_cluster_states (
+CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   total_steps BIGINT NOT NULL,
-  cluster_center FLOAT[] NOT NULL,
+  center FLOAT[] NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
   FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 );
 
-CREATE TRIGGER update_skill_optimization_cluster_states_updated_at BEFORE UPDATE ON skill_optimization_cluster_states
+CREATE TRIGGER update_skill_optimization_clusters_updated_at BEFORE UPDATE ON skill_optimization_clusters
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE INDEX idx_skill_optimization_cluster_states_agent_id ON skill_optimization_cluster_states(agent_id);
+CREATE INDEX idx_skill_optimization_clusters_agent_id ON skill_optimization_clusters(agent_id);
 
-CREATE INDEX idx_skill_optimization_cluster_states_skill_id ON skill_optimization_cluster_states(skill_id);
+CREATE INDEX idx_skill_optimization_clusters_skill_id ON skill_optimization_clusters(skill_id);
 
-ALTER TABLE skill_optimization_cluster_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_optimization_clusters ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "service_role_full_access" ON skill_optimization_cluster_states FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_full_access" ON skill_optimization_clusters FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 
 -- ================================================
@@ -493,13 +493,15 @@ CREATE TABLE IF NOT EXISTS skill_optimization_arms (
   id UUID NOT NULL DEFAULT uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
+  cluster_id UUID NOT NULL,
   params JSONB NOT NULL,
   stats JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE CASCADE
 );
 
 CREATE TRIGGER update_skill_optimization_arms_updated_at BEFORE UPDATE ON skill_optimization_arms

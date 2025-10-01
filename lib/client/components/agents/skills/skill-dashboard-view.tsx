@@ -1,5 +1,6 @@
 'use client';
 
+import { generateSkillArms } from '@client/api/v1/idk/skills';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -11,12 +12,13 @@ import {
 } from '@client/components/ui/card';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
+import { useToast } from '@client/hooks/use-toast';
 import { useDatasets } from '@client/providers/datasets';
 import { useEvaluationRuns } from '@client/providers/evaluation-runs';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
-import { useClusterStates } from '@client/providers/skill-optimization-cluster-states';
+import { useClusterStates } from '@client/providers/skill-optimization-clusters';
 import {
   ArrowRightIcon,
   CpuIcon,
@@ -27,11 +29,12 @@ import {
   PlusIcon,
   RefreshCwIcon,
   Settings,
+  Wand2Icon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export function SkillDashboardView(): ReactElement {
   const {
@@ -43,8 +46,10 @@ export function SkillDashboardView(): ReactElement {
     navigateToClusters,
   } = useNavigation();
   const router = useRouter();
+  const { toast } = useToast();
 
   const { selectedSkill, selectedAgent } = navigationState;
+  const [isGeneratingArms, setIsGeneratingArms] = useState(false);
 
   // Use providers
   const {
@@ -130,6 +135,29 @@ export function SkillDashboardView(): ReactElement {
   const recentEvaluations = evaluationRuns.slice(0, 10);
   const associatedDatasets = datasets.slice(0, 5);
 
+  // Handler for generating skill arms
+  const handleGenerateArms = async () => {
+    if (!selectedSkill) return;
+
+    setIsGeneratingArms(true);
+    try {
+      const arms = await generateSkillArms(selectedSkill.id);
+      toast({
+        title: 'Arms generated successfully',
+        description: `Generated ${arms.length} optimization arms for ${selectedSkill.name}`,
+      });
+    } catch (error) {
+      console.error('Error generating arms:', error);
+      toast({
+        title: 'Failed to generate arms',
+        description: 'Please try again later',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingArms(false);
+    }
+  };
+
   // Early return if no skill or agent selected - AFTER all hooks
   if (!selectedSkill || !selectedAgent) {
     return (
@@ -164,6 +192,14 @@ export function SkillDashboardView(): ReactElement {
             >
               <Settings className="h-4 w-4 mr-2" />
               Edit Skill
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleGenerateArms}
+              disabled={isGeneratingArms}
+            >
+              <Wand2Icon className="h-4 w-4 mr-2" />
+              {isGeneratingArms ? 'Generating...' : 'Generate Arms'}
             </Button>
             <Button
               onClick={() =>

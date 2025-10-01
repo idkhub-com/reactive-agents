@@ -57,11 +57,11 @@ import type {
   SkillOptimizationArmUpdateParams,
 } from '@shared/types/data/skill-optimization-arm';
 import type {
-  SkillOptimizationClusterState,
-  SkillOptimizationClusterStateCreateParams,
-  SkillOptimizationClusterStateQueryParams,
-  SkillOptimizationClusterStateUpdateParams,
-} from '@shared/types/data/skill-optimization-cluster-state';
+  SkillOptimizationCluster,
+  SkillOptimizationClusterCreateParams,
+  SkillOptimizationClusterQueryParams,
+  SkillOptimizationClusterUpdateParams,
+} from '@shared/types/data/skill-optimization-cluster';
 import type {
   SkillOptimizationEvaluationRun,
   SkillOptimizationEvaluationRunCreateParams,
@@ -191,18 +191,18 @@ export interface UserDataStorageConnector {
     modelIds: string[],
   ): Promise<void> | void;
 
-  // Skill Optimization Cluster States
-  getSkillOptimizationClusterStates(
-    queryParams: SkillOptimizationClusterStateQueryParams,
-  ): Promise<SkillOptimizationClusterState[]> | SkillOptimizationClusterState[];
-  createSkillOptimizationClusterStates(
-    params_list: SkillOptimizationClusterStateCreateParams[],
-  ): Promise<SkillOptimizationClusterState[]> | SkillOptimizationClusterState[];
-  updateSkillOptimizationClusterState(
+  // Skill Optimization Cluster
+  getSkillOptimizationClusters(
+    queryParams: SkillOptimizationClusterQueryParams,
+  ): Promise<SkillOptimizationCluster[]> | SkillOptimizationCluster[];
+  createSkillOptimizationClusters(
+    params_list: SkillOptimizationClusterCreateParams[],
+  ): Promise<SkillOptimizationCluster[]> | SkillOptimizationCluster[];
+  updateSkillOptimizationCluster(
     id: string,
-    update: SkillOptimizationClusterStateUpdateParams,
-  ): Promise<SkillOptimizationClusterState> | SkillOptimizationClusterState;
-  deleteSkillOptimizationClusterState(id: string): Promise<void> | void;
+    update: SkillOptimizationClusterUpdateParams,
+  ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
+  deleteSkillOptimizationCluster(id: string): Promise<void> | void;
 
   // Skill Optimization Arms
   getSkillOptimizationArms(
@@ -216,6 +216,7 @@ export interface UserDataStorageConnector {
     update: SkillOptimizationArmUpdateParams,
   ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
   deleteSkillOptimizationArm(id: string): Promise<void> | void;
+  deleteSkillOptimizationArmsForSkill(skillId: string): Promise<void> | void;
 
   // Skill Optimization Evaluation Run
   getSkillOptimizationEvaluationRuns(

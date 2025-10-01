@@ -10,7 +10,7 @@ import { LogsProvider } from './logs';
 import { ModelsProvider } from './models';
 import { NavigationProvider } from './navigation';
 import { ReactQueryProvider } from './query-client';
-import { ClusterStatesProvider } from './skill-optimization-cluster-states';
+import { ClusterStatesProvider } from './skill-optimization-clusters';
 import { SkillsProvider } from './skills';
 
 interface AppProvidersProps {

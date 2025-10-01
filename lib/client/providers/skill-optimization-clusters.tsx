@@ -1,7 +1,7 @@
 'use client';
 
 import { getSkillClusterStates } from '@client/api/v1/idk/skills';
-import type { SkillOptimizationClusterState } from '@shared/types/data/skill-optimization-cluster-state';
+import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
@@ -16,7 +16,7 @@ export const clusterStateQueryKeys = {
 
 interface ClusterStatesContextType {
   // Query state
-  clusterStates: SkillOptimizationClusterState[];
+  clusterStates: SkillOptimizationCluster[];
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -26,9 +26,7 @@ interface ClusterStatesContextType {
   setSkillId: (skillId: string | null) => void;
 
   // Helper functions
-  getClusterStateById: (
-    id: string,
-  ) => SkillOptimizationClusterState | undefined;
+  getClusterStateById: (id: string) => SkillOptimizationCluster | undefined;
   refreshClusterStates: () => void;
 }
 
@@ -59,9 +57,9 @@ export const ClusterStatesProvider = ({
 
   // Helper functions
   const getClusterStateById = useCallback(
-    (id: string): SkillOptimizationClusterState | undefined => {
+    (id: string): SkillOptimizationCluster | undefined => {
       return clusterStates?.find(
-        (clusterState: SkillOptimizationClusterState) => clusterState.id === id,
+        (clusterState: SkillOptimizationCluster) => clusterState.id === id,
       );
     },
     [clusterStates],

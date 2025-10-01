@@ -18,8 +18,8 @@ export * from './model';
 export * from './skill';
 // Skill Optimization Arm types
 export * from './skill-optimization-arm';
-// Skill Optimization Cluster State types
-export * from './skill-optimization-cluster-state';
+// Skill Optimization Cluster types
+export * from './skill-optimization-cluster';
 // Skill Optimization Evaluation Run types
 export * from './skill-optimization-evaluation-run';
 // Tool types

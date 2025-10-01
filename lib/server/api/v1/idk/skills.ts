@@ -128,23 +128,21 @@ export const skillsRouter = new Hono<AppEnv>()
     },
   )
   .get(
-    '/:skillId/cluster-states',
+    '/:skillId/clusters',
     zValidator('param', z.object({ skillId: z.uuid() })),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const clusterStates = await connector.getSkillOptimizationClusterStates(
-          {
-            skill_id: skillId,
-          },
-        );
+        const clusters = await connector.getSkillOptimizationClusters({
+          skill_id: skillId,
+        });
 
-        return c.json(clusterStates);
+        return c.json(clusters);
       } catch (error) {
-        console.error('Error getting cluster states for skill:', error);
-        return c.json({ error: 'Failed to get cluster states for skill' }, 500);
+        console.error('Error getting clusters for skill:', error);
+        return c.json({ error: 'Failed to get clusters for skill' }, 500);
       }
     },
   )

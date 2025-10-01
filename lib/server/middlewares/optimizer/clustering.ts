@@ -5,11 +5,8 @@ import type {
 import { calculateDistance, kMeansClustering } from '@server/utils/math';
 import { debug, error } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
-import type {
-  Log,
-  Skill,
-  SkillOptimizationClusterStateCreateParams,
-} from '@shared/types/data';
+import type { Log, Skill } from '@shared/types/data';
+import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/skill-optimization-cluster';
 import type { ClusterResult } from '@shared/utils/math';
 
 function extractEmbeddings(logs: Log[]): number[][] {
@@ -87,7 +84,7 @@ export async function autoClusterSkill(
   if (logs.length >= interval) {
     try {
       const clusterStates =
-        await userDataStorageConnector.getSkillOptimizationClusterStates({
+        await userDataStorageConnector.getSkillOptimizationClusters({
           skill_id: skill.id,
         });
 
@@ -108,19 +105,19 @@ export async function autoClusterSkill(
 
       // Create new clusters
       if (clusterStates.length === 0) {
-        const newClusterStatesCreateParamsList: SkillOptimizationClusterStateCreateParams[] =
+        const newClusterStatesCreateParamsList: SkillOptimizationClusterCreateParams[] =
           [];
         for (const newClusterCenter of newClusterCenters) {
-          const params: SkillOptimizationClusterStateCreateParams = {
+          const params: SkillOptimizationClusterCreateParams = {
             agent_id: skill.agent_id,
             skill_id: skill.id,
             total_steps: 0,
-            cluster_center: newClusterCenter,
+            center: newClusterCenter,
           };
 
           newClusterStatesCreateParamsList.push(params);
         }
-        await userDataStorageConnector.createSkillOptimizationClusterStates(
+        await userDataStorageConnector.createSkillOptimizationClusters(
           newClusterStatesCreateParamsList,
         );
       }
@@ -135,7 +132,7 @@ export async function autoClusterSkill(
             if (used.has(i)) continue;
 
             const distance = calculateDistance(
-              clusterState.cluster_center,
+              clusterState.center,
               newClusterCenters[i],
             );
 
@@ -157,10 +154,10 @@ export async function autoClusterSkill(
         // Update all matched cluster states
         await Promise.all(
           matches.map((match) =>
-            userDataStorageConnector.updateSkillOptimizationClusterState(
+            userDataStorageConnector.updateSkillOptimizationCluster(
               match.clusterStateId,
               {
-                cluster_center: match.newCenter,
+                center: match.newCenter,
               },
             ),
           ),

@@ -5,10 +5,10 @@ import {
   Skill,
   type SkillCreateParams,
   SkillOptimizationArm,
-  SkillOptimizationClusterState,
   type SkillQueryParams,
   type SkillUpdateParams,
 } from '@shared/types/data';
+import { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { hc } from 'hono/client';
 
 const client = hc<IdkRoute>(API_URL);
@@ -121,10 +121,8 @@ export async function removeModelsFromSkill(
 
 export async function getSkillClusterStates(
   skillId: string,
-): Promise<SkillOptimizationClusterState[]> {
-  const response = await client.v1.idk.skills[':skillId'][
-    'cluster-states'
-  ].$get({
+): Promise<SkillOptimizationCluster[]> {
+  const response = await client.v1.idk.skills[':skillId'].clusters.$get({
     param: {
       skillId,
     },
@@ -134,7 +132,7 @@ export async function getSkillClusterStates(
     throw new Error('Failed to fetch cluster states for skill');
   }
 
-  return SkillOptimizationClusterState.array().parse(await response.json());
+  return SkillOptimizationCluster.array().parse(await response.json());
 }
 
 export async function getSkillArms(
