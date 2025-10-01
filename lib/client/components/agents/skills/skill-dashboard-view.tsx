@@ -16,11 +16,13 @@ import { useEvaluationRuns } from '@client/providers/evaluation-runs';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
+import { useClusterStates } from '@client/providers/skill-optimization-cluster-states';
 import {
   ArrowRightIcon,
   CpuIcon,
   DatabaseIcon,
   FileTextIcon,
+  LayersIcon,
   PlayIcon,
   PlusIcon,
   RefreshCwIcon,
@@ -38,6 +40,7 @@ export function SkillDashboardView(): ReactElement {
     navigateToEvaluations,
     navigateToDatasets,
     navigateToModels,
+    navigateToClusters,
   } = useNavigation();
   const router = useRouter();
 
@@ -65,6 +68,13 @@ export function SkillDashboardView(): ReactElement {
 
   // Models via provider
   const { skillModels, isLoadingSkillModels, setSkillId } = useModels();
+
+  // Cluster states via provider
+  const {
+    clusterStates,
+    isLoading: isLoadingClusterStates,
+    setSkillId: setClusterStatesSkillId,
+  } = useClusterStates();
 
   // Update evaluation runs query params
   useEffect(() => {
@@ -106,6 +116,15 @@ export function SkillDashboardView(): ReactElement {
     }
     setSkillId(selectedSkill.id);
   }, [selectedSkill, setSkillId]);
+
+  // Update cluster states skill ID
+  useEffect(() => {
+    if (!selectedSkill) {
+      setClusterStatesSkillId(null);
+      return;
+    }
+    setClusterStatesSkillId(selectedSkill.id);
+  }, [selectedSkill, setClusterStatesSkillId]);
 
   // Use provider data directly
   const recentEvaluations = evaluationRuns.slice(0, 10);
@@ -432,6 +451,67 @@ export function SkillDashboardView(): ReactElement {
                   <PlusIcon className="h-3 w-3 mr-1" />
                   Add
                 </Button>
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRightIcon className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Clusters Card */}
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() =>
+              navigateToClusters(selectedAgent.name, selectedSkill.name)
+            }
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-medium">
+                  Clusters
+                </CardTitle>
+                <CardDescription>Optimization clusters</CardDescription>
+              </div>
+              <LayersIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingClusterStates ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map(() => (
+                    <Skeleton key={nanoid()} className="h-4 w-full" />
+                  ))}
+                </div>
+              ) : clusterStates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No clusters found
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {clusterStates.slice(0, 3).map((cluster, index) => (
+                    <div
+                      key={cluster.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="truncate flex-1">
+                        Cluster {index + 1}
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {cluster.total_steps.toString()} reqs
+                      </Badge>
+                    </div>
+                  ))}
+                  {clusterStates.length > 3 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        +{clusterStates.length - 3} more
+                      </span>
+                      <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-4">
                 <Button variant="ghost" size="sm">
                   View All
                   <ArrowRightIcon className="h-3 w-3 ml-1" />

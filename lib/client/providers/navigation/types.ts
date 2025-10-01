@@ -22,6 +22,7 @@ export interface NavigationState {
     | 'datasets'
     | 'configurations'
     | 'models'
+    | 'clusters'
     | 'create-evaluation'
     | 'create-dataset'
     | 'create-configuration'
@@ -70,6 +71,7 @@ export interface NavigationContextType {
   navigateToCreateDataset: (agentName: string, skillName: string) => void;
   navigateToConfigurations: (agentName: string, skillName: string) => void;
   navigateToModels: (agentName: string, skillName: string) => void;
+  navigateToClusters: (agentName: string, skillName: string) => void;
   navigateBack: (targetSegmentIndex: number) => void;
   updateBreadcrumbs: (segments: BreadcrumbSegment[]) => void;
 }

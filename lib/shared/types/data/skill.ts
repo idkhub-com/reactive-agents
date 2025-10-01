@@ -1,15 +1,11 @@
 import { z } from 'zod';
 
 export const SkillMetadata = z.object({
-  last_trained_at: z.iso.datetime({ offset: true }).optional(),
-  /** The timestamp of the most recent log used in the last training batch.
+  last_clustering_at: z.iso.datetime({ offset: true }).optional(),
+  /** The timestamp of the most recent log used in the last clustering batch.
    *
    * We will query the logs from this timestamp to the current time to find the most recent logs. */
-  last_trained_log_start_time: z.number().optional(),
-  /** Timestamp when optimization was started. Used as a lock to prevent concurrent optimization.
-   *
-   * If this timestamp is more than 6 hours old, it's considered stale and can be overwritten. */
-  optimization_started_at: z.iso.datetime({ offset: true }).optional(),
+  last_clustering_log_start_time: z.number().optional(),
 });
 
 export const Skill = z.object({
@@ -49,7 +45,7 @@ export const SkillCreateParams = z
     agent_id: z.uuid(),
     name: z.string().min(1).max(255),
     description: z.string().min(25).max(10000),
-    metadata: z.record(z.string(), z.unknown()).default({}),
+    metadata: SkillMetadata,
     max_configurations: z.number().int().min(0).max(25).default(3),
   })
   .strict();
@@ -59,7 +55,7 @@ export type SkillCreateParams = z.infer<typeof SkillCreateParams>;
 export const SkillUpdateParams = z
   .object({
     description: z.string().min(25).max(10000).optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    metadata: SkillMetadata.optional(),
     max_configurations: z.number().int().min(0).max(25).optional(),
   })
   .strict()

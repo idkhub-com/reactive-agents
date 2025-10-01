@@ -114,6 +114,9 @@ export function NavigationProvider({
     if (subPath === 'models') {
       return 'models';
     }
+    if (subPath === 'clusters') {
+      return 'clusters';
+    }
     if (subPath === 'edit') {
       return 'edit-skill';
     }
@@ -305,6 +308,11 @@ export function NavigationProvider({
           breadcrumbs.push({
             label: 'Models',
             path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/models`,
+          });
+        } else if (currentView === 'clusters') {
+          breadcrumbs.push({
+            label: 'Clusters',
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
           });
         }
       } else if (newState.selectedAgent && currentView === 'skills-list') {

@@ -3,9 +3,13 @@ import type {
   UserDataStorageConnector,
 } from '@server/types/connector';
 import { calculateDistance, kMeansClustering } from '@server/utils/math';
-import { error } from '@shared/console-logging';
+import { debug, error } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
-import type { Log, Skill } from '@shared/types/data';
+import type {
+  Log,
+  Skill,
+  SkillOptimizationClusterStateCreateParams,
+} from '@shared/types/data';
 import type { ClusterResult } from '@shared/utils/math';
 
 function extractEmbeddings(logs: Log[]): number[][] {
@@ -67,15 +71,17 @@ export async function autoClusterSkill(
     return;
   }
 
-  const interval = 10;
+  const interval = 5;
 
   const logs = await logsStorageConnector.getLogs({
     skill_id: skill.id,
-    after: skill.metadata.last_trained_log_start_time,
+    after: skill.metadata.last_clustering_log_start_time,
     // Since the embedding is not null, we can assume that the logs are valid
     // and are for one of the allowed function names
     embedding_not_null: true,
   });
+
+  debug(`[OPTIMIZER] Got ${logs.length} logs for skill ${skill.id}`);
 
   // Automatically cluster logs if there are enough logs
   if (logs.length >= interval) {
@@ -100,43 +106,75 @@ export async function autoClusterSkill(
       const matches: Array<{ clusterStateId: string; newCenter: number[] }> =
         [];
 
-      for (const clusterState of clusterStates) {
-        let minDistance = Infinity;
-        let bestMatchIndex = -1;
+      // Create new clusters
+      if (clusterStates.length === 0) {
+        const newClusterStatesCreateParamsList: SkillOptimizationClusterStateCreateParams[] =
+          [];
+        for (const newClusterCenter of newClusterCenters) {
+          const params: SkillOptimizationClusterStateCreateParams = {
+            agent_id: skill.agent_id,
+            skill_id: skill.id,
+            total_steps: 0,
+            cluster_center: newClusterCenter,
+          };
 
-        // Find the closest unused new cluster center
-        for (let i = 0; i < newClusterCenters.length; i++) {
-          if (used.has(i)) continue;
+          newClusterStatesCreateParamsList.push(params);
+        }
+        await userDataStorageConnector.createSkillOptimizationClusterStates(
+          newClusterStatesCreateParamsList,
+        );
+      }
+      // Update existing clusters
+      else {
+        for (const clusterState of clusterStates) {
+          let minDistance = Infinity;
+          let bestMatchIndex = -1;
 
-          const distance = calculateDistance(
-            clusterState.cluster_center,
-            newClusterCenters[i],
-          );
+          // Find the closest unused new cluster center
+          for (let i = 0; i < newClusterCenters.length; i++) {
+            if (used.has(i)) continue;
 
-          if (distance < minDistance) {
-            minDistance = distance;
-            bestMatchIndex = i;
+            const distance = calculateDistance(
+              clusterState.cluster_center,
+              newClusterCenters[i],
+            );
+
+            if (distance < minDistance) {
+              minDistance = distance;
+              bestMatchIndex = i;
+            }
+          }
+
+          if (bestMatchIndex !== -1) {
+            used.add(bestMatchIndex);
+            matches.push({
+              clusterStateId: clusterState.id,
+              newCenter: newClusterCenters[bestMatchIndex],
+            });
           }
         }
 
-        if (bestMatchIndex !== -1) {
-          used.add(bestMatchIndex);
-          matches.push({
-            clusterStateId: clusterState.id,
-            newCenter: newClusterCenters[bestMatchIndex],
-          });
-        }
+        // Update all matched cluster states
+        await Promise.all(
+          matches.map((match) =>
+            userDataStorageConnector.updateSkillOptimizationClusterState(
+              match.clusterStateId,
+              {
+                cluster_center: match.newCenter,
+              },
+            ),
+          ),
+        );
       }
 
-      // Update all matched cluster states
-      await Promise.all(
-        matches.map((match) =>
-          userDataStorageConnector.updateSkillOptimizationClusterState(
-            match.clusterStateId,
-            { cluster_center: match.newCenter },
-          ),
-        ),
-      );
+      const lastLog = logs[logs.length - 1];
+
+      await userDataStorageConnector.updateSkill(skill.id, {
+        metadata: {
+          last_clustering_at: new Date().toISOString(),
+          last_clustering_log_start_time: lastLog.start_time,
+        },
+      });
     } catch (e) {
       error(`[OPTIMIZER] Error during optimization for skill ${skill.id}:`, e);
     }

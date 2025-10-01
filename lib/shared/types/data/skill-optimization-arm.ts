@@ -37,10 +37,10 @@ export type SkillOptimizationArmParams = z.infer<
 >;
 
 export const SkillOptimizationArmStats = z.object({
-  n: z.int64().min(0n),
-  mean: z.float64().min(0).max(1),
-  n2: z.int64().min(0n),
-  total_reward: z.int64().min(0n),
+  n: z.number().min(0),
+  mean: z.number().min(0).max(1),
+  n2: z.number().min(0),
+  total_reward: z.number().min(0),
 });
 export type SkillOptimizationArmStats = z.infer<
   typeof SkillOptimizationArmStats

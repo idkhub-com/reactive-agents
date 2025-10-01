@@ -17,12 +17,12 @@ export const SkillOptimizationClusterState = z.object({
    * The total number of requests that have been processed by the algorithm
    * in this cluster.
    */
-  total_steps: z.int64().min(0n),
+  total_steps: z.number().min(0),
 
   /** An array representing the center of the cluster of the logs in
    * n-dimensional space.
    */
-  cluster_center: z.array(z.float32()),
+  cluster_center: z.array(z.number()),
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -49,7 +49,8 @@ export const SkillOptimizationClusterStateCreateParams = z
   .object({
     agent_id: z.uuid(),
     skill_id: z.uuid(),
-    cluster_center: z.array(z.float32()),
+    total_steps: z.number().min(0),
+    cluster_center: z.array(z.number()),
   })
   .strict();
 
@@ -59,7 +60,8 @@ export type SkillOptimizationClusterStateCreateParams = z.infer<
 
 export const SkillOptimizationClusterStateUpdateParams = z
   .object({
-    cluster_center: z.array(z.float32()),
+    total_steps: z.number().min(0).optional(),
+    cluster_center: z.array(z.number()).optional(),
   })
   .strict();
 

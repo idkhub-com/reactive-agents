@@ -44,10 +44,10 @@ export async function handleGenerateArms(
           system_prompt: systemPrompt,
         };
         const stats: SkillOptimizationArmStats = {
-          n: 0n,
+          n: 0,
           mean: 0,
-          n2: 0n,
-          total_reward: 0n,
+          n2: 0,
+          total_reward: 0,
         };
         const createParams: SkillOptimizationArmCreateParams = {
           agent_id: skill.agent_id,
