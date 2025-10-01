@@ -1,7 +1,8 @@
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import { generateEmbeddingForRequest } from '@server/utils/embeddings';
-import { cosineSimilarity } from '@server/utils/math';
+import { cosineSimilarity, sampleBeta } from '@server/utils/math';
+import { findRealtimeEvaluations } from '@server/utils/realtime-evaluations';
 import { renderTemplate } from '@server/utils/templates';
 import { error } from '@shared/console-logging';
 import {
@@ -22,30 +23,50 @@ import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
 function getOptimalArm(arms: SkillOptimizationArm[]): SkillOptimizationArm {
-  // TODO: Implement armed bandit algorithm to find the optimal arm to pull
-  // export const SkillOptimizationArmStats = z.object({
-  //   n: z.number().min(0),
-  //   mean: z.number().min(0).max(1),
-  //   n2: z.number().min(0),
-  //   total_reward: z.number().min(0),
-  // });
-  // export const SkillOptimizationArm = z.object({
-  //   id: z.uuid(),
-  //   agent_id: z.uuid(),
-  //   skill_id: z.uuid(),
-  //   cluster_id: z.uuid(),
-  //   params: SkillOptimizationArmParams,
-  //   stats: SkillOptimizationArmStats,
-  //   created_at: z.iso.datetime({ offset: true }),
-  //   updated_at: z.iso.datetime({ offset: true }),
-  // });
+  // Implement Thompson Sampling algorithm for multi-armed bandit
+  // Thompson Sampling uses Bayesian approach: sample from posterior Beta distribution
+  // and select the arm with highest sampled value
+
+  let optimalArm = arms[0];
+  let maxSample = -Infinity;
+
+  for (const arm of arms) {
+    // Beta distribution parameters with uniform prior (Beta(1,1))
+    // alpha = successes + 1, beta = failures + 1
+    const successes = arm.stats.total_reward;
+    const failures = arm.stats.n - arm.stats.total_reward;
+    const alpha = successes + 1;
+    const beta = failures + 1;
+
+    // Sample from Beta(alpha, beta)
+    const sample = sampleBeta(alpha, beta);
+
+    if (sample > maxSample) {
+      maxSample = sample;
+      optimalArm = arm;
+    }
+  }
+
+  return optimalArm;
 }
 
 function getOptimalCluster(
   embedding: number[],
   clusters: SkillOptimizationCluster[],
 ): SkillOptimizationCluster {
-  // TODO: Find the closest cluster to the embedding
+  // Find the cluster with the highest cosine similarity to the embedding
+  let optimalCluster = clusters[0];
+  let maxSimilarity = -1;
+
+  for (const cluster of clusters) {
+    const similarity = cosineSimilarity(embedding, cluster.center);
+    if (similarity > maxSimilarity) {
+      maxSimilarity = similarity;
+      optimalCluster = cluster;
+    }
+  }
+
+  return optimalCluster;
 }
 
 function getRandomValueInRange(min: number, max: number): number {
@@ -114,6 +135,8 @@ async function validateTargetConfiguration(
       });
 
       const optimalArm = getOptimalArm(arms);
+
+      c.set('pulled_arm', optimalArm);
 
       const renderedSystemPrompt = renderTemplate(
         optimalArm.params.system_prompt!,
@@ -267,6 +290,19 @@ async function validateTargetConfiguration(
   return parseResult.data;
 }
 
+async function updatePulledArm(
+  userDataStorageConnector: UserDataStorageConnector,
+  arm: SkillOptimizationArm,
+) {
+  const evaluationRuns = await findRealtimeEvaluations(
+    arm.agent_id,
+    arm.skill_id,
+    userDataStorageConnector,
+  );
+
+  // TODO: Implement arm update here
+}
+
 export const idkHubConfigurationInjectorMiddleware = createMiddleware(
   async (c: AppContext, next: Next) => {
     const url = new URL(c.req.url);
@@ -325,5 +361,12 @@ export const idkHubConfigurationInjectorMiddleware = createMiddleware(
       }
     }
     await next();
+    const pulledArm = c.get('pulled_arm');
+    if (!pulledArm) {
+      // Nothing to do
+      return;
+    }
+    const userDataStorageConnector = c.get('user_data_storage_connector');
+    await updatePulledArm(userDataStorageConnector, pulledArm);
   },
 );
