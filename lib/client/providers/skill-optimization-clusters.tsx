@@ -1,22 +1,22 @@
 'use client';
 
-import { getSkillClusterStates } from '@client/api/v1/idk/skills';
+import { getSkillClusterStates as getSkillClusters } from '@client/api/v1/idk/skills';
 import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
 
 // Query keys for React Query caching
-export const clusterStateQueryKeys = {
-  all: ['skillOptimizationClusterStates'] as const,
-  lists: () => [...clusterStateQueryKeys.all, 'list'] as const,
+export const clusterQueryKeys = {
+  all: ['skillOptimizationClusters'] as const,
+  lists: () => [...clusterQueryKeys.all, 'list'] as const,
   list: (skillId: string | null) =>
-    [...clusterStateQueryKeys.lists(), skillId] as const,
+    [...clusterQueryKeys.lists(), skillId] as const,
 };
 
-interface ClusterStatesContextType {
+interface ClustersContextType {
   // Query state
-  clusterStates: SkillOptimizationCluster[];
+  clusters: SkillOptimizationCluster[];
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -26,15 +26,15 @@ interface ClusterStatesContextType {
   setSkillId: (skillId: string | null) => void;
 
   // Helper functions
-  getClusterStateById: (id: string) => SkillOptimizationCluster | undefined;
-  refreshClusterStates: () => void;
+  getClusterById: (id: string) => SkillOptimizationCluster | undefined;
+  refreshClusters: () => void;
 }
 
-const ClusterStatesContext = createContext<
-  ClusterStatesContextType | undefined
->(undefined);
+const ClustersContext = createContext<ClustersContextType | undefined>(
+  undefined,
+);
 
-export const ClusterStatesProvider = ({
+export const ClustersProvider = ({
   children,
 }: {
   children: React.ReactNode;
@@ -45,35 +45,35 @@ export const ClusterStatesProvider = ({
 
   // Cluster states query
   const {
-    data: clusterStates = [],
+    data: clusters = [],
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: clusterStateQueryKeys.list(skillId),
-    queryFn: () => getSkillClusterStates(skillId!),
+    queryKey: clusterQueryKeys.list(skillId),
+    queryFn: () => getSkillClusters(skillId!),
     enabled: !!skillId, // Only fetch when we have skillId
   });
 
   // Helper functions
-  const getClusterStateById = useCallback(
+  const getClusterById = useCallback(
     (id: string): SkillOptimizationCluster | undefined => {
-      return clusterStates?.find(
-        (clusterState: SkillOptimizationCluster) => clusterState.id === id,
+      return clusters?.find(
+        (cluster: SkillOptimizationCluster) => cluster.id === id,
       );
     },
-    [clusterStates],
+    [clusters],
   );
 
-  const refreshClusterStates = useCallback(() => {
+  const refreshClusters = useCallback(() => {
     queryClient.invalidateQueries({
-      queryKey: clusterStateQueryKeys.all,
+      queryKey: clusterQueryKeys.all,
     });
   }, [queryClient]);
 
-  const contextValue: ClusterStatesContextType = {
+  const contextValue: ClustersContextType = {
     // Query state
-    clusterStates,
+    clusters,
     isLoading,
     error,
     refetch,
@@ -83,23 +83,21 @@ export const ClusterStatesProvider = ({
     setSkillId,
 
     // Helper functions
-    getClusterStateById,
-    refreshClusterStates,
+    getClusterById: getClusterById,
+    refreshClusters: refreshClusters,
   };
 
   return (
-    <ClusterStatesContext.Provider value={contextValue}>
+    <ClustersContext.Provider value={contextValue}>
       {children}
-    </ClusterStatesContext.Provider>
+    </ClustersContext.Provider>
   );
 };
 
-export const useClusterStates = (): ClusterStatesContextType => {
-  const context = useContext(ClusterStatesContext);
+export const useClusters = (): ClustersContextType => {
+  const context = useContext(ClustersContext);
   if (!context) {
-    throw new Error(
-      'useClusterStates must be used within a ClusterStatesProvider',
-    );
+    throw new Error('useClusters must be used within a ClustersProvider');
   }
   return context;
 };

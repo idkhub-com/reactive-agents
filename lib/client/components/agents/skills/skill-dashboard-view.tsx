@@ -18,7 +18,7 @@ import { useEvaluationRuns } from '@client/providers/evaluation-runs';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
-import { useClusterStates } from '@client/providers/skill-optimization-clusters';
+import { useClusters } from '@client/providers/skill-optimization-clusters';
 import {
   ArrowRightIcon,
   CpuIcon,
@@ -76,10 +76,10 @@ export function SkillDashboardView(): ReactElement {
 
   // Cluster states via provider
   const {
-    clusterStates,
+    clusters: clusterStates,
     isLoading: isLoadingClusterStates,
     setSkillId: setClusterStatesSkillId,
-  } = useClusterStates();
+  } = useClusters();
 
   // Update evaluation runs query params
   useEffect(() => {

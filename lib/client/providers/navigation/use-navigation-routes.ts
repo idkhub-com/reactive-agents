@@ -129,6 +129,29 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
     [router],
   );
 
+  const navigateToClusterArms = useCallback(
+    (agentName: string, skillName: string, clusterId: string) => {
+      router.push(
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/clusters/${clusterId}/arms`,
+      );
+    },
+    [router],
+  );
+
+  const navigateToArmDetail = useCallback(
+    (
+      agentName: string,
+      skillName: string,
+      clusterId: string,
+      armId: string,
+    ) => {
+      router.push(
+        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/clusters/${clusterId}/arms/${armId}`,
+      );
+    },
+    [router],
+  );
+
   return {
     navigateToSkillDashboard,
     navigateToLogs,
@@ -144,5 +167,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
     navigateToConfigurations,
     navigateToModels,
     navigateToClusters,
+    navigateToClusterArms,
+    navigateToArmDetail,
   };
 }

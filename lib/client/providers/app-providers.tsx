@@ -10,7 +10,8 @@ import { LogsProvider } from './logs';
 import { ModelsProvider } from './models';
 import { NavigationProvider } from './navigation';
 import { ReactQueryProvider } from './query-client';
-import { ClusterStatesProvider } from './skill-optimization-clusters';
+import { ArmsProvider } from './skill-optimization-arms';
+import { ClustersProvider } from './skill-optimization-clusters';
 import { SkillsProvider } from './skills';
 
 interface AppProvidersProps {
@@ -49,15 +50,17 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
             <SkillsProvider>
               <AIProviderAPIKeysProvider>
                 <ModelsProvider>
-                  <ClusterStatesProvider>
-                    <LogsProvider>
-                      <DatasetsProvider>
-                        <EvaluationRunsProvider>
-                          {children}
-                        </EvaluationRunsProvider>
-                      </DatasetsProvider>
-                    </LogsProvider>
-                  </ClusterStatesProvider>
+                  <ClustersProvider>
+                    <ArmsProvider>
+                      <LogsProvider>
+                        <DatasetsProvider>
+                          <EvaluationRunsProvider>
+                            {children}
+                          </EvaluationRunsProvider>
+                        </DatasetsProvider>
+                      </LogsProvider>
+                    </ArmsProvider>
+                  </ClustersProvider>
                 </ModelsProvider>
               </AIProviderAPIKeysProvider>
             </SkillsProvider>

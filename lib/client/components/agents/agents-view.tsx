@@ -6,6 +6,8 @@ import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';
 import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
+import { ArmDetailView } from './skills/arms/arm-detail-view';
+import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
 import { ClustersView } from './skills/clusters/clusters-view';
 import { DatasetDetailsView } from './skills/datasets';
 import { CreateDatasetView } from './skills/datasets/create-dataset-view';
@@ -115,6 +117,18 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Clusters">
             <ClustersView />
+          </AgentErrorBoundary>
+        );
+      case 'cluster-arms':
+        return (
+          <AgentErrorBoundary sectionName="Cluster Arms">
+            <ClusterArmsView />
+          </AgentErrorBoundary>
+        );
+      case 'arm-detail':
+        return (
+          <AgentErrorBoundary sectionName="Arm Detail">
+            <ArmDetailView />
           </AgentErrorBoundary>
         );
       default:

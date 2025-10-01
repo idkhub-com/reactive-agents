@@ -2,7 +2,6 @@ import { BaseArmsParams } from '@server/handlers/idkhub/base-arms';
 import { generateSystemPromptForSkill } from '@server/handlers/idkhub/system-prompt';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
-import { debug } from '@shared/console-logging';
 import type {
   SkillOptimizationArmCreateParams,
   SkillOptimizationArmParams,

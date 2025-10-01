@@ -125,6 +125,8 @@ describe('EditSkillView', () => {
       navigateToCreateDataset: vi.fn(),
       navigateToConfigurations: vi.fn(),
       navigateToModels: vi.fn(),
+      navigateToClusters: vi.fn(),
+      navigateToClusterArms: vi.fn(),
       navigateBack: vi.fn(),
       updateBreadcrumbs: vi.fn(),
       skills: [],

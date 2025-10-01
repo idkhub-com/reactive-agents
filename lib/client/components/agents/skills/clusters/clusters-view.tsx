@@ -13,19 +13,18 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useNavigation } from '@client/providers/navigation';
-import { useClusterStates } from '@client/providers/skill-optimization-clusters';
+import { useClusters } from '@client/providers/skill-optimization-clusters';
 import { LayersIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
 export function ClustersView(): ReactElement {
-  const { navigationState } = useNavigation();
+  const { navigationState, navigateToClusterArms } = useNavigation();
   const { selectedSkill, selectedAgent } = navigationState;
   const goBack = useSmartBack();
 
-  const { clusterStates, isLoading, error, refetch, setSkillId } =
-    useClusterStates();
+  const { clusters, isLoading, error, refetch, setSkillId } = useClusters();
 
   // Set skill ID when skill changes
   useEffect(() => {
@@ -76,9 +75,7 @@ export function ClustersView(): ReactElement {
               <LayersIcon className="h-5 w-5" />
               Cluster Overview
             </CardTitle>
-            <CardDescription>
-              Total clusters: {clusterStates.length}
-            </CardDescription>
+            <CardDescription>Total clusters: {clusters.length}</CardDescription>
           </CardHeader>
         </Card>
 
@@ -109,7 +106,7 @@ export function ClustersView(): ReactElement {
                 </CardContent>
               </Card>
             </div>
-          ) : clusterStates.length === 0 ? (
+          ) : clusters.length === 0 ? (
             <div className="col-span-full">
               <Card>
                 <CardContent className="pt-6 text-center">
@@ -124,10 +121,17 @@ export function ClustersView(): ReactElement {
               </Card>
             </div>
           ) : (
-            clusterStates.map((cluster, index) => (
+            clusters.map((cluster, index) => (
               <Card
                 key={cluster.id}
-                className="hover:shadow-lg transition-shadow"
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() =>
+                  navigateToClusterArms(
+                    selectedAgent.name,
+                    selectedSkill.name,
+                    cluster.id,
+                  )
+                }
               >
                 <CardHeader>
                   <CardTitle className="text-lg">Cluster {index + 1}</CardTitle>
