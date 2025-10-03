@@ -135,9 +135,10 @@ async function validateTargetConfiguration(
           skill.max_configurations,
         );
         const clusterParams: SkillOptimizationClusterCreateParams[] =
-          initialCentroids.map((centroid) => ({
+          initialCentroids.map((centroid, index) => ({
             agent_id: skill.agent_id,
             skill_id: skill.id,
+            name: `Cluster ${index + 1}`,
             total_steps: 0,
             centroid,
           }));

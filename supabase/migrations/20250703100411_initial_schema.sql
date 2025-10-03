@@ -27,6 +27,7 @@ CREATE TABLE if not exists skills (
   description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
   max_configurations INTEGER NOT NULL DEFAULT 3,
+  num_system_prompts INTEGER NOT NULL DEFAULT 3,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -342,35 +343,6 @@ CREATE POLICY "service_role_full_access" ON log_outputs FOR ALL TO service_role 
 
 
 -- ================================================
--- Skill optimizations table
--- ================================================
-CREATE TABLE IF NOT EXISTS skill_optimizations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  agent_id UUID NOT NULL,
-  skill_id UUID NOT NULL,
-  version INTEGER NOT NULL,
-  data JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
-  UNIQUE(agent_id, skill_id, version)
-);
-
-CREATE TRIGGER update_skill_optimizations_updated_at BEFORE UPDATE ON skill_optimizations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE INDEX idx_skill_optimizations_agent_id ON skill_optimizations(agent_id);
-
-CREATE INDEX idx_skill_optimizations_skill_id ON skill_optimizations(skill_id);
-
-CREATE INDEX idx_skill_optimizations_version ON skill_optimizations(version);
-
-ALTER TABLE skill_optimizations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "service_role_full_access" ON skill_optimizations FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- ================================================
 -- Cache table
 -- ================================================
 CREATE TABLE IF NOT EXISTS cache (
@@ -426,6 +398,7 @@ CREATE TRIGGER update_models_updated_at BEFORE UPDATE ON models
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_models_ai_provider_api_key_id ON models(ai_provider_api_key_id);
+
 CREATE INDEX idx_models_model_name ON models(model_name);
 
 ALTER TABLE models ENABLE ROW LEVEL SECURITY;
@@ -446,6 +419,7 @@ CREATE TABLE IF NOT EXISTS skill_models (
 );
 
 CREATE INDEX idx_skill_models_skill_id ON skill_models(skill_id);
+
 CREATE INDEX idx_skill_models_model_id ON skill_models(model_id);
 
 ALTER TABLE skill_models ENABLE ROW LEVEL SECURITY;
@@ -466,6 +440,7 @@ CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
+  name TEXT NOT NULL,
   total_steps BIGINT NOT NULL,
   centroid FLOAT[] NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -476,6 +451,8 @@ CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
 
 CREATE TRIGGER update_skill_optimization_clusters_updated_at BEFORE UPDATE ON skill_optimization_clusters
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    
+CREATE INDEX idx_skill_optimization_clusters_name ON skill_optimization_clusters(name);
 
 CREATE INDEX idx_skill_optimization_clusters_agent_id ON skill_optimization_clusters(agent_id);
 
@@ -494,6 +471,7 @@ CREATE TABLE IF NOT EXISTS skill_optimization_arms (
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   cluster_id UUID NOT NULL,
+  name TEXT NOT NULL,
   params JSONB NOT NULL,
   stats JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -507,7 +485,10 @@ CREATE TABLE IF NOT EXISTS skill_optimization_arms (
 CREATE TRIGGER update_skill_optimization_arms_updated_at BEFORE UPDATE ON skill_optimization_arms
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE INDEX idx_skill_optimization_arms_name ON skill_optimization_arms(name);
+
 CREATE INDEX idx_skill_optimization_arms_agent_id ON skill_optimization_arms(agent_id);
+
 CREATE INDEX idx_skill_optimization_arms_skill_id ON skill_optimization_arms(skill_id);
 
 ALTER TABLE skill_optimization_arms ENABLE ROW LEVEL SECURITY;
@@ -532,6 +513,7 @@ CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_runs (
 );
 
 CREATE INDEX idx_skill_optimization_evaluation_runs_agent_id ON skill_optimization_evaluation_runs(agent_id);
+
 CREATE INDEX idx_skill_optimization_evaluation_runs_skill_id ON skill_optimization_evaluation_runs(skill_id);
 
 ALTER TABLE skill_optimization_evaluation_runs ENABLE ROW LEVEL SECURITY;

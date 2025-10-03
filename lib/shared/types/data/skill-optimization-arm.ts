@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
-// Model Configuration parameters
-// All fields are normalized 0 to 1.
+/** Model Configuration parameters
+ * These are constants that define the range of values for each parameter.
+ * All fields are normalized 0 to 1.
+ */
 export const SkillOptimizationBaseArmParams = z.object({
   temperature_min: z.number().min(0).max(1),
   temperature_max: z.number().min(0).max(1),
@@ -20,8 +22,6 @@ export type SkillOptimizationBaseArmParams = z.infer<
   typeof SkillOptimizationBaseArmParams
 >;
 
-// Model Configuration parameters
-// All fields are normalized 0 to 1.
 export const SkillOptimizationArmParams = SkillOptimizationBaseArmParams.extend(
   {
     model_id: z.uuid(),
@@ -51,7 +51,16 @@ export const SkillOptimizationArm = z.object({
   agent_id: z.uuid(),
   skill_id: z.uuid(),
   cluster_id: z.uuid(),
+
+  /** An auto-generated name for the arm. */
+  name: z.string(),
+
+  /** Complete Skill Optimization Arm Parameters
+   * This configuration defines what parameters are sent to the AI provider.
+   */
   params: SkillOptimizationArmParams,
+
+  /** Statistics used for tracking the performance of the arm. */
   stats: SkillOptimizationArmStats,
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -64,6 +73,7 @@ export const SkillOptimizationArmQueryParams = z
     agent_id: z.uuid().optional(),
     skill_id: z.uuid().optional(),
     cluster_id: z.uuid().optional(),
+    name: z.string().optional(),
     limit: z.coerce.number().min(1).max(100).default(100).optional(),
     offset: z.coerce.number().min(0).default(0).optional(),
   })
@@ -77,6 +87,7 @@ export const SkillOptimizationArmCreateParams = z
     agent_id: z.uuid(),
     skill_id: z.uuid(),
     cluster_id: z.uuid(),
+    name: z.string(),
     params: SkillOptimizationArmParams,
     stats: SkillOptimizationArmStats,
   })
@@ -85,6 +96,8 @@ export type SkillOptimizationArmCreateParams = z.infer<
   typeof SkillOptimizationArmCreateParams
 >;
 
+// Only the stats should be updated
+// Name is an auto-generated constant defined at creation time
 export const SkillOptimizationArmUpdateParams = z
   .object({
     stats: SkillOptimizationArmStats.partial(),

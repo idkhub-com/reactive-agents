@@ -24,9 +24,10 @@ export const skillsRouter = new Hono<AppEnv>()
         newSkill.max_configurations,
       );
       const clusterParams: SkillOptimizationClusterCreateParams[] =
-        initialCentroids.map((centroid) => ({
+        initialCentroids.map((centroid, index) => ({
           agent_id: newSkill.agent_id,
           skill_id: newSkill.id,
+          name: `Cluster ${index + 1}`,
           total_steps: 0,
           centroid,
         }));
@@ -78,9 +79,10 @@ export const skillsRouter = new Hono<AppEnv>()
             updatedSkill.max_configurations,
           );
           const clusterParams: SkillOptimizationClusterCreateParams[] =
-            initialCentroids.map((centroid) => ({
+            initialCentroids.map((centroid, index) => ({
               agent_id: updatedSkill.agent_id,
               skill_id: updatedSkill.id,
+              name: `Cluster ${index + 1}`,
               total_steps: 0,
               centroid,
             }));

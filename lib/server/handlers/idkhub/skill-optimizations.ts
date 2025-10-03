@@ -60,6 +60,7 @@ export async function handleGenerateArms(
 
   const createParamsList: SkillOptimizationArmCreateParams[] = [];
 
+  let humanArmIndex = 1;
   for (const cluster of skillClusters) {
     for (const model of skillModels) {
       for (const systemPrompt of systemPrompts) {
@@ -79,10 +80,12 @@ export async function handleGenerateArms(
             agent_id: skill.agent_id,
             skill_id: skill.id,
             cluster_id: cluster.id,
+            name: `Configuration ${humanArmIndex}`,
             params: armParams,
             stats: stats,
           };
           createParamsList.push(createParams);
+          humanArmIndex++;
         }
       }
     }

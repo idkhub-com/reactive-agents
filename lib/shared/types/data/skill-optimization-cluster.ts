@@ -10,6 +10,9 @@ export const SkillOptimizationCluster = z.object({
   agent_id: z.uuid(),
   skill_id: z.uuid(),
 
+  /** An auto-generated name for the cluster. */
+  name: z.string(),
+
   /**
    * The total number of requests that have been processed by the algorithm
    * in this cluster.
@@ -31,6 +34,7 @@ export const SkillOptimizationClusterQueryParams = z
     id: z.uuid().optional(),
     agent_id: z.uuid().optional(),
     skill_id: z.uuid().optional(),
+    name: z.string().optional(),
     limit: z.coerce.number().int().positive().optional(),
     offset: z.coerce.number().int().min(0).optional(),
   })
@@ -44,6 +48,7 @@ export const SkillOptimizationClusterCreateParams = z
   .object({
     agent_id: z.uuid(),
     skill_id: z.uuid(),
+    name: z.string(),
     total_steps: z.number().min(0),
     centroid: z.array(z.number()),
   })
@@ -53,6 +58,7 @@ export type SkillOptimizationClusterCreateParams = z.infer<
   typeof SkillOptimizationClusterCreateParams
 >;
 
+// Name is an auto-generated constant defined at creation time
 export const SkillOptimizationClusterUpdateParams = z
   .object({
     total_steps: z.number().min(0).optional(),

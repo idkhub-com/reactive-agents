@@ -95,7 +95,7 @@ export async function autoClusterSkill(
         return;
       }
 
-      const newClusterCenters = clusterResult.centroids;
+      const newCentroids = clusterResult.centroids;
 
       // Match old cluster centers to new cluster centers based on proximity
       // Each old cluster gets matched to the closest new cluster
@@ -105,20 +105,16 @@ export async function autoClusterSkill(
 
       // Create new clusters
       if (clusterStates.length === 0) {
-        const newClusterStatesCreateParamsList: SkillOptimizationClusterCreateParams[] =
-          [];
-        for (const newClusterCenter of newClusterCenters) {
-          const params: SkillOptimizationClusterCreateParams = {
+        const clusterParams: SkillOptimizationClusterCreateParams[] =
+          newCentroids.map((centroid, index) => ({
             agent_id: skill.agent_id,
             skill_id: skill.id,
+            name: `Cluster ${index + 1}`,
             total_steps: 0,
-            centroid: newClusterCenter,
-          };
-
-          newClusterStatesCreateParamsList.push(params);
-        }
+            centroid,
+          }));
         await userDataStorageConnector.createSkillOptimizationClusters(
-          newClusterStatesCreateParamsList,
+          clusterParams,
         );
       }
       // Update existing clusters
@@ -128,12 +124,12 @@ export async function autoClusterSkill(
           let bestMatchIndex = -1;
 
           // Find the closest unused new cluster center
-          for (let i = 0; i < newClusterCenters.length; i++) {
+          for (let i = 0; i < newCentroids.length; i++) {
             if (used.has(i)) continue;
 
             const distance = calculateDistance(
               clusterState.centroid,
-              newClusterCenters[i],
+              newCentroids[i],
             );
 
             if (distance < minDistance) {
@@ -146,7 +142,7 @@ export async function autoClusterSkill(
             used.add(bestMatchIndex);
             matches.push({
               clusterStateId: clusterState.id,
-              newCenter: newClusterCenters[bestMatchIndex],
+              newCenter: newCentroids[bestMatchIndex],
             });
           }
         }
