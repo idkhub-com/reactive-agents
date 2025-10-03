@@ -9,7 +9,6 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 import {
   evaluateOneLogForTurnRelevancy,
@@ -46,21 +45,9 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForTurnRelevancy(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 export const turnRelevancyEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => methodConfig,
   evaluate: runEvaluation,
-  evaluateOneLog,
+  evaluateOneLog: evaluateOneLogForTurnRelevancy,
   getParameterSchema: TurnRelevancyEvaluationParameters,
 };

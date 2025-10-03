@@ -23,6 +23,7 @@ export const SkillOptimizationEvaluationRun = z.object({
   id: z.uuid(),
   agent_id: z.uuid(),
   skill_id: z.uuid(),
+  cluster_id: z.uuid(),
 
   /** The results of when the arm pull was evaluated */
   results: z.array(SkillOptimizationEvaluationResult),
@@ -36,6 +37,7 @@ export const SkillOptimizationEvaluationRunQueryParams = z
     id: z.uuid().optional(),
     agent_id: z.uuid().optional(),
     skill_id: z.uuid().optional(),
+    cluster_id: z.uuid().optional(),
     limit: z.number().min(1).max(100).optional(),
     offset: z.number().min(0).optional(),
   })
@@ -48,6 +50,8 @@ export const SkillOptimizationEvaluationRunCreateParams = z
   .object({
     agent_id: z.uuid(),
     skill_id: z.uuid(),
+    cluster_id: z.uuid(),
+    results: z.array(SkillOptimizationEvaluationResult),
   })
   .strict();
 export type SkillOptimizationEvaluationRunCreateParams = z.infer<

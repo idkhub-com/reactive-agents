@@ -10,7 +10,7 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+
 import {
   evaluateConversationCompletenessMain,
   evaluateOneLogForConversationCompleteness,
@@ -48,23 +48,11 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForConversationCompleteness(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 // Evaluation connector constant
 export const conversationCompletenessEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => conversationCompletenessMethodConfig,
     evaluate: runEvaluation,
-    evaluateOneLog,
+    evaluateOneLog: evaluateOneLogForConversationCompleteness,
     getParameterSchema: ConversationCompletenessEvaluationParameters,
   };

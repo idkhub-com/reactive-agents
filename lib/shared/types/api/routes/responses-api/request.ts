@@ -1,6 +1,8 @@
-import { ReasoningEffort } from '@shared/types/api/routes/chat-completions-api';
 import { ChatCompletionMessage } from '@shared/types/api/routes/shared/messages';
-import { ReasoningSummary } from '@shared/types/api/routes/shared/thinking';
+import {
+  ReasoningEffort,
+  ReasoningSummary,
+} from '@shared/types/api/routes/shared/thinking';
 import { z } from 'zod';
 import {
   McpApprovalRequest,

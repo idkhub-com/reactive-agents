@@ -3,16 +3,16 @@ import type {
   UserDataStorageConnector,
 } from '@server/types/connector';
 import { error, info, warn } from '@shared/console-logging';
+import type { Log, LogOutput } from '@shared/types/data';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
-import type { Log } from '@shared/types/data/log';
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
   type EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations';
 import { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+
 import type { ToolCall } from './types';
 
 // Pure functions for tool evaluation logic
@@ -516,9 +516,9 @@ const evaluateLog = (
 
 async function evaluateOneLogForToolCorrectness(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -532,27 +532,27 @@ async function evaluateOneLogForToolCorrectness(
     evaluationRun.metadata?.parameters || {},
   );
 
-  // Convert IdkRequestLog to Log format for compatibility
-  const logForEvaluation: Log = log as Log;
-
   // Evaluate the single log
-  const logResult = evaluateLog(logForEvaluation, params);
+  const logResult = evaluateLog(log, params);
 
   // Create log output record
-  await userDataStorageConnector.createLogOutput(evaluationRunId, {
-    log_id: log.id,
-    output: {
-      tools_called: logResult.tools_called,
-      expected_tools: logResult.expected_tools,
+  const logOutput = await userDataStorageConnector.createLogOutput(
+    evaluationRunId,
+    {
+      log_id: log.id,
+      output: {
+        tools_called: logResult.tools_called,
+        expected_tools: logResult.expected_tools,
+        score: logResult.score,
+        reason: logResult.reason,
+      },
       score: logResult.score,
-      reason: logResult.reason,
+      metadata: {
+        evaluation_method: 'tool_correctness',
+        parameters: params,
+      },
     },
-    score: logResult.score,
-    metadata: {
-      evaluation_method: 'tool_correctness',
-      parameters: params,
-    },
-  });
+  );
 
   // Get all log outputs for this evaluation run to calculate new average
   const allLogOutputs = await userDataStorageConnector.getLogOutputs(
@@ -591,6 +591,8 @@ async function evaluateOneLogForToolCorrectness(
       threshold_used: thresholdUsed,
     },
   });
+
+  return logOutput;
 }
 
 // Tool correctness connector constant instance
@@ -736,17 +738,6 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
     }
   },
 
-  async evaluateOneLog(
-    evaluationRunId: string,
-    log: IdkRequestLog,
-    userDataStorageConnector: UserDataStorageConnector,
-  ): Promise<void> {
-    await evaluateOneLogForToolCorrectness(
-      evaluationRunId,
-      log,
-      userDataStorageConnector,
-    );
-  },
-
+  evaluateOneLog: evaluateOneLogForToolCorrectness,
   getParameterSchema: ToolCorrectnessEvaluationParameters,
 };

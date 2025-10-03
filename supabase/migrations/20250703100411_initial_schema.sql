@@ -518,20 +518,22 @@ CREATE POLICY "service_role_full_access" ON skill_optimization_arms FOR ALL TO s
 -- ================================================
 -- Skill Optimization Evaluation Runs table
 -- ================================================
-CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_run (
+CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_runs (
   id UUID NOT NULL DEFAULT uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
+  cluster_id UUID NOT NULL,
   results JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_skill_optimization_evaluation_run_agent_id ON skill_optimization_evaluation_run(agent_id);
-CREATE INDEX idx_skill_optimization_evaluation_run_skill_id ON skill_optimization_evaluation_run(skill_id);
+CREATE INDEX idx_skill_optimization_evaluation_runs_agent_id ON skill_optimization_evaluation_runs(agent_id);
+CREATE INDEX idx_skill_optimization_evaluation_runs_skill_id ON skill_optimization_evaluation_runs(skill_id);
 
-ALTER TABLE skill_optimization_evaluation_run ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_optimization_evaluation_runs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "service_role_full_access" ON skill_optimization_evaluation_run FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_full_access" ON skill_optimization_evaluation_runs FOR ALL TO service_role USING (true) WITH CHECK (true);

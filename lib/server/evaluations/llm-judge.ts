@@ -351,6 +351,7 @@ async function callIDKHubOpenAIResponsesAPI(
       targets: [
         {
           provider: AIProvider.OPENAI,
+          model: config.model,
           cache: {
             mode: CacheMode.SIMPLE,
           },

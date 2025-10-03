@@ -1,8 +1,20 @@
+import { extractTaskAndOutcome } from '@server/connectors/evaluations/task-completion/service/task-and-outcome';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion/task-completion';
 import type { TaskCompletionAverageResult } from '@server/connectors/evaluations/task-completion/types';
-import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations';
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { debug } from '@shared/console-logging';
+import {
+  type ChatCompletionRequestData,
+  FunctionName,
+  type ResponsesRequestData,
+  type StreamChatCompletionRequestData,
+} from '@shared/types/api/request';
+import { IdkResponseBody } from '@shared/types/api/response';
+import {
+  type ChatCompletionMessage,
+  ChatCompletionMessageRole,
+} from '@shared/types/api/routes/shared/messages';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -10,161 +22,188 @@ import type {
 } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import type {
-  LogOutput as EvaluationOutput,
-  LogOutputCreateParams as EvaluationOutputCreateParams,
+  LogOutput,
+  LogOutputCreateParams,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import { produceIdkRequestData } from '@shared/utils/idk-request-data';
+import { nanoid } from 'nanoid';
 
-/**
- * Extract task and outcome from LLM response
- */
-function extractTaskAndOutcome(extractionResult: {
-  reasoning?: string;
-  metadata?: Record<string, unknown>;
-}): { task: string; outcome: string } {
-  const reasoning = extractionResult.reasoning || '';
-  const metadata = (extractionResult.metadata || {}) as Record<string, unknown>;
+function extractMessagesFromResponsesRequest(
+  idkRequestData: ResponsesRequestData,
+): ChatCompletionMessage[] {
+  const input = idkRequestData.requestBody.input;
+  let messages: ChatCompletionMessage[] = [];
 
-  // Check if this is a fallback result (API error, etc.)
-  if (metadata.fallback === true) {
-    return { task: '', outcome: '' };
-  }
+  if (typeof input === 'string') {
+    messages = [
+      {
+        role: ChatCompletionMessageRole.USER,
+        content: input,
+      },
+    ];
+  } else {
+    const idMap = new Map<string, string>();
 
-  // Try to get structured data from metadata first
-  let task = typeof metadata.task === 'string' ? metadata.task : '';
-  let outcome = typeof metadata.outcome === 'string' ? metadata.outcome : '';
-
-  // If not found in top-level metadata, check nested metadata structure
-  if (!task || !outcome) {
-    const nestedMetadata = metadata.metadata as Record<string, unknown>;
-    if (nestedMetadata) {
-      if (!task && typeof nestedMetadata.task === 'string') {
-        task = nestedMetadata.task;
-      }
-      if (!outcome && typeof nestedMetadata.outcome === 'string') {
-        outcome = nestedMetadata.outcome;
-      }
-    }
-  }
-
-  // If still not found, try to extract from metadata reasoning
-  if (!task || !outcome) {
-    if (typeof metadata.reasoning === 'string') {
-      const reasoning = metadata.reasoning;
-
-      // Try to extract task and outcome from the reasoning text
-      // Look for patterns like "The user was trying to..." and "However, the actual outcome was..."
-      const taskMatch = reasoning.match(
-        /The user (?:was trying to|requested|wanted to|asked to) (.+?)(?:\.|,|;|however|but|$)/i,
-      );
-      const outcomeMatch = reasoning.match(
-        /(?:However, the actual outcome was|the outcome was|the result was) (.+?)(?:\.|;|therefore|so|indicating|$)/i,
-      );
-
-      // For the battery creation case, we need a different pattern since it doesn't follow the standard format
-      if (!task && !outcome) {
-        const batteryMatch = reasoning.match(
-          /The user requested (.+?)\. However, (.+?)\./i,
-        );
-        if (batteryMatch) {
-          task = batteryMatch[1].trim();
-          outcome = batteryMatch[2].trim();
+    input.forEach((message) => {
+      if (!('role' in message)) {
+        if (
+          'name' in message &&
+          'call_id' in message &&
+          message.type === 'function'
+        ) {
+          let id = idMap.get(message.call_id);
+          if (!id) {
+            id = nanoid(3);
+            idMap.set(message.call_id, id);
+          }
+          messages.push({
+            role: ChatCompletionMessageRole.ASSISTANT,
+            tool_calls: [
+              {
+                id: id,
+                type: 'function',
+                function: {
+                  name: message.name,
+                  arguments: JSON.stringify(message.arguments),
+                },
+              },
+            ],
+          });
+        } else if ('output' in message && 'call_id' in message) {
+          let id = idMap.get(message.call_id);
+          if (!id) {
+            id = nanoid(3);
+            idMap.set(message.call_id, id);
+          }
+          messages.push({
+            role: ChatCompletionMessageRole.TOOL,
+            tool_call_id: id,
+            content: message.output,
+          });
+        } else if (message.type === 'mcp_call' && 'server_label' in message) {
+          const id = nanoid(3);
+          messages.push({
+            role: ChatCompletionMessageRole.ASSISTANT,
+            tool_calls: [
+              {
+                id: id,
+                type: 'mcp_call',
+                function: {
+                  name: message.name,
+                  arguments: JSON.stringify(message.arguments),
+                },
+              },
+            ],
+          });
+          messages.push({
+            role: ChatCompletionMessageRole.TOOL,
+            tool_call_id: id,
+            content: message.output ?? message.error ?? 'success',
+          });
         }
-      }
 
-      if (!task && taskMatch) {
-        task = taskMatch[1].trim();
+        // If there is no role, we likely don't want to embed the message
+        return;
       }
-      if (!outcome && outcomeMatch) {
-        outcome = outcomeMatch[1].trim();
-        // Remove "that" prefix if present
-        if (outcome.startsWith('that ')) {
-          outcome = outcome.substring(5);
-        }
-      }
-    }
+      messages.push(message);
+    });
   }
 
-  // Fallback: try to parse JSON from reasoning
-  if (!task || !outcome) {
-    try {
-      const parsed = JSON.parse(reasoning) as Record<string, unknown>;
-      if (!task && typeof parsed.task === 'string') task = parsed.task;
-      if (!outcome && typeof parsed.outcome === 'string')
-        outcome = parsed.outcome;
-    } catch {
-      console.warn(
-        'Failed to parse JSON from extraction reasoning:',
-        reasoning,
-      );
-    }
-  }
+  debug('messages', messages);
 
-  return { task, outcome };
+  return messages;
 }
 
-/**
- * Get tools called from log metadata
- */
-function getToolsCalled(
-  log: Log,
-  params: TaskCompletionEvaluationParameters,
-): ToolUsage[] {
-  if (params.tools_called && Array.isArray(params.tools_called)) {
-    return params.tools_called as ToolUsage[];
+export function extractMessagesFromRequestData(
+  idkRequestData:
+    | ChatCompletionRequestData
+    | StreamChatCompletionRequestData
+    | ResponsesRequestData,
+): ChatCompletionMessage[] {
+  switch (idkRequestData.functionName) {
+    case FunctionName.CHAT_COMPLETE:
+      return idkRequestData.requestBody.messages;
+    case FunctionName.STREAM_CHAT_COMPLETE:
+      return idkRequestData.requestBody.messages;
+    case FunctionName.CREATE_MODEL_RESPONSE:
+      return extractMessagesFromResponsesRequest(idkRequestData);
   }
-
-  const tools = log.metadata?.tools;
-  if (typeof tools === 'string') {
-    try {
-      return JSON.parse(tools) as ToolUsage[];
-    } catch {
-      return [];
-    }
-  }
-
-  if (Array.isArray(tools)) {
-    return tools as ToolUsage[];
-  }
-
-  if (typeof tools === 'object' && tools !== null) {
-    return [tools as ToolUsage];
-  }
-
-  return [];
 }
 
-/**
- * Get actual output from params or log
- */
-function getActualOutput(
-  log: Log,
-  params: TaskCompletionEvaluationParameters,
+export function formatMessagesForExtraction(
+  messages: ChatCompletionMessage[],
 ): string {
-  if (typeof params.actual_output === 'string') {
-    return params.actual_output;
-  }
+  return messages
+    .filter((message) => {
+      // Exclude system and developer messages from embeddings
+      return (
+        message.role !== ChatCompletionMessageRole.SYSTEM &&
+        message.role !== ChatCompletionMessageRole.DEVELOPER
+      );
+    })
+    .map((message) => {
+      const role = message.role;
+      let content = '';
 
-  // Try to get from ai_provider_request_log response_body
-  if (log.ai_provider_request_log?.response_body) {
-    if (typeof log.ai_provider_request_log.response_body === 'string') {
-      return log.ai_provider_request_log.response_body;
-    }
-    return JSON.stringify(log.ai_provider_request_log.response_body);
-  }
+      if (
+        role === ChatCompletionMessageRole.TOOL ||
+        role === ChatCompletionMessageRole.FUNCTION
+      ) {
+        return `Tool Call ${message.tool_call_id} Output: ${content}`;
+      }
 
-  // Try to get from metadata
-  if (log.metadata?.ground_truth) {
-    if (typeof log.metadata.ground_truth === 'string') {
-      return log.metadata.ground_truth;
-    }
-    return JSON.stringify(log.metadata.ground_truth);
-  }
+      if (typeof message.content === 'string') {
+        content += message.content;
+      } else if (Array.isArray(message.content)) {
+        content += message.content
+          .map((item) => {
+            if (typeof item === 'object' && item.text) {
+              return item.text;
+            }
+            return '';
+          })
+          .filter(Boolean)
+          .join(' ');
+      } else if (message.content) {
+        content += String(message.content);
+      }
 
-  return '';
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        const tools = message.tool_calls
+          .map((tool) => {
+            const parsedTool = tool as {
+              id: string;
+              type: 'mcp_call';
+              function: {
+                name: string;
+                arguments: string;
+              };
+            };
+            return `Tool Call ID: ${parsedTool.id}\nTool Call Name: ${parsedTool.function.name}\nTool Call Arguments: ${parsedTool.function.arguments}`;
+          })
+          .join(', ');
+        return `Assistant Tool Calls:\n${tools}`;
+      }
+
+      // Only include messages with non-empty content after trimming
+      if (!content.trim()) {
+        return '';
+      }
+
+      if (role === ChatCompletionMessageRole.USER) {
+        return `User: ${content}`.trim();
+      }
+      if (role === ChatCompletionMessageRole.ASSISTANT) {
+        return `Assistant: ${content}`.trim();
+      }
+
+      return `${role}: ${content}`.trim();
+    })
+    .filter(Boolean)
+    .join('\n\n\n');
 }
 
 /**
@@ -189,8 +228,96 @@ async function generateVerdict(
   };
 }
 
+export function extractOutputFromResponseBody(
+  responseBody: IdkResponseBody,
+): string {
+  if ('choices' in responseBody) {
+    if ('message' in responseBody.choices[0]) {
+      const content = responseBody.choices[0].message.content;
+      if (Array.isArray(content)) {
+        let contentString = '';
+        for (const chunk of content) {
+          contentString += chunk.text;
+        }
+        return contentString;
+      } else if (typeof content === 'string') {
+        return content;
+      } else {
+        throw new Error('Unexpected content type');
+      }
+    } else if ('text' in responseBody.choices[0]) {
+      return responseBody.choices[0].text;
+    }
+  } else if ('output' in responseBody) {
+    const outputText = responseBody.output_text;
+    if (outputText) {
+      return outputText;
+    } else {
+      const output = responseBody.output;
+      let outputString = '';
+      for (const step of output) {
+        switch (step.type) {
+          case 'message': {
+            if ('content' in step) {
+              if (step.content) {
+                for (const chunk of step.content) {
+                  outputString += chunk.text;
+                }
+                outputString += '\n';
+              }
+            } else {
+              continue;
+            }
+            break;
+          }
+          case 'function':
+            outputString += `${step.name}: ${JSON.stringify(step.arguments)}\n`;
+            break;
+          case 'mcp_call':
+            outputString += `${step.name}: ${JSON.stringify(step.arguments)}\n OUTPUT: ${JSON.stringify(step.output)}\n\n`;
+            break;
+          default:
+            continue;
+        }
+      }
+      return outputString;
+    }
+  }
+
+  throw new Error('Unexpected output type');
+}
+
+async function getTaskAndOutcome(
+  log: Log,
+): Promise<{ task: string; outcome: string }> {
+  const idkRequestData = produceIdkRequestData(
+    log.ai_provider_request_log.method,
+    log.ai_provider_request_log.request_url,
+    {},
+    log.ai_provider_request_log.request_body,
+  );
+  const responseBody = IdkResponseBody.parse(
+    log.ai_provider_request_log.response_body,
+  );
+
+  const messages = extractMessagesFromRequestData(
+    idkRequestData as
+      | ChatCompletionRequestData
+      | StreamChatCompletionRequestData
+      | ResponsesRequestData,
+  );
+  const input = formatMessagesForExtraction(messages);
+  const output = extractOutputFromResponseBody(responseBody);
+
+  debug('input', input);
+
+  debug('output', output);
+
+  return await extractTaskAndOutcome(input, output);
+}
+
 /**
- * Evaluate a single log and create EvaluationOutput record
+ * Evaluate a single log and create LogOutput record
  */
 async function evaluateSingleLog(
   log: Log,
@@ -198,71 +325,12 @@ async function evaluateSingleLog(
   llm_judge: LLMJudge,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput> {
+): Promise<LogOutput> {
   const start_time = Date.now();
   const verbose_logs: string[] = [];
 
   try {
-    // Step 1: Extract task and outcome
-    let task = '';
-    let outcome = '';
-    let extraction_llm_output = '';
-
-    if (params.task) {
-      task = params.task;
-    } else if (log.metadata?.trace) {
-      // Use trace-based extraction
-      const { getTaskCompletionExtractionTraceTemplate } = await import(
-        '@server/connectors/evaluations/task-completion/templates/extraction-trace'
-      );
-
-      const traceString =
-        typeof log.metadata.trace === 'string'
-          ? log.metadata.trace
-          : JSON.stringify(log.metadata.trace, null, 2);
-
-      const extractionTemplate = getTaskCompletionExtractionTraceTemplate({
-        trace: traceString,
-      });
-      const extraction_result = await llm_judge.evaluate({
-        text: `${extractionTemplate.systemPrompt}\n\n${extractionTemplate.userPrompt}`,
-        outputFormat: extractionTemplate.outputFormat,
-      });
-
-      extraction_llm_output = JSON.stringify(extraction_result);
-      ({ task, outcome } = extractTaskAndOutcome(extraction_result));
-    } else {
-      // Use standard extraction
-      const rawInput =
-        params.input ||
-        (
-          (log.ai_provider_request_log as Record<string, unknown>)
-            ?.request_body as Record<string, unknown>
-        )?.input ||
-        '';
-      const input =
-        typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
-      const tools_called = getToolsCalled(log, params);
-      const actual_output = getActualOutput(log, params);
-
-      const { getTaskCompletionExtractionTemplate } = await import(
-        '@server/connectors/evaluations/task-completion/templates/extraction'
-      );
-
-      const extractionTemplate = getTaskCompletionExtractionTemplate({
-        input,
-        tools_called,
-        actual_output,
-      });
-
-      const extraction_result = await llm_judge.evaluate({
-        text: `${extractionTemplate.systemPrompt}\n\n${extractionTemplate.userPrompt}`,
-        outputFormat: extractionTemplate.outputFormat,
-      });
-
-      extraction_llm_output = JSON.stringify(extraction_result);
-      ({ task, outcome } = extractTaskAndOutcome(extraction_result));
-    }
+    const { task, outcome } = await getTaskAndOutcome(log);
 
     // Step 2: Generate verdict
     const { verdict, reason } = await generateVerdict(
@@ -283,8 +351,8 @@ async function evaluateSingleLog(
     const passed = final_verdict >= threshold;
     const execution_time = Date.now() - start_time;
 
-    // Create EvaluationOutput record
-    const evaluationOutput: EvaluationOutputCreateParams = {
+    // Create LogOutput record
+    const evaluationOutput: LogOutputCreateParams = {
       log_id: log.id,
       output: {
         task,
@@ -294,7 +362,6 @@ async function evaluateSingleLog(
         reasoning: reason,
         threshold,
         strict_mode: params.strict_mode,
-        extraction_llm_output,
         verdict_llm_output,
         execution_time,
         execution_time_ms: execution_time,
@@ -307,7 +374,10 @@ async function evaluateSingleLog(
         outcome,
         threshold,
         strict_mode: params.strict_mode,
-        extraction_llm_output,
+        extraction_llm_output: {
+          task,
+          outcome,
+        },
         verdict_llm_output,
         execution_time,
         execution_time_ms: execution_time,
@@ -325,7 +395,7 @@ async function evaluateSingleLog(
     console.error('Error evaluating log:', error);
     const execution_time = Date.now() - start_time;
 
-    const evaluationOutput: EvaluationOutputCreateParams = {
+    const evaluationOutput: LogOutputCreateParams = {
       log_id: log.id,
       output: {
         error: true,
@@ -362,9 +432,9 @@ async function processLogsInBatches(
   llmJudge: LLMJudge,
   evaluationRunId: string,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput[]> {
+): Promise<LogOutput[]> {
   const batch_size = params.batch_size || 10;
-  const results: EvaluationOutput[] = [];
+  const results: LogOutput[] = [];
 
   for (let i = 0; i < logs.length; i += batch_size) {
     const batch = logs.slice(i, i + batch_size);
@@ -403,9 +473,9 @@ async function processLogsInBatches(
 
 export async function evaluateOneLogForTaskCompletion(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -429,7 +499,7 @@ export async function evaluateOneLogForTaskCompletion(
   });
 
   // Evaluate the single log
-  await evaluateSingleLog(
+  const logOutput = await evaluateSingleLog(
     logForEvaluation,
     params,
     llmJudge,
@@ -474,11 +544,13 @@ export async function evaluateOneLogForTaskCompletion(
       evaluation_outputs: allLogOutputs.map((o) => o.id),
     },
   });
+
+  return logOutput;
 }
 
 /**
  * Task completion evaluation function - evaluates each log individually
- * and stores EvaluationOutput records, then returns average results
+ * and stores LogOutput records, then returns average results
  */
 export async function evaluateTaskCompletion(
   agentId: string,
@@ -529,7 +601,7 @@ export async function evaluateTaskCompletion(
     // Get logs from database
     const logs = await userDataStorageConnector.getDatasetLogs(datasetId, {});
 
-    // Process all logs and create EvaluationOutput records
+    // Process all logs and create LogOutput records
     const evaluationOutputs = await processLogsInBatches(
       logs,
       params,

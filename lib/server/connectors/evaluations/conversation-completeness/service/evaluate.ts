@@ -10,11 +10,11 @@ import {
   extractEvaluationOutputIds,
 } from '@server/evaluations/utils/statistics';
 import type { UserDataStorageConnector } from '@server/types/connector';
+import type { LogOutput } from '@shared/types/data';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 /**
  * Evaluate conversation completeness for a single log
@@ -255,9 +255,9 @@ export async function evaluateConversationCompletenessMain(
 
 export async function evaluateOneLogForConversationCompleteness(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -280,20 +280,23 @@ export async function evaluateOneLogForConversationCompleteness(
   );
 
   // Create log output
-  await userDataStorageConnector.createLogOutput(evaluationRunId, {
-    log_id: log.id,
-    score: result.score,
-    output: {
+  const logOutput = await userDataStorageConnector.createLogOutput(
+    evaluationRunId,
+    {
+      log_id: log.id,
       score: result.score,
-      reasoning: result.reasoning,
-      passed: result.score >= (params.threshold || 0.5),
-      threshold: params.threshold || 0.5,
-      execution_time_ms: 0,
-      evaluated_at: new Date().toISOString(),
-      evaluation_run_id: evaluationRunId,
+      output: {
+        score: result.score,
+        reasoning: result.reasoning,
+        passed: result.score >= (params.threshold || 0.5),
+        threshold: params.threshold || 0.5,
+        execution_time_ms: 0,
+        evaluated_at: new Date().toISOString(),
+        evaluation_run_id: evaluationRunId,
+      },
+      metadata: result.metadata || {},
     },
-    metadata: result.metadata || {},
-  });
+  );
 
   // Get all log outputs for this evaluation run to calculate new average
   const allLogOutputs = await userDataStorageConnector.getLogOutputs(
@@ -313,4 +316,6 @@ export async function evaluateOneLogForConversationCompleteness(
     evaluationOutputIds,
     userDataStorageConnector,
   });
+
+  return logOutput;
 }

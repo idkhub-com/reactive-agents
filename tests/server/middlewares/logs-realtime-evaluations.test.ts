@@ -5,8 +5,8 @@ import type {
 import type { HttpMethod } from '@server/types/http';
 import {
   findRealtimeEvaluations,
+  runRealtimeEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
-  triggerRealtimeEvaluations,
 } from '@server/utils/realtime-evaluations';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
@@ -186,7 +186,7 @@ describe('Realtime Evaluations Integration', () => {
         [EvaluationMethodName.TURN_RELEVANCY]: evaluationConnector,
       };
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
         evaluationConnectorsMap,
@@ -250,7 +250,7 @@ describe('Realtime Evaluations Integration', () => {
         userDataStorageConnector,
       );
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
         evaluationConnectorsMap,
@@ -298,7 +298,7 @@ describe('Realtime Evaluations Integration', () => {
         userDataStorageConnector,
       );
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
         evaluationConnectorsMap,
@@ -328,7 +328,7 @@ describe('Realtime Evaluations Integration', () => {
       expect(realtimeEvaluations).toEqual([]);
 
       // Trigger with empty evaluations should be safe
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
         {},

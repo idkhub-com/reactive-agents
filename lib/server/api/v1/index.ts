@@ -76,11 +76,11 @@ app.use('*', cacheMiddleware(factory, supabaseCacheStorageConnector));
 // Use authenticated middleware for all routes
 app.use('*', authenticatedMiddleware(factory));
 
-// Use IdkHub configuration injector middleware for all routes
-app.use('*', idkHubConfigurationInjectorMiddleware);
-
 // Use agent and skill middleware for all routes
 app.use('*', agentAndSkillMiddleware);
+
+// Use IdkHub configuration injector middleware for all routes
+app.use('*', idkHubConfigurationInjectorMiddleware);
 
 // Use tool middleware for all routes
 app.use(toolMiddleware);

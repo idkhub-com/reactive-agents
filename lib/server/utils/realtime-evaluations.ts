@@ -2,6 +2,7 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
+import type { LogOutput } from '@shared/types/data';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
@@ -48,18 +49,19 @@ export async function findRealtimeEvaluations(
 }
 
 /**
- * Trigger realtime evaluation for a single log across multiple evaluation runs
+ * Run realtime evaluations for a single log
  */
-export async function triggerRealtimeEvaluations(
+export async function runRealtimeEvaluationsForLog(
   log: IdkRequestLog,
   evaluationRuns: EvaluationRun[],
-  evaluationConnectorsMap: Partial<
-    Record<EvaluationMethodName, EvaluationMethodConnector>
+  evaluationConnectorsMap: Record<
+    EvaluationMethodName,
+    EvaluationMethodConnector
   >,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput[]> {
   if (evaluationRuns.length === 0) {
-    return;
+    return [];
   }
 
   console.log(
@@ -85,14 +87,10 @@ export async function triggerRealtimeEvaluations(
         return;
       }
 
-      await connector.evaluateOneLog(
+      return await connector.evaluateOneLog(
         evaluationRun.id,
         log,
         userDataStorageConnector,
-      );
-
-      console.log(
-        `Completed realtime evaluation ${evaluationRun.id} for log ${log.id}`,
       );
     } catch (error) {
       console.error(
@@ -104,9 +102,14 @@ export async function triggerRealtimeEvaluations(
   });
 
   try {
-    await Promise.allSettled(evaluationPromises);
-  } catch (error) {
-    console.error('Error in realtime evaluations batch:', error);
+    return (await Promise.allSettled(evaluationPromises))
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value!);
+  } catch (e) {
+    if (e instanceof Error) {
+      throw new Error('Error in realtime evaluations batch:', e);
+    }
+    throw new Error('Error in realtime evaluations batch: unknown error');
   }
 }
 

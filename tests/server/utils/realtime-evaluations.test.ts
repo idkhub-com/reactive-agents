@@ -7,7 +7,7 @@ import {
   evaluateExistingLogsInRealtimeDataset,
   findRealtimeEvaluations,
   shouldTriggerRealtimeEvaluation,
-  triggerRealtimeEvaluations,
+  runRealtimeEvaluationsForLog,
 } from '@server/utils/realtime-evaluations';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
@@ -248,7 +248,7 @@ describe('Realtime Evaluations', () => {
 
   describe('triggerRealtimeEvaluations', () => {
     it('should do nothing when no evaluation runs provided', async () => {
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         [],
         {},
@@ -275,7 +275,7 @@ describe('Realtime Evaluations', () => {
         { ...mockIdkRequestLog, id: 'log-4', start_time: 4000 }, // This should be removed as it exceeds limit of 3
       ]);
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         [mockEvaluationRun],
         evaluationConnectorsMap,
@@ -320,7 +320,7 @@ describe('Realtime Evaluations', () => {
         // Mock implementation to suppress console output
       });
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         [mockEvaluationRun],
         evaluationConnectorsMap,
@@ -347,7 +347,7 @@ describe('Realtime Evaluations', () => {
         // Mock implementation to suppress console output
       });
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         [mockEvaluationRun],
         evaluationConnectorsMap,
@@ -374,7 +374,7 @@ describe('Realtime Evaluations', () => {
         [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
       };
 
-      await triggerRealtimeEvaluations(
+      await runRealtimeEvaluationsForLog(
         mockIdkRequestLog,
         [mockEvaluationRun],
         evaluationConnectorsMap,

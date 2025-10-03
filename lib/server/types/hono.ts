@@ -45,9 +45,11 @@ export interface AppEnv {
     addLogsClient: (clientId: string, client: LogsClient) => void;
     removeLogsClient: (clientId: string) => void;
     hooks_connectors_map: Record<string, HooksConnector>;
-    evaluation_connectors_map: Partial<
-      Record<EvaluationMethodName, EvaluationMethodConnector>
+    evaluation_connectors_map: Record<
+      EvaluationMethodName,
+      EvaluationMethodConnector
     >;
+
     executeHooks: (
       c: AppContext,
       hookType: HookType,

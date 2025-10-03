@@ -33,14 +33,8 @@ const client = new OpenAI({
 });
 
 const idkhubConfig = {
-  targets: [
-    {
-      provider: 'openai',
-      model: 'gpt-4o-mini',
-      api_key: process.env.OPENAI_API_KEY,
-    },
-  ],
-  agent_name: 'Calendar Event Planner',
+  targets: [{ optimization: 'auto' }],
+  agent_name: 'calendar_event_planner',
   skill_name: 'generate',
 };
 

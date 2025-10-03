@@ -1,4 +1,9 @@
 import type {
+  LogOutput,
+  LogOutputCreateParams,
+  LogOutputQueryParams,
+} from '@shared/types/data';
+import type {
   Agent,
   AgentCreateParams,
   AgentQueryParams,
@@ -33,11 +38,6 @@ import type {
   ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
 import type { Log, LogsQueryParams } from '@shared/types/data/log';
-import type {
-  LogOutput,
-  LogOutputCreateParams,
-  LogOutputQueryParams,
-} from '@shared/types/data/log-output';
 import type {
   Model,
   ModelCreateParams,
@@ -76,7 +76,6 @@ import type {
   EvaluationMethodDetails,
   EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import type { Hook, HookResult } from '@shared/types/middleware/hooks';
 import type { z } from 'zod';
 
@@ -231,10 +230,8 @@ export interface UserDataStorageConnector {
 }
 
 export interface LogsStorageConnector {
-  getLogs(
-    queryParams: LogsQueryParams,
-  ): Promise<IdkRequestLog[]> | IdkRequestLog[];
-  createLog(log: IdkRequestLog): Promise<IdkRequestLog> | IdkRequestLog;
+  getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
+  createLog(log: Log): Promise<Log> | Log;
   deleteLog(id: string): Promise<void> | void;
 }
 
@@ -257,8 +254,8 @@ export interface EvaluationMethodConnector {
   ) => Promise<EvaluationRun>;
   evaluateOneLog: (
     evaluationRunId: string,
-    log: IdkRequestLog,
+    log: Log,
     userDataStorageConnector: UserDataStorageConnector,
-  ) => Promise<void>;
+  ) => Promise<LogOutput>;
   getParameterSchema: z.ZodType;
 }

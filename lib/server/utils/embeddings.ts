@@ -38,7 +38,7 @@ function extractMessagesFromResponsesRequest(
         if (
           'name' in message &&
           'call_id' in message &&
-          message.type !== 'mcp_call'
+          message.type === 'function'
         ) {
           let id = idMap.get(message.call_id);
           if (!id) {

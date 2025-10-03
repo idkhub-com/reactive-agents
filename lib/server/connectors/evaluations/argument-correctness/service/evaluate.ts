@@ -15,12 +15,12 @@ import type {
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import type {
-  LogOutput as EvaluationOutput,
-  LogOutputCreateParams as EvaluationOutputCreateParams,
+  LogOutput,
+  LogOutputCreateParams,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+
 import { v4 as uuidv4 } from 'uuid';
 
 // Use a template builder to construct prompts
@@ -45,7 +45,7 @@ async function evaluateSingleLog(
   params: ArgumentCorrectnessEvaluationParameters,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput> {
+): Promise<LogOutput> {
   const start_time = Date.now();
   const _evaluation_output_id = uuidv4();
   const verbose_logs: string[] = [];
@@ -138,7 +138,7 @@ async function evaluateSingleLog(
     const passed = final_score >= threshold;
 
     const execution_time = Date.now() - start_time;
-    const evaluationOutput: EvaluationOutputCreateParams = {
+    const evaluationOutput: LogOutputCreateParams = {
       log_id: log.id,
       output: {
         score: final_score,
@@ -173,7 +173,7 @@ async function evaluateSingleLog(
     return storedOutput;
   } catch (error) {
     const execution_time = Date.now() - start_time;
-    const evaluationOutput: EvaluationOutputCreateParams = {
+    const evaluationOutput: LogOutputCreateParams = {
       log_id: log.id,
       output: {
         error: true,
@@ -206,9 +206,9 @@ async function processLogsInBatches(
   params: ArgumentCorrectnessEvaluationParameters,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput[]> {
+): Promise<LogOutput[]> {
   const batch_size = params.batch_size || 10;
-  const results: EvaluationOutput[] = [];
+  const results: LogOutput[] = [];
   for (let i = 0; i < logs.length; i += batch_size) {
     const batch = logs.slice(i, i + batch_size);
     if (params.async_mode !== false) {
@@ -349,9 +349,9 @@ export async function evaluateArgumentCorrectness(
 
 export async function evaluateOneLogForArgumentCorrectness(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -369,7 +369,7 @@ export async function evaluateOneLogForArgumentCorrectness(
   const logForEvaluation: Log = log as Log;
 
   // Evaluate the single log
-  await evaluateSingleLog(
+  const logOutput = await evaluateSingleLog(
     logForEvaluation,
     params,
     evaluationRunId,
@@ -397,4 +397,6 @@ export async function evaluateOneLogForArgumentCorrectness(
     evaluationOutputIds,
     userDataStorageConnector,
   });
+
+  return logOutput;
 }

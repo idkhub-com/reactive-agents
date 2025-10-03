@@ -11,11 +11,11 @@ import type { Log } from '@shared/types/data/log';
 import type {
   LogOutput as EvaluationOutput,
   LogOutputCreateParams as EvaluationOutputCreateParams,
+  LogOutput,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { v4 as uuidv4 } from 'uuid';
 
 function pickRoleData(
@@ -141,9 +141,9 @@ async function evaluateSingleLog(
 
 export async function evaluateOneLogForRoleAdherence(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -167,7 +167,7 @@ export async function evaluateOneLogForRoleAdherence(
   });
 
   // Evaluate the single log
-  await evaluateSingleLog(
+  const logOutput = await evaluateSingleLog(
     logForEvaluation,
     params,
     evaluationRunId,
@@ -212,6 +212,8 @@ export async function evaluateOneLogForRoleAdherence(
       evaluation_outputs: allLogOutputs.map((o) => o.id),
     },
   });
+
+  return logOutput;
 }
 
 export async function evaluateRoleAdherenceDataset(

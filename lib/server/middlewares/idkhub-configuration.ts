@@ -2,9 +2,8 @@ import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import { generateEmbeddingForRequest } from '@server/utils/embeddings';
 import { cosineSimilarity, sampleBeta } from '@server/utils/math';
-import { findRealtimeEvaluations } from '@server/utils/realtime-evaluations';
 import { renderTemplate } from '@server/utils/templates';
-import { error } from '@shared/console-logging';
+import { debug, error } from '@shared/console-logging';
 import {
   FunctionName,
   type IdkConfig,
@@ -90,7 +89,14 @@ function getRandomReasoningEffortFromRange(
   min: number,
   max: number,
 ): ReasoningEffort | null {
-  const randomIndex = Math.floor(getRandomValueInRange(min, max)) * 10;
+  const randomValue = getRandomValueInRange(min, max) * 9.9;
+
+  debug(`Random value: ${randomValue}`);
+
+  const randomIndex = Math.floor(randomValue);
+
+  debug(`Random index: ${randomIndex}`);
+
   return ReasoningMap[randomIndex];
 }
 
@@ -181,6 +187,8 @@ async function validateTargetConfiguration(
         optimalArm.params.thinking_max,
       );
 
+      debug(`Reasoning effort: ${reasoningEffort}`);
+
       idkTargetConfiguration = {
         ai_provider: apiKeyRecord.ai_provider as AIProvider,
         model: model.model_name,
@@ -265,6 +273,8 @@ async function validateTargetConfiguration(
     );
   }
 
+  debug(idkTargetConfiguration);
+
   const rawData = {
     ...idkTargetPreProcessed,
     configuration: idkTargetConfiguration,
@@ -288,19 +298,6 @@ async function validateTargetConfiguration(
   }
 
   return parseResult.data;
-}
-
-async function updatePulledArm(
-  userDataStorageConnector: UserDataStorageConnector,
-  arm: SkillOptimizationArm,
-) {
-  const evaluationRuns = await findRealtimeEvaluations(
-    arm.agent_id,
-    arm.skill_id,
-    userDataStorageConnector,
-  );
-
-  // TODO: Implement arm update here
 }
 
 export const idkHubConfigurationInjectorMiddleware = createMiddleware(
@@ -361,12 +358,5 @@ export const idkHubConfigurationInjectorMiddleware = createMiddleware(
       }
     }
     await next();
-    const pulledArm = c.get('pulled_arm');
-    if (!pulledArm) {
-      // Nothing to do
-      return;
-    }
-    const userDataStorageConnector = c.get('user_data_storage_connector');
-    await updatePulledArm(userDataStorageConnector, pulledArm);
   },
 );

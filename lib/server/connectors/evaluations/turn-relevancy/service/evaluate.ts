@@ -9,13 +9,13 @@ import type {
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import type {
-  LogOutput as EvaluationOutput,
-  LogOutputCreateParams as EvaluationOutputCreateParams,
+  LogOutput,
+  LogOutputCreateParams,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+
 import { v4 as uuidv4 } from 'uuid';
 
 function isRetryableError(error: unknown): boolean {
@@ -64,7 +64,7 @@ async function evaluateSingleLog(
   llm_judge: LLMJudge,
   userDataStorageConnector: UserDataStorageConnector,
   retryCount = 0,
-): Promise<EvaluationOutput> {
+): Promise<LogOutput> {
   const start_time = Date.now();
   const _evaluation_output_id = uuidv4();
   const maxRetries = 2;
@@ -96,7 +96,7 @@ async function evaluateSingleLog(
     const passed = final_score >= threshold;
     const execution_time = Date.now() - start_time;
 
-    const evaluationOutput: EvaluationOutputCreateParams = {
+    const LogOutput: LogOutputCreateParams = {
       log_id: log.id,
       output: {
         score: final_score,
@@ -126,7 +126,7 @@ async function evaluateSingleLog(
 
     const createdOutput = await userDataStorageConnector.createLogOutput(
       evaluation_run_id,
-      evaluationOutput,
+      LogOutput,
     );
 
     return createdOutput;
@@ -156,7 +156,7 @@ async function evaluateSingleLog(
 
     const execution_time = Date.now() - start_time;
 
-    const errorOutput: EvaluationOutputCreateParams = {
+    const errorOutput: LogOutputCreateParams = {
       log_id: log.id,
       output: {
         score: 0,
@@ -193,7 +193,7 @@ async function processLogsInBatches(
   evaluation_run_id: string,
   llm_judge: LLMJudge,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput[]> {
+): Promise<LogOutput[]> {
   const batch_size = params.batch_size || 10;
   const results = [];
 
@@ -255,9 +255,9 @@ async function processLogsInBatches(
 
 export async function evaluateOneLogForTurnRelevancy(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -271,9 +271,6 @@ export async function evaluateOneLogForTurnRelevancy(
     evaluationRun.metadata?.parameters || {},
   );
 
-  // Convert IdkRequestLog to Log format for compatibility
-  const logForEvaluation: Log = log as Log;
-
   const llmJudge = createLLMJudge({
     model: params.model,
     temperature: params.temperature,
@@ -281,8 +278,8 @@ export async function evaluateOneLogForTurnRelevancy(
   });
 
   // Evaluate the single log
-  await evaluateSingleLog(
-    logForEvaluation,
+  const logOutput = await evaluateSingleLog(
+    log,
     params,
     evaluationRunId,
     llmJudge,
@@ -345,6 +342,8 @@ export async function evaluateOneLogForTurnRelevancy(
       error_results_count: allLogOutputs.length - validResults.length,
     },
   });
+
+  return logOutput;
 }
 
 export async function evaluateTurnRelevancyDataset(
