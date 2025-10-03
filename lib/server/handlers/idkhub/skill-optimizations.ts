@@ -26,6 +26,21 @@ export async function handleGenerateArms(
   // Remove all current arms for the skill
   await userStorageConnector.deleteSkillOptimizationArmsForSkill(skill.id);
 
+  // Reset cluster step count
+  const clusters = await userStorageConnector.getSkillOptimizationClusters({
+    skill_id: skill.id,
+  });
+
+  if (!clusters) {
+    return c.json({ error: 'Clusters not found' }, 404);
+  }
+
+  for (const cluster of clusters) {
+    await userStorageConnector.updateSkillOptimizationCluster(cluster.id, {
+      total_steps: 0,
+    });
+  }
+
   const skillModels = await userStorageConnector.getSkillModels(skill.id);
   const skillClusters = await userStorageConnector.getSkillOptimizationClusters(
     { skill_id: skill.id },
@@ -35,7 +50,7 @@ export async function handleGenerateArms(
     return c.json({ error: 'Skill models or clusters not found' }, 404);
   }
 
-  const numberOfSystemPrompts = 3;
+  const numberOfSystemPrompts = 2;
 
   const systemPrompts = [];
   for (let i = 0; i < numberOfSystemPrompts; i++) {

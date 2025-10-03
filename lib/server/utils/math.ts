@@ -1,4 +1,27 @@
+import { EMBEDDINGS_DIMENSIONS } from '@server/constants';
 import type { ClusterResult } from '@shared/utils/math';
+
+export function getInitialClusterCentroids(
+  numberOfClusters: number,
+  dimension = EMBEDDINGS_DIMENSIONS,
+): number[][] {
+  const centroids: number[][] = [];
+
+  for (let i = 0; i < numberOfClusters; i++) {
+    const centroid: number[] = [];
+    for (let j = 0; j < dimension; j++) {
+      centroid.push(Math.random() * 2 - 1);
+    }
+
+    // Normalize to unit vector for better distribution
+    const magnitude = Math.sqrt(
+      centroid.reduce((sum, val) => sum + val * val, 0),
+    );
+    centroids.push(centroid.map((val) => val / magnitude));
+  }
+
+  return centroids;
+}
 
 export function calculateDistance(a: number[], b: number[]): number {
   if (a.length !== b.length) {

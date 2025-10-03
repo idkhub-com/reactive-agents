@@ -145,68 +145,79 @@ export function ClusterArmsView(): ReactElement {
               </Card>
             </div>
           ) : (
-            arms.map((arm, index) => (
-              <Card
-                key={arm.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() =>
-                  navigateToArmDetail(
-                    selectedAgent.name,
-                    selectedSkill.name,
-                    clusterId,
-                    arm.id,
-                  )
-                }
-              >
-                <CardHeader>
-                  <CardTitle className="text-lg">Arm {index + 1}</CardTitle>
-                  <CardDescription>ID: {arm.id.slice(0, 8)}...</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-sm font-medium mb-2">Statistics</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Pulls
-                          </span>
-                          <Badge variant="secondary">{arm.stats.n}</Badge>
+            arms
+              .slice()
+              .sort((a, b) => b.stats.mean - a.stats.mean)
+              .map((arm, index) => (
+                <Card
+                  key={arm.id}
+                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() =>
+                    navigateToArmDetail(
+                      selectedAgent.name,
+                      selectedSkill.name,
+                      clusterId,
+                      arm.id,
+                    )
+                  }
+                >
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Arm #{arm.originalIndex}
+                    </CardTitle>
+                    <CardDescription>
+                      Rank: {index + 1} | ID: {arm.id.slice(0, 8)}...
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-sm font-medium mb-2">
+                          Statistics
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Mean
-                          </span>
-                          <Badge variant="outline">
-                            {arm.stats.mean.toFixed(3)}
-                          </Badge>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              Pulls
+                            </span>
+                            <Badge variant="secondary">{arm.stats.n}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              Mean
+                            </span>
+                            <Badge variant="outline">
+                              {arm.stats.mean.toFixed(3)}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <div className="text-sm font-medium mb-2">Parameters</div>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Temp</span>
-                          <span>
-                            {arm.params.temperature_min.toFixed(2)}-
-                            {arm.params.temperature_max.toFixed(2)}
-                          </span>
+                      <div>
+                        <div className="text-sm font-medium mb-2">
+                          Parameters
                         </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Top P</span>
-                          <span>
-                            {arm.params.top_p_min.toFixed(2)}-
-                            {arm.params.top_p_max.toFixed(2)}
-                          </span>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Temp</span>
+                            <span>
+                              {arm.params.temperature_min.toFixed(2)}-
+                              {arm.params.temperature_max.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Top P</span>
+                            <span>
+                              {arm.params.top_p_min.toFixed(2)}-
+                              {arm.params.top_p_max.toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))
           )}
         </div>
       </div>

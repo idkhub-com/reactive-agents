@@ -6,8 +6,8 @@ import type { HttpMethod } from '@server/types/http';
 import {
   evaluateExistingLogsInRealtimeDataset,
   findRealtimeEvaluations,
-  shouldTriggerRealtimeEvaluation,
   runRealtimeEvaluationsForLog,
+  shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';

@@ -79,7 +79,7 @@ const eventInputs = [
 ];
 
 // Number of random inputs to process
-const N_INPUTS = 5;
+const N_INPUTS = 10;
 
 // Function to get random elements from array
 function getRandomElements<T>(array: T[], count: number): T[] {

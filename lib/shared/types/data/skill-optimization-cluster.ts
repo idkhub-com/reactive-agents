@@ -19,7 +19,7 @@ export const SkillOptimizationCluster = z.object({
   /** An array representing the center of the cluster of the logs in
    * n-dimensional space.
    */
-  center: z.array(z.number()),
+  centroid: z.array(z.number()),
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -45,7 +45,7 @@ export const SkillOptimizationClusterCreateParams = z
     agent_id: z.uuid(),
     skill_id: z.uuid(),
     total_steps: z.number().min(0),
-    center: z.array(z.number()),
+    centroid: z.array(z.number()),
   })
   .strict();
 
@@ -56,7 +56,7 @@ export type SkillOptimizationClusterCreateParams = z.infer<
 export const SkillOptimizationClusterUpdateParams = z
   .object({
     total_steps: z.number().min(0).optional(),
-    center: z.array(z.number()).optional(),
+    centroid: z.array(z.number()).optional(),
   })
   .strict();
 

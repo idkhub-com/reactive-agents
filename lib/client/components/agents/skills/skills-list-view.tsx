@@ -20,7 +20,7 @@ import { useSkills } from '@client/providers/skills';
 import type { Skill } from '@shared/types/data';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -34,6 +34,7 @@ interface SkillStats {
 export function SkillsListView(): ReactElement {
   const { navigationState, navigateToSkillDashboard } = useNavigation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Use providers
@@ -152,6 +153,28 @@ export function SkillsListView(): ReactElement {
     }
   };
 
+  // Auto-redirect to skill creation when agent has no skills (unless user dismissed it)
+  useEffect(() => {
+    const skipCreate = searchParams.get('skip_create') === 'true';
+
+    if (
+      !isLoadingSkills &&
+      navigationState.selectedAgent &&
+      skills.length === 0 &&
+      !skipCreate
+    ) {
+      router.push(
+        `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/skills/create`,
+      );
+    }
+  }, [
+    isLoadingSkills,
+    navigationState.selectedAgent,
+    skills.length,
+    searchParams,
+    router,
+  ]);
+
   if (!navigationState.selectedAgent) {
     return (
       <>
@@ -162,7 +185,7 @@ export function SkillsListView(): ReactElement {
         />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-2">Welcome to /agents</h2>
+            <h2 className="text-2xl font-semibold mb-2">Welcome to Agents</h2>
             <p className="text-muted-foreground mb-4">
               Select an agent from the dropdown above to view its skills and
               start managing your AI /agents.

@@ -107,9 +107,12 @@ export function CreateSkillView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Navigate back to agent's agent page
+      // Navigate back to agent's page with skip_create to prevent redirect loop
+      // (skills provider may not have refreshed yet)
       if (agentName) {
-        router.push(`/agents/${encodeURIComponent(agentName)}`);
+        router.push(
+          `/agents/${encodeURIComponent(agentName)}?skip_create=true`,
+        );
       } else {
         router.push('/agents');
       }
@@ -121,6 +124,14 @@ export function CreateSkillView(): React.ReactElement {
 
   // No need to update form since agent is fixed
 
+  const handleBack = () => {
+    if (agentName) {
+      router.push(`/agents/${encodeURIComponent(agentName)}?skip_create=true`);
+    } else {
+      router.push('/agents');
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -130,6 +141,7 @@ export function CreateSkillView(): React.ReactElement {
             ? `Define a new capability for ${currentAgent.name}`
             : 'Define a new capability for this agent'
         }
+        onBack={handleBack}
       />
       <div className="container mx-auto py-6 max-w-2xl">
         {/* Agent Context Card */}
@@ -264,7 +276,7 @@ export function CreateSkillView(): React.ReactElement {
                     type="button"
                     variant="outline"
                     size="lg"
-                    onClick={() => router.back()}
+                    onClick={handleBack}
                     disabled={isCreating}
                     className="flex-1"
                   >

@@ -153,7 +153,9 @@ export function ClustersView(): ReactElement {
                       <span className="text-sm text-muted-foreground">
                         Dimensions
                       </span>
-                      <Badge variant="outline">{cluster.center.length}D</Badge>
+                      <Badge variant="outline">
+                        {cluster.centroid.length}D
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>

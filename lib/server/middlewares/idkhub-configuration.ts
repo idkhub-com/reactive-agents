@@ -1,7 +1,12 @@
+import { handleGenerateArms } from '@server/handlers/idkhub/skill-optimizations';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import { generateEmbeddingForRequest } from '@server/utils/embeddings';
-import { cosineSimilarity, sampleBeta } from '@server/utils/math';
+import {
+  cosineSimilarity,
+  getInitialClusterCentroids,
+  sampleBeta,
+} from '@server/utils/math';
 import { renderTemplate } from '@server/utils/templates';
 import { debug, error } from '@shared/console-logging';
 import {
@@ -18,6 +23,7 @@ import type {
   SkillOptimizationArm,
   SkillOptimizationCluster,
 } from '@shared/types/data';
+import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/skill-optimization-cluster';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
@@ -58,7 +64,7 @@ function getOptimalCluster(
   let maxSimilarity = -1;
 
   for (const cluster of clusters) {
-    const similarity = cosineSimilarity(embedding, cluster.center);
+    const similarity = cosineSimilarity(embedding, cluster.centroid);
     if (similarity > maxSimilarity) {
       maxSimilarity = similarity;
       optimalCluster = cluster;
@@ -118,19 +124,30 @@ async function validateTargetConfiguration(
     try {
       const skill = c.get('skill');
 
-      const clusters =
+      let clusters =
         await userDataStorageConnector.getSkillOptimizationClusters({
           skill_id: skill.id,
         });
 
       if (clusters.length === 0) {
-        return c.json(
-          {
-            error:
-              'IdkHub optimization not found. Check your optimization version and ensure it exists.',
-          },
-          422,
+        // Create initial clusters with equally spaced centroids
+        const initialCentroids = getInitialClusterCentroids(
+          skill.max_configurations,
         );
+        const clusterParams: SkillOptimizationClusterCreateParams[] =
+          initialCentroids.map((centroid) => ({
+            agent_id: skill.agent_id,
+            skill_id: skill.id,
+            total_steps: 0,
+            centroid,
+          }));
+
+        clusters =
+          await userDataStorageConnector.createSkillOptimizationClusters(
+            clusterParams,
+          );
+
+        await handleGenerateArms(c, userDataStorageConnector, skill.id);
       }
 
       const optimalCluster = getOptimalCluster(embedding, clusters);

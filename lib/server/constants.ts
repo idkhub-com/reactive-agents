@@ -43,3 +43,5 @@ export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'demo-key';
 export const AI_PROVIDER_API_KEY_ENCRYPTION_KEY =
   process.env.AI_PROVIDER_API_KEY_ENCRYPTION_KEY ??
   'default-32-byte-key-change-in-prod';
+
+export const EMBEDDINGS_DIMENSIONS = 1536;

@@ -1,5 +1,7 @@
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
 
+import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
+
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
 import z from 'zod';
@@ -11,12 +13,12 @@ const StructuredOutputResponse = z.object({
 
 type StructuredOutputResponse = z.infer<typeof StructuredOutputResponse>;
 
-function getSystemPrompt() {
+function getSystemPrompt(task?: string) {
   const systemPrompt = `You are an expert at analyzing AI system interactions to extract task objectives and factual outcomes.
 
-Your job is to analyze the provided input, tools used, and output to determine:
-1. The TASK: What was the user trying to accomplish?
-2. The OUTCOME: What actually happened or was produced?
+${task ? `The TASK: ${task}\n` : 'Your job is to analyze the provided input, tools used, and output to determine the task. What was the user trying to accomplish?\n'}
+    
+Your job is to analyze the provided input, tools used, and output to determine the outcome. What actually happened or was produced?
 
 Be precise and factual. Focus on the concrete task and measurable outcome.`;
 
@@ -37,7 +39,11 @@ Extract the TASK and OUTCOME from this interaction.`;
   return firstMessage;
 }
 
-export async function extractTaskAndOutcome(input: string, output: string) {
+export async function extractTaskAndOutcome(
+  params: TaskCompletionEvaluationParameters,
+  input: string,
+  output: string,
+) {
   // Check if OpenAI API key is available
   const apiKey = OPENAI_API_KEY;
   if (!apiKey) {
@@ -63,7 +69,8 @@ export async function extractTaskAndOutcome(input: string, output: string) {
     skill_name: 'extract-task-and-outcome',
   };
 
-  const systemPrompt = getSystemPrompt();
+  const systemPrompt = getSystemPrompt(params.task);
+
   const firstMessage = getFirstMessage(input, output);
 
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client

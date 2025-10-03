@@ -277,8 +277,8 @@ CREATE TABLE if not exists evaluation_runs (
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
-  FOREIGN KEY (agent_id) REFERENCES agents(id),
-  FOREIGN KEY (skill_id) REFERENCES skills(id)
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 );
 
 CREATE TRIGGER update_evaluation_runs_updated_at BEFORE UPDATE ON evaluation_runs
@@ -467,7 +467,7 @@ CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   total_steps BIGINT NOT NULL,
-  center FLOAT[] NOT NULL,
+  centroid FLOAT[] NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,

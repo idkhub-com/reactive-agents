@@ -1,6 +1,8 @@
 import { zValidator } from '@hono/zod-validator';
 import { handleGenerateArms } from '@server/handlers/idkhub/skill-optimizations';
 import type { AppEnv } from '@server/types/hono';
+import { getInitialClusterCentroids } from '@server/utils/math';
+import type { SkillOptimizationClusterCreateParams } from '@shared/types/data';
 import {
   SkillCreateParams,
   SkillQueryParams,
@@ -16,6 +18,20 @@ export const skillsRouter = new Hono<AppEnv>()
       const connector = c.get('user_data_storage_connector');
 
       const newSkill = await connector.createSkill(data);
+
+      // Create initial clusters with equally spaced centroids
+      const initialCentroids = getInitialClusterCentroids(
+        newSkill.max_configurations,
+      );
+      const clusterParams: SkillOptimizationClusterCreateParams[] =
+        initialCentroids.map((centroid) => ({
+          agent_id: newSkill.agent_id,
+          skill_id: newSkill.id,
+          total_steps: 0,
+          centroid,
+        }));
+
+      await connector.createSkillOptimizationClusters(clusterParams);
 
       return c.json(newSkill, 201);
     } catch (error) {
@@ -47,6 +63,35 @@ export const skillsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         const updatedSkill = await connector.updateSkill(skillId, data);
+
+        if (data.max_configurations) {
+          const currentClusters = await connector.getSkillOptimizationClusters({
+            skill_id: updatedSkill.id,
+          });
+
+          for (const cluster of currentClusters) {
+            await connector.deleteSkillOptimizationCluster(cluster.id);
+          }
+
+          // Create initial clusters with equally spaced centroids
+          const initialCentroids = getInitialClusterCentroids(
+            updatedSkill.max_configurations,
+          );
+          const clusterParams: SkillOptimizationClusterCreateParams[] =
+            initialCentroids.map((centroid) => ({
+              agent_id: updatedSkill.agent_id,
+              skill_id: updatedSkill.id,
+              total_steps: 0,
+              centroid,
+            }));
+
+          await connector.createSkillOptimizationClusters(clusterParams);
+        }
+
+        if (data.description) {
+          // Regenerate arms if the description is updated
+          await handleGenerateArms(c, connector, skillId);
+        }
 
         return c.json(updatedSkill, 200);
       } catch (error) {
@@ -101,6 +146,8 @@ export const skillsRouter = new Hono<AppEnv>()
 
         await connector.addModelsToSkill(skillId, modelIds);
 
+        await handleGenerateArms(c, connector, skillId);
+
         return c.json({ success: true }, 201);
       } catch (error) {
         console.error('Error adding models to skill:', error);
@@ -119,6 +166,8 @@ export const skillsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         await connector.removeModelsFromSkill(skillId, modelIds);
+
+        await handleGenerateArms(c, connector, skillId);
 
         return c.json({ success: true });
       } catch (error) {

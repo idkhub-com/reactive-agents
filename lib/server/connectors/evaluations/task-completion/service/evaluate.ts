@@ -1,5 +1,6 @@
 import { extractTaskAndOutcome } from '@server/connectors/evaluations/task-completion/service/task-and-outcome';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion/task-completion';
+import getTaskCompletionVerdictTemplate from '@server/connectors/evaluations/task-completion/templates/verdict';
 import type { TaskCompletionAverageResult } from '@server/connectors/evaluations/task-completion/types';
 import { createLLMJudge } from '@server/evaluations';
 import type { UserDataStorageConnector } from '@server/types/connector';
@@ -213,10 +214,6 @@ async function generateVerdict(
   { task, outcome }: { task: string; outcome: string },
   llm_judge: LLMJudge,
 ): Promise<{ verdict: number; reason: string }> {
-  const { getTaskCompletionVerdictTemplate } = await import(
-    '@server/connectors/evaluations/task-completion/templates/verdict'
-  );
-
   const verdictTemplate = getTaskCompletionVerdictTemplate({ task, outcome });
   const verdict_result = await llm_judge.evaluate({
     text: `${verdictTemplate.systemPrompt}\n\n${verdictTemplate.userPrompt}`,
@@ -288,6 +285,7 @@ export function extractOutputFromResponseBody(
 }
 
 async function getTaskAndOutcome(
+  params: TaskCompletionEvaluationParameters,
   log: Log,
 ): Promise<{ task: string; outcome: string }> {
   const idkRequestData = produceIdkRequestData(
@@ -309,11 +307,8 @@ async function getTaskAndOutcome(
   const input = formatMessagesForExtraction(messages);
   const output = extractOutputFromResponseBody(responseBody);
 
-  debug('input', input);
-
-  debug('output', output);
-
-  return await extractTaskAndOutcome(input, output);
+  const { task, outcome } = await extractTaskAndOutcome(params, input, output);
+  return { task: params.task || task, outcome };
 }
 
 /**
@@ -330,7 +325,7 @@ async function evaluateSingleLog(
   const verbose_logs: string[] = [];
 
   try {
-    const { task, outcome } = await getTaskAndOutcome(log);
+    const { task, outcome } = await getTaskAndOutcome(params, log);
 
     // Step 2: Generate verdict
     const { verdict, reason } = await generateVerdict(

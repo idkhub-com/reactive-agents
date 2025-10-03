@@ -112,7 +112,7 @@ export async function autoClusterSkill(
             agent_id: skill.agent_id,
             skill_id: skill.id,
             total_steps: 0,
-            center: newClusterCenter,
+            centroid: newClusterCenter,
           };
 
           newClusterStatesCreateParamsList.push(params);
@@ -132,7 +132,7 @@ export async function autoClusterSkill(
             if (used.has(i)) continue;
 
             const distance = calculateDistance(
-              clusterState.center,
+              clusterState.centroid,
               newClusterCenters[i],
             );
 
@@ -157,7 +157,7 @@ export async function autoClusterSkill(
             userDataStorageConnector.updateSkillOptimizationCluster(
               match.clusterStateId,
               {
-                center: match.newCenter,
+                centroid: match.newCenter,
               },
             ),
           ),
