@@ -19,7 +19,7 @@ import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimiza
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 export function ClusterArmsView(): ReactElement {
   const { navigationState, navigateToArmDetail } = useNavigation();
@@ -29,6 +29,12 @@ export function ClusterArmsView(): ReactElement {
   const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
     useArms();
   const { clusters } = useClusters();
+
+  // Add original index to arms (stays static per load)
+  const armsWithIndex = useMemo(
+    () => arms.map((arm, index) => ({ ...arm, originalIndex: index + 1 })),
+    [arms],
+  );
 
   // Find the current cluster
   const currentCluster = clusters.find(
@@ -132,7 +138,7 @@ export function ClusterArmsView(): ReactElement {
                 </CardContent>
               </Card>
             </div>
-          ) : arms.length === 0 ? (
+          ) : armsWithIndex.length === 0 ? (
             <div className="col-span-full">
               <Card>
                 <CardContent className="pt-6 text-center">
@@ -145,7 +151,7 @@ export function ClusterArmsView(): ReactElement {
               </Card>
             </div>
           ) : (
-            arms
+            armsWithIndex
               .slice()
               .sort((a, b) => b.stats.mean - a.stats.mean)
               .map((arm, index) => (

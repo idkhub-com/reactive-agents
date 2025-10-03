@@ -27,6 +27,9 @@ export const SkillOptimizationEvaluationRun = z.object({
 
   /** The results of when the arm pull was evaluated */
   results: z.array(SkillOptimizationEvaluationResult),
+
+  /** When the evaluation run was created */
+  created_at: z.iso.datetime({ offset: true }),
 });
 export type SkillOptimizationEvaluationRun = z.infer<
   typeof SkillOptimizationEvaluationRun

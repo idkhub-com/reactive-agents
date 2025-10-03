@@ -5,6 +5,7 @@ import {
   Skill,
   type SkillCreateParams,
   SkillOptimizationArm,
+  SkillOptimizationEvaluationRun,
   type SkillQueryParams,
   type SkillUpdateParams,
 } from '@shared/types/data';
@@ -167,4 +168,22 @@ export async function generateSkillArms(
   }
 
   return SkillOptimizationArm.array().parse(await response.json());
+}
+
+export async function getSkillEvaluationRuns(
+  skillId: string,
+): Promise<SkillOptimizationEvaluationRun[]> {
+  const response = await client.v1.idk.skills[':skillId'][
+    'evaluation-runs'
+  ].$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch evaluation runs');
+  }
+
+  return SkillOptimizationEvaluationRun.array().parse(await response.json());
 }

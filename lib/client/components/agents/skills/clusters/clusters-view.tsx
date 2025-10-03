@@ -14,10 +14,12 @@ import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useNavigation } from '@client/providers/navigation';
 import { useClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { LayersIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
+import { ClusterPerformanceChart } from './cluster-performance-chart';
 
 export function ClustersView(): ReactElement {
   const { navigationState, navigateToClusterArms } = useNavigation();
@@ -25,15 +27,19 @@ export function ClustersView(): ReactElement {
   const goBack = useSmartBack();
 
   const { clusters, isLoading, error, refetch, setSkillId } = useClusters();
+  const { getEvaluationRunsByClusterId, setSkillId: setEvaluationRunsSkillId } =
+    useSkillOptimizationEvaluationRuns();
 
   // Set skill ID when skill changes
   useEffect(() => {
     if (!selectedSkill) {
       setSkillId(null);
+      setEvaluationRunsSkillId(null);
       return;
     }
     setSkillId(selectedSkill.id);
-  }, [selectedSkill, setSkillId]);
+    setEvaluationRunsSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillId, setEvaluationRunsSkillId]);
 
   // Early return if no skill or agent selected
   if (!selectedSkill || !selectedAgent) {
@@ -140,7 +146,7 @@ export function ClustersView(): ReactElement {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
                         Total Requests
@@ -156,6 +162,16 @@ export function ClustersView(): ReactElement {
                       <Badge variant="outline">
                         {cluster.centroid.length}D
                       </Badge>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Performance per Hour
+                      </div>
+                      <ClusterPerformanceChart
+                        evaluationRuns={getEvaluationRunsByClusterId(
+                          cluster.id,
+                        )}
+                      />
                     </div>
                   </div>
                 </CardContent>

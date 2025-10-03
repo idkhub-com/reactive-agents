@@ -62,15 +62,10 @@ export const ArmsProvider = ({
     enabled: !!skillId, // Only fetch when we have skillId
   });
 
-  // Filter arms by clusterId if specified and add original index
+  // Filter arms by clusterId if specified
   const arms = useMemo(() => {
-    const filtered = clusterId
-      ? allArms.filter((arm) => arm.cluster_id === clusterId)
-      : allArms;
-    return filtered.map((arm, index) => ({
-      ...arm,
-      originalIndex: index + 1,
-    }));
+    if (!clusterId) return allArms;
+    return allArms.filter((arm) => arm.cluster_id === clusterId);
   }, [allArms, clusterId]);
 
   // Helper functions

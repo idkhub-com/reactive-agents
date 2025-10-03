@@ -228,4 +228,23 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ error: 'Failed to generate arms' }, 500);
       }
     },
+  )
+  .get(
+    '/:skillId/evaluation-runs',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const arms = await connector.getSkillOptimizationEvaluationRuns({
+          skill_id: skillId,
+        });
+
+        return c.json(arms);
+      } catch (error) {
+        console.error('Error getting evaluation runs:', error);
+        return c.json({ error: 'Failed to get evaluation runs' }, 500);
+      }
+    },
   );
