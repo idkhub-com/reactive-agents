@@ -69,14 +69,14 @@ idk
 
 ***Streaming mode not yet implemented***
 
-| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers | Vision |
-| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- | ------ |
-| Anthropic        | ✅       | ✅         | ✅          | ⬛                | ⬛            | ✅     |
-| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
-| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
-| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
-| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛            | ⬛     |
-| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛            | ⬛     |
+| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | Vision | MCP Servers |
+| ---------------- | -------- | ---------- | ----------- | ----------------- | ------ | ------------- |
+| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
+| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
+| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
+| OpenRouter       | ✅       | ✅         | ✅          | ✅                | ✅     | ⬛            |
+| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛     | ⬛            |
+| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
 
 ### Responses API
 
