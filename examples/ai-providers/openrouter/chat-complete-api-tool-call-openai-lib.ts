@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import 'dotenv/config';
 import logger from '@shared/console-logging';
+import { z } from 'zod';
 
 if (!process.env.OPENROUTER_API_KEY) {
   logger.error('OPENROUTER_API_KEY environment variable is required');
@@ -13,6 +14,10 @@ const client = new OpenAI({
   apiKey: process.env.BEARER_TOKEN ?? 'idk',
   baseURL: 'http://localhost:3000/v1',
 });
+
+// Constants for token limits
+const MAX_TOKENS_INITIAL = 300;
+const MAX_TOKENS_FINAL = 500;
 
 const idkhubConfig = {
   targets: [
@@ -56,6 +61,13 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
+// Zod schema for runtime validation
+const CalculateArgsSchema = z.object({
+  operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+  a: z.number(),
+  b: z.number(),
+});
+
 function calculate(operation: string, a: number, b: number): number {
   switch (operation) {
     case 'add':
@@ -96,9 +108,10 @@ const response1 = await client
     ],
     tools,
     tool_choice: 'auto',
+    max_tokens: MAX_TOKENS_INITIAL,
   });
 
-const message1 = response1.choices[0].message;
+const message1 = response1.choices?.[0]?.message;
 logger.printWithHeader(
   'Agent Response',
   message1.content || '[Tool calls made]',
@@ -134,7 +147,9 @@ if (message1.tool_calls) {
 
     let toolResult: string;
     try {
-      const args = JSON.parse(toolCall.function.arguments);
+      // Parse and validate arguments with runtime type checking
+      const rawArgs = JSON.parse(toolCall.function.arguments);
+      const args = CalculateArgsSchema.parse(rawArgs);
 
       if (toolCall.function.name === 'calculate') {
         const result = calculate(args.operation, args.a, args.b);
@@ -145,7 +160,11 @@ if (message1.tool_calls) {
 
       logger.printWithHeader('Tool Result', toolResult);
     } catch (error) {
-      toolResult = `Error: ${error}`;
+      if (error instanceof z.ZodError) {
+        toolResult = `Validation Error: ${error.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`).join(', ')}`;
+      } else {
+        toolResult = `Error: ${error}`;
+      }
       logger.printWithHeader('Tool Error', toolResult);
     }
 
@@ -157,21 +176,41 @@ if (message1.tool_calls) {
   }
 
   // Get the final response after tool execution
-  const finalResponse = await client
-    .withOptions({
-      defaultHeaders: {
-        'x-idk-config': JSON.stringify(idkhubConfig),
-      },
-    })
-    .chat.completions.create({
-      model: 'openai/gpt-4o-mini',
-      messages: toolMessages,
-      tools,
-      tool_choice: 'auto',
-    });
+  // Only make the API call if we have tool results to process
+  if (toolMessages.length > 2) {
+    // More than system + user message
+    const finalResponse = await client
+      .withOptions({
+        defaultHeaders: {
+          'x-idk-config': JSON.stringify(idkhubConfig),
+        },
+      })
+      .chat.completions.create({
+        model: 'openai/gpt-4o-mini',
+        messages: toolMessages,
+        tools,
+        tool_choice: 'auto',
+        max_tokens: MAX_TOKENS_FINAL,
+      });
 
-  logger.printWithHeader(
-    'Final Agent Response',
-    finalResponse.choices[0].message.content || '',
-  );
+    const finalMessage = finalResponse.choices?.[0]?.message;
+
+    // Log the final response
+    if (finalMessage.content) {
+      logger.printWithHeader('Final Agent Response', finalMessage.content);
+    } else if (finalMessage.tool_calls) {
+      logger.printWithHeader(
+        'Final Agent Response',
+        '[Additional tool calls needed]',
+      );
+      // Note: In a real application, you'd continue the tool call loop here
+    } else {
+      logger.printWithHeader('Final Agent Response', '[No response content]');
+    }
+  } else {
+    logger.printWithHeader(
+      'Final Agent Response',
+      '[No tool results to process - skipping final API call]',
+    );
+  }
 }

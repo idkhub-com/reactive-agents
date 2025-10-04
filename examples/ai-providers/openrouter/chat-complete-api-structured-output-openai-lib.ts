@@ -50,7 +50,9 @@ const response1 = await client
         content: userMessage1,
       },
     ],
-    // This is a custom zodTextFormat to make it work with zod v4
+    // Using OpenAI structured output with JSON schema validation (different from JSON mode)
+    // Structured output enforces strict schema validation and type safety, while JSON mode
+    // only guarantees valid JSON format without schema enforcement
     response_format: {
       type: 'json_schema',
       json_schema: {
@@ -61,5 +63,11 @@ const response1 = await client
     },
   });
 
-const agentResponse = response1.choices[0].message.parsed;
+const agentResponse = response1.choices?.[0]?.message?.parsed;
+if (!agentResponse) {
+  logger.error('No parsed response received');
+  const content = response1.choices?.[0]?.message?.content || 'No content';
+  logger.printWithHeader('Raw Response', content);
+  process.exit(1);
+}
 logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));

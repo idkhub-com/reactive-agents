@@ -60,7 +60,23 @@ const response1 = await client
     },
   });
 
-const agentResponse = JSON.parse(
-  response1.choices[0]?.message?.content || '{}',
-);
-logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));
+const content = response1.choices?.[0]?.message?.content || '{}';
+let agentResponse: z.infer<typeof CalendarEvent>;
+
+try {
+  agentResponse = JSON.parse(content);
+  logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));
+} catch (error) {
+  logger.error('Failed to parse JSON response:', error);
+  logger.error('Raw content that failed to parse:', content);
+  // Fallback to empty object to prevent crashes
+  agentResponse = {
+    name: '',
+    date: '',
+    participants: [],
+  };
+  logger.printWithHeader(
+    'Agent Response (Fallback)',
+    JSON.stringify(agentResponse),
+  );
+}

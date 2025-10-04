@@ -33,62 +33,58 @@ logger.printWithHeader('User', userMessage);
 const imageUrl =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg';
 
-const response = await client.chat.completions.create(
+// Extract the initial message content to avoid duplication
+const initialMessageContent = [
   {
+    type: 'text' as const,
+    text: userMessage,
+  },
+  {
+    type: 'image_url' as const,
+    image_url: {
+      url: imageUrl,
+      detail: 'auto' as const,
+    },
+  },
+];
+
+const response = await client
+  .withOptions({
+    defaultHeaders: {
+      'x-idk-config': JSON.stringify(idkhubConfig),
+    },
+  })
+  .chat.completions.create({
     model: 'openai/gpt-4o-mini',
     messages: [
       {
         role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: userMessage,
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: imageUrl,
-              detail: 'auto',
-            },
-          },
-        ],
+        content: initialMessageContent,
       },
     ],
     max_tokens: 500,
-  },
-  {
-    headers: {
-      'x-idk-config': JSON.stringify(idkhubConfig),
-    },
-  },
-);
+  });
 
-logger.printWithHeader('Agent', response.choices[0]?.message?.content || '');
+const initialResponse = response.choices?.[0]?.message?.content || '';
+logger.printWithHeader('Agent', initialResponse);
 
 // Example with follow-up question about the same image
 const followUpMessage =
   'What would be the best time of day to visit this location for photography?';
 logger.printWithHeader('User', followUpMessage);
 
-const followUpResponse = await client.chat.completions.create(
-  {
+const followUpResponse = await client
+  .withOptions({
+    defaultHeaders: {
+      'x-idk-config': JSON.stringify(idkhubConfig),
+    },
+  })
+  .chat.completions.create({
     model: 'openai/gpt-4o-mini',
     messages: [
       {
         role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: userMessage,
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: imageUrl,
-              detail: 'auto',
-            },
-          },
-        ],
+        content: initialMessageContent,
       },
       {
         role: 'assistant',
@@ -100,15 +96,7 @@ const followUpResponse = await client.chat.completions.create(
       },
     ],
     max_tokens: 300,
-  },
-  {
-    headers: {
-      'x-idk-config': JSON.stringify(idkhubConfig),
-    },
-  },
-);
+  });
 
-logger.printWithHeader(
-  'Agent',
-  followUpResponse.choices[0]?.message?.content || '',
-);
+const followUpContent = followUpResponse.choices?.[0]?.message?.content || '';
+logger.printWithHeader('Agent', followUpContent);
