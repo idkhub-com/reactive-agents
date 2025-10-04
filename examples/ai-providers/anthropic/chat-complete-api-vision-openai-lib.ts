@@ -26,19 +26,75 @@ const idkhubConfig = {
   skill_name: 'Image Analysis',
 };
 
-// Function to fetch image from URL and convert to base64
-async function fetchImageAsBase64(imageUrl: string): Promise<string> {
-  try {
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.statusText}`);
+// Function to fetch image from URL and convert to base64 with timeout and retry logic
+async function fetchImageAsBase64(
+  imageUrl: string,
+  maxRetries = 3,
+  timeoutMs = 10000,
+): Promise<string> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Create an AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(imageUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'IDKHub-Agent/1.0',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.startsWith('image/')) {
+        throw new Error(
+          `Invalid content type: ${contentType}. Expected image/*`,
+        );
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      return buffer.toString('base64');
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        lastError = new Error(`Request timeout after ${timeoutMs}ms`);
+      }
+
+      logger.error(
+        `Attempt ${attempt}/${maxRetries} failed:`,
+        lastError.message,
+      );
+
+      // Don't retry on certain types of errors
+      if (
+        lastError.message.includes('HTTP 4') ||
+        lastError.message.includes('Invalid content type')
+      ) {
+        break;
+      }
+
+      // Wait before retrying (exponential backoff)
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 5000);
+        logger.error(`Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    return buffer.toString('base64');
-  } catch (error) {
-    throw new Error(`Error fetching image: ${error}`);
   }
+
+  throw new Error(
+    `Failed to fetch image after ${maxRetries} attempts: ${lastError?.message}`,
+  );
 }
 
 async function runVisionExample(): Promise<void> {

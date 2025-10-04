@@ -24,61 +24,81 @@ const idkhubConfig = {
   skill_name: 'JavaScript',
 };
 
-const userMessage1 = 'Are semicolons optional in JavaScript?';
-logger.printWithHeader('User', userMessage1);
+async function runChatExample(): Promise<void> {
+  try {
+    const userMessage1 = 'Are semicolons optional in JavaScript?';
+    logger.printWithHeader('User', userMessage1);
 
-const response1 = await client
-  .withOptions({
-    defaultHeaders: {
-      'x-idk-config': JSON.stringify(idkhubConfig),
-    },
-  })
-  .chat.completions.create({
-    model: 'claude-opus-4-1',
-    messages: [
-      {
-        role: 'system',
-        content: 'You are a coding assistant that talks like a pirate',
-      },
-      {
-        role: 'user',
-        content: userMessage1,
-      },
-    ],
-  });
+    const response1 = await client
+      .withOptions({
+        defaultHeaders: {
+          'x-idk-config': JSON.stringify(idkhubConfig),
+        },
+      })
+      .chat.completions.create({
+        model: 'claude-opus-4-1',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a coding assistant that talks like a pirate',
+          },
+          {
+            role: 'user',
+            content: userMessage1,
+          },
+        ],
+      });
 
-const agentResponse1 = response1.choices[0].message.content;
-logger.printWithHeader('Agent', agentResponse1 || '');
+    const agentResponse1 = response1.choices[0]?.message?.content;
+    if (!agentResponse1) {
+      throw new Error('No response received from the agent');
+    }
+    logger.printWithHeader('Agent', agentResponse1);
 
-const userMessage2 = 'What about in Rust?';
-logger.printWithHeader('User', userMessage2);
+    const userMessage2 = 'What about in Rust?';
+    logger.printWithHeader('User', userMessage2);
 
-const response2 = await client
-  .withOptions({
-    defaultHeaders: {
-      'x-idk-config': JSON.stringify(idkhubConfig),
-    },
-  })
-  .chat.completions.create({
-    model: 'claude-opus-4-1',
-    messages: [
-      {
-        role: 'system',
-        content: 'You are a coding assistant that talks like a pirate',
-      },
-      {
-        role: 'user',
-        content: userMessage1,
-      },
-      {
-        role: 'assistant',
-        content: agentResponse1,
-      },
-      {
-        role: 'user',
-        content: userMessage2,
-      },
-    ],
-  });
+    const response2 = await client
+      .withOptions({
+        defaultHeaders: {
+          'x-idk-config': JSON.stringify(idkhubConfig),
+        },
+      })
+      .chat.completions.create({
+        model: 'claude-opus-4-1',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a coding assistant that talks like a pirate',
+          },
+          {
+            role: 'user',
+            content: userMessage1,
+          },
+          {
+            role: 'assistant',
+            content: agentResponse1,
+          },
+          {
+            role: 'user',
+            content: userMessage2,
+          },
+        ],
+      });
 
-logger.printWithHeader('Agent', response2.choices[0].message.content || '');
+    const agentResponse2 = response2.choices[0]?.message?.content;
+    if (!agentResponse2) {
+      throw new Error('No response received from the agent for second message');
+    }
+    logger.printWithHeader('Agent', agentResponse2);
+  } catch (error) {
+    logger.error('Error in chat example:', error);
+    throw error;
+  }
+}
+
+// Run the example
+runChatExample().catch((error) => {
+  logger.error('Failed to run chat example:', error);
+  process.exit(1);
+});

@@ -35,36 +35,38 @@ const CalendarEvent = z.object({
 
 type CalendarEvent = z.infer<typeof CalendarEvent>;
 
-const userMessage = 'Alice and Bob are going to a science fair on Friday.';
-logger.printWithHeader('User', userMessage);
+async function runJsonModeExample(): Promise<void> {
+  try {
+    const userMessage = 'Alice and Bob are going to a science fair on Friday.';
+    logger.printWithHeader('User', userMessage);
 
-// Generate JSON schema from Zod for the system prompt
-const jsonSchema = {
-  type: 'object',
-  properties: {
-    name: { type: 'string', description: 'name of the event' },
-    date: { type: 'string', description: 'date of the event' },
-    participants: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'array of participant names',
-    },
-  },
-  required: ['name', 'date', 'participants'],
-};
+    // Generate JSON schema from Zod for the system prompt
+    const jsonSchema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'name of the event' },
+        date: { type: 'string', description: 'date of the event' },
+        participants: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'array of participant names',
+        },
+      },
+      required: ['name', 'date', 'participants'],
+    };
 
-const response = await client
-  .withOptions({
-    defaultHeaders: {
-      'x-idk-config': JSON.stringify(idkhubConfig),
-    },
-  })
-  .chat.completions.create({
-    model: 'claude-opus-4-1',
-    messages: [
-      {
-        role: 'system',
-        content: `Extract the event information from the user's message and return it as a valid JSON object that matches this exact schema:
+    const response = await client
+      .withOptions({
+        defaultHeaders: {
+          'x-idk-config': JSON.stringify(idkhubConfig),
+        },
+      })
+      .chat.completions.create({
+        model: 'claude-opus-4-1',
+        messages: [
+          {
+            role: 'system',
+            content: `Extract the event information from the user's message and return it as a valid JSON object that matches this exact schema:
 
 ${JSON.stringify(jsonSchema, null, 2)}
 
@@ -73,45 +75,61 @@ Important:
 - All required fields must be present
 - Use appropriate string values for date (e.g., "Friday", "2025-01-17", etc.)
 - Participants should be an array of individual names`,
-      },
-      {
-        role: 'user',
-        content: userMessage,
-      },
-    ],
-  });
+          },
+          {
+            role: 'user',
+            content: userMessage,
+          },
+        ],
+      });
 
-const responseContent = response.choices[0]?.message?.content || '{}';
-logger.printWithHeader('Raw Response', responseContent);
+    const responseContent = response.choices[0]?.message?.content || '{}';
+    if (!responseContent) {
+      throw new Error('No response received from the agent');
+    }
 
-try {
-  // Parse the JSON response
-  const parsedResponse = JSON.parse(responseContent);
+    logger.printWithHeader('Raw Response', responseContent);
 
-  // Validate against the Zod schema
-  const validatedEvent: CalendarEvent = CalendarEvent.parse(parsedResponse);
+    try {
+      // Parse the JSON response
+      const parsedResponse = JSON.parse(responseContent);
 
-  logger.printWithHeader(
-    'Validated Calendar Event',
-    JSON.stringify(validatedEvent, null, 2),
-  );
+      // Validate against the Zod schema
+      const validatedEvent: CalendarEvent = CalendarEvent.parse(parsedResponse);
 
-  // Log individual fields for verification
-  logger.printWithHeader('Event Name', validatedEvent.name);
-  logger.printWithHeader('Event Date', validatedEvent.date);
-  logger.printWithHeader(
-    'Participants',
-    validatedEvent.participants.join(', '),
-  );
-} catch (error) {
-  if (error instanceof z.ZodError) {
-    logger.error('Zod validation failed:', error.issues);
-    logger.printWithHeader(
-      'Validation Errors',
-      JSON.stringify(error.issues, null, 2),
-    );
-  } else {
-    logger.error('Failed to parse response as JSON:', error);
+      logger.printWithHeader(
+        'Validated Calendar Event',
+        JSON.stringify(validatedEvent, null, 2),
+      );
+
+      // Log individual fields for verification
+      logger.printWithHeader('Event Name', validatedEvent.name);
+      logger.printWithHeader('Event Date', validatedEvent.date);
+      logger.printWithHeader(
+        'Participants',
+        validatedEvent.participants.join(', '),
+      );
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.error('Zod validation failed:', error.issues);
+        logger.printWithHeader(
+          'Validation Errors',
+          JSON.stringify(error.issues, null, 2),
+        );
+      } else {
+        logger.error('Failed to parse response as JSON:', error);
+      }
+      logger.printWithHeader('Raw Response Content', responseContent);
+      throw error;
+    }
+  } catch (error) {
+    logger.error('Error in JSON mode example:', error);
+    throw error;
   }
-  logger.printWithHeader('Raw Response Content', responseContent);
 }
+
+// Run the example
+runJsonModeExample().catch((error) => {
+  logger.error('Failed to run JSON mode example:', error);
+  process.exit(1);
+});

@@ -56,19 +56,23 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
-function calculate(operation: string, a: number, b: number): number {
+function calculate(
+  operation: string,
+  a: number,
+  b: number,
+): { result?: number; error?: string } {
   switch (operation) {
     case 'add':
-      return a + b;
+      return { result: a + b };
     case 'subtract':
-      return a - b;
+      return { result: a - b };
     case 'multiply':
-      return a * b;
+      return { result: a * b };
     case 'divide':
-      if (b === 0) throw new Error('Division by zero');
-      return a / b;
+      if (b === 0) return { error: 'Division by zero' };
+      return { result: a / b };
     default:
-      throw new Error(`Unknown operation: ${operation}`);
+      return { error: `Unknown operation: ${operation}` };
   }
 }
 
@@ -122,21 +126,42 @@ if (toolCalls && toolCalls.length > 0) {
     let toolResult: string;
     try {
       if (toolCall.function.name === 'calculate') {
+        // Runtime validation for tool call arguments
         const args = JSON.parse(toolCall.function.arguments);
-        const { operation, a, b } = args as {
-          operation: string;
-          a: number;
-          b: number;
-        };
-        const result = calculate(operation, a, b);
-        toolResult = result.toString();
+
+        // Validate argument structure and types
+        if (typeof args !== 'object' || args === null) {
+          toolResult = 'Error: Invalid arguments - expected object';
+        } else if (typeof args.operation !== 'string') {
+          toolResult = 'Error: Invalid operation - expected string';
+        } else if (typeof args.a !== 'number' || typeof args.b !== 'number') {
+          toolResult =
+            'Error: Invalid numbers - expected numeric values for a and b';
+        } else {
+          const { operation, a, b } = args as {
+            operation: string;
+            a: number;
+            b: number;
+          };
+          const result = calculate(operation, a, b);
+
+          if (result.error) {
+            toolResult = `Error: ${result.error}`;
+          } else {
+            toolResult = result.result!.toString();
+          }
+        }
       } else {
         toolResult = `Unknown function: ${toolCall.function.name}`;
       }
 
       logger.printWithHeader('Tool Result', toolResult);
     } catch (error) {
-      toolResult = `Error: ${error}`;
+      if (error instanceof SyntaxError) {
+        toolResult = 'Error: Invalid JSON in function arguments';
+      } else {
+        toolResult = `Error: ${error}`;
+      }
       logger.printWithHeader('Tool Error', toolResult);
     }
 
