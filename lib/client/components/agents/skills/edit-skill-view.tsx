@@ -175,9 +175,7 @@ export function EditSkillView(): React.ReactElement {
                 <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">
-                  Skill Name (Read-only)
-                </div>
+                <div className="text-sm text-muted-foreground">Skill Name</div>
                 <div className="font-semibold text-lg text-blue-800 dark:text-blue-200">
                   {currentSkill.name}
                 </div>
@@ -215,7 +213,7 @@ export function EditSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description (Optional)
+                        Description
                       </FormLabel>
                       <FormControl>
                         <Textarea

@@ -13,6 +13,7 @@ import { ReactQueryProvider } from './query-client';
 import { ArmsProvider } from './skill-optimization-arms';
 import { ClustersProvider } from './skill-optimization-clusters';
 import { SkillOptimizationEvaluationRunsProvider } from './skill-optimization-evaluation-runs';
+import { SkillOptimizationEvaluationsProvider } from './skill-optimization-evaluations';
 import { SkillsProvider } from './skills';
 
 interface AppProvidersProps {
@@ -54,13 +55,15 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
                   <ClustersProvider>
                     <ArmsProvider>
                       <SkillOptimizationEvaluationRunsProvider>
-                        <LogsProvider>
-                          <DatasetsProvider>
-                            <EvaluationRunsProvider>
-                              {children}
-                            </EvaluationRunsProvider>
-                          </DatasetsProvider>
-                        </LogsProvider>
+                        <SkillOptimizationEvaluationsProvider>
+                          <LogsProvider>
+                            <DatasetsProvider>
+                              <EvaluationRunsProvider>
+                                {children}
+                              </EvaluationRunsProvider>
+                            </DatasetsProvider>
+                          </LogsProvider>
+                        </SkillOptimizationEvaluationsProvider>
                       </SkillOptimizationEvaluationRunsProvider>
                     </ArmsProvider>
                   </ClustersProvider>

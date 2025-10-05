@@ -419,7 +419,7 @@ export function CreateEvaluationRunView(): ReactElement {
                   />
                 </div>
                 <div>
-                  <Label htmlFor={descriptionId}>Description (Optional)</Label>
+                  <Label htmlFor={descriptionId}>Description</Label>
                   <Textarea
                     id={descriptionId}
                     placeholder="Describe what this evaluation is testing..."

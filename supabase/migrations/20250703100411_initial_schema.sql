@@ -509,7 +509,8 @@ CREATE TABLE if not exists skill_optimization_evaluations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE (agent_id, skill_id, evaluation_method)
 );
 
 CREATE TRIGGER update_skill_optimization_evaluations_updated_at BEFORE UPDATE ON skill_optimization_evaluations

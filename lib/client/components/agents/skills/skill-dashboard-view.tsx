@@ -21,6 +21,7 @@ import { useNavigation } from '@client/providers/navigation';
 import { useClusters } from '@client/providers/skill-optimization-clusters';
 import {
   ArrowRightIcon,
+  CheckCircle2,
   CpuIcon,
   DatabaseIcon,
   FileTextIcon,
@@ -35,6 +36,7 @@ import { nanoid } from 'nanoid';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
+import { ManageSkillEvaluationsDialog } from './manage-skill-evaluations-dialog';
 
 export function SkillDashboardView(): ReactElement {
   const {
@@ -50,6 +52,7 @@ export function SkillDashboardView(): ReactElement {
 
   const { selectedSkill, selectedAgent } = navigationState;
   const [isGeneratingArms, setIsGeneratingArms] = useState(false);
+  const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
 
   // Use providers
   const {
@@ -200,6 +203,13 @@ export function SkillDashboardView(): ReactElement {
             >
               <Wand2Icon className="h-4 w-4 mr-2" />
               {isGeneratingArms ? 'Generating...' : 'Generate Arms'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsManageEvaluationsOpen(true)}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Manage Evaluations
             </Button>
             <Button
               onClick={() =>
@@ -585,6 +595,15 @@ export function SkillDashboardView(): ReactElement {
           </Card>
         </div>
       </div>
+
+      {/* Manage Evaluations Dialog */}
+      {selectedSkill && (
+        <ManageSkillEvaluationsDialog
+          open={isManageEvaluationsOpen}
+          onOpenChange={setIsManageEvaluationsOpen}
+          skillId={selectedSkill.id}
+        />
+      )}
     </>
   );
 }

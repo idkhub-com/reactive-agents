@@ -332,7 +332,7 @@ export const skillsRouter = new Hono<AppEnv>()
             createParamsList,
           );
 
-        return c.json({ createdEvaluations }, 200);
+        return c.json(createdEvaluations, 200);
       } catch (error) {
         console.error('Error generating evaluations:', error);
         return c.json({ error: 'Failed to generate evaluations' }, 500);

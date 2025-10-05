@@ -128,7 +128,7 @@ export function CreateAgentView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Agent Name *
+                        Agent Name
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -153,7 +153,7 @@ export function CreateAgentView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description (Optional)
+                        Description
                       </FormLabel>
                       <FormControl>
                         <Textarea

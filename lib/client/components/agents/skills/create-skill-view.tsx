@@ -21,6 +21,7 @@ import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
+import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillCreateParams } from '@shared/types/data/skill';
@@ -70,6 +71,7 @@ type CreateSkillFormData = z.infer<typeof CreateSkillFormSchema>;
 export function CreateSkillView(): React.ReactElement {
   const { agents, selectedAgent } = useAgents();
   const { createSkill, isCreating } = useSkills();
+  const { setSelectedSkill } = useNavigation();
   const router = useRouter();
   const params = useParams();
   const agentName = params.agentName as string;
@@ -110,16 +112,18 @@ export function CreateSkillView(): React.ReactElement {
         num_system_prompts: data.num_system_prompts,
       };
 
-      await createSkill(skillParams);
+      const newSkill = await createSkill(skillParams);
 
       // Reset form after successful creation
       form.reset();
 
-      // Navigate back to agent's page with skip_create to prevent redirect loop
-      // (skills provider may not have refreshed yet)
+      // Set the newly created skill as selected
+      setSelectedSkill(newSkill);
+
+      // Navigate to evaluations setup page
       if (agentName) {
         router.push(
-          `/agents/${encodeURIComponent(agentName)}?skip_create=true`,
+          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/evaluations-2/create`,
         );
       } else {
         router.push('/agents');
@@ -204,7 +208,7 @@ export function CreateSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Skill Name *
+                        Skill Name
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -229,7 +233,7 @@ export function CreateSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description (Optional)
+                        Description
                       </FormLabel>
                       <FormControl>
                         <Textarea

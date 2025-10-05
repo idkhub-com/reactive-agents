@@ -10,6 +10,7 @@ import {
   type SkillUpdateParams,
 } from '@shared/types/data';
 import { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
+import { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
 import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { hc } from 'hono/client';
 
@@ -189,7 +190,9 @@ export async function getSkillEvaluationRuns(
   return SkillOptimizationEvaluationRun.array().parse(await response.json());
 }
 
-export async function getSkillEvaluations(skillId: string) {
+export async function getSkillEvaluations(
+  skillId: string,
+): Promise<SkillOptimizationEvaluation[]> {
   const response = await client.v1.idk.skills[':skillId'].evaluations.$get({
     param: {
       skillId,
@@ -200,13 +203,13 @@ export async function getSkillEvaluations(skillId: string) {
     throw new Error('Failed to fetch skill evaluations');
   }
 
-  return SkillOptimizationEvaluationRun.array().parse(await response.json());
+  return SkillOptimizationEvaluation.array().parse(await response.json());
 }
 
 export async function createSkillEvaluation(
   skillId: string,
   methods: EvaluationMethodName[],
-): Promise<SkillOptimizationEvaluationRun> {
+): Promise<SkillOptimizationEvaluation[]> {
   const response = await client.v1.idk.skills[':skillId'].evaluations.$post({
     param: {
       skillId,
@@ -220,7 +223,7 @@ export async function createSkillEvaluation(
     throw new Error('Failed to create skill evaluation');
   }
 
-  return SkillOptimizationEvaluationRun.parse(await response.json());
+  return SkillOptimizationEvaluation.array().parse(await response.json());
 }
 
 export async function deleteSkillEvaluation(
