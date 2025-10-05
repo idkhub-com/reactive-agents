@@ -52,6 +52,6 @@ export const knowledgeRetentionEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => knowledgeRetentionMethodConfig,
     evaluate: runEvaluation,
-    evaluateOneLog: evaluateOneLogForKnowledgeRetention,
+    evaluateLog: evaluateOneLogForKnowledgeRetention,
     getParameterSchema: KnowledgeRetentionEvaluationParameters,
   };

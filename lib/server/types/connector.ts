@@ -68,6 +68,7 @@ import type {
   SkillOptimizationEvaluationQueryParams,
 } from '@shared/types/data/skill-optimization-evaluation';
 import type {
+  SkillOptimizationEvaluationResult,
   SkillOptimizationEvaluationRun,
   SkillOptimizationEvaluationRunCreateParams,
   SkillOptimizationEvaluationRunQueryParams,
@@ -269,10 +270,9 @@ export interface EvaluationMethodConnector {
     jobDetails: EvaluationRunJobDetails,
     userDataStorageConnector: UserDataStorageConnector,
   ) => Promise<EvaluationRun>;
-  evaluateOneLog: (
-    evaluationRunId: string,
+  evaluateLog: (
+    evaluation: SkillOptimizationEvaluation,
     log: Log,
-    userDataStorageConnector: UserDataStorageConnector,
-  ) => Promise<LogOutput>;
+  ) => Promise<SkillOptimizationEvaluationResult>;
   getParameterSchema: z.ZodType;
 }

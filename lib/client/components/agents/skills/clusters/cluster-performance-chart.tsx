@@ -58,15 +58,15 @@ export function ClusterPerformanceChart({
       const hourKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
 
       for (const result of run.results) {
-        if (!methodHourlyScores.has(result.evaluation_method)) {
-          methodHourlyScores.set(result.evaluation_method, new Map());
+        if (!methodHourlyScores.has(result.method)) {
+          methodHourlyScores.set(result.method, new Map());
         }
-        const hourlyScores = methodHourlyScores.get(result.evaluation_method)!;
+        const hourlyScores = methodHourlyScores.get(result.method)!;
 
         if (!hourlyScores.has(hourKey)) {
           hourlyScores.set(hourKey, []);
         }
-        hourlyScores.get(hourKey)!.push(result.evaluation_score);
+        hourlyScores.get(hourKey)!.push(result.score);
       }
     }
 

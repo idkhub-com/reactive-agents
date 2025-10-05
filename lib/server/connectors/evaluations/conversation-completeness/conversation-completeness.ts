@@ -53,6 +53,6 @@ export const conversationCompletenessEvaluationConnector: EvaluationMethodConnec
   {
     getDetails: () => conversationCompletenessMethodConfig,
     evaluate: runEvaluation,
-    evaluateOneLog: evaluateOneLogForConversationCompleteness,
+    evaluateLog: evaluateOneLogForConversationCompleteness,
     getParameterSchema: ConversationCompletenessEvaluationParameters,
   };

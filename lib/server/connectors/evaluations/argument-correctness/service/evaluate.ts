@@ -8,6 +8,19 @@ import {
   extractEvaluationOutputIds,
 } from '@server/evaluations/utils/statistics';
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { extractMessagesFromRequestData } from '@server/utils/embeddings';
+import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
+import { formatMessagesForExtraction } from '@server/utils/messages';
+import type {
+  ChatCompletionRequestData,
+  ResponsesRequestData,
+  StreamChatCompletionRequestData,
+} from '@shared/types/api/request';
+import { IdkResponseBody } from '@shared/types/api/response';
+import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -20,6 +33,7 @@ import type {
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
+import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 // Use a template builder to construct prompts
 function buildPromptForToolArgs(
@@ -146,7 +160,6 @@ async function evaluateSingleLog(
         execution_time,
         execution_time_ms: execution_time,
         evaluated_at: new Date().toISOString(),
-        evaluation_run_id,
       },
       score: final_score,
       metadata: {
@@ -344,56 +357,94 @@ export async function evaluateArgumentCorrectness(
   }
 }
 
-export async function evaluateOneLogForArgumentCorrectness(
-  evaluationRunId: string,
+export async function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
   log: Log,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<LogOutput> {
-  // Get the evaluation run to access parameters
-  const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
-    id: evaluationRunId,
-  });
-  const evaluationRun = evaluationRuns[0];
-  if (!evaluationRun) {
-    throw new Error(`Evaluation run ${evaluationRunId} not found`);
+): Promise<SkillOptimizationEvaluationResult> {
+  const params = ArgumentCorrectnessEvaluationParameters.parse(
+    evaluation.metadata,
+  );
+
+  const start_time = Date.now();
+  const idkRequestData = produceIdkRequestData(
+    log.ai_provider_request_log.method,
+    log.ai_provider_request_log.request_url,
+    {},
+    log.ai_provider_request_log.request_body,
+  );
+  const responseBody = IdkResponseBody.parse(
+    log.ai_provider_request_log.response_body,
+  );
+
+  const messages = extractMessagesFromRequestData(
+    idkRequestData as
+      | ChatCompletionRequestData
+      | StreamChatCompletionRequestData
+      | ResponsesRequestData,
+  );
+  const input = formatMessagesForExtraction(messages);
+  const output = extractOutputFromResponseBody(responseBody);
+
+  let tools_called: ToolUsage[] = [];
+  if (params.tools_called && Array.isArray(params.tools_called)) {
+    tools_called = params.tools_called as ToolUsage[];
+  } else if (log.metadata && typeof log.metadata.tools === 'string') {
+    try {
+      tools_called = JSON.parse(log.metadata.tools) as ToolUsage[];
+    } catch {
+      tools_called = [];
+    }
+  } else if (log.metadata && log.metadata.tools !== undefined) {
+    const t = log.metadata.tools;
+    if (Array.isArray(t)) tools_called = t as ToolUsage[];
+    else if (typeof t === 'object' && t !== null)
+      tools_called = [t as ToolUsage];
   }
 
-  const params = ArgumentCorrectnessEvaluationParameters.parse(
-    evaluationRun.metadata?.parameters || {},
-  );
-
-  // Convert IdkRequestLog to Log format for compatibility
-  const logForEvaluation: Log = log as Log;
-
-  // Evaluate the single log
-  const logOutput = await evaluateSingleLog(
-    logForEvaluation,
-    params,
-    evaluationRunId,
-    userDataStorageConnector,
-  );
-
-  // Get all log outputs for this evaluation run to calculate new average
-  const allLogOutputs = await userDataStorageConnector.getLogOutputs(
-    evaluationRunId,
-    {},
-  );
-
-  // Calculate statistics and update evaluation run using shared utilities
-  const thresholdUsed = params.strict_mode ? 1.0 : params.threshold || 0.5;
-  const statistics = calculateEvaluationStatistics(
-    allLogOutputs,
-    thresholdUsed,
-  );
-  const evaluationOutputIds = extractEvaluationOutputIds(allLogOutputs);
-
-  await updateEvaluationRunWithStatistics({
-    evaluationRunId,
-    statistics,
-    threshold: thresholdUsed,
-    evaluationOutputIds,
-    userDataStorageConnector,
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
   });
 
-  return logOutput;
+  const { systemPrompt, userPrompt } = buildPromptForToolArgs(
+    input,
+    output,
+    tools_called,
+  );
+
+  const judgeResult = await llmJudge.evaluate({
+    text: `${systemPrompt}\n\n${userPrompt}`,
+  });
+
+  let computed_score: number | null = null;
+  const meta = judgeResult.metadata as Record<string, unknown> | undefined;
+  const perTool = Array.isArray(meta?.per_tool)
+    ? (meta?.per_tool as unknown[])
+    : undefined;
+  if (perTool && perTool.length > 0) {
+    const total = perTool.length;
+    let correctCount = 0;
+    for (const item of perTool) {
+      const obj = item as Record<string, unknown>;
+      if (typeof obj?.correct === 'boolean' && obj.correct) correctCount += 1;
+    }
+    computed_score = total > 0 ? correctCount / total : null;
+  }
+
+  const final_score = computed_score ?? judgeResult.score;
+  const execution_time = Date.now() - start_time;
+
+  const result: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
+    score: final_score,
+    extra_data: {
+      tools_called,
+      execution_time,
+      execution_time_ms: execution_time,
+      ...(judgeResult.metadata ? { judge_metadata: judgeResult.metadata } : {}),
+    },
+  };
+
+  return result;
 }

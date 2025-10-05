@@ -1,5 +1,5 @@
 import {
-  evaluateOneLogForTaskCompletion,
+  evaluateLog,
   evaluateTaskCompletion,
 } from '@server/connectors/evaluations/task-completion/service/evaluate';
 import type { UserDataStorageConnector } from '@server/types/connector';
@@ -566,7 +566,7 @@ describe('Task Completion Evaluator', () => {
         {} as unknown as EvaluationRun,
       );
 
-      await evaluateOneLogForTaskCompletion(
+      await evaluateLog(
         evaluationRunId,
         mockLog,
         mockUserDataStorageConnector,
@@ -709,7 +709,7 @@ describe('Task Completion Evaluator', () => {
         {} as unknown as EvaluationRun,
       );
 
-      await evaluateOneLogForTaskCompletion(
+      await evaluateLog(
         evaluationRunId,
         mockLog,
         mockUserDataStorageConnector,
@@ -739,7 +739,7 @@ describe('Task Completion Evaluator', () => {
       mockedGetEvaluationRuns.mockResolvedValue([]);
 
       await expect(
-        evaluateOneLogForTaskCompletion(
+        evaluateLog(
           evaluationRunId,
           mockLog,
           mockUserDataStorageConnector,

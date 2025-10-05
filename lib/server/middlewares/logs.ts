@@ -8,7 +8,7 @@ import type { AppEnv } from '@server/types/hono';
 import type { HttpMethod } from '@server/types/http';
 import {
   findRealtimeEvaluations,
-  runRealtimeEvaluationsForLog,
+  runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
 import type { FunctionName } from '@shared/types/api/request';
@@ -100,9 +100,8 @@ interface ProcessLogsParams {
   hookLogs: HookLog[];
   logsStorageConnector: LogsStorageConnector;
   userDataStorageConnector: UserDataStorageConnector;
-  evaluationConnectorsMap?: Record<
-    EvaluationMethodName,
-    EvaluationMethodConnector
+  evaluationConnectorsMap?: Partial<
+    Record<EvaluationMethodName, EvaluationMethodConnector>
   >;
   pulledArm?: SkillOptimizationArm;
 }
@@ -196,7 +195,7 @@ async function processLogs({
     );
 
     if (realtimeEvaluations.length > 0) {
-      const logOutputs = await runRealtimeEvaluationsForLog(
+      const logOutputs = await runEvaluationsForLog(
         log,
         realtimeEvaluations,
         evaluationConnectorsMap,
@@ -205,15 +204,15 @@ async function processLogs({
 
       const map = new Map<EvaluationMethodName, LogOutput>();
       for (const output of logOutputs) {
-        const evaluationRun = realtimeEvaluations.find(
+        const skillOptimizationEvaluation = realtimeEvaluations.find(
           (evaluation) => evaluation.id === output.evaluation_run_id,
         );
-        if (!evaluationRun) {
+        if (!skillOptimizationEvaluation) {
           throw new Error(
-            `Evaluation run not found for ID: ${output.evaluation_run_id}`,
+            `Skill optimization evaluation not found for ID: ${output.evaluation_run_id}`,
           );
         }
-        map.set(evaluationRun.evaluation_method, output);
+        map.set(skillOptimizationEvaluation.evaluation_method, output);
       }
       return map;
     }
@@ -278,8 +277,8 @@ async function addSkillOptimizationEvaluationRun(
   const skillOptimizationEvaluationResults: SkillOptimizationEvaluationResult[] =
     Array.from(evaluationResults.entries()).map(([method_name, output]) => {
       const result: SkillOptimizationEvaluationResult = {
-        evaluation_method: method_name,
-        evaluation_score: output.score,
+        method: method_name,
+        score: output.score,
         extra_data: output.metadata,
       };
       return result;

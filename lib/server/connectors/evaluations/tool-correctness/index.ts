@@ -738,6 +738,6 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
     }
   },
 
-  evaluateOneLog: evaluateOneLogForToolCorrectness,
+  evaluateLog: evaluateOneLogForToolCorrectness,
   getParameterSchema: ToolCorrectnessEvaluationParameters,
 };

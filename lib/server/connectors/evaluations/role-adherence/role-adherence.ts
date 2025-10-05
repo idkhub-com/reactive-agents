@@ -47,6 +47,6 @@ async function runEvaluation(
 export const roleAdherenceEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => roleAdherenceMethodConfig,
   evaluate: runEvaluation,
-  evaluateOneLog: evaluateOneLogForRoleAdherence,
+  evaluateLog: evaluateOneLogForRoleAdherence,
   getParameterSchema: RoleAdherenceEvaluationParameters,
 };

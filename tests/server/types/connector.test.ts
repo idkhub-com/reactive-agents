@@ -38,7 +38,7 @@ describe('Connector Interfaces', () => {
           updated_at: new Date().toISOString(),
         } as EvaluationRun),
 
-        evaluateOneLog: vi.fn().mockResolvedValue(undefined),
+        evaluateLog: vi.fn().mockResolvedValue(undefined),
 
         getParameterSchema: z.object({
           threshold: z.number().min(0).max(1),
@@ -130,7 +130,7 @@ describe('Connector Interfaces', () => {
 
       expect(typeof connector.getDetails).toBe('function');
       expect(typeof connector.evaluate).toBe('function');
-      expect(typeof connector.evaluateOneLog).toBe('function');
+      expect(typeof connector.evaluateLog).toBe('function');
       expect(connector.getParameterSchema).toBeDefined();
     });
 
@@ -198,18 +198,18 @@ describe('Connector Interfaces', () => {
         metadata: { ground_truth: { text: 'expected output' } },
       } as unknown as IdkRequestLog;
 
-      await connector.evaluateOneLog(
+      await connector.evaluateLog(
         evaluationRunId,
         log,
         mockUserDataStorageConnector,
       );
 
-      expect(connector.evaluateOneLog).toHaveBeenCalledWith(
+      expect(connector.evaluateLog).toHaveBeenCalledWith(
         evaluationRunId,
         log,
         mockUserDataStorageConnector,
       );
-      expect(connector.evaluateOneLog).toHaveBeenCalledTimes(1);
+      expect(connector.evaluateLog).toHaveBeenCalledTimes(1);
     });
 
     it('should have a valid parameter schema', () => {
@@ -232,13 +232,13 @@ describe('Connector Interfaces', () => {
         const evaluationRunId = 'test-run-id';
         const log = {} as unknown as IdkRequestLog;
 
-        await connector.evaluateOneLog(
+        await connector.evaluateLog(
           evaluationRunId,
           log,
           mockUserDataStorageConnector,
         );
 
-        expect(connector.evaluateOneLog).toHaveBeenCalledWith(
+        expect(connector.evaluateLog).toHaveBeenCalledWith(
           evaluationRunId,
           expect.any(Object),
           expect.any(Object),
@@ -246,8 +246,8 @@ describe('Connector Interfaces', () => {
 
         // Verify first argument is a string
         const callArgs = (
-          connector.evaluateOneLog as MockedFunction<
-            typeof connector.evaluateOneLog
+          connector.evaluateLog as MockedFunction<
+            typeof connector.evaluateLog
           >
         ).mock.calls[0];
         expect(typeof callArgs[0]).toBe('string');
@@ -264,15 +264,15 @@ describe('Connector Interfaces', () => {
           metadata: {},
         } as unknown as IdkRequestLog;
 
-        await connector.evaluateOneLog(
+        await connector.evaluateLog(
           'test-run-id',
           log,
           mockUserDataStorageConnector,
         );
 
         const callArgs = (
-          connector.evaluateOneLog as MockedFunction<
-            typeof connector.evaluateOneLog
+          connector.evaluateLog as MockedFunction<
+            typeof connector.evaluateLog
           >
         ).mock.calls[0];
         expect(callArgs[1]).toBe(log);
@@ -283,15 +283,15 @@ describe('Connector Interfaces', () => {
       it('should accept UserDataStorageConnector as third parameter', async () => {
         const connector = createMockEvaluationMethodConnector();
 
-        await connector.evaluateOneLog(
+        await connector.evaluateLog(
           'test-run-id',
           {} as unknown as IdkRequestLog,
           mockUserDataStorageConnector,
         );
 
         const callArgs = (
-          connector.evaluateOneLog as MockedFunction<
-            typeof connector.evaluateOneLog
+          connector.evaluateLog as MockedFunction<
+            typeof connector.evaluateLog
           >
         ).mock.calls[0];
         expect(callArgs[2]).toBe(mockUserDataStorageConnector);
@@ -302,7 +302,7 @@ describe('Connector Interfaces', () => {
       it('should return Promise<void>', async () => {
         const connector = createMockEvaluationMethodConnector();
 
-        const result = connector.evaluateOneLog(
+        const result = connector.evaluateLog(
           'test-run-id',
           {} as unknown as IdkRequestLog,
           mockUserDataStorageConnector,
@@ -377,7 +377,7 @@ describe('Connector Interfaces', () => {
         }),
         evaluate: async (_jobDetails, _userDataStorageConnector) =>
           ({}) as EvaluationRun,
-        evaluateOneLog: async (
+        evaluateLog: async (
           _evaluationRunId,
           _log,
           _userDataStorageConnector,
@@ -388,7 +388,7 @@ describe('Connector Interfaces', () => {
       // Verify all methods exist and have correct types
       expect(typeof connector.getDetails).toBe('function');
       expect(typeof connector.evaluate).toBe('function');
-      expect(typeof connector.evaluateOneLog).toBe('function');
+      expect(typeof connector.evaluateLog).toBe('function');
       expect(connector.getParameterSchema).toBeDefined();
     });
   });

@@ -48,6 +48,6 @@ async function runEvaluation(
 export const turnRelevancyEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => methodConfig,
   evaluate: runEvaluation,
-  evaluateOneLog: evaluateOneLogForTurnRelevancy,
+  evaluateLog: evaluateOneLogForTurnRelevancy,
   getParameterSchema: TurnRelevancyEvaluationParameters,
 };

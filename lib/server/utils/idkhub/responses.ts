@@ -2,9 +2,8 @@ import { HttpError } from '@server/errors/http';
 import { responseHandler } from '@server/handlers/response-handler';
 import type { AppContext } from '@server/types/hono';
 import type { FunctionName } from '@shared/types/api/request';
-
 import type { IdkRequestData } from '@shared/types/api/request/body';
-
+import type { IdkResponseBody } from '@shared/types/api/response';
 import type { AIProvider } from '@shared/types/constants';
 import type { AIProviderRequestLog } from '@shared/types/idkhub/observability';
 import type {
@@ -92,4 +91,63 @@ export async function createResponse(
   }
 
   return mappedResponse;
+}
+
+export function extractOutputFromResponseBody(
+  responseBody: IdkResponseBody,
+): string {
+  if ('choices' in responseBody) {
+    if ('message' in responseBody.choices[0]) {
+      const content = responseBody.choices[0].message.content;
+      if (Array.isArray(content)) {
+        let contentString = '';
+        for (const chunk of content) {
+          contentString += chunk.text;
+        }
+        return contentString;
+      } else if (typeof content === 'string') {
+        return content;
+      } else {
+        throw new Error('Unexpected content type');
+      }
+    } else if ('text' in responseBody.choices[0]) {
+      return responseBody.choices[0].text;
+    }
+  } else if ('output' in responseBody) {
+    const outputText = responseBody.output_text;
+    if (outputText) {
+      return outputText;
+    } else {
+      const output = responseBody.output;
+      let outputString = '';
+      for (const step of output) {
+        switch (step.type) {
+          case 'message': {
+            if ('content' in step) {
+              if (step.content) {
+                for (const chunk of step.content) {
+                  outputString += chunk.text;
+                }
+                outputString += '\n';
+              }
+            } else {
+              continue;
+            }
+            break;
+          }
+          case 'function':
+            outputString += `${step.name}: ${JSON.stringify(step.arguments)}\n`;
+            break;
+          case 'mcp_call':
+            outputString += `${step.name}: ${JSON.stringify(step.arguments)}\n OUTPUT: ${JSON.stringify(step.output)}\n\n`;
+            break;
+          default:
+            continue;
+        }
+      }
+      return outputString;
+    }
+  }
+
+  throw new Error('Unexpected output type');
 }

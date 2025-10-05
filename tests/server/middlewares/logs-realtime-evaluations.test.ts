@@ -5,14 +5,12 @@ import type {
 import type { HttpMethod } from '@server/types/http';
 import {
   findRealtimeEvaluations,
-  runRealtimeEvaluationsForLog,
+  runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
-import type { Dataset } from '@shared/types/data/dataset';
-import type { EvaluationRun } from '@shared/types/data/evaluation-run';
-import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
@@ -22,11 +20,7 @@ import { z } from 'zod';
 // Mock user data storage connector
 const createMockUserDataStorageConnector = () =>
   ({
-    getDatasets: vi.fn(),
-    getEvaluationRuns: vi.fn(),
-    getDatasetLogs: vi.fn(),
-    addLogsToDataset: vi.fn(),
-    removeLogsFromDataset: vi.fn(),
+    getSkillOptimizationEvaluations: vi.fn(),
     // Other methods not used in tests
     getFeedback: vi.fn(),
     createFeedback: vi.fn(),
@@ -49,14 +43,22 @@ const createMockUserDataStorageConnector = () =>
     createDataset: vi.fn(),
     updateDataset: vi.fn(),
     deleteDataset: vi.fn(),
+    getDatasets: vi.fn(),
     getLogs: vi.fn(),
     deleteLog: vi.fn(),
     createEvaluationRun: vi.fn(),
     updateEvaluationRun: vi.fn(),
     deleteEvaluationRun: vi.fn(),
+    getEvaluationRuns: vi.fn(),
     getLogOutputs: vi.fn(),
     createLogOutput: vi.fn(),
     deleteLogOutput: vi.fn(),
+    getDatasetLogs: vi.fn(),
+    addLogsToDataset: vi.fn(),
+    removeLogsFromDataset: vi.fn(),
+    createSkillOptimizationEvaluation: vi.fn(),
+    updateSkillOptimizationEvaluation: vi.fn(),
+    deleteSkillOptimizationEvaluation: vi.fn(),
     // AI Provider API Key methods
     getAIProviderAPIKeys: vi.fn(),
     getAIProviderAPIKeyById: vi.fn(),
@@ -72,7 +74,7 @@ const createMockEvaluationConnector = (): EvaluationMethodConnector => ({
     description: 'Test evaluation method',
   }),
   evaluate: vi.fn(),
-  evaluateOneLog: vi.fn(),
+  evaluateLog: vi.fn(),
   getParameterSchema: z.object({}),
 });
 
@@ -114,35 +116,17 @@ const mockIdkRequestLog: IdkRequestLog = {
   external_user_id: null,
   external_user_human_name: null,
   user_metadata: null,
+  embedding: null,
 } as const;
 
-const mockRealtimeDataset: Dataset = {
-  id: 'dataset-789',
-  agent_id: 'agent-456',
-  name: 'Test Realtime Dataset',
-  description: null,
-  is_realtime: true,
-  realtime_size: 5,
-  metadata: {},
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-const mockEvaluationRun: EvaluationRun = {
-  id: 'eval-run-123',
-  dataset_id: 'dataset-789',
+const mockSkillOptimizationEvaluation: SkillOptimizationEvaluation = {
+  id: 'eval-123',
   agent_id: 'agent-456',
   skill_id: 'skill-789',
   evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
-  name: 'Test Evaluation Run',
-  description: null,
-  status: EvaluationRunStatus.RUNNING,
-  results: {},
   metadata: {},
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-  started_at: null,
-  completed_at: null,
 };
 
 describe('Realtime Evaluations Integration', () => {
@@ -158,13 +142,9 @@ describe('Realtime Evaluations Integration', () => {
   describe('Full Workflow Integration', () => {
     it('should execute complete realtime evaluation workflow', async () => {
       // Setup: Mock storage responses for a successful realtime evaluation workflow
-      vi.mocked(userDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(userDataStorageConnector.getEvaluationRuns).mockResolvedValue([
-        mockEvaluationRun,
-      ]);
-      vi.mocked(userDataStorageConnector.getDatasetLogs).mockResolvedValue([]);
+      vi.mocked(
+        userDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([mockSkillOptimizationEvaluation]);
 
       // Step 1: Check if we should trigger realtime evaluations
       const url = new URL('http://localhost:3000/v1/chat/completions');
@@ -179,14 +159,14 @@ describe('Realtime Evaluations Integration', () => {
       );
 
       expect(realtimeEvaluations).toHaveLength(1);
-      expect(realtimeEvaluations[0]).toEqual(mockEvaluationRun);
+      expect(realtimeEvaluations[0]).toEqual(mockSkillOptimizationEvaluation);
 
       // Step 3: Trigger realtime evaluations
       const evaluationConnectorsMap = {
         [EvaluationMethodName.TURN_RELEVANCY]: evaluationConnector,
-      };
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
 
-      await runRealtimeEvaluationsForLog(
+      await runEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
         evaluationConnectorsMap,
@@ -194,22 +174,14 @@ describe('Realtime Evaluations Integration', () => {
       );
 
       // Verify the complete workflow executed correctly
-      expect(userDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        agent_id: 'agent-456',
-        is_realtime: true,
-      });
-      expect(userDataStorageConnector.getEvaluationRuns).toHaveBeenCalledWith({
-        dataset_id: 'dataset-789',
+      expect(
+        userDataStorageConnector.getSkillOptimizationEvaluations,
+      ).toHaveBeenCalledWith({
         agent_id: 'agent-456',
         skill_id: 'skill-789',
-        status: EvaluationRunStatus.RUNNING,
       });
-      // Verify that getDatasets was called during realtime dataset size limit handling
-      expect(userDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        id: 'dataset-789',
-      });
-      expect(evaluationConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-123',
+      expect(evaluationConnector.evaluateLog).toHaveBeenCalledWith(
+        'eval-123',
         mockIdkRequestLog,
         userDataStorageConnector,
       );
@@ -217,32 +189,30 @@ describe('Realtime Evaluations Integration', () => {
 
     it('should handle multiple evaluation methods', async () => {
       // Create multiple evaluation runs with different methods
-      const argumentCorrectnessRun = {
-        ...mockEvaluationRun,
-        id: 'eval-run-456',
-        evaluation_method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
+      const taskCompletionEvaluation: SkillOptimizationEvaluation = {
+        ...mockSkillOptimizationEvaluation,
+        id: 'eval-456',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
       };
 
-      vi.mocked(userDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
+      vi.mocked(
+        userDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([
+        mockSkillOptimizationEvaluation,
+        taskCompletionEvaluation,
       ]);
-      vi.mocked(userDataStorageConnector.getEvaluationRuns).mockResolvedValue([
-        mockEvaluationRun,
-        argumentCorrectnessRun,
-      ]);
-      vi.mocked(userDataStorageConnector.getDatasetLogs).mockResolvedValue([]);
 
-      const argumentConnector = createMockEvaluationConnector();
-      vi.mocked(argumentConnector.getDetails).mockReturnValue({
-        method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
-        name: 'Argument Correctness',
-        description: 'Test argument correctness',
+      const taskCompletionConnector = createMockEvaluationConnector();
+      vi.mocked(taskCompletionConnector.getDetails).mockReturnValue({
+        method: EvaluationMethodName.TASK_COMPLETION,
+        name: 'Task Completion',
+        description: 'Test task completion',
       });
 
       const evaluationConnectorsMap = {
         [EvaluationMethodName.TURN_RELEVANCY]: evaluationConnector,
-        [EvaluationMethodName.ARGUMENT_CORRECTNESS]: argumentConnector,
-      };
+        [EvaluationMethodName.TASK_COMPLETION]: taskCompletionConnector,
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
 
       const realtimeEvaluations = await findRealtimeEvaluations(
         mockIdkRequestLog.agent_id,
@@ -250,7 +220,7 @@ describe('Realtime Evaluations Integration', () => {
         userDataStorageConnector,
       );
 
-      await runRealtimeEvaluationsForLog(
+      await runEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
         evaluationConnectorsMap,
@@ -258,66 +228,23 @@ describe('Realtime Evaluations Integration', () => {
       );
 
       // Verify both evaluations were triggered
-      expect(evaluationConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-123',
+      expect(evaluationConnector.evaluateLog).toHaveBeenCalledWith(
+        'eval-123',
         mockIdkRequestLog,
         userDataStorageConnector,
       );
-      expect(argumentConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-456',
+      expect(taskCompletionConnector.evaluateLog).toHaveBeenCalledWith(
+        'eval-456',
         mockIdkRequestLog,
         userDataStorageConnector,
       );
-    });
-
-    it('should handle realtime dataset size management during full workflow', async () => {
-      // Setup dataset with logs that exceed the limit
-      const existingLogs = Array.from({ length: 6 }, (_, i) => ({
-        ...mockIdkRequestLog,
-        id: `existing-log-${i}`,
-        start_time: 1000 + i * 1000, // Different timestamps
-      }));
-
-      vi.mocked(userDataStorageConnector.getDatasets).mockResolvedValue([
-        { ...mockRealtimeDataset, realtime_size: 3 }, // Small limit for testing
-      ]);
-      vi.mocked(userDataStorageConnector.getEvaluationRuns).mockResolvedValue([
-        mockEvaluationRun,
-      ]);
-      vi.mocked(userDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        existingLogs,
-      );
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: evaluationConnector,
-      };
-
-      const realtimeEvaluations = await findRealtimeEvaluations(
-        mockIdkRequestLog.agent_id,
-        mockIdkRequestLog.skill_id,
-        userDataStorageConnector,
-      );
-
-      await runRealtimeEvaluationsForLog(
-        mockIdkRequestLog,
-        realtimeEvaluations,
-        evaluationConnectorsMap,
-        userDataStorageConnector,
-      );
-
-      // Verify dataset size management was handled (realtime datasets don't use bridge table)
-      // Instead, verify that getDatasets was called to check the dataset properties
-      expect(userDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        id: 'dataset-789',
-      });
-
-      // Verify evaluation was still triggered
-      expect(evaluationConnector.evaluateOneLog).toHaveBeenCalled();
     });
 
     it('should handle no realtime evaluations gracefully', async () => {
-      // Setup: No realtime datasets
-      vi.mocked(userDataStorageConnector.getDatasets).mockResolvedValue([]);
+      // Setup: No skill optimization evaluations
+      vi.mocked(
+        userDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([]);
 
       const realtimeEvaluations = await findRealtimeEvaluations(
         mockIdkRequestLog.agent_id,
@@ -328,15 +255,66 @@ describe('Realtime Evaluations Integration', () => {
       expect(realtimeEvaluations).toEqual([]);
 
       // Trigger with empty evaluations should be safe
-      await runRealtimeEvaluationsForLog(
+      await runEvaluationsForLog(
         mockIdkRequestLog,
         realtimeEvaluations,
-        {},
+        {} as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>,
         userDataStorageConnector,
       );
 
-      // No dataset operations should occur
-      expect(userDataStorageConnector.addLogsToDataset).not.toHaveBeenCalled();
+      // No evaluation should occur
+      expect(evaluationConnector.evaluateLog).not.toHaveBeenCalled();
+    });
+
+    it('should handle evaluation errors gracefully in full workflow', async () => {
+      vi.mocked(
+        userDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([mockSkillOptimizationEvaluation]);
+
+      // Mock evaluation to fail
+      vi.mocked(evaluationConnector.evaluateLog).mockRejectedValue(
+        new Error('Evaluation failed'),
+      );
+
+      const evaluationConnectorsMap = {
+        [EvaluationMethodName.TURN_RELEVANCY]: evaluationConnector,
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
+
+      const realtimeEvaluations = await findRealtimeEvaluations(
+        mockIdkRequestLog.agent_id,
+        mockIdkRequestLog.skill_id,
+        userDataStorageConnector,
+      );
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Mock implementation to suppress console output
+      });
+
+      await runEvaluationsForLog(
+        mockIdkRequestLog,
+        realtimeEvaluations,
+        evaluationConnectorsMap,
+        userDataStorageConnector,
+      );
+
+      // Error should be logged
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error in skill optimization evaluation eval-123 for log log-123:',
+        expect.any(Error),
+      );
+    });
+
+    it('should filter out requests that should not trigger evaluations', () => {
+      // Test internal IDK API calls
+      const idkUrl = new URL('http://localhost:3000/v1/idk/agents');
+      expect(shouldTriggerRealtimeEvaluation(200, idkUrl)).toBe(false);
+
+      // Test non-200 status
+      const url = new URL('http://localhost:3000/v1/chat/completions');
+      expect(shouldTriggerRealtimeEvaluation(500, url)).toBe(false);
+
+      // Test valid AI provider call
+      expect(shouldTriggerRealtimeEvaluation(200, url)).toBe(true);
     });
   });
 });

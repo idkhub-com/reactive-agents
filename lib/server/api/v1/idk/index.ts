@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { agentsRouter } from './agents';
 import { aiProviderAPIKeysRouter } from './ai-provider-api-keys';
 import { authRouter } from './auth';
-import { evaluationsRouter } from './evaluations';
+// import { evaluationsRouter } from './evaluations';
 import { feedbacksRouter } from './feedbacks';
 import { improvedResponsesRouter } from './improved-responses';
 import { modelsRouter } from './models';
@@ -15,7 +15,7 @@ export const idkRouter = new Hono<AppEnv>()
   .route('/observability', observabilityRouter)
   .route('/references', referencesRouter)
   .route('/auth', authRouter)
-  .route('/evaluations', evaluationsRouter)
+  // .route('/evaluations', evaluationsRouter)
   .route('/agents', agentsRouter)
   .route('/skills', skillsRouter)
   .route('/models', modelsRouter)

@@ -4,16 +4,13 @@ import type {
 } from '@server/types/connector';
 import type { HttpMethod } from '@server/types/http';
 import {
-  evaluateExistingLogsInRealtimeDataset,
   findRealtimeEvaluations,
-  runRealtimeEvaluationsForLog,
+  runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
-import type { Dataset } from '@shared/types/data/dataset';
-import type { EvaluationRun } from '@shared/types/data/evaluation-run';
-import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
+import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
@@ -23,11 +20,7 @@ import { z } from 'zod';
 // Mock user data storage connector
 const createMockUserDataStorageConnector = () =>
   ({
-    getDatasets: vi.fn(),
-    getEvaluationRuns: vi.fn(),
-    getDatasetLogs: vi.fn(),
-    addLogsToDataset: vi.fn(),
-    removeLogsFromDataset: vi.fn(),
+    getSkillOptimizationEvaluations: vi.fn(),
     // Other methods not used in tests
     getFeedback: vi.fn(),
     createFeedback: vi.fn(),
@@ -50,14 +43,22 @@ const createMockUserDataStorageConnector = () =>
     createDataset: vi.fn(),
     updateDataset: vi.fn(),
     deleteDataset: vi.fn(),
+    getDatasets: vi.fn(),
     getLogs: vi.fn(),
     deleteLog: vi.fn(),
     createEvaluationRun: vi.fn(),
     updateEvaluationRun: vi.fn(),
     deleteEvaluationRun: vi.fn(),
+    getEvaluationRuns: vi.fn(),
     getLogOutputs: vi.fn(),
     createLogOutput: vi.fn(),
     deleteLogOutput: vi.fn(),
+    getDatasetLogs: vi.fn(),
+    addLogsToDataset: vi.fn(),
+    removeLogsFromDataset: vi.fn(),
+    createSkillOptimizationEvaluation: vi.fn(),
+    updateSkillOptimizationEvaluation: vi.fn(),
+    deleteSkillOptimizationEvaluation: vi.fn(),
     // AI Provider API Key methods
     getAIProviderAPIKeys: vi.fn(),
     getAIProviderAPIKeyById: vi.fn(),
@@ -73,7 +74,7 @@ const createMockEvaluationConnector = (): EvaluationMethodConnector => ({
     description: 'Test evaluation method',
   }),
   evaluate: vi.fn(),
-  evaluateOneLog: vi.fn(),
+  evaluateLog: vi.fn(),
   getParameterSchema: z.object({}),
 });
 
@@ -115,35 +116,17 @@ const mockIdkRequestLog: IdkRequestLog = {
   external_user_id: null,
   external_user_human_name: null,
   user_metadata: null,
+  embedding: null,
 } as const;
 
-const mockRealtimeDataset: Dataset = {
-  id: 'dataset-123',
-  agent_id: 'agent-456',
-  name: 'Test Realtime Dataset',
-  description: null,
-  is_realtime: true,
-  realtime_size: 3,
-  metadata: {},
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-const mockEvaluationRun: EvaluationRun = {
-  id: 'eval-run-123',
-  dataset_id: 'dataset-123',
+const mockSkillOptimizationEvaluation: SkillOptimizationEvaluation = {
+  id: 'eval-123',
   agent_id: 'agent-456',
   skill_id: 'skill-789',
   evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
-  name: 'Test Evaluation Run',
-  description: null,
-  status: EvaluationRunStatus.RUNNING,
-  results: {},
   metadata: {},
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-  started_at: null,
-  completed_at: null,
 };
 
 describe('Realtime Evaluations', () => {
@@ -155,8 +138,10 @@ describe('Realtime Evaluations', () => {
   });
 
   describe('findRealtimeEvaluations', () => {
-    it('should return empty array when no realtime datasets exist', async () => {
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([]);
+    it('should return empty array when no skill optimization evaluations exist', async () => {
+      vi.mocked(
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([]);
 
       const result = await findRealtimeEvaluations(
         'agent-456',
@@ -165,52 +150,18 @@ describe('Realtime Evaluations', () => {
       );
 
       expect(result).toEqual([]);
-      expect(mockUserDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        agent_id: 'agent-456',
-        is_realtime: true,
-      });
-    });
-
-    it('should return evaluation runs for realtime datasets', async () => {
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(
-        mockUserDataStorageConnector.getEvaluationRuns,
-      ).mockResolvedValue([mockEvaluationRun]);
-
-      const result = await findRealtimeEvaluations(
-        'agent-456',
-        'skill-789',
-        mockUserDataStorageConnector,
-      );
-
-      expect(result).toEqual([mockEvaluationRun]);
       expect(
-        mockUserDataStorageConnector.getEvaluationRuns,
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
       ).toHaveBeenCalledWith({
-        dataset_id: 'dataset-123',
         agent_id: 'agent-456',
         skill_id: 'skill-789',
-        status: EvaluationRunStatus.RUNNING,
       });
     });
 
-    it('should handle multiple realtime datasets', async () => {
-      const dataset2 = { ...mockRealtimeDataset, id: 'dataset-456' };
-      const evaluationRun2 = {
-        ...mockEvaluationRun,
-        id: 'eval-run-456',
-        dataset_id: 'dataset-456',
-      };
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-        dataset2,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getEvaluationRuns)
-        .mockResolvedValueOnce([mockEvaluationRun])
-        .mockResolvedValueOnce([evaluationRun2]);
+    it('should return skill optimization evaluations', async () => {
+      vi.mocked(
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([mockSkillOptimizationEvaluation]);
 
       const result = await findRealtimeEvaluations(
         'agent-456',
@@ -218,16 +169,42 @@ describe('Realtime Evaluations', () => {
         mockUserDataStorageConnector,
       );
 
-      expect(result).toEqual([mockEvaluationRun, evaluationRun2]);
+      expect(result).toEqual([mockSkillOptimizationEvaluation]);
       expect(
-        mockUserDataStorageConnector.getEvaluationRuns,
-      ).toHaveBeenCalledTimes(2);
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).toHaveBeenCalledWith({
+        agent_id: 'agent-456',
+        skill_id: 'skill-789',
+      });
+    });
+
+    it('should return multiple skill optimization evaluations', async () => {
+      const evaluation2: SkillOptimizationEvaluation = {
+        ...mockSkillOptimizationEvaluation,
+        id: 'eval-456',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+      };
+
+      vi.mocked(
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockResolvedValue([mockSkillOptimizationEvaluation, evaluation2]);
+
+      const result = await findRealtimeEvaluations(
+        'agent-456',
+        'skill-789',
+        mockUserDataStorageConnector,
+      );
+
+      expect(result).toEqual([mockSkillOptimizationEvaluation, evaluation2]);
+      expect(
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('should handle errors gracefully', async () => {
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockRejectedValue(
-        new Error('Database error'),
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).mockRejectedValue(new Error('Database error'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Mock implementation to suppress console output
       });
@@ -246,110 +223,95 @@ describe('Realtime Evaluations', () => {
     });
   });
 
-  describe('triggerRealtimeEvaluations', () => {
+  describe('runRealtimeEvaluationsForLog', () => {
     it('should do nothing when no evaluation runs provided', async () => {
-      await runRealtimeEvaluationsForLog(
+      const result = await runEvaluationsForLog(
         mockIdkRequestLog,
         [],
-        {},
+        {} as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>,
         mockUserDataStorageConnector,
       );
 
-      expect(mockUserDataStorageConnector.getDatasets).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+      expect(
+        mockUserDataStorageConnector.getSkillOptimizationEvaluations,
+      ).not.toHaveBeenCalled();
     });
 
-    it('should trigger evaluations and manage dataset size limits', async () => {
+    it('should trigger evaluations', async () => {
       const mockConnector = createMockEvaluationConnector();
+      const mockLogOutput = {
+        id: 'output-123',
+        evaluation_run_id: 'eval-123',
+        log_id: 'log-123',
+        output: {},
+        score: 0.95,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      };
+      vi.mocked(mockConnector.evaluateLog).mockResolvedValue(mockLogOutput);
+
       const evaluationConnectorsMap = {
         [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
 
-      // Mock dataset size management
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue([
-        { ...mockIdkRequestLog, id: 'log-1', start_time: 1000 },
-        { ...mockIdkRequestLog, id: 'log-2', start_time: 2000 },
-        { ...mockIdkRequestLog, id: 'log-3', start_time: 3000 },
-        { ...mockIdkRequestLog, id: 'log-4', start_time: 4000 }, // This should be removed as it exceeds limit of 3
-      ]);
-
-      await runRealtimeEvaluationsForLog(
+      const result = await runEvaluationsForLog(
         mockIdkRequestLog,
-        [mockEvaluationRun],
+        [mockSkillOptimizationEvaluation],
         evaluationConnectorsMap,
         mockUserDataStorageConnector,
       );
 
-      // For realtime datasets, logs are not managed via bridge table
-      // So addLogsToDataset and removeLogsFromDataset should not be called
-      expect(
-        mockUserDataStorageConnector.addLogsToDataset,
-      ).not.toHaveBeenCalled();
-      expect(
-        mockUserDataStorageConnector.removeLogsFromDataset,
-      ).not.toHaveBeenCalled();
-
       // Verify evaluation was triggered
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-123',
+      expect(mockConnector.evaluateLog).toHaveBeenCalledWith(
+        'eval-123',
         mockIdkRequestLog,
         mockUserDataStorageConnector,
       );
+
+      expect(result).toEqual([mockLogOutput]);
     });
 
     it('should handle evaluation errors gracefully', async () => {
       const mockConnector = createMockEvaluationConnector();
-      vi.mocked(mockConnector.evaluateOneLog).mockRejectedValue(
+      vi.mocked(mockConnector.evaluateLog).mockRejectedValue(
         new Error('Evaluation failed'),
       );
 
       const evaluationConnectorsMap = {
         [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        [],
-      );
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Mock implementation to suppress console output
       });
 
-      await runRealtimeEvaluationsForLog(
+      const result = await runEvaluationsForLog(
         mockIdkRequestLog,
-        [mockEvaluationRun],
+        [mockSkillOptimizationEvaluation],
         evaluationConnectorsMap,
         mockUserDataStorageConnector,
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Error in realtime evaluation eval-run-123 for log log-123:',
+        'Error in skill optimization evaluation eval-123 for log log-123:',
         expect.any(Error),
       );
+      expect(result).toEqual([]);
     });
 
     it('should skip evaluations when no connector found', async () => {
-      const evaluationConnectorsMap = {}; // No connectors available
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        [],
-      );
+      const evaluationConnectorsMap = {} as Partial<
+        Record<EvaluationMethodName, EvaluationMethodConnector>
+      >; // No connectors available
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
         // Mock implementation to suppress console output
       });
 
-      await runRealtimeEvaluationsForLog(
+      const result = await runEvaluationsForLog(
         mockIdkRequestLog,
-        [mockEvaluationRun],
+        [mockSkillOptimizationEvaluation],
         evaluationConnectorsMap,
         mockUserDataStorageConnector,
       );
@@ -357,37 +319,123 @@ describe('Realtime Evaluations', () => {
       expect(consoleSpy).toHaveBeenCalledWith(
         'No connector found for evaluation method: turn_relevancy',
       );
+      expect(result).toEqual([]);
     });
 
-    it('should skip non-realtime datasets', async () => {
-      const nonRealtimeDataset = { ...mockRealtimeDataset, is_realtime: false };
+    it('should handle multiple evaluations in parallel', async () => {
+      const mockConnector1 = createMockEvaluationConnector();
+      const mockConnector2 = createMockEvaluationConnector();
 
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        nonRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        [],
-      );
-
-      const mockConnector = createMockEvaluationConnector();
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
+      const mockLogOutput1 = {
+        id: 'output-1',
+        evaluation_run_id: 'eval-123',
+        log_id: 'log-123',
+        output: {},
+        score: 0.95,
+        metadata: {},
+        created_at: new Date().toISOString(),
       };
 
-      await runRealtimeEvaluationsForLog(
+      const mockLogOutput2 = {
+        id: 'output-2',
+        evaluation_run_id: 'eval-456',
+        log_id: 'log-123',
+        output: {},
+        score: 0.85,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      };
+
+      vi.mocked(mockConnector1.evaluateLog).mockResolvedValue(
+        mockLogOutput1,
+      );
+      vi.mocked(mockConnector2.evaluateLog).mockResolvedValue(
+        mockLogOutput2,
+      );
+
+      const evaluation2: SkillOptimizationEvaluation = {
+        ...mockSkillOptimizationEvaluation,
+        id: 'eval-456',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+      };
+
+      const evaluationConnectorsMap = {
+        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector1,
+        [EvaluationMethodName.TASK_COMPLETION]: mockConnector2,
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
+
+      const result = await runEvaluationsForLog(
         mockIdkRequestLog,
-        [mockEvaluationRun],
+        [mockSkillOptimizationEvaluation, evaluation2],
         evaluationConnectorsMap,
         mockUserDataStorageConnector,
       );
 
-      // Should not add logs to non-realtime dataset
-      expect(
-        mockUserDataStorageConnector.addLogsToDataset,
-      ).not.toHaveBeenCalled();
+      expect(mockConnector1.evaluateLog).toHaveBeenCalledWith(
+        'eval-123',
+        mockIdkRequestLog,
+        mockUserDataStorageConnector,
+      );
 
-      // Should still trigger evaluation though
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalled();
+      expect(mockConnector2.evaluateLog).toHaveBeenCalledWith(
+        'eval-456',
+        mockIdkRequestLog,
+        mockUserDataStorageConnector,
+      );
+
+      expect(result).toEqual([mockLogOutput1, mockLogOutput2]);
+    });
+
+    it('should continue with other evaluations if one fails', async () => {
+      const mockConnector1 = createMockEvaluationConnector();
+      const mockConnector2 = createMockEvaluationConnector();
+
+      const mockLogOutput2 = {
+        id: 'output-2',
+        evaluation_run_id: 'eval-456',
+        log_id: 'log-123',
+        output: {},
+        score: 0.85,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      };
+
+      vi.mocked(mockConnector1.evaluateLog).mockRejectedValue(
+        new Error('Evaluation 1 failed'),
+      );
+      vi.mocked(mockConnector2.evaluateLog).mockResolvedValue(
+        mockLogOutput2,
+      );
+
+      const evaluation2: SkillOptimizationEvaluation = {
+        ...mockSkillOptimizationEvaluation,
+        id: 'eval-456',
+        evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+      };
+
+      const evaluationConnectorsMap = {
+        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector1,
+        [EvaluationMethodName.TASK_COMPLETION]: mockConnector2,
+      } as Partial<Record<EvaluationMethodName, EvaluationMethodConnector>>;
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Mock implementation to suppress console output
+      });
+
+      const result = await runEvaluationsForLog(
+        mockIdkRequestLog,
+        [mockSkillOptimizationEvaluation, evaluation2],
+        evaluationConnectorsMap,
+        mockUserDataStorageConnector,
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error in skill optimization evaluation eval-123 for log log-123:',
+        expect.any(Error),
+      );
+
+      // Should only return successful evaluation
+      expect(result).toEqual([mockLogOutput2]);
     });
   });
 
@@ -425,242 +473,6 @@ describe('Realtime Evaluations', () => {
         const url = new URL(endpoint);
         expect(shouldTriggerRealtimeEvaluation(200, url)).toBe(true);
       }
-    });
-  });
-
-  describe('evaluateExistingLogsInRealtimeDataset', () => {
-    let mockConnector: EvaluationMethodConnector;
-
-    beforeEach(() => {
-      mockConnector = createMockEvaluationConnector();
-    });
-
-    it('should evaluate existing logs in realtime dataset', async () => {
-      const existingLogs = [
-        { ...mockIdkRequestLog, id: 'log-1', start_time: 1000 },
-        { ...mockIdkRequestLog, id: 'log-2', start_time: 2000 },
-        { ...mockIdkRequestLog, id: 'log-3', start_time: 3000 },
-      ];
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        existingLogs,
-      );
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      // Verify dataset was fetched to check if realtime
-      expect(mockUserDataStorageConnector.getDatasets).toHaveBeenCalledWith({
-        id: 'dataset-123',
-      });
-
-      // Verify existing logs were retrieved with skill_id filter for realtime datasets
-      expect(mockUserDataStorageConnector.getDatasetLogs).toHaveBeenCalledWith(
-        'dataset-123',
-        {
-          skill_id: 'skill-789',
-        },
-      );
-
-      // Verify all existing logs were evaluated
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalledTimes(3);
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-123',
-        existingLogs[0],
-        mockUserDataStorageConnector,
-      );
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-123',
-        existingLogs[1],
-        mockUserDataStorageConnector,
-      );
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalledWith(
-        'eval-run-123',
-        existingLogs[2],
-        mockUserDataStorageConnector,
-      );
-    });
-
-    it('should skip non-realtime datasets', async () => {
-      const nonRealtimeDataset = { ...mockRealtimeDataset, is_realtime: false };
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        nonRealtimeDataset,
-      ]);
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      // Should not get logs or evaluate
-      expect(
-        mockUserDataStorageConnector.getDatasetLogs,
-      ).not.toHaveBeenCalled();
-      expect(mockConnector.evaluateOneLog).not.toHaveBeenCalled();
-    });
-
-    it('should handle missing dataset gracefully', async () => {
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([]);
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      // Should not get logs or evaluate
-      expect(
-        mockUserDataStorageConnector.getDatasetLogs,
-      ).not.toHaveBeenCalled();
-      expect(mockConnector.evaluateOneLog).not.toHaveBeenCalled();
-    });
-
-    it('should handle empty dataset gracefully', async () => {
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        [],
-      );
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      // Should get logs but not evaluate
-      expect(mockUserDataStorageConnector.getDatasetLogs).toHaveBeenCalledWith(
-        'dataset-123',
-        {
-          skill_id: 'skill-789',
-        },
-      );
-      expect(mockConnector.evaluateOneLog).not.toHaveBeenCalled();
-    });
-
-    it('should handle missing evaluation connector gracefully', async () => {
-      const existingLogs = [
-        { ...mockIdkRequestLog, id: 'log-1', start_time: 1000 },
-      ];
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        existingLogs,
-      );
-
-      // No connectors available
-      const evaluationConnectorsMap = {};
-
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-        // Mock implementation to suppress console output
-      });
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'No connector found for evaluation method: turn_relevancy',
-      );
-    });
-
-    it('should handle individual evaluation errors gracefully', async () => {
-      const existingLogs = [
-        { ...mockIdkRequestLog, id: 'log-1', start_time: 1000 },
-        { ...mockIdkRequestLog, id: 'log-2', start_time: 2000 },
-      ];
-
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockResolvedValue([
-        mockRealtimeDataset,
-      ]);
-      vi.mocked(mockUserDataStorageConnector.getDatasetLogs).mockResolvedValue(
-        existingLogs,
-      );
-
-      // Mock first evaluation to fail, second to succeed
-      vi.mocked(mockConnector.evaluateOneLog)
-        .mockRejectedValueOnce(new Error('Evaluation failed'))
-        .mockResolvedValueOnce(undefined);
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
-        // Mock implementation to suppress console output
-      });
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      // Both logs should be attempted
-      expect(mockConnector.evaluateOneLog).toHaveBeenCalledTimes(2);
-
-      // Error should be logged
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Error in backfill evaluation of log log-1 for evaluation run eval-run-123:',
-        expect.any(Error),
-      );
-    });
-
-    it('should handle database errors gracefully', async () => {
-      vi.mocked(mockUserDataStorageConnector.getDatasets).mockRejectedValue(
-        new Error('Database error'),
-      );
-
-      const evaluationConnectorsMap = {
-        [EvaluationMethodName.TURN_RELEVANCY]: mockConnector,
-      };
-
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
-        // Mock implementation to suppress console output
-      });
-
-      await evaluateExistingLogsInRealtimeDataset(
-        mockEvaluationRun,
-        evaluationConnectorsMap,
-        mockUserDataStorageConnector,
-      );
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Error in backfill evaluation for evaluation run eval-run-123:',
-        expect.any(Error),
-      );
-
-      // Should not attempt to evaluate
-      expect(mockConnector.evaluateOneLog).not.toHaveBeenCalled();
     });
   });
 });

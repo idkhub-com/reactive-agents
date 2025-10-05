@@ -1,5 +1,5 @@
 import {
-  evaluateOneLogForTaskCompletion,
+  evaluateLog,
   evaluateTaskCompletion,
 } from '@server/connectors/evaluations/task-completion/service/evaluate';
 import type {
@@ -58,6 +58,6 @@ async function runEvaluation(
 export const taskCompletionEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => taskCompletionMethodConfig,
   evaluate: runEvaluation,
-  evaluateOneLog: evaluateOneLogForTaskCompletion,
+  evaluateLog,
   getParameterSchema: TaskCompletionEvaluationParameters,
 };

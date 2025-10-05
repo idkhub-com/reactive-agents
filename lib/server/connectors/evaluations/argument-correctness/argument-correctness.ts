@@ -11,10 +11,7 @@ import type {
 import { EvaluationMethodName as Names } from '@shared/types/idkhub/evaluations';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
 
-import {
-  evaluateArgumentCorrectness,
-  evaluateOneLogForArgumentCorrectness,
-} from './service/evaluate';
+import { evaluateArgumentCorrectness, evaluateLog } from './service/evaluate';
 
 const methodConfig: EvaluationMethodDetails = {
   method: Names.ARGUMENT_CORRECTNESS as unknown as EvaluationMethodName,
@@ -50,6 +47,6 @@ export const argumentCorrectnessEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => methodConfig,
     evaluate: runEvaluation,
-    evaluateOneLog: evaluateOneLogForArgumentCorrectness,
+    evaluateLog,
     getParameterSchema: ArgumentCorrectnessEvaluationParameters,
   };

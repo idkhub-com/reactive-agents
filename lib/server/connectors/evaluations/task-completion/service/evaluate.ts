@@ -4,18 +4,19 @@ import getTaskCompletionVerdictTemplate from '@server/connectors/evaluations/tas
 import type { TaskCompletionAverageResult } from '@server/connectors/evaluations/task-completion/types';
 import { createLLMJudge } from '@server/evaluations';
 import type { UserDataStorageConnector } from '@server/types/connector';
-import { debug } from '@shared/console-logging';
-import {
-  type ChatCompletionRequestData,
-  FunctionName,
-  type ResponsesRequestData,
-  type StreamChatCompletionRequestData,
+import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
+import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
+import { formatMessagesForExtraction } from '@server/utils/messages';
+import type {
+  ChatCompletionRequestData,
+  ResponsesRequestData,
+  StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
 import { IdkResponseBody } from '@shared/types/api/response';
-import {
-  type ChatCompletionMessage,
-  ChatCompletionMessageRole,
-} from '@shared/types/api/routes/shared/messages';
+import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -30,182 +31,6 @@ import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluatio
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
-import { nanoid } from 'nanoid';
-
-function extractMessagesFromResponsesRequest(
-  idkRequestData: ResponsesRequestData,
-): ChatCompletionMessage[] {
-  const input = idkRequestData.requestBody.input;
-  let messages: ChatCompletionMessage[] = [];
-
-  if (typeof input === 'string') {
-    messages = [
-      {
-        role: ChatCompletionMessageRole.USER,
-        content: input,
-      },
-    ];
-  } else {
-    const idMap = new Map<string, string>();
-
-    input.forEach((message) => {
-      if (!('role' in message)) {
-        if (
-          'name' in message &&
-          'call_id' in message &&
-          message.type === 'function'
-        ) {
-          let id = idMap.get(message.call_id);
-          if (!id) {
-            id = nanoid(3);
-            idMap.set(message.call_id, id);
-          }
-          messages.push({
-            role: ChatCompletionMessageRole.ASSISTANT,
-            tool_calls: [
-              {
-                id: id,
-                type: 'function',
-                function: {
-                  name: message.name,
-                  arguments: JSON.stringify(message.arguments),
-                },
-              },
-            ],
-          });
-        } else if ('output' in message && 'call_id' in message) {
-          let id = idMap.get(message.call_id);
-          if (!id) {
-            id = nanoid(3);
-            idMap.set(message.call_id, id);
-          }
-          messages.push({
-            role: ChatCompletionMessageRole.TOOL,
-            tool_call_id: id,
-            content: message.output,
-          });
-        } else if (message.type === 'mcp_call' && 'server_label' in message) {
-          const id = nanoid(3);
-          messages.push({
-            role: ChatCompletionMessageRole.ASSISTANT,
-            tool_calls: [
-              {
-                id: id,
-                type: 'mcp_call',
-                function: {
-                  name: message.name,
-                  arguments: JSON.stringify(message.arguments),
-                },
-              },
-            ],
-          });
-          messages.push({
-            role: ChatCompletionMessageRole.TOOL,
-            tool_call_id: id,
-            content: message.output ?? message.error ?? 'success',
-          });
-        }
-
-        // If there is no role, we likely don't want to embed the message
-        return;
-      }
-      messages.push(message);
-    });
-  }
-
-  debug('messages', messages);
-
-  return messages;
-}
-
-export function extractMessagesFromRequestData(
-  idkRequestData:
-    | ChatCompletionRequestData
-    | StreamChatCompletionRequestData
-    | ResponsesRequestData,
-): ChatCompletionMessage[] {
-  switch (idkRequestData.functionName) {
-    case FunctionName.CHAT_COMPLETE:
-      return idkRequestData.requestBody.messages;
-    case FunctionName.STREAM_CHAT_COMPLETE:
-      return idkRequestData.requestBody.messages;
-    case FunctionName.CREATE_MODEL_RESPONSE:
-      return extractMessagesFromResponsesRequest(idkRequestData);
-  }
-}
-
-export function formatMessagesForExtraction(
-  messages: ChatCompletionMessage[],
-): string {
-  return messages
-    .filter((message) => {
-      // Exclude system and developer messages from embeddings
-      return (
-        message.role !== ChatCompletionMessageRole.SYSTEM &&
-        message.role !== ChatCompletionMessageRole.DEVELOPER
-      );
-    })
-    .map((message) => {
-      const role = message.role;
-      let content = '';
-
-      if (
-        role === ChatCompletionMessageRole.TOOL ||
-        role === ChatCompletionMessageRole.FUNCTION
-      ) {
-        return `Tool Call ${message.tool_call_id} Output: ${content}`;
-      }
-
-      if (typeof message.content === 'string') {
-        content += message.content;
-      } else if (Array.isArray(message.content)) {
-        content += message.content
-          .map((item) => {
-            if (typeof item === 'object' && item.text) {
-              return item.text;
-            }
-            return '';
-          })
-          .filter(Boolean)
-          .join(' ');
-      } else if (message.content) {
-        content += String(message.content);
-      }
-
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        const tools = message.tool_calls
-          .map((tool) => {
-            const parsedTool = tool as {
-              id: string;
-              type: 'mcp_call';
-              function: {
-                name: string;
-                arguments: string;
-              };
-            };
-            return `Tool Call ID: ${parsedTool.id}\nTool Call Name: ${parsedTool.function.name}\nTool Call Arguments: ${parsedTool.function.arguments}`;
-          })
-          .join(', ');
-        return `Assistant Tool Calls:\n${tools}`;
-      }
-
-      // Only include messages with non-empty content after trimming
-      if (!content.trim()) {
-        return '';
-      }
-
-      if (role === ChatCompletionMessageRole.USER) {
-        return `User: ${content}`.trim();
-      }
-      if (role === ChatCompletionMessageRole.ASSISTANT) {
-        return `Assistant: ${content}`.trim();
-      }
-
-      return `${role}: ${content}`.trim();
-    })
-    .filter(Boolean)
-    .join('\n\n\n');
-}
 
 /**
  * Generate verdict using universal LLM judge with verdict template
@@ -223,65 +48,6 @@ async function generateVerdict(
     verdict: verdict_result.score,
     reason: verdict_result.reasoning,
   };
-}
-
-export function extractOutputFromResponseBody(
-  responseBody: IdkResponseBody,
-): string {
-  if ('choices' in responseBody) {
-    if ('message' in responseBody.choices[0]) {
-      const content = responseBody.choices[0].message.content;
-      if (Array.isArray(content)) {
-        let contentString = '';
-        for (const chunk of content) {
-          contentString += chunk.text;
-        }
-        return contentString;
-      } else if (typeof content === 'string') {
-        return content;
-      } else {
-        throw new Error('Unexpected content type');
-      }
-    } else if ('text' in responseBody.choices[0]) {
-      return responseBody.choices[0].text;
-    }
-  } else if ('output' in responseBody) {
-    const outputText = responseBody.output_text;
-    if (outputText) {
-      return outputText;
-    } else {
-      const output = responseBody.output;
-      let outputString = '';
-      for (const step of output) {
-        switch (step.type) {
-          case 'message': {
-            if ('content' in step) {
-              if (step.content) {
-                for (const chunk of step.content) {
-                  outputString += chunk.text;
-                }
-                outputString += '\n';
-              }
-            } else {
-              continue;
-            }
-            break;
-          }
-          case 'function':
-            outputString += `${step.name}: ${JSON.stringify(step.arguments)}\n`;
-            break;
-          case 'mcp_call':
-            outputString += `${step.name}: ${JSON.stringify(step.arguments)}\n OUTPUT: ${JSON.stringify(step.output)}\n\n`;
-            break;
-          default:
-            continue;
-        }
-      }
-      return outputString;
-    }
-  }
-
-  throw new Error('Unexpected output type');
 }
 
 async function getTaskAndOutcome(
@@ -466,7 +232,7 @@ async function processLogsInBatches(
   return results;
 }
 
-export async function evaluateOneLogForTaskCompletion(
+export async function evaluateLogOld(
   evaluationRunId: string,
   log: Log,
   userDataStorageConnector: UserDataStorageConnector,
@@ -679,4 +445,50 @@ export async function evaluateTaskCompletion(
 
     throw error;
   }
+}
+
+export async function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
+  log: Log,
+): Promise<SkillOptimizationEvaluationResult> {
+  const params = TaskCompletionEvaluationParameters.parse(evaluation.metadata);
+
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
+
+  const start_time = Date.now();
+
+  const { task, outcome } = await getTaskAndOutcome(params, log);
+
+  // Step 2: Generate verdict
+  const { verdict, reason } = await generateVerdict(
+    { task, outcome },
+    llmJudge,
+  );
+  const verdict_llm_output = JSON.stringify({ verdict, reason });
+
+  const execution_time = Date.now() - start_time;
+
+  const result: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.TASK_COMPLETION,
+    score: verdict,
+    extra_data: {
+      task,
+      outcome,
+      strict_mode: params.strict_mode,
+      extraction_llm_output: {
+        task,
+        outcome,
+      },
+      verdict_llm_output,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
+    },
+  };
+
+  return result;
 }

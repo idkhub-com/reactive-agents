@@ -2,8 +2,8 @@ import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { z } from 'zod';
 
 export const SkillOptimizationEvaluationResult = z.object({
-  evaluation_method: z.enum(EvaluationMethodName),
-  evaluation_score: z.number().min(0).max(1),
+  method: z.enum(EvaluationMethodName),
+  score: z.number().min(0).max(1),
   extra_data: z.record(z.string(), z.unknown()),
 });
 export type SkillOptimizationEvaluationResult = z.infer<
