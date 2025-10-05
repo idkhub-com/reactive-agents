@@ -71,7 +71,7 @@ export type TaskCompletionResult = z.infer<typeof TaskCompletionResultSchema>;
  */
 export type TaskCompletionMetadata = {
   actual_output?: Record<string, unknown>;
-  tools_called?: TaskCompletionToolCall[];
+  // tools_called?: TaskCompletionToolCall[];
   criteria?: {
     criteria: string[];
     task_type?:

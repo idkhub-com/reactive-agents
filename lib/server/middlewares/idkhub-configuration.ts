@@ -1,4 +1,4 @@
-import { handleGenerateArms } from '@server/handlers/idkhub/skill-optimizations';
+import { handleGenerateArms } from '@server/optimization/skill-optimizations';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import { generateEmbeddingForRequest } from '@server/utils/embeddings';
@@ -97,11 +97,7 @@ function getRandomReasoningEffortFromRange(
 ): ReasoningEffort | null {
   const randomValue = getRandomValueInRange(min, max) * 9.9;
 
-  debug(`Random value: ${randomValue}`);
-
   const randomIndex = Math.floor(randomValue);
-
-  debug(`Random index: ${randomIndex}`);
 
   return ReasoningMap[randomIndex];
 }

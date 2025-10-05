@@ -69,6 +69,10 @@ import {
   type SkillOptimizationClusterUpdateParams,
 } from '@shared/types/data/skill-optimization-cluster';
 import {
+  SkillOptimizationEvaluation,
+  type SkillOptimizationEvaluationQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation';
+import {
   SkillOptimizationEvaluationRun,
   type SkillOptimizationEvaluationRunQueryParams,
 } from '@shared/types/data/skill-optimization-evaluation-run';
@@ -1046,6 +1050,68 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     skillId: string,
   ): Promise<void> => {
     await deleteFromSupabase('skill_optimization_arms', {
+      skill_id: `eq.${skillId}`,
+    });
+  },
+
+  // SkillOptimizationEvaluation
+  getSkillOptimizationEvaluations: async (
+    queryParams: SkillOptimizationEvaluationQueryParams,
+  ): Promise<SkillOptimizationEvaluation[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.evaluation_method) {
+      postgRESTParams.evaluation_method = `eq.${queryParams.evaluation_method}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const evaluations = await selectFromSupabase(
+      'skill_optimization_evaluations',
+      postgRESTParams,
+      z.array(SkillOptimizationEvaluation),
+    );
+
+    return evaluations;
+  },
+
+  async createSkillOptimizationEvaluations(
+    params: SkillOptimizationEvaluation[],
+  ): Promise<SkillOptimizationEvaluation[]> {
+    const createdEvaluations = await insertIntoSupabase(
+      'skill_optimization_evaluations',
+      params,
+      z.array(SkillOptimizationEvaluation),
+    );
+
+    return createdEvaluations;
+  },
+
+  async deleteSkillOptimizationEvaluation(id: string): Promise<void> {
+    await deleteFromSupabase('skill_optimization_evaluations', {
+      id: `eq.${id}`,
+    });
+  },
+
+  async deleteSkillOptimizationEvaluationsForSkill(
+    skillId: string,
+  ): Promise<void> {
+    await deleteFromSupabase('skill_optimization_evaluations', {
       skill_id: `eq.${skillId}`,
     });
   },

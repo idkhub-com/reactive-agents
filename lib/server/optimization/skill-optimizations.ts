@@ -1,5 +1,5 @@
-import { BaseArmsParams } from '@server/handlers/idkhub/base-arms';
-import { generateSystemPromptForSkill } from '@server/handlers/idkhub/system-prompt';
+import { BaseArmsParams } from '@server/optimization/base-arms';
+import { generateSystemPromptForSkill } from '@server/optimization/utils/system-prompt';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import type {
@@ -50,7 +50,7 @@ export async function handleGenerateArms(
     return c.json({ error: 'Skill models or clusters not found' }, 404);
   }
 
-  const numberOfSystemPrompts = 2;
+  const numberOfSystemPrompts = skill.num_system_prompts;
 
   const systemPrompts = [];
   for (let i = 0; i < numberOfSystemPrompts; i++) {

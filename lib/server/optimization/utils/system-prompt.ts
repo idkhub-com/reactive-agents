@@ -63,7 +63,7 @@ export async function generateSystemPromptForSkill(skill: Skill) {
       },
     })
     .chat.completions.parse({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5',
       messages: [
         { role: 'system', content: systemPrompt },
         {
@@ -75,7 +75,7 @@ export async function generateSystemPromptForSkill(skill: Skill) {
       response_format: {
         type: 'json_schema',
         json_schema: {
-          name: 'event',
+          name: 'system_prompt_generator',
           strict: true,
           schema: z.toJSONSchema(StructuredOutputResponse),
         },

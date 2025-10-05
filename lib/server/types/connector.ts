@@ -63,6 +63,11 @@ import type {
   SkillOptimizationClusterUpdateParams,
 } from '@shared/types/data/skill-optimization-cluster';
 import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationCreateParams,
+  SkillOptimizationEvaluationQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation';
+import type {
   SkillOptimizationEvaluationRun,
   SkillOptimizationEvaluationRunCreateParams,
   SkillOptimizationEvaluationRunQueryParams,
@@ -216,6 +221,18 @@ export interface UserDataStorageConnector {
   ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
   deleteSkillOptimizationArm(id: string): Promise<void> | void;
   deleteSkillOptimizationArmsForSkill(skillId: string): Promise<void> | void;
+
+  // Skill Optimization Evaluations
+  getSkillOptimizationEvaluations(
+    queryParams: SkillOptimizationEvaluationQueryParams,
+  ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
+  createSkillOptimizationEvaluations(
+    params_list: SkillOptimizationEvaluationCreateParams[],
+  ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
+  deleteSkillOptimizationEvaluation(id: string): Promise<void> | void;
+  deleteSkillOptimizationEvaluationsForSkill(
+    skillId: string,
+  ): Promise<void> | void;
 
   // Skill Optimization Evaluation Run
   getSkillOptimizationEvaluationRuns(

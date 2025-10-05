@@ -496,6 +496,38 @@ ALTER TABLE skill_optimization_arms ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_optimization_arms FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 
+
+-- ================================================
+-- Skill Optimization Evaluations Table
+-- ================================================
+CREATE TABLE if not exists skill_optimization_evaluations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  evaluation_method TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+CREATE TRIGGER update_skill_optimization_evaluations_updated_at BEFORE UPDATE ON skill_optimization_evaluations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON COLUMN skill_optimization_evaluations.evaluation_method IS 'The method used for evaluating the skill';
+
+COMMENT ON COLUMN skill_optimization_evaluations.metadata IS 'Additional metadata for the evaluation run configuration and settings';
+
+CREATE INDEX idx_skill_optimization_evaluations_agent_id ON skill_optimization_evaluations(agent_id);
+
+CREATE INDEX idx_skill_optimization_evaluations_evaluation_method ON skill_optimization_evaluations(evaluation_method);
+
+ALTER TABLE skill_optimization_evaluations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_evaluations FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
 -- ================================================
 -- Skill Optimization Evaluation Runs table
 -- ================================================

@@ -54,8 +54,14 @@ const CreateSkillFormSchema = z
     max_configurations: z
       .number()
       .int()
-      .min(0, 'Max configurations must be at least 0')
+      .min(1, 'Min configurations must be at least 1')
       .max(25, 'Max configurations cannot exceed 25'),
+
+    num_system_prompts: z
+      .number()
+      .int()
+      .min(1, 'Min system prompts must be at least 1')
+      .max(25, 'Max system prompts cannot exceed 25'),
   })
   .strict();
 
@@ -84,6 +90,7 @@ export function CreateSkillView(): React.ReactElement {
       name: '',
       description: '',
       max_configurations: 3,
+      num_system_prompts: 3,
     },
   });
 
@@ -99,7 +106,8 @@ export function CreateSkillView(): React.ReactElement {
         name: sanitizeUserInput(data.name),
         description: sanitizeUserInput(data.description),
         metadata: {},
-        max_configurations: data.max_configurations || 3,
+        max_configurations: data.max_configurations,
+        num_system_prompts: data.num_system_prompts,
       };
 
       await createSkill(skillParams);
@@ -264,6 +272,34 @@ export function CreateSkillView(): React.ReactElement {
                         Maximum number of configurations allowed for this skill.
                         Each configuration represents a unique AI model setup
                         with specific prompts and parameters.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="num_system_prompts"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">
+                        Number of System Prompts
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="h-11"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                          disabled={isCreating}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The number of system prompts that will be generated for
+                        this skill.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
