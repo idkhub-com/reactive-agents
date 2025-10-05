@@ -10,6 +10,7 @@ import {
   type SkillUpdateParams,
 } from '@shared/types/data';
 import { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
+import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { hc } from 'hono/client';
 
 const client = hc<IdkRoute>(API_URL);
@@ -112,7 +113,7 @@ export async function removeModelsFromSkill(
     param: {
       skillId,
     },
-    json: { modelIds },
+    query: { ids: modelIds },
   });
 
   if (!response.ok) {
@@ -186,4 +187,56 @@ export async function getSkillEvaluationRuns(
   }
 
   return SkillOptimizationEvaluationRun.array().parse(await response.json());
+}
+
+export async function getSkillEvaluations(skillId: string) {
+  const response = await client.v1.idk.skills[':skillId'].evaluations.$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill evaluations');
+  }
+
+  return SkillOptimizationEvaluationRun.array().parse(await response.json());
+}
+
+export async function createSkillEvaluation(
+  skillId: string,
+  methods: EvaluationMethodName[],
+): Promise<SkillOptimizationEvaluationRun> {
+  const response = await client.v1.idk.skills[':skillId'].evaluations.$post({
+    param: {
+      skillId,
+    },
+    json: {
+      methods,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to create skill evaluation');
+  }
+
+  return SkillOptimizationEvaluationRun.parse(await response.json());
+}
+
+export async function deleteSkillEvaluation(
+  skillId: string,
+  evaluationId: string,
+): Promise<void> {
+  const response = await client.v1.idk.skills[':skillId'].evaluations[
+    ':evaluationId'
+  ].$delete({
+    param: {
+      skillId,
+      evaluationId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete skill evaluation');
+  }
 }

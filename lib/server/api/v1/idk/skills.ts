@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator';
-import { handleGenerateEvaluations } from '@server/optimization/evaluations';
+
 import { handleGenerateArms } from '@server/optimization/skill-optimizations';
+import { generateEvaluationCreateParams } from '@server/optimization/utils/evaluations';
 import type { AppEnv } from '@server/types/hono';
 import { getInitialClusterCentroids } from '@server/utils/math';
 import type { SkillOptimizationClusterCreateParams } from '@shared/types/data';
@@ -9,6 +10,7 @@ import {
   SkillQueryParams,
   SkillUpdateParams,
 } from '@shared/types/data/skill';
+import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -17,7 +19,6 @@ export const skillsRouter = new Hono<AppEnv>()
     try {
       const data = c.req.valid('json');
       const userDataStorageConnector = c.get('user_data_storage_connector');
-      const evaluationConnectorsMap = c.get('evaluation_connectors_map');
 
       const newSkill = await userDataStorageConnector.createSkill(data);
 
@@ -36,13 +37,6 @@ export const skillsRouter = new Hono<AppEnv>()
 
       await userDataStorageConnector.createSkillOptimizationClusters(
         clusterParams,
-      );
-
-      await handleGenerateEvaluations(
-        c,
-        userDataStorageConnector,
-        evaluationConnectorsMap,
-        newSkill.id,
       );
 
       return c.json(newSkill, 201);
@@ -73,7 +67,6 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const data = c.req.valid('json');
         const userDataStorageConnector = c.get('user_data_storage_connector');
-        const evaluationConnectorsMap = c.get('evaluation_connectors_map');
 
         const updatedSkill = await userDataStorageConnector.updateSkill(
           skillId,
@@ -116,13 +109,6 @@ export const skillsRouter = new Hono<AppEnv>()
           data.num_system_prompts
         ) {
           await handleGenerateArms(c, userDataStorageConnector, skillId);
-
-          await handleGenerateEvaluations(
-            c,
-            userDataStorageConnector,
-            evaluationConnectorsMap,
-            updatedSkill.id,
-          );
         }
 
         return c.json(updatedSkill, 200);
@@ -190,14 +176,14 @@ export const skillsRouter = new Hono<AppEnv>()
   .delete(
     '/:skillId/models',
     zValidator('param', z.object({ skillId: z.uuid() })),
-    zValidator('json', z.object({ modelIds: z.array(z.uuid()) })),
+    zValidator('query', z.object({ ids: z.array(z.uuid()) })),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');
-        const { modelIds } = c.req.valid('json');
+        const { ids } = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
-        await connector.removeModelsFromSkill(skillId, modelIds);
+        await connector.removeModelsFromSkill(skillId, ids);
 
         await handleGenerateArms(c, connector, skillId);
 
@@ -277,6 +263,101 @@ export const skillsRouter = new Hono<AppEnv>()
       } catch (error) {
         console.error('Error getting evaluation runs:', error);
         return c.json({ error: 'Failed to get evaluation runs' }, 500);
+      }
+    },
+  )
+  .get(
+    '/:skillId/evaluations',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const evaluations = await connector.getSkillOptimizationEvaluations({
+          skill_id: skillId,
+        });
+
+        return c.json(evaluations);
+      } catch (error) {
+        console.error('Error getting evaluations:', error);
+        return c.json({ error: 'Failed to get evaluations' }, 500);
+      }
+    },
+  )
+  .post(
+    '/:skillId/evaluations',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    zValidator(
+      'json',
+      z.object({ methods: z.array(z.enum(EvaluationMethodName)) }),
+    ),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const { methods } = c.req.valid('json');
+        const userDataStorageConnector = c.get('user_data_storage_connector');
+        const evaluationConnectorsMap = c.get('evaluation_connectors_map');
+
+        const skills = await userDataStorageConnector.getSkills({
+          id: skillId,
+        });
+
+        if (skills.length === 0) {
+          return c.json({ error: 'Skill not found' }, 404);
+        }
+
+        const skill = skills[0];
+
+        const createParamsList = [];
+        for (const method of methods) {
+          const evaluationConnector = evaluationConnectorsMap[method];
+          if (!evaluationConnector) {
+            throw new Error(
+              `Evaluation connector not found for method ${method}`,
+            );
+          }
+
+          const createParams = await generateEvaluationCreateParams(
+            skill,
+            evaluationConnector,
+            method,
+          );
+
+          createParamsList.push(createParams);
+        }
+
+        const createdEvaluations =
+          await userDataStorageConnector.createSkillOptimizationEvaluations(
+            createParamsList,
+          );
+
+        return c.json({ createdEvaluations }, 200);
+      } catch (error) {
+        console.error('Error generating evaluations:', error);
+        return c.json({ error: 'Failed to generate evaluations' }, 500);
+      }
+    },
+  )
+  .delete(
+    '/:skillId/evaluations/:evaluationId',
+    zValidator(
+      'param',
+      z.object({ skillId: z.uuid(), evaluationId: z.uuid() }),
+    ),
+    async (c) => {
+      try {
+        const { evaluationId } = c.req.valid('param');
+        const userDataStorageConnector = c.get('user_data_storage_connector');
+
+        await userDataStorageConnector.deleteSkillOptimizationEvaluation(
+          evaluationId,
+        );
+
+        return c.json({ message: 'Evaluations deleted successfully' }, 200);
+      } catch (error) {
+        console.error('Error deleting evaluations:', error);
+        return c.json({ error: 'Failed to delete evaluations' }, 500);
       }
     },
   );
