@@ -3,10 +3,10 @@ import { completionsRouter } from '@server/api/v1/completions';
 import { embeddingsRouter } from '@server/api/v1/embeddings';
 import { idkRouter } from '@server/api/v1/idk';
 import { responsesRouter } from '@server/api/v1/responses';
-import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
+// import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
-import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
+// import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
 import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
 import { turnRelevancyEvaluationConnector } from '@server/connectors/evaluations/turn-relevancy';
@@ -60,10 +60,10 @@ app.use('*', hooksMiddleware(factory, []));
 app.use(
   '*',
   evaluationMethodConnectors(factory, [
-    argumentCorrectnessEvaluationConnector,
+    // argumentCorrectnessEvaluationConnector,
     conversationCompletenessEvaluationConnector,
     knowledgeRetentionEvaluationConnector,
-    roleAdherenceEvaluationConnector,
+    // roleAdherenceEvaluationConnector,
     taskCompletionEvaluationConnector,
     toolCorrectnessEvaluationConnector,
     turnRelevancyEvaluationConnector,

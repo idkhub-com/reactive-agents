@@ -21,8 +21,6 @@ import type {
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
 
-import { v4 as uuidv4 } from 'uuid';
-
 // Use a template builder to construct prompts
 function buildPromptForToolArgs(
   input: string,
@@ -47,7 +45,6 @@ async function evaluateSingleLog(
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<LogOutput> {
   const start_time = Date.now();
-  const _evaluation_output_id = uuidv4();
   const verbose_logs: string[] = [];
 
   try {

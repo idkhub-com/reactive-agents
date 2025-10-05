@@ -11,9 +11,9 @@ export const RoleAdherenceEvaluationParameters = z.object({
   max_tokens: z.number().positive().default(1000),
   batch_size: z.number().positive().default(1000),
 
-  // role_definition: z.string().optional(),
-  // assistant_output: z.string().optional(),
-  // instructions: z.string().optional(),
+  role_definition: z.string().optional(),
+  assistant_output: z.string().optional(),
+  instructions: z.string().optional(),
 });
 
 export type RoleAdherenceEvaluationParameters = z.infer<
