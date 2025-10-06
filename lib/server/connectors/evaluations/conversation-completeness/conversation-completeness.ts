@@ -13,7 +13,7 @@ import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluatio
 
 import {
   evaluateConversationCompletenessMain,
-  evaluateOneLogForConversationCompleteness,
+  evaluateLog,
 } from './service/evaluate';
 
 // Simplified method configuration constant - only essential fields for standardization
@@ -53,6 +53,6 @@ export const conversationCompletenessEvaluationConnector: EvaluationMethodConnec
   {
     getDetails: () => conversationCompletenessMethodConfig,
     evaluate: runEvaluation,
-    evaluateLog: evaluateOneLogForConversationCompleteness,
+    evaluateLog,
     getParameterSchema: ConversationCompletenessEvaluationParameters,
   };

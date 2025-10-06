@@ -9,10 +9,7 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
-import {
-  evaluateKnowledgeRetention,
-  evaluateOneLogForKnowledgeRetention,
-} from './service/evaluate';
+import { evaluateKnowledgeRetention, evaluateLog } from './service/evaluate';
 
 // Simplified method configuration constant - only essential fields for standardization
 const knowledgeRetentionMethodConfig: EvaluationMethodDetails = {
@@ -52,6 +49,6 @@ export const knowledgeRetentionEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => knowledgeRetentionMethodConfig,
     evaluate: runEvaluation,
-    evaluateLog: evaluateOneLogForKnowledgeRetention,
+    evaluateLog,
     getParameterSchema: KnowledgeRetentionEvaluationParameters,
   };

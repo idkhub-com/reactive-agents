@@ -1,5 +1,4 @@
 import { HttpMethod } from '@server/types/http';
-import { debug } from '@shared/console-logging';
 import {
   type ChatCompletionRequestData,
   FunctionName,
@@ -154,8 +153,6 @@ function extractMessagesFromResponsesRequest(
       messages.push(message);
     });
   }
-
-  debug('messages', messages);
 
   return messages;
 }

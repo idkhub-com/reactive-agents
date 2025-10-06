@@ -3,7 +3,12 @@ import type {
   UserDataStorageConnector,
 } from '@server/types/connector';
 import { error, info, warn } from '@shared/console-logging';
-import type { Log, LogOutput } from '@shared/types/data';
+import type {
+  Log,
+  LogOutput,
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import {
@@ -421,7 +426,7 @@ const generateReason = (
   return `Partial match: ${matchedCount}/${expected_tools.length} expected tools were called correctly. Expected: ${expectedNames.join(', ')}, Called: ${calledNames.join(', ')}.`;
 };
 
-const evaluateLog = (
+const evaluateLogInternal = (
   log: Log,
   parameters: ToolCorrectnessEvaluationParameters,
 ): {
@@ -514,7 +519,7 @@ const evaluateLog = (
   };
 };
 
-async function evaluateOneLogForToolCorrectness(
+export async function evaluateOneLogForToolCorrectness(
   evaluationRunId: string,
   log: Log,
   userDataStorageConnector: UserDataStorageConnector,
@@ -533,7 +538,7 @@ async function evaluateOneLogForToolCorrectness(
   );
 
   // Evaluate the single log
-  const logResult = evaluateLog(log, params);
+  const logResult = evaluateLogInternal(log, params);
 
   // Create log output record
   const logOutput = await userDataStorageConnector.createLogOutput(
@@ -593,6 +598,35 @@ async function evaluateOneLogForToolCorrectness(
   });
 
   return logOutput;
+}
+
+export function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
+  log: Log,
+): Promise<SkillOptimizationEvaluationResult> {
+  const params = ToolCorrectnessEvaluationParameters.parse(evaluation.metadata);
+
+  const start_time = Date.now();
+
+  // Evaluate using the internal evaluateLogInternal function
+  const logResult = evaluateLogInternal(log, params);
+
+  const execution_time = Date.now() - start_time;
+
+  const evaluationResult: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.TOOL_CORRECTNESS,
+    score: logResult.score,
+    extra_data: {
+      tools_called: logResult.tools_called,
+      expected_tools: logResult.expected_tools,
+      reasoning: logResult.reason,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
+    },
+  };
+
+  return Promise.resolve(evaluationResult);
 }
 
 // Tool correctness connector constant instance
@@ -664,7 +698,7 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
 
       for (const log of logs) {
         try {
-          const logResult = evaluateLog(
+          const logResult = evaluateLogInternal(
             log,
             toolCorrectnessParams as ToolCorrectnessEvaluationParameters,
           );
@@ -738,6 +772,6 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
     }
   },
 
-  evaluateLog: evaluateOneLogForToolCorrectness,
+  evaluateLog,
   getParameterSchema: ToolCorrectnessEvaluationParameters,
 };

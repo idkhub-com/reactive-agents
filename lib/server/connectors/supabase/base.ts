@@ -3,7 +3,6 @@ import {
   SUPABASE_SERVICE_ROLE_KEY,
   SUPABASE_URL,
 } from '@server/constants';
-import { debug } from '@shared/console-logging';
 import type { z } from 'zod';
 
 const checkEnvironmentVariables = (): void => {
@@ -243,10 +242,6 @@ export const rpcFunctionWithResponse = async <T extends z.ZodType>(
   checkEnvironmentVariables();
 
   const url = new URL(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`);
-
-  debug(
-    `Calling RPC function ${functionName} with params ${JSON.stringify(params)}`,
-  );
 
   const response = await fetch(url, {
     method: 'POST',

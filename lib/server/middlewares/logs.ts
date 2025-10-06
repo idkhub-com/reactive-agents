@@ -7,7 +7,6 @@ import type {
 import type { AppEnv } from '@server/types/hono';
 import type { HttpMethod } from '@server/types/http';
 import {
-  findRealtimeEvaluations,
   runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
@@ -17,7 +16,6 @@ import {
   NonPrivateIdkConfig,
 } from '@shared/types/api/request/headers';
 import type {
-  LogOutput,
   SkillOptimizationArm,
   SkillOptimizationEvaluationResult,
   SkillOptimizationEvaluationRunCreateParams,
@@ -121,7 +119,7 @@ async function processLogs({
   logsStorageConnector,
   userDataStorageConnector,
   evaluationConnectorsMap,
-}: ProcessLogsParams): Promise<Map<EvaluationMethodName, LogOutput>> {
+}: ProcessLogsParams): Promise<SkillOptimizationEvaluationResult[]> {
   const endTime = Date.now();
   const duration = endTime - startTime;
 
@@ -129,7 +127,7 @@ async function processLogs({
 
   if (!('model' in aiProviderLog.request_body)) {
     console.error('No model found in request body');
-    return new Map();
+    return [];
   }
 
   const log: Log = {
@@ -188,36 +186,22 @@ async function processLogs({
     userDataStorageConnector &&
     evaluationConnectorsMap
   ) {
-    const realtimeEvaluations = await findRealtimeEvaluations(
-      agent.id,
-      skill.id,
-      userDataStorageConnector,
-    );
+    const evaluations =
+      await userDataStorageConnector.getSkillOptimizationEvaluations({
+        agent_id: skill.agent_id,
+        skill_id: skill.id,
+      });
 
-    if (realtimeEvaluations.length > 0) {
-      const logOutputs = await runEvaluationsForLog(
+    if (evaluations.length > 0) {
+      const results = await runEvaluationsForLog(
         log,
-        realtimeEvaluations,
+        evaluations,
         evaluationConnectorsMap,
-        userDataStorageConnector,
       );
-
-      const map = new Map<EvaluationMethodName, LogOutput>();
-      for (const output of logOutputs) {
-        const skillOptimizationEvaluation = realtimeEvaluations.find(
-          (evaluation) => evaluation.id === output.evaluation_run_id,
-        );
-        if (!skillOptimizationEvaluation) {
-          throw new Error(
-            `Skill optimization evaluation not found for ID: ${output.evaluation_run_id}`,
-          );
-        }
-        map.set(skillOptimizationEvaluation.evaluation_method, output);
-      }
-      return map;
+      return results;
     }
   }
-  return new Map();
+  return [];
 }
 
 const shouldLogRequest = (url: URL): boolean => {
@@ -237,12 +221,10 @@ const shouldLogRequest = (url: URL): boolean => {
 async function updatePulledArm(
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
-  evaluationResults: Map<EvaluationMethodName, LogOutput>,
+  evaluationResults: SkillOptimizationEvaluationResult[],
 ) {
   // Calculate average score from all evaluations (normalized 0-1)
-  const scores = Array.from(evaluationResults.values()).map(
-    (output) => output.score,
-  );
+  const scores = evaluationResults.map((result) => result.score);
 
   const reward = scores.reduce((sum, score) => sum + score, 0) / scores.length;
   await updateArmStats(userDataStorageConnector, arm, reward);
@@ -272,23 +254,13 @@ async function updateArmStats(
 async function addSkillOptimizationEvaluationRun(
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
-  evaluationResults: Map<EvaluationMethodName, LogOutput>,
+  evaluationResults: SkillOptimizationEvaluationResult[],
 ) {
-  const skillOptimizationEvaluationResults: SkillOptimizationEvaluationResult[] =
-    Array.from(evaluationResults.entries()).map(([method_name, output]) => {
-      const result: SkillOptimizationEvaluationResult = {
-        method: method_name,
-        score: output.score,
-        extra_data: output.metadata,
-      };
-      return result;
-    });
-
   const createParams: SkillOptimizationEvaluationRunCreateParams = {
     agent_id: arm.agent_id,
     skill_id: arm.skill_id,
     cluster_id: arm.cluster_id,
-    results: skillOptimizationEvaluationResults,
+    results: evaluationResults,
   };
 
   await userDataStorageConnector.createSkillOptimizationEvaluationRun(
@@ -319,7 +291,7 @@ async function processLogsAndOptimizeSkill(
   processLogsParams: ProcessLogsParams,
 ) {
   const evaluationResults = await processLogs(processLogsParams);
-  if (evaluationResults.size > 0 && processLogsParams.pulledArm) {
+  if (evaluationResults.length > 0 && processLogsParams.pulledArm) {
     await updatePulledArm(
       processLogsParams.userDataStorageConnector,
       processLogsParams.pulledArm,

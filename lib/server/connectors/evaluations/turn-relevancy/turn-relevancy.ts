@@ -10,10 +10,7 @@ import type {
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
 
-import {
-  evaluateOneLogForTurnRelevancy,
-  evaluateTurnRelevancyDataset,
-} from './service/evaluate';
+import { evaluateLog, evaluateTurnRelevancyDataset } from './service/evaluate';
 
 const methodConfig: EvaluationMethodDetails = {
   method: EvaluationMethodName.TURN_RELEVANCY,
@@ -48,6 +45,6 @@ async function runEvaluation(
 export const turnRelevancyEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => methodConfig,
   evaluate: runEvaluation,
-  evaluateLog: evaluateOneLogForTurnRelevancy,
+  evaluateLog,
   getParameterSchema: TurnRelevancyEvaluationParameters,
 };

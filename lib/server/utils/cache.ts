@@ -3,7 +3,7 @@ import {
   type CommonRequestOptions,
   type CreateResponseOptions,
   createResponse,
-} from '@server/utils/idkhub/response';
+} from '@server/utils/idkhub/responses';
 import { FunctionName } from '@shared/types/api/request';
 import { CacheStatus } from '@shared/types/middleware/cache';
 

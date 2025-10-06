@@ -566,11 +566,7 @@ describe('Task Completion Evaluator', () => {
         {} as unknown as EvaluationRun,
       );
 
-      await evaluateLog(
-        evaluationRunId,
-        mockLog,
-        mockUserDataStorageConnector,
-      );
+      await evaluateLog(evaluationRunId, mockLog, mockUserDataStorageConnector);
 
       // Verify evaluation run was retrieved
       expect(mockedGetEvaluationRuns).toHaveBeenCalledWith({
@@ -709,11 +705,7 @@ describe('Task Completion Evaluator', () => {
         {} as unknown as EvaluationRun,
       );
 
-      await evaluateLog(
-        evaluationRunId,
-        mockLog,
-        mockUserDataStorageConnector,
-      );
+      await evaluateLog(evaluationRunId, mockLog, mockUserDataStorageConnector);
 
       // Verify that the log failed the threshold check
       expect(mockedUpdateEvaluationRun).toHaveBeenCalledWith(
@@ -739,11 +731,7 @@ describe('Task Completion Evaluator', () => {
       mockedGetEvaluationRuns.mockResolvedValue([]);
 
       await expect(
-        evaluateLog(
-          evaluationRunId,
-          mockLog,
-          mockUserDataStorageConnector,
-        ),
+        evaluateLog(evaluationRunId, mockLog, mockUserDataStorageConnector),
       ).rejects.toThrow(`Evaluation run ${evaluationRunId} not found`);
     });
   });

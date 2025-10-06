@@ -3,7 +3,7 @@ import type {
   UserDataStorageConnector,
 } from '@server/types/connector';
 import { calculateDistance, kMeansClustering } from '@server/utils/math';
-import { debug, error } from '@shared/console-logging';
+import { error } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
 import type { Log, Skill } from '@shared/types/data';
 import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/skill-optimization-cluster';
@@ -77,8 +77,6 @@ export async function autoClusterSkill(
     // and are for one of the allowed function names
     embedding_not_null: true,
   });
-
-  debug(`[OPTIMIZER] Got ${logs.length} logs for skill ${skill.id}`);
 
   // Automatically cluster logs if there are enough logs
   if (logs.length >= interval) {

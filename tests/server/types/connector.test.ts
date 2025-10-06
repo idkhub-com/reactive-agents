@@ -246,9 +246,7 @@ describe('Connector Interfaces', () => {
 
         // Verify first argument is a string
         const callArgs = (
-          connector.evaluateLog as MockedFunction<
-            typeof connector.evaluateLog
-          >
+          connector.evaluateLog as MockedFunction<typeof connector.evaluateLog>
         ).mock.calls[0];
         expect(typeof callArgs[0]).toBe('string');
         expect(callArgs[0]).toBe(evaluationRunId);
@@ -271,9 +269,7 @@ describe('Connector Interfaces', () => {
         );
 
         const callArgs = (
-          connector.evaluateLog as MockedFunction<
-            typeof connector.evaluateLog
-          >
+          connector.evaluateLog as MockedFunction<typeof connector.evaluateLog>
         ).mock.calls[0];
         expect(callArgs[1]).toBe(log);
         expect(callArgs[1]).toHaveProperty('id');
@@ -290,9 +286,7 @@ describe('Connector Interfaces', () => {
         );
 
         const callArgs = (
-          connector.evaluateLog as MockedFunction<
-            typeof connector.evaluateLog
-          >
+          connector.evaluateLog as MockedFunction<typeof connector.evaluateLog>
         ).mock.calls[0];
         expect(callArgs[2]).toBe(mockUserDataStorageConnector);
         expect(typeof callArgs[2].getEvaluationRuns).toBe('function');

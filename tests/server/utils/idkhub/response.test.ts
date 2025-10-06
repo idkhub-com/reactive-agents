@@ -2,7 +2,7 @@ import { HttpError } from '@server/errors/http';
 import { responseHandler } from '@server/handlers/response-handler';
 import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
-import { createResponse } from '@server/utils/idkhub/response';
+import { createResponse } from '@server/utils/idkhub/responses';
 import {
   type ChatCompletionRequestData,
   FunctionName,

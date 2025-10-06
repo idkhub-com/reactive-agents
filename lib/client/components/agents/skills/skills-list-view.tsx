@@ -1,5 +1,6 @@
 'use client';
 
+import { getAgentEvaluationRuns } from '@client/api/v1/idk/agents';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -18,11 +19,13 @@ import { useLogs } from '@client/providers/logs';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import type { Skill } from '@shared/types/data';
+import { useQuery } from '@tanstack/react-query';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { AgentPerformanceChart } from './agent-performance-chart';
 
 interface SkillStats {
   skillId: string;
@@ -49,6 +52,19 @@ export function SkillsListView(): ReactElement {
 
   const [skillStats, setSkillStats] = useState<SkillStats[]>([]);
   const [logsBySkill, setLogsBySkill] = useState<Record<string, number>>({});
+
+  // Fetch agent-level evaluation runs
+  const {
+    data: agentEvaluationRuns = [],
+    isLoading: isLoadingAgentEvaluationRuns,
+  } = useQuery({
+    queryKey: ['agentEvaluationRuns', navigationState.selectedAgent?.id],
+    queryFn: () =>
+      navigationState.selectedAgent
+        ? getAgentEvaluationRuns(navigationState.selectedAgent.id)
+        : Promise.resolve([]),
+    enabled: !!navigationState.selectedAgent,
+  });
 
   // Update skills query params when agent changes
   useEffect(() => {
@@ -210,6 +226,19 @@ export function SkillsListView(): ReactElement {
         }
       />
       <div className="p-6 space-y-6">
+        {/* Performance Chart - Full Width */}
+        <Card>
+          <CardContent className="pt-6">
+            {isLoadingAgentEvaluationRuns ? (
+              <div className="h-64 flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ) : (
+              <AgentPerformanceChart evaluationRuns={agentEvaluationRuns} />
+            )}
+          </CardContent>
+        </Card>
+
         <div className="relative">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input

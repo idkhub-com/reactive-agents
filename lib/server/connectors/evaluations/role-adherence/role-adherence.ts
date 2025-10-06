@@ -1,5 +1,5 @@
 import {
-  evaluateOneLogForRoleAdherence,
+  evaluateLog,
   evaluateRoleAdherenceDataset,
 } from '@server/connectors/evaluations/role-adherence/service/evaluate';
 import type {
@@ -47,6 +47,6 @@ async function runEvaluation(
 export const roleAdherenceEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => roleAdherenceMethodConfig,
   evaluate: runEvaluation,
-  evaluateLog: evaluateOneLogForRoleAdherence,
+  evaluateLog,
   getParameterSchema: RoleAdherenceEvaluationParameters,
 };

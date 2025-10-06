@@ -92,4 +92,24 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.json({ error: 'Failed to fetch skills' }, 500);
       }
     },
+  )
+  .get(
+    '/:agentId/evaluation-runs',
+    zValidator('param', z.object({ agentId: z.uuid() })),
+    async (c) => {
+      try {
+        const { agentId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const evaluationRuns =
+          await connector.getSkillOptimizationEvaluationRuns({
+            agent_id: agentId,
+          });
+
+        return c.json(evaluationRuns);
+      } catch (error) {
+        console.error('Error getting evaluation runs:', error);
+        return c.json({ error: 'Failed to get evaluation runs' }, 500);
+      }
+    },
   );

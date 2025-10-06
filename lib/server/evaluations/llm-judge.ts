@@ -1,6 +1,7 @@
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
 // Import IDKHub OpenAI provider types for better schema handling
 import type { ResponseCreateParamsNonStreaming } from '@server/types/model-response';
+import { debug, error } from '@shared/console-logging';
 import type { ResponsesResponseBody } from '@shared/types/api/routes/responses-api/response';
 import { AIProvider } from '@shared/types/constants';
 import type {
@@ -291,6 +292,9 @@ async function callIDKHubOpenAIResponsesAPI(
   api_key: string,
 ): Promise<ResponsesResponseBody> {
   const controller = new AbortController();
+
+  debug('timeout', config.timeout);
+
   const timeoutId = setTimeout(() => controller.abort(), config.timeout);
 
   try {
@@ -345,6 +349,8 @@ async function callIDKHubOpenAIResponsesAPI(
       },
     };
 
+    debug('requestParams', requestParams);
+
     const idkConfig = {
       agent_name: 'llm-judge',
       skill_name: 'judge',
@@ -385,10 +391,15 @@ async function callIDKHubOpenAIResponsesAPI(
       );
     }
 
-    return (await response.json()) as ResponsesResponseBody;
-  } catch (error) {
+    const body = await response.text();
+
+    debug('body', body);
+
+    return JSON.parse(body) as ResponsesResponseBody;
+  } catch (e) {
+    error('Error in OpenAI Responses API:', e);
     clearTimeout(timeoutId);
-    throw error;
+    throw e;
   }
 }
 

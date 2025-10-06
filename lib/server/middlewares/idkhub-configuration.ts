@@ -8,7 +8,7 @@ import {
   sampleBeta,
 } from '@server/utils/math';
 import { renderTemplate } from '@server/utils/templates';
-import { debug, error } from '@shared/console-logging';
+import { error } from '@shared/console-logging';
 import {
   FunctionName,
   type IdkConfig,
@@ -201,8 +201,6 @@ async function validateTargetConfiguration(
         optimalArm.params.thinking_max,
       );
 
-      debug(`Reasoning effort: ${reasoningEffort}`);
-
       idkTargetConfiguration = {
         ai_provider: apiKeyRecord.ai_provider as AIProvider,
         model: model.model_name,
@@ -286,8 +284,6 @@ async function validateTargetConfiguration(
       422,
     );
   }
-
-  debug(idkTargetConfiguration);
 
   const rawData = {
     ...idkTargetPreProcessed,

@@ -1,39 +1,10 @@
-import type {
-  EvaluationMethodConnector,
-  UserDataStorageConnector,
-} from '@server/types/connector';
+import type { EvaluationMethodConnector } from '@server/types/connector';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
-
-/**
- * Find active skill optimization evaluations for a given agent and skill
- */
-export async function findRealtimeEvaluations(
-  agentId: string,
-  skillId: string,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<SkillOptimizationEvaluation[]> {
-  try {
-    // Get skill optimization evaluations for this skill
-    const evaluations =
-      await userDataStorageConnector.getSkillOptimizationEvaluations({
-        agent_id: agentId,
-        skill_id: skillId,
-      });
-
-    return evaluations || [];
-  } catch (error) {
-    console.error(
-      `Error finding realtime evaluations for agent ${agentId}, skill ${skillId}:`,
-      error,
-    );
-    return [];
-  }
-}
 
 /**
  * Run realtime evaluations for a single log using skill optimization evaluations

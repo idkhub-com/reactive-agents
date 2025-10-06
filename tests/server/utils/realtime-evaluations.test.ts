@@ -346,12 +346,8 @@ describe('Realtime Evaluations', () => {
         created_at: new Date().toISOString(),
       };
 
-      vi.mocked(mockConnector1.evaluateLog).mockResolvedValue(
-        mockLogOutput1,
-      );
-      vi.mocked(mockConnector2.evaluateLog).mockResolvedValue(
-        mockLogOutput2,
-      );
+      vi.mocked(mockConnector1.evaluateLog).mockResolvedValue(mockLogOutput1);
+      vi.mocked(mockConnector2.evaluateLog).mockResolvedValue(mockLogOutput2);
 
       const evaluation2: SkillOptimizationEvaluation = {
         ...mockSkillOptimizationEvaluation,
@@ -403,9 +399,7 @@ describe('Realtime Evaluations', () => {
       vi.mocked(mockConnector1.evaluateLog).mockRejectedValue(
         new Error('Evaluation 1 failed'),
       );
-      vi.mocked(mockConnector2.evaluateLog).mockResolvedValue(
-        mockLogOutput2,
-      );
+      vi.mocked(mockConnector2.evaluateLog).mockResolvedValue(mockLogOutput2);
 
       const evaluation2: SkillOptimizationEvaluation = {
         ...mockSkillOptimizationEvaluation,

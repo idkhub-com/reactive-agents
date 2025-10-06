@@ -10,12 +10,12 @@ import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
 import { getCachedResponse } from '@server/utils/cache';
 import { inputHookHandler, outputHookHandler } from '@server/utils/hooks';
-import { constructRequest } from '@server/utils/idkhub/request';
+import { constructRequest } from '@server/utils/idkhub/requests';
 import {
   type CommonRequestOptions,
   type CreateResponseOptions,
   createResponse,
-} from '@server/utils/idkhub/response';
+} from '@server/utils/idkhub/responses';
 
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
