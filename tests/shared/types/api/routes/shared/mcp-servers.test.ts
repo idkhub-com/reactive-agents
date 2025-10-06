@@ -1,4 +1,7 @@
-import { MCPServer, MCPServers } from '@shared/types/api/routes/shared/mcp-servers';
+import {
+  MCPServer,
+  MCPServers,
+} from '@shared/types/api/routes/shared/mcp-servers';
 import { describe, expect, it } from 'vitest';
 
 describe('MCP Servers Types', () => {
@@ -12,7 +15,9 @@ describe('MCP Servers Types', () => {
       expect(() => MCPServer.parse(server)).not.toThrow();
       const parsed = MCPServer.parse(server);
       expect(parsed.type).toBe('url');
-      expect(parsed.url).toBe('https://example-server.modelcontextprotocol.io/sse');
+      expect(parsed.url).toBe(
+        'https://example-server.modelcontextprotocol.io/sse',
+      );
       expect(parsed.name).toBeUndefined();
       expect(parsed.authorization_token).toBeUndefined();
     });
@@ -28,7 +33,9 @@ describe('MCP Servers Types', () => {
       expect(() => MCPServer.parse(server)).not.toThrow();
       const parsed = MCPServer.parse(server);
       expect(parsed.type).toBe('url');
-      expect(parsed.url).toBe('https://example-server.modelcontextprotocol.io/sse');
+      expect(parsed.url).toBe(
+        'https://example-server.modelcontextprotocol.io/sse',
+      );
       expect(parsed.name).toBe('example-mcp');
       expect(parsed.authorization_token).toBe('YOUR_TOKEN');
     });

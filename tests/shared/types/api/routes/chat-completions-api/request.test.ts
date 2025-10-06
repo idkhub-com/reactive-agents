@@ -658,7 +658,9 @@ describe('Chat Completions API Request Types', () => {
       expect(parsed.mcp_servers).toBeDefined();
       expect(parsed.mcp_servers).toHaveLength(1);
       expect(parsed.mcp_servers![0].type).toBe('url');
-      expect(parsed.mcp_servers![0].url).toBe('https://example-server.modelcontextprotocol.io/sse');
+      expect(parsed.mcp_servers![0].url).toBe(
+        'https://example-server.modelcontextprotocol.io/sse',
+      );
       expect(parsed.mcp_servers![0].name).toBe('example-mcp');
       expect(parsed.mcp_servers![0].authorization_token).toBe('YOUR_TOKEN');
     });
@@ -716,7 +718,9 @@ describe('Chat Completions API Request Types', () => {
       const parsed = ChatCompletionRequestBody.parse(request);
       expect(parsed.mcp_servers).toHaveLength(1);
       expect(parsed.mcp_servers![0].type).toBe('url');
-      expect(parsed.mcp_servers![0].url).toBe('https://minimal-server.modelcontextprotocol.io/sse');
+      expect(parsed.mcp_servers![0].url).toBe(
+        'https://minimal-server.modelcontextprotocol.io/sse',
+      );
       expect(parsed.mcp_servers![0].name).toBeUndefined();
       expect(parsed.mcp_servers![0].authorization_token).toBeUndefined();
     });
