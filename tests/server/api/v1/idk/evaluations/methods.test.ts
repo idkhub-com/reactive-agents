@@ -315,7 +315,7 @@ describe('Evaluation Methods API', () => {
       const data = await res.json();
 
       expect(Array.isArray(data)).toBe(true);
-      expect(data).toHaveLength(8);
+      expect(data).toHaveLength(9);
 
       // Check that all expected methods are included
       // biome-ignore lint/suspicious/noExplicitAny: Union types from Hono API responses require any for test assertions
