@@ -315,7 +315,7 @@ describe('Evaluation Methods API', () => {
       const data = await res.json();
 
       expect(Array.isArray(data)).toBe(true);
-      expect(data).toHaveLength(9);
+      expect(data).toHaveLength(10);
 
       // Check that all expected methods are included
       // biome-ignore lint/suspicious/noExplicitAny: Union types from Hono API responses require any for test assertions
@@ -325,6 +325,13 @@ describe('Evaluation Methods API', () => {
       expect(methodNames).toContain(EvaluationMethodName.ROLE_ADHERENCE);
       expect(methodNames).toContain(EvaluationMethodName.TURN_RELEVANCY);
       expect(methodNames).toContain(EvaluationMethodName.TOOL_CORRECTNESS);
+      expect(methodNames).toContain(EvaluationMethodName.KNOWLEDGE_RETENTION);
+      expect(methodNames).toContain(
+        EvaluationMethodName.CONVERSATION_COMPLETENESS,
+      );
+      expect(methodNames).toContain(EvaluationMethodName.ANSWER_RELEVANCY);
+      expect(methodNames).toContain(EvaluationMethodName.CONTEXTUAL_PRECISION);
+      expect(methodNames).toContain(EvaluationMethodName.FAITHFULNESS);
 
       // Check structure of each method
       // biome-ignore lint/suspicious/noExplicitAny: Union types from Hono API responses require any for test assertions

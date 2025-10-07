@@ -1,5 +1,6 @@
 import { AnswerRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/answer-relevancy';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
+import { ContextualPrecisionEvaluationParameters } from '@shared/types/idkhub/evaluations/contextual-precision';
 import { FaithfulnessEvaluationParameters } from '@shared/types/idkhub/evaluations/faithfulness';
 import { z } from 'zod';
 import { ConversationCompletenessEvaluationParameters } from './conversation-completeness';
@@ -19,6 +20,7 @@ export enum EvaluationMethodName {
   CONVERSATION_COMPLETENESS = 'conversation_completeness',
   ANSWER_RELEVANCY = 'answer_relevancy',
   FAITHFULNESS = 'faithfulness',
+  CONTEXTUAL_PRECISION = 'contextual_precision',
 }
 
 export const EvaluationMethodDetails = z.object({
@@ -38,6 +40,7 @@ export const EvaluationMethodParameters = z.union([
   ConversationCompletenessEvaluationParameters,
   AnswerRelevancyEvaluationParameters,
   FaithfulnessEvaluationParameters,
+  ContextualPrecisionEvaluationParameters,
 ]);
 export type EvaluationMethodParameters = z.infer<
   typeof EvaluationMethodParameters
