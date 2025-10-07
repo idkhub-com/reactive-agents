@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 
+import { answerRelevancyEvaluationConnector } from '@server/connectors/evaluations/answer-relevancy';
 import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
@@ -34,6 +35,7 @@ const evaluationConnectors: Record<
   [EvaluationMethodName.TOOL_CORRECTNESS]: toolCorrectnessEvaluationConnector,
   [EvaluationMethodName.CONVERSATION_COMPLETENESS]:
     conversationCompletenessEvaluationConnector,
+  [EvaluationMethodName.ANSWER_RELEVANCY]: answerRelevancyEvaluationConnector,
 };
 
 // Dynamically generate evaluation methods from attached connectors
