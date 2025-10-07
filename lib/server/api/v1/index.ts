@@ -6,6 +6,7 @@ import { responsesRouter } from '@server/api/v1/responses';
 import { answerRelevancyEvaluationConnector } from '@server/connectors/evaluations/answer-relevancy';
 import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
+import { faithfulnessEvaluationConnector } from '@server/connectors/evaluations/faithfulness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
 import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
@@ -65,6 +66,7 @@ app.use(
     answerRelevancyEvaluationConnector,
     argumentCorrectnessEvaluationConnector,
     conversationCompletenessEvaluationConnector,
+    faithfulnessEvaluationConnector,
     knowledgeRetentionEvaluationConnector,
     roleAdherenceEvaluationConnector,
     taskCompletionEvaluationConnector,

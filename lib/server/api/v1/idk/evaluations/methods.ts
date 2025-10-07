@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { answerRelevancyEvaluationConnector } from '@server/connectors/evaluations/answer-relevancy';
 import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
+import { faithfulnessEvaluationConnector } from '@server/connectors/evaluations/faithfulness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
 import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
@@ -36,6 +37,7 @@ const evaluationConnectors: Record<
   [EvaluationMethodName.CONVERSATION_COMPLETENESS]:
     conversationCompletenessEvaluationConnector,
   [EvaluationMethodName.ANSWER_RELEVANCY]: answerRelevancyEvaluationConnector,
+  [EvaluationMethodName.FAITHFULNESS]: faithfulnessEvaluationConnector,
 };
 
 // Dynamically generate evaluation methods from attached connectors
