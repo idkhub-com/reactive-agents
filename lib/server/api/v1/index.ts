@@ -5,6 +5,7 @@ import { idkRouter } from '@server/api/v1/idk';
 import { responsesRouter } from '@server/api/v1/responses';
 import { answerRelevancyEvaluationConnector } from '@server/connectors/evaluations/answer-relevancy';
 import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
+import { contextualPrecisionEvaluationConnector } from '@server/connectors/evaluations/contextual-precision';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
 import { faithfulnessEvaluationConnector } from '@server/connectors/evaluations/faithfulness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
@@ -66,6 +67,7 @@ app.use(
     answerRelevancyEvaluationConnector,
     argumentCorrectnessEvaluationConnector,
     conversationCompletenessEvaluationConnector,
+    contextualPrecisionEvaluationConnector,
     faithfulnessEvaluationConnector,
     knowledgeRetentionEvaluationConnector,
     roleAdherenceEvaluationConnector,
