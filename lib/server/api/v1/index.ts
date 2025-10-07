@@ -3,6 +3,7 @@ import { completionsRouter } from '@server/api/v1/completions';
 import { embeddingsRouter } from '@server/api/v1/embeddings';
 import { idkRouter } from '@server/api/v1/idk';
 import { responsesRouter } from '@server/api/v1/responses';
+import { answerRelevancyEvaluationConnector } from '@server/connectors/evaluations/answer-relevancy';
 import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
@@ -61,6 +62,7 @@ app.use('*', hooksMiddleware(factory, []));
 app.use(
   '*',
   evaluationMethodConnectors(factory, [
+    answerRelevancyEvaluationConnector,
     argumentCorrectnessEvaluationConnector,
     conversationCompletenessEvaluationConnector,
     knowledgeRetentionEvaluationConnector,
