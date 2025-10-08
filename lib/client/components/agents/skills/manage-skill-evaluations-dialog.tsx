@@ -75,18 +75,23 @@ export function ManageSkillEvaluationsDialog({
     isLoading,
   } = useSkillOptimizationEvaluations();
 
+  const [initialMethods, setInitialMethods] = useState<EvaluationMethodName[]>(
+    [],
+  );
   const [selectedMethods, setSelectedMethods] = useState<
     EvaluationMethodName[]
   >([]);
   const [evaluationMap, setEvaluationMap] = useState<
     Map<EvaluationMethodName, SkillOptimizationEvaluation>
   >(new Map());
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch evaluations when dialog opens
   useEffect(() => {
     if (open && skillId) {
       // Reset state before fetching
       setSelectedMethods([]);
+      setInitialMethods([]);
       setEvaluationMap(new Map());
       fetchEvaluations(skillId);
     }
@@ -112,34 +117,67 @@ export function ManageSkillEvaluationsDialog({
     console.log('ManageEvaluationsDialog - Setting selected methods:', methods);
     setEvaluationMap(map);
     setSelectedMethods(methods);
+    setInitialMethods(methods);
   }, [evaluations, open]);
 
-  const handleToggleMethod = async (method: EvaluationMethodName) => {
+  const handleToggleMethod = (method: EvaluationMethodName) => {
     const isCurrentlySelected = selectedMethods.includes(method);
 
     if (isCurrentlySelected) {
-      // Remove method
-      const evaluation = evaluationMap.get(method);
-      if (evaluation) {
-        try {
-          await deleteEvaluation(skillId, evaluation.id);
-          setSelectedMethods((prev) => prev.filter((m) => m !== method));
-        } catch (error) {
-          console.error('Failed to delete evaluation:', error);
-        }
-      }
+      setSelectedMethods((prev) => prev.filter((m) => m !== method));
     } else {
-      // Add method
-      try {
-        await createEvaluation(skillId, [method]);
-        setSelectedMethods((prev) => [...prev, method]);
-      } catch (error) {
-        console.error('Failed to create evaluation:', error);
-      }
+      setSelectedMethods((prev) => [...prev, method]);
     }
   };
 
-  const isProcessing = isCreating || isDeleting;
+  const handleAccept = async () => {
+    setIsSaving(true);
+    try {
+      // Determine what to add and what to remove
+      const methodsToAdd = selectedMethods.filter(
+        (method) => !initialMethods.includes(method),
+      );
+      const methodsToRemove = initialMethods.filter(
+        (method) => !selectedMethods.includes(method),
+      );
+
+      // Delete evaluations that were removed
+      const deletePromises = methodsToRemove.map(async (method) => {
+        const evaluation = evaluationMap.get(method);
+        if (evaluation) {
+          await deleteEvaluation(skillId, evaluation.id);
+        }
+      });
+
+      // Create evaluations that were added
+      const createPromises =
+        methodsToAdd.length > 0
+          ? [createEvaluation(skillId, methodsToAdd)]
+          : [];
+
+      // Execute all operations in parallel
+      await Promise.all([...deletePromises, ...createPromises]);
+
+      // Close dialog on success
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to save evaluation changes:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset to initial state
+    setSelectedMethods(initialMethods);
+    onOpenChange(false);
+  };
+
+  const hasChanges =
+    JSON.stringify([...selectedMethods].sort()) !==
+    JSON.stringify([...initialMethods].sort());
+
+  const isProcessing = isCreating || isDeleting || isSaving;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,10 +247,20 @@ export function ManageSkillEvaluationsDialog({
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             disabled={isProcessing}
           >
-            Close
+            Cancel
+          </Button>
+          <Button onClick={handleAccept} disabled={!hasChanges || isProcessing}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Accept'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

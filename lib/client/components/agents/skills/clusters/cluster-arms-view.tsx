@@ -12,6 +12,8 @@ import {
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
+import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useArms } from '@client/providers/skill-optimization-arms';
 import { useClusters } from '@client/providers/skill-optimization-clusters';
@@ -19,7 +21,7 @@ import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimiza
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 
 export function ClusterArmsView(): ReactElement {
   const { navigationState, navigateToArmDetail } = useNavigation();
@@ -29,11 +31,22 @@ export function ClusterArmsView(): ReactElement {
   const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
     useArms();
   const { clusters } = useClusters();
+  const { skillModels, setSkillId: setModelsSkillId } = useModels();
+  const { getAPIKeyById } = useAIProviderAPIKeys();
 
-  // Add original index to arms (stays static per load)
-  const armsWithIndex = useMemo(
-    () => arms.map((arm, index) => ({ ...arm, originalIndex: index + 1 })),
-    [arms],
+  // Helper function to get model and provider info for an arm
+  const getArmMetadata = useCallback(
+    (modelId: string) => {
+      const model = skillModels.find((m) => m.id === modelId);
+      if (!model) return { modelName: 'Unknown', providerName: 'Unknown' };
+
+      const apiKey = getAPIKeyById(model.ai_provider_api_key_id);
+      return {
+        modelName: model.model_name,
+        providerName: apiKey?.ai_provider || 'Unknown',
+      };
+    },
+    [skillModels, getAPIKeyById],
   );
 
   // Find the current cluster
@@ -48,10 +61,12 @@ export function ClusterArmsView(): ReactElement {
   useEffect(() => {
     if (!selectedSkill) {
       setSkillId(null);
+      setModelsSkillId(null);
       return;
     }
     setSkillId(selectedSkill.id);
-  }, [selectedSkill, setSkillId]);
+    setModelsSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillId, setModelsSkillId]);
 
   useEffect(() => {
     if (!clusterId) {
@@ -138,7 +153,7 @@ export function ClusterArmsView(): ReactElement {
                 </CardContent>
               </Card>
             </div>
-          ) : armsWithIndex.length === 0 ? (
+          ) : arms.length === 0 ? (
             <div className="col-span-full">
               <Card>
                 <CardContent className="pt-6 text-center">
@@ -151,79 +166,106 @@ export function ClusterArmsView(): ReactElement {
               </Card>
             </div>
           ) : (
-            armsWithIndex
+            arms
               .slice()
               .sort((a, b) => b.stats.mean - a.stats.mean)
-              .map((arm, index) => (
-                <Card
-                  key={arm.id}
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() =>
-                    navigateToArmDetail(
-                      selectedAgent.name,
-                      selectedSkill.name,
-                      clusterId,
-                      arm.id,
-                    )
-                  }
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Arm #{arm.originalIndex}
-                    </CardTitle>
-                    <CardDescription>
-                      Rank: {index + 1} | ID: {arm.id.slice(0, 8)}...
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-sm font-medium mb-2">
-                          Statistics
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              Pulls
-                            </span>
-                            <Badge variant="secondary">{arm.stats.n}</Badge>
+              .map((arm, index) => {
+                const { modelName, providerName } = getArmMetadata(
+                  arm.params.model_id,
+                );
+                return (
+                  <Card
+                    key={arm.id}
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() =>
+                      navigateToArmDetail(
+                        selectedAgent.name,
+                        selectedSkill.name,
+                        clusterId,
+                        arm.id,
+                      )
+                    }
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-lg">{arm.name}</CardTitle>
+                      <CardDescription>
+                        Rank: {index + 1} | ID: {arm.id.slice(0, 8)}...
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-sm font-medium mb-2">
+                            Configuration
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              Mean
-                            </span>
-                            <Badge variant="outline">
-                              {arm.stats.mean.toFixed(3)}
-                            </Badge>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                Provider
+                              </span>
+                              <Badge variant="secondary">{providerName}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                Model
+                              </span>
+                              <Badge variant="outline">{modelName}</Badge>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div>
-                        <div className="text-sm font-medium mb-2">
-                          Parameters
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Temp</span>
-                            <span>
-                              {arm.params.temperature_min.toFixed(2)}-
-                              {arm.params.temperature_max.toFixed(2)}
-                            </span>
+                        <div>
+                          <div className="text-sm font-medium mb-2">
+                            Statistics
                           </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Top P</span>
-                            <span>
-                              {arm.params.top_p_min.toFixed(2)}-
-                              {arm.params.top_p_max.toFixed(2)}
-                            </span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                Pulls
+                              </span>
+                              <Badge variant="secondary">{arm.stats.n}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                Mean
+                              </span>
+                              <Badge variant="outline">
+                                {arm.stats.mean.toFixed(3)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm font-medium mb-2">
+                            Parameters
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                Temp
+                              </span>
+                              <span>
+                                {arm.params.temperature_min.toFixed(2)}-
+                                {arm.params.temperature_max.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                Top P
+                              </span>
+                              <span>
+                                {arm.params.top_p_min.toFixed(2)}-
+                                {arm.params.top_p_max.toFixed(2)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
           )}
         </div>
       </div>

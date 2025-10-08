@@ -180,7 +180,7 @@ async function processLogs({
     console.error(error);
   }
 
-  // Trigger realtime evaluations if conditions are met
+  // Trigger evaluations if conditions are met
   if (
     shouldTriggerRealtimeEvaluation(status, url) &&
     userDataStorageConnector &&

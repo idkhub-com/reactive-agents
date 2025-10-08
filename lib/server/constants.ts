@@ -45,3 +45,11 @@ export const AI_PROVIDER_API_KEY_ENCRYPTION_KEY =
   'default-32-byte-key-change-in-prod';
 
 export const EMBEDDINGS_DIMENSIONS = 1536;
+
+export const UNSUPPORTED_TEMPERATURE_MODELS = [
+  'gpt-5',
+  'gpt-5-mini',
+  'gpt-5-nano',
+];
+
+export const UNSUPPORTED_TOP_P_MODELS = ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'];

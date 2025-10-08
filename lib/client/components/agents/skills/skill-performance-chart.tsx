@@ -102,7 +102,7 @@ export function SkillPerformanceChart({
         const color = METHOD_COLORS[method] || 'rgb(148, 163, 184)';
 
         // Show points when there's only one data point (can't draw a line with one point)
-        const hasOnlyOnePoint = sortedHours.length === 1;
+        const hasOnlyOnePoint = data.filter((d) => d !== null).length === 1;
 
         return {
           label: formatMethodName(method),
@@ -110,7 +110,7 @@ export function SkillPerformanceChart({
           borderColor: color,
           backgroundColor: color,
           borderWidth: 2,
-          pointRadius: hasOnlyOnePoint ? 4 : 0,
+          pointRadius: hasOnlyOnePoint ? 2 : 0,
           pointHoverRadius: 6,
           pointHoverBorderWidth: 2,
           tension: 0.3,

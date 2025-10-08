@@ -309,8 +309,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
         const skill = skills[0];
 
-        const createParamsList = [];
-        for (const method of methods) {
+        const createParamsPromises = methods.map(async (method) => {
           const evaluationConnector = evaluationConnectorsMap[method];
           if (!evaluationConnector) {
             throw new Error(
@@ -324,8 +323,10 @@ export const skillsRouter = new Hono<AppEnv>()
             method,
           );
 
-          createParamsList.push(createParams);
-        }
+          return createParams;
+        });
+
+        const createParamsList = await Promise.all(createParamsPromises);
 
         const createdEvaluations =
           await userDataStorageConnector.createSkillOptimizationEvaluations(

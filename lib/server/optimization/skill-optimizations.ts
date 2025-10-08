@@ -52,11 +52,11 @@ export async function handleGenerateArms(
 
   const numberOfSystemPrompts = skill.num_system_prompts;
 
-  const systemPrompts = [];
+  const systemPromptPromises = [];
   for (let i = 0; i < numberOfSystemPrompts; i++) {
-    const systemPrompt = await generateSystemPromptForSkill(skill);
-    systemPrompts.push(systemPrompt);
+    systemPromptPromises.push(generateSystemPromptForSkill(skill));
   }
+  const systemPrompts = await Promise.all(systemPromptPromises);
 
   const createParamsList: SkillOptimizationArmCreateParams[] = [];
 

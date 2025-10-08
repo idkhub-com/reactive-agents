@@ -100,7 +100,7 @@ export function ClusterPerformanceChart({
         const color = METHOD_COLORS[method] || 'rgb(148, 163, 184)';
 
         // Show points when there's only one data point (can't draw a line with one point)
-        const hasOnlyOnePoint = sortedHours.length === 1;
+        const hasOnlyOnePoint = data.filter((d) => d !== null).length === 1;
 
         return {
           label: formatMethodName(method),
@@ -108,7 +108,7 @@ export function ClusterPerformanceChart({
           borderColor: color,
           backgroundColor: color,
           borderWidth: 2,
-          pointRadius: hasOnlyOnePoint ? 1 : 0,
+          pointRadius: hasOnlyOnePoint ? 2 : 0,
           pointHoverRadius: 4,
           pointHoverBorderWidth: 2,
           tension: 0.3,

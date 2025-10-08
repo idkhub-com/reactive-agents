@@ -68,7 +68,7 @@ export async function autoClusterSkill(
     return;
   }
 
-  const interval = 5;
+  const interval = 15;
 
   const logs = await logsStorageConnector.getLogs({
     skill_id: skill.id,

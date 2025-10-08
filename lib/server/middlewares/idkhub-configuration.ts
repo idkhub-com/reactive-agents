@@ -349,6 +349,7 @@ export const idkHubConfigurationInjectorMiddleware = createMiddleware(
           ),
         );
 
+        // In case of an error return a response
         for (const idkTargetOrResponse of idkTargetsOrResponses) {
           if (idkTargetOrResponse instanceof Response) {
             return idkTargetOrResponse;
