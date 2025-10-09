@@ -13,7 +13,7 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useNavigation } from '@client/providers/navigation';
-import { useArms } from '@client/providers/skill-optimization-arms';
+import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
@@ -24,7 +24,7 @@ export function ArmDetailView(): ReactElement {
   const goBack = useSmartBack();
 
   const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
-    useArms();
+    useSkillOptimizationArms();
 
   // Set skill ID and cluster ID when they change
   useEffect(() => {

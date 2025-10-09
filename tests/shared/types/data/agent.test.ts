@@ -26,6 +26,7 @@ describe('Agent Data Transforms and Validation', () => {
     it('should default metadata to empty object', () => {
       const inputData = {
         name: 'Test Agent',
+        description: 'A test agent',
       };
 
       const result = AgentCreateParams.parse(inputData);
@@ -42,6 +43,7 @@ describe('Agent Data Transforms and Validation', () => {
 
       const inputData = {
         name: 'Test Agent',
+        description: 'A test agent',
         metadata: customMetadata,
       };
 
@@ -50,26 +52,20 @@ describe('Agent Data Transforms and Validation', () => {
       expect(result.metadata).toEqual(customMetadata);
     });
 
-    it('should accept null description', () => {
-      const inputData = {
+    it('should require description field', () => {
+      const inputDataWithNull = {
         name: 'Test Agent',
         description: null,
       };
 
-      const result = AgentCreateParams.parse(inputData);
+      expect(() => AgentCreateParams.parse(inputDataWithNull)).toThrow();
 
-      expect(result.description).toBeNull();
-    });
-
-    it('should accept undefined description', () => {
-      const inputData = {
+      const inputDataWithUndefined = {
         name: 'Test Agent',
         description: undefined,
       };
 
-      const result = AgentCreateParams.parse(inputData);
-
-      expect(result.description).toBeUndefined();
+      expect(() => AgentCreateParams.parse(inputDataWithUndefined)).toThrow();
     });
 
     it('should prevent users from overriding id field (strict mode)', () => {
@@ -150,7 +146,7 @@ describe('Agent Data Transforms and Validation', () => {
 
       const inputData = {
         name: 'Test Agent',
-
+        description: 'A test agent',
         metadata: complexMetadata,
       };
 
@@ -411,8 +407,8 @@ describe('Agent Data Transforms and Validation', () => {
       expect(() => Agent.parse(invalidAgent)).toThrow();
     });
 
-    it('should accept null description', () => {
-      const validAgent = {
+    it('should require non-null description', () => {
+      const invalidAgent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'Test Agent',
         description: null,
@@ -422,8 +418,7 @@ describe('Agent Data Transforms and Validation', () => {
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      const result = Agent.parse(validAgent);
-      expect(result.description).toBeNull();
+      expect(() => Agent.parse(invalidAgent)).toThrow();
     });
 
     it('should handle complex metadata objects', () => {

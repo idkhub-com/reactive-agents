@@ -1,5 +1,4 @@
 import { feedbacksRouter } from '@server/api/v1/idk/feedbacks';
-import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppEnv } from '@server/types/hono';
 import type { Feedback } from '@shared/types/data/feedback';
 import { Hono } from 'hono';
@@ -13,36 +12,56 @@ import {
 } from 'vitest';
 
 // Create a mock UserDataStorageConnector with all required methods
-const mockUserDataStorageConnector: UserDataStorageConnector = {
+const mockUserDataStorageConnector = {
   // Feedback methods
   getFeedback: vi.fn(),
   createFeedback: vi.fn(),
   deleteFeedback: vi.fn(),
-  // Improved response methods (required by interface)
+  // Improved response methods
   getImprovedResponse: vi.fn(),
   createImprovedResponse: vi.fn(),
   updateImprovedResponse: vi.fn(),
   deleteImprovedResponse: vi.fn(),
-  // Agent methods (required by interface)
+  // Agent methods
   getAgents: vi.fn(),
   createAgent: vi.fn(),
   updateAgent: vi.fn(),
   deleteAgent: vi.fn(),
-  // Skill methods (required by interface)
+  // Skill methods
   getSkills: vi.fn(),
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
-  // Skill configuration methods
+  // System prompt methods
+  getSystemPrompts: vi.fn(),
+  createSystemPrompt: vi.fn(),
+  updateSystemPrompt: vi.fn(),
+  deleteSystemPrompt: vi.fn(),
+  // Skill Optimization Cluster methods
   getSkillOptimizationClusters: vi.fn(),
-  createSkillOptimizationCluster: vi.fn(),
-  updateSkillConfiguration: vi.fn(),
-  deleteSkillOptimization: vi.fn(),
-  // Tool methods (required by interface)
+  createSkillOptimizationClusters: vi.fn(),
+  updateSkillOptimizationCluster: vi.fn(),
+  deleteSkillOptimizationCluster: vi.fn(),
+  // Skill Optimization Arm methods
+  getSkillOptimizationArms: vi.fn(),
+  createSkillOptimizationArms: vi.fn(),
+  updateSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArmsForSkill: vi.fn(),
+  // Skill Optimization Evaluation methods
+  getSkillOptimizationEvaluations: vi.fn(),
+  createSkillOptimizationEvaluations: vi.fn(),
+  deleteSkillOptimizationEvaluation: vi.fn(),
+  deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+  // Skill Optimization Evaluation Run methods
+  getSkillOptimizationEvaluationRuns: vi.fn(),
+  createSkillOptimizationEvaluationRun: vi.fn(),
+  deleteSkillOptimizationEvaluationRun: vi.fn(),
+  // Tool methods
   getTools: vi.fn(),
   createTool: vi.fn(),
   deleteTool: vi.fn(),
-  // Dataset methods (required by interface)
+  // Dataset methods
   getDatasets: vi.fn(),
   createDataset: vi.fn(),
   updateDataset: vi.fn(),
@@ -54,7 +73,7 @@ const mockUserDataStorageConnector: UserDataStorageConnector = {
   getDatasetLogs: vi.fn(),
   addLogsToDataset: vi.fn(),
   removeLogsFromDataset: vi.fn(),
-  // Evalution run methods
+  // Evaluation run methods
   getEvaluationRuns: vi.fn(),
   createEvaluationRun: vi.fn(),
   updateEvaluationRun: vi.fn(),
@@ -70,18 +89,16 @@ const mockUserDataStorageConnector: UserDataStorageConnector = {
   updateAIProviderAPIKey: vi.fn(),
   deleteAIProviderAPIKey: vi.fn(),
   // Model methods
-  getSkillModels: vi.fn(),
+  getModels: vi.fn(),
   getModelById: vi.fn(),
   createModel: vi.fn(),
   updateModel: vi.fn(),
   deleteModel: vi.fn(),
   // Skill-Model relationship methods
   getSkillModels: vi.fn(),
-  getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
 };
-
 // Type the mocked functions
 const mockGetFeedback =
   mockUserDataStorageConnector.getFeedback as MockedFunction<

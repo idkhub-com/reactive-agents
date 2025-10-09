@@ -555,7 +555,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
 ): Promise<SkillOptimizationEvaluationResult> {
-  const params = TurnRelevancyEvaluationParameters.parse(evaluation.metadata);
+  const params = TurnRelevancyEvaluationParameters.parse(evaluation.params);
 
   const llmJudge = createLLMJudge({
     model: params.model,

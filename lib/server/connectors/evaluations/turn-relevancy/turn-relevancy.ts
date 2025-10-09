@@ -19,7 +19,7 @@ const methodConfig: EvaluationMethodDetails = {
     'Evaluates whether a conversation turn is relevant to the prior context',
 } as const;
 
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -44,7 +44,6 @@ async function runEvaluation(
 
 export const turnRelevancyEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => methodConfig,
-  evaluate: runEvaluation,
   evaluateLog,
   getParameterSchema: TurnRelevancyEvaluationParameters,
 };

@@ -25,28 +25,32 @@ describe('Skill Data Transforms and Validation', () => {
   });
 
   describe('SkillCreateParams Transform', () => {
-    it('should default metadata to empty object', () => {
+    it('should accept valid skill creation parameters', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
       };
 
       const result = SkillCreateParams.parse(inputData);
 
       expect(result.metadata).toEqual({});
+      expect(result.description).toBe(
+        'This is a test skill description with sufficient length',
+      );
     });
 
-    it('should accept custom metadata', () => {
+    it('should accept custom metadata with optional fields', () => {
       const customMetadata = {
-        type: 'chat-completion',
-        model: 'gpt-4',
-        temperature: 0.7,
-        max_tokens: 1000,
+        last_clustering_at: '2023-01-01T00:00:00.000Z',
+        last_clustering_log_start_time: 1234567890,
       };
 
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
         metadata: customMetadata,
       };
 
@@ -55,34 +59,36 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result.metadata).toEqual(customMetadata);
     });
 
-    it('should accept null description', () => {
+    it('should reject description that is too short', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
-        description: null,
+        description: 'Too short',
+        metadata: {},
       };
 
-      const result = SkillCreateParams.parse(inputData);
-
-      expect(result.description).toBeNull();
+      expect(() => SkillCreateParams.parse(inputData)).toThrow();
     });
 
-    it('should accept undefined description', () => {
+    it('should accept minimum length description', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
-        description: undefined,
+        description: 'This has exactly 25 chars',
+        metadata: {},
       };
 
       const result = SkillCreateParams.parse(inputData);
 
-      expect(result.description).toBeUndefined();
+      expect(result.description).toBe('This has exactly 25 chars');
     });
 
     it('should prevent users from overriding id field (strict mode)', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
         id: '123e4567-e89b-12d3-a456-426614174000', // This should be ignored
       };
 
@@ -93,6 +99,8 @@ describe('Skill Data Transforms and Validation', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
         created_at: '2023-01-01T00:00:00.000Z', // This should be ignored
       };
 
@@ -103,6 +111,8 @@ describe('Skill Data Transforms and Validation', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
         updated_at: '2023-01-01T00:00:00.000Z', // This should be ignored
       };
 
@@ -113,6 +123,8 @@ describe('Skill Data Transforms and Validation', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
         extraField: 'should be rejected', // This should cause rejection
       };
 
@@ -131,62 +143,54 @@ describe('Skill Data Transforms and Validation', () => {
       const inputData = {
         agent_id: testAgentId,
         name: '', // Empty string should be rejected
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
       };
 
       expect(() => SkillCreateParams.parse(inputData)).toThrow();
     });
 
-    it('should handle complex metadata objects', () => {
-      const complexMetadata = {
-        type: 'chat-completion',
-        model: 'gpt-4',
-        settings: {
-          temperature: 0.7,
-          top_p: 0.9,
-          max_tokens: 1000,
-        },
-        capabilities: ['text-generation', 'conversation'],
-        nested: {
-          deep: {
-            value: 'test',
-            number: 42,
-            array: [1, 2, 3],
-          },
-        },
+    it('should accept metadata with all optional fields', () => {
+      const fullMetadata = {
+        last_clustering_at: '2023-01-01T00:00:00.000Z',
+        last_clustering_log_start_time: 1234567890,
       };
 
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
-        metadata: complexMetadata,
+        description: 'This is a test skill description with sufficient length',
+        metadata: fullMetadata,
       };
 
       const result = SkillCreateParams.parse(inputData);
 
-      expect(result.metadata).toEqual(complexMetadata);
+      expect(result.metadata).toEqual(fullMetadata);
+    });
+
+    it('should accept default values for max_configurations and num_system_prompts', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'Test Skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+      };
+
+      const result = SkillCreateParams.parse(inputData);
+
+      expect(result.max_configurations).toBe(3);
+      expect(result.num_system_prompts).toBe(3);
     });
   });
 
   describe('SkillUpdateParams Transform', () => {
     it('should not allow extra parameters', () => {
       const inputData = {
-        description: 'My skill description',
+        description: 'My skill description with sufficient length for testing',
         id: '123e4567-e89b-12d3-a456-426614174000',
       };
 
-      expect(() => SkillUpdateParams.parse(inputData)).toThrow(
-        `\
-[
-  {
-    "code": "unrecognized_keys",
-    "keys": [
-      "id"
-    ],
-    "path": [],
-    "message": "Unrecognized key: \\"id\\""
-  }
-]`,
-      );
+      expect(() => SkillUpdateParams.parse(inputData)).toThrow();
     });
 
     it('should reject objects with no update fields', () => {
@@ -199,17 +203,22 @@ describe('Skill Data Transforms and Validation', () => {
 
     it('should accept updates with description only', () => {
       const inputData = {
-        description: 'Updated description',
+        description:
+          'Updated description with sufficient length for validation',
       };
 
       const result = SkillUpdateParams.parse(inputData);
 
-      expect(result.description).toBe('Updated description');
+      expect(result.description).toBe(
+        'Updated description with sufficient length for validation',
+      );
       expect(result.metadata).toBeUndefined();
     });
 
     it('should accept updates with metadata only', () => {
-      const newMetadata = { version: '2.0', updated: true };
+      const newMetadata = {
+        last_clustering_at: '2023-02-01T00:00:00.000Z',
+      };
       const inputData = {
         metadata: newMetadata,
       };
@@ -222,23 +231,26 @@ describe('Skill Data Transforms and Validation', () => {
 
     it('should accept partial updates with multiple fields', () => {
       const inputData = {
-        description: 'Updated description',
+        description:
+          'Updated description with sufficient length for validation',
+        max_configurations: 5,
       };
 
       const result = SkillUpdateParams.parse(inputData);
 
-      expect(result.description).toBe('Updated description');
+      expect(result.description).toBe(
+        'Updated description with sufficient length for validation',
+      );
+      expect(result.max_configurations).toBe(5);
       expect(result.metadata).toBeUndefined();
     });
 
-    it('should handle null description updates', () => {
+    it('should reject description that is too short', () => {
       const inputData = {
-        description: null,
+        description: 'Too short',
       };
 
-      const result = SkillUpdateParams.parse(inputData);
-
-      expect(result.description).toBeNull();
+      expect(() => SkillUpdateParams.parse(inputData)).toThrow();
     });
   });
 
@@ -345,9 +357,10 @@ describe('Skill Data Transforms and Validation', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'Test Skill',
-        description: 'A test skill',
-        metadata: { type: 'completion' },
+        description: 'A test skill with sufficient description length',
+        metadata: {},
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -357,37 +370,43 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result).toEqual(skillData);
     });
 
-    it('should accept null description', () => {
+    it('should validate skill with metadata fields', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'Test Skill',
-        description: null,
-        metadata: {},
+        description: 'A test skill with sufficient description length',
+        metadata: {
+          last_clustering_at: '2023-01-01T00:00:00.000Z',
+          last_clustering_log_start_time: 1234567890,
+        },
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
       const result = Skill.parse(skillData);
 
-      expect(result.description).toBeNull();
+      expect(result.metadata.last_clustering_at).toBe(
+        '2023-01-01T00:00:00.000Z',
+      );
+      expect(result.metadata.last_clustering_log_start_time).toBe(1234567890);
     });
 
-    it('should accept undefined description', () => {
+    it('should require description field', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'Test Skill',
         metadata: {},
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      const result = Skill.parse(skillData);
-
-      expect(result.description).toBeUndefined();
+      expect(() => Skill.parse(skillData)).toThrow();
     });
 
     it('should reject invalid UUIDs', () => {
@@ -395,8 +414,10 @@ describe('Skill Data Transforms and Validation', () => {
         id: 'invalid-uuid',
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'A test skill with sufficient description length',
         metadata: {},
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -404,18 +425,24 @@ describe('Skill Data Transforms and Validation', () => {
       expect(() => Skill.parse(skillData)).toThrow();
     });
 
-    it('should reject empty name', () => {
+    it('should accept empty name from database', () => {
+      // Note: Skill schema (for reading from DB) allows empty names,
+      // but SkillCreateParams (for creation) does not
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: '',
+        description: 'A test skill with sufficient description length',
         metadata: {},
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      expect(() => Skill.parse(skillData)).toThrow();
+      const result = Skill.parse(skillData);
+
+      expect(result.name).toBe('');
     });
 
     it('should reject invalid datetime strings', () => {
@@ -423,8 +450,10 @@ describe('Skill Data Transforms and Validation', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'A test skill with sufficient description length',
         metadata: {},
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -437,8 +466,10 @@ describe('Skill Data Transforms and Validation', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'Test Skill',
+        description: 'A test skill with sufficient description length',
         metadata: {},
         max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
       };

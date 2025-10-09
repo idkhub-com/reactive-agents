@@ -113,7 +113,7 @@ export async function generateEvaluationCreateParams(
     agent_id: skill.agent_id,
     skill_id: skill.id,
     evaluation_method: method,
-    metadata: structuredOutputResponse as unknown as Record<string, unknown>,
+    params: structuredOutputResponse as unknown as Record<string, unknown>,
   };
 
   return params;

@@ -13,7 +13,7 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useNavigation } from '@client/providers/navigation';
-import { useClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { LayersIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -26,7 +26,8 @@ export function ClustersView(): ReactElement {
   const { selectedSkill, selectedAgent } = navigationState;
   const goBack = useSmartBack();
 
-  const { clusters, isLoading, error, refetch, setSkillId } = useClusters();
+  const { clusters, isLoading, error, refetch, setSkillId } =
+    useSkillOptimizationClusters();
   const { getEvaluationRunsByClusterId, setSkillId: setEvaluationRunsSkillId } =
     useSkillOptimizationEvaluationRuns();
 

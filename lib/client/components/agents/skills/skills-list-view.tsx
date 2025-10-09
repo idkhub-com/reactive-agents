@@ -13,8 +13,6 @@ import {
 import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
-import { useDatasets } from '@client/providers/datasets';
-import { useEvaluationRuns } from '@client/providers/evaluation-runs';
 import { useLogs } from '@client/providers/logs';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
@@ -30,8 +28,6 @@ import { AgentPerformanceChart } from './agent-performance-chart';
 interface SkillStats {
   skillId: string;
   logsCount: number;
-  evaluationsCount: number;
-  datasetsCount: number;
 }
 
 export function SkillsListView(): ReactElement {
@@ -46,9 +42,6 @@ export function SkillsListView(): ReactElement {
     isLoading: isLoadingSkills,
     setQueryParams: setSkillQueryParams,
   } = useSkills();
-  const { evaluationRuns, setQueryParams: setEvaluationQueryParams } =
-    useEvaluationRuns();
-  const { datasets, setQueryParams: setDatasetQueryParams } = useDatasets();
 
   const [skillStats, setSkillStats] = useState<SkillStats[]>([]);
   const [logsBySkill, setLogsBySkill] = useState<Record<string, number>>({});
@@ -74,18 +67,6 @@ export function SkillsListView(): ReactElement {
       limit: 100,
     });
   }, [navigationState.selectedAgent, setSkillQueryParams]);
-
-  // Ensure evaluations and datasets providers filter by the selected agent
-  useEffect(() => {
-    if (!navigationState.selectedAgent) return;
-    const agentId = navigationState.selectedAgent.id;
-    setEvaluationQueryParams({ agent_id: agentId, limit: 100, offset: 0 });
-    setDatasetQueryParams({ agent_id: agentId, limit: 100, offset: 0 });
-  }, [
-    navigationState.selectedAgent,
-    setEvaluationQueryParams,
-    setDatasetQueryParams,
-  ]);
 
   // Fetch a recent slice of agent logs via Logs provider and group by skill_id
   const { logs: recentAgentLogs = [], setQueryParams: setLogsQueryParams } =
@@ -120,20 +101,10 @@ export function SkillsListView(): ReactElement {
       skillId: skill.id,
       // Use recent agent logs grouped by skill_id (approximate, not total)
       logsCount: logsBySkill[skill.id] || 0,
-      evaluationsCount: evaluationRuns.filter(
-        (run) => run.skill_id === skill.id,
-      ).length,
-      datasetsCount: datasets.length, // Use provider data
     }));
 
     setSkillStats(stats);
-  }, [
-    skills,
-    evaluationRuns,
-    datasets.length,
-    navigationState.selectedAgent,
-    logsBySkill,
-  ]);
+  }, [skills, navigationState.selectedAgent, logsBySkill]);
 
   const filteredSkills = useMemo(() => {
     if (!searchQuery) return skills;
@@ -149,8 +120,6 @@ export function SkillsListView(): ReactElement {
       skillStats.find((stats) => stats.skillId === skillId) || {
         skillId,
         logsCount: 0,
-        evaluationsCount: 0,
-        datasetsCount: 0,
       }
     );
   };
@@ -303,12 +272,6 @@ export function SkillsListView(): ReactElement {
                   <CardContent>
                     <div className="flex gap-2 flex-wrap">
                       <Badge variant="secondary">{stats.logsCount} logs</Badge>
-                      <Badge variant="secondary">
-                        {stats.evaluationsCount} evaluations
-                      </Badge>
-                      <Badge variant="secondary">
-                        {stats.datasetsCount} datasets
-                      </Badge>
                     </div>
                   </CardContent>
                 </Card>

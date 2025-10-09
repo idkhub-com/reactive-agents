@@ -157,7 +157,6 @@ describe('Knowledge Retention Evaluation', () => {
       expect(result.data.model).toBe('gpt-4o');
       expect(result.data.temperature).toBe(0.1);
       expect(result.data.max_tokens).toBe(1000);
-      expect(result.data.timeout).toBe(3000);
       expect(result.data.include_reason).toBe(true);
       expect(result.data.strict_mode).toBe(false);
       expect(result.data.async_mode).toBe(false);
@@ -258,24 +257,24 @@ describe('Knowledge Retention Evaluation', () => {
     const schema = knowledgeRetentionEvaluationConnector.getParameterSchema;
 
     // Test valid integer values with required threshold
-    expect(schema.safeParse({ threshold: 0.5, timeout: 1000 }).success).toBe(
-      true,
-    );
     expect(schema.safeParse({ threshold: 0.5, batch_size: 10 }).success).toBe(
       true,
     );
     expect(schema.safeParse({ threshold: 0.5, max_tokens: 50 }).success).toBe(
       true,
     );
+    expect(schema.safeParse({ threshold: 0.5, batch_size: 20 }).success).toBe(
+      true,
+    );
 
     // Test invalid integer values
-    expect(schema.safeParse({ threshold: 0.5, timeout: 0 }).success).toBe(
-      false,
-    );
     expect(schema.safeParse({ threshold: 0.5, batch_size: 0 }).success).toBe(
       false,
     );
     expect(schema.safeParse({ threshold: 0.5, max_tokens: 0 }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ threshold: 0.5, batch_size: -1 }).success).toBe(
       false,
     );
   });
@@ -285,17 +284,91 @@ describe('Knowledge Retention Evaluation', () => {
       const evaluationRunId = 'test-evaluation-run-id';
       const mockLog = {
         id: 'test-log-id',
-        input: 'User mentioned they like pizza. Tell me about italian cuisine.',
-        output:
-          'Italian cuisine is diverse. Since you mentioned liking pizza, you might also enjoy pasta dishes.',
+        agent_id: 'test-agent-id',
+        skill_id: 'test-skill-id',
+        method: 'POST',
+        endpoint: '/v1/chat/completions',
+        function_name: 'chat-complete',
+        status: 200,
+        start_time: Date.now(),
+        end_time: Date.now() + 1000,
+        duration: 1000,
+        base_idk_config: {},
+        ai_provider: 'openai',
+        model: 'gpt-4o',
         ai_provider_request_log: {
+          provider: 'openai',
+          function_name: 'create_model_response',
+          method: 'POST',
+          request_url: 'http://localhost:3000/v1/responses',
+          status: 200,
           request_body: {
-            context: 'Previous conversation about food preferences',
+            model: 'gpt-4o',
+            input: [
+              {
+                role: 'user',
+                content:
+                  'User mentioned they like pizza. Tell me about italian cuisine.',
+              },
+            ],
           },
+          response_body: {
+            id: 'resp-123',
+            object: 'response',
+            created_at: Date.now(),
+            error: null,
+            incomplete_details: null,
+            instructions: null,
+            metadata: null,
+            model: 'gpt-4o',
+            output: [
+              {
+                id: 'msg-123',
+                type: 'message',
+                role: 'assistant',
+                content: [
+                  {
+                    annotations: [],
+                    text: 'Italian cuisine is diverse. Since you mentioned liking pizza, you might also enjoy pasta dishes.',
+                    type: 'output_text',
+                  },
+                ],
+              },
+            ],
+            parallel_tool_calls: null,
+            previous_response_id: null,
+            reasoning: null,
+            temperature: null,
+            tools: [],
+            usage: {
+              input_tokens: 10,
+              output_tokens: 20,
+              total_tokens: 30,
+              output_tokens_details: {
+                reasoning_tokens: 0,
+              },
+            },
+            user: null,
+          },
+          raw_request_body: '{}',
+          raw_response_body: '{}',
+          cache_mode: 'enabled',
+          cache_status: 'miss',
         },
+        hook_logs: [],
         metadata: {
           conversation_history: ['User likes pizza'],
         },
+        embedding: null,
+        cache_status: 'miss',
+        trace_id: null,
+        parent_span_id: null,
+        span_id: null,
+        span_name: null,
+        app_id: null,
+        external_user_id: null,
+        external_user_human_name: null,
+        user_metadata: null,
       } as unknown as IdkRequestLog;
 
       // Mock LLM judge response
@@ -329,6 +402,7 @@ describe('Knowledge Retention Evaluation', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockLLMResponse),
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
       });
 
       // Mock evaluation run retrieval
@@ -389,6 +463,7 @@ describe('Knowledge Retention Evaluation', () => {
           },
         },
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       // Mock existing log outputs retrieval
@@ -407,6 +482,7 @@ describe('Knowledge Retention Evaluation', () => {
             },
           },
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
         {
           id: 'new-output-id',
@@ -422,6 +498,7 @@ describe('Knowledge Retention Evaluation', () => {
             },
           },
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 
@@ -484,11 +561,83 @@ describe('Knowledge Retention Evaluation', () => {
       const evaluationRunId = 'test-evaluation-run-id';
       const mockLog = {
         id: 'test-log-id',
-        input: 'What did I tell you earlier?',
-        output: "I'm not sure what you're referring to.",
+        agent_id: 'test-agent-id',
+        skill_id: 'test-skill-id',
+        method: 'POST',
+        endpoint: '/v1/chat/completions',
+        function_name: 'chat-complete',
+        status: 200,
+        start_time: Date.now(),
+        end_time: Date.now() + 1000,
+        duration: 1000,
+        base_idk_config: {},
+        ai_provider: 'openai',
+        model: 'gpt-4o',
         ai_provider_request_log: {
-          request_body: { context: 'Previous conversation context' },
+          provider: 'openai',
+          function_name: 'create_model_response',
+          method: 'POST',
+          request_url: 'http://localhost:3000/v1/responses',
+          status: 200,
+          request_body: {
+            model: 'gpt-4o',
+            input: [{ role: 'user', content: 'What did I tell you earlier?' }],
+          },
+          response_body: {
+            id: 'resp-456',
+            object: 'response',
+            created_at: Date.now(),
+            error: null,
+            incomplete_details: null,
+            instructions: null,
+            metadata: null,
+            model: 'gpt-4o',
+            output: [
+              {
+                id: 'msg-456',
+                type: 'message',
+                role: 'assistant',
+                content: [
+                  {
+                    annotations: [],
+                    text: "I'm not sure what you're referring to.",
+                    type: 'output_text',
+                  },
+                ],
+              },
+            ],
+            parallel_tool_calls: null,
+            previous_response_id: null,
+            reasoning: null,
+            temperature: null,
+            tools: [],
+            usage: {
+              input_tokens: 8,
+              output_tokens: 10,
+              total_tokens: 18,
+              output_tokens_details: {
+                reasoning_tokens: 0,
+              },
+            },
+            user: null,
+          },
+          raw_request_body: '{}',
+          raw_response_body: '{}',
+          cache_mode: 'enabled',
+          cache_status: 'miss',
         },
+        hook_logs: [],
+        metadata: {},
+        embedding: null,
+        cache_status: 'miss',
+        trace_id: null,
+        parent_span_id: null,
+        span_id: null,
+        span_name: null,
+        app_id: null,
+        external_user_id: null,
+        external_user_human_name: null,
+        user_metadata: null,
       } as unknown as IdkRequestLog;
 
       const mockLLMResponse = {
@@ -520,6 +669,7 @@ describe('Knowledge Retention Evaluation', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockLLMResponse),
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
       });
 
       mockedGetEvaluationRuns.mockResolvedValue([
@@ -558,6 +708,7 @@ describe('Knowledge Retention Evaluation', () => {
           },
         },
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       mockedGetLogOutputs.mockResolvedValue([
@@ -575,6 +726,7 @@ describe('Knowledge Retention Evaluation', () => {
             },
           },
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 

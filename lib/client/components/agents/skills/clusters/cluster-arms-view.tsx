@@ -15,8 +15,8 @@ import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
-import { useArms } from '@client/providers/skill-optimization-arms';
-import { useClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
+import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -29,8 +29,8 @@ export function ClusterArmsView(): ReactElement {
   const goBack = useSmartBack();
 
   const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
-    useArms();
-  const { clusters } = useClusters();
+    useSkillOptimizationArms();
+  const { clusters } = useSkillOptimizationClusters();
   const { skillModels, setSkillId: setModelsSkillId } = useModels();
   const { getAPIKeyById } = useAIProviderAPIKeys();
 

@@ -1,4 +1,4 @@
-import type { KnowledgeRetentionEvaluationParameters } from '@server/connectors/evaluations/knowledge-retention/types';
+import type { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
 
 // Default evaluation criteria for knowledge retention
 export const defaultKnowledgeRetentionCriteria = [

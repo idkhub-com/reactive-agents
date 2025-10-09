@@ -1,4 +1,4 @@
-import type { ConversationCompletenessEvaluationParameters } from '@server/connectors/evaluations/conversation-completeness/types';
+import type { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
 
 /**
  * Default evaluation criteria for conversation completeness

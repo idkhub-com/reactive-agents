@@ -23,7 +23,7 @@ const taskCompletionMethodConfig: EvaluationMethodDetails = {
 } as const;
 
 // Dataset evaluation function
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -57,7 +57,6 @@ async function runEvaluation(
 // Evaluation connector constant
 export const taskCompletionEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => taskCompletionMethodConfig,
-  evaluate: runEvaluation,
   evaluateLog,
   getParameterSchema: TaskCompletionEvaluationParameters,
 };

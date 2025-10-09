@@ -318,7 +318,7 @@ export async function evaluateLog(
   log: Log,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params =
-    evaluation.metadata as ConversationCompletenessEvaluationParameters;
+    evaluation.params as ConversationCompletenessEvaluationParameters;
 
   const start_time = Date.now();
 

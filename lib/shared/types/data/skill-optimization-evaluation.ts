@@ -9,7 +9,7 @@ export const SkillOptimizationEvaluation = z.object({
   agent_id: z.uuid(),
   skill_id: z.uuid(),
   evaluation_method: z.enum(EvaluationMethodName),
-  metadata: z.record(z.string(), z.unknown()),
+  params: z.record(z.string(), z.unknown()),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -37,7 +37,7 @@ export const SkillOptimizationEvaluationCreateParams = z
     agent_id: z.uuid(),
     skill_id: z.uuid(),
     evaluation_method: z.enum(EvaluationMethodName),
-    metadata: z.record(z.string(), z.unknown()).default({}),
+    params: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 

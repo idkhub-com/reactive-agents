@@ -20,7 +20,7 @@ const methodConfig: EvaluationMethodDetails = {
     'Evaluates whether an agent generated correct tool call arguments given the input and task using LLM-as-a-judge',
 } as const;
 
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -46,7 +46,6 @@ async function runEvaluation(
 export const argumentCorrectnessEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => methodConfig,
-    evaluate: runEvaluation,
     evaluateLog,
     getParameterSchema: ArgumentCorrectnessEvaluationParameters,
   };

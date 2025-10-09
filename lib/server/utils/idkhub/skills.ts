@@ -19,6 +19,7 @@ export async function getOrCreateSkill(
       description: 'This skill must be set up before it can be optimized.',
       metadata: {},
       max_configurations: 3,
+      num_system_prompts: 0,
     });
     return newSkill;
   }

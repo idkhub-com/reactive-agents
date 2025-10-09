@@ -7,6 +7,7 @@ import {
   IdkTarget,
   IdkTargetPreProcessed,
   NonPrivateIdkConfig,
+  OptimizationType,
   RetrySettings,
   Strategy,
   StrategyModes,
@@ -269,44 +270,46 @@ describe('Request Headers Types', () => {
 
     it('should validate minimal target configuration with configuration_name', () => {
       const target = {
-        configuration_name: 'my-config',
+        optimization: OptimizationType.AUTO,
       };
 
       expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
       const parsed = IdkTargetPreProcessed.parse(target);
-      expect(parsed.configuration_name).toBe('my-config');
+      expect(parsed.optimization).toBe(OptimizationType.AUTO);
       expect(parsed.weight).toBe(1); // default value
     });
 
-    it('should validate target with configuration_name and configuration_version', () => {
+    it('should validate target with optimization and optimization_version', () => {
       const target = {
-        configuration_name: 'my-config',
-        configuration_version: 'abc123',
+        optimization: OptimizationType.AUTO,
+        optimization_version: 1,
       };
 
       expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
       const parsed = IdkTargetPreProcessed.parse(target);
-      expect(parsed.configuration_name).toBe('my-config');
-      expect(parsed.configuration_version).toBe('abc123');
+      expect(parsed.optimization).toBe(OptimizationType.AUTO);
+      expect(parsed.optimization_version).toBe(1);
     });
 
-    it('should reject configuration_version without configuration_name', () => {
+    it('should reject optimization_version without optimization set to auto', () => {
       const target = {
-        configuration_version: 'abc123',
+        provider: AIProvider.OPENAI,
+        model: 'gpt-4',
+        optimization_version: 1,
       };
 
       expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
-        '`configuration_version` is defined, but `configuration_name` is not. Please provide a valid configuration name.',
+        '`optimization_version` is defined, but `optimization` is set to none. Set `optimization` to auto to use an optimization version.',
       );
     });
 
-    it('should reject target without provider or configuration_name', () => {
+    it('should reject target without provider when optimization is not auto', () => {
       const target = {
         api_key: 'test-key',
       };
 
       expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
-        '`provider` or `configuration_name` is required.',
+        '`provider` is required when optimization is not set to auto',
       );
     });
 
@@ -339,8 +342,6 @@ describe('Request Headers Types', () => {
         },
         provider: AIProvider.OPENAI,
         model: 'gpt-4',
-        configuration_name: 'my-openai-config',
-        configuration_version: 'abc123',
         system_prompt_variables: {
           name: 'Assistant',
           role: 'helpful',
@@ -356,7 +357,6 @@ describe('Request Headers Types', () => {
       expect(parsed.id).toBe('openai-target-1');
       expect(parsed.weight).toBe(2);
       expect(parsed.provider).toBe(AIProvider.OPENAI);
-      expect(parsed.configuration_name).toBe('my-openai-config');
       expect(parsed.system_prompt_variables?.name).toBe('Assistant');
       expect(parsed.openai_project).toBe('proj_123');
     });
@@ -376,6 +376,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'sk-test-key',
@@ -417,6 +418,7 @@ describe('Request Headers Types', () => {
           presence_penalty: 0,
           stop: ['\n'],
           seed: 42,
+          reasoning_effort: null,
           additional_params: { custom: 'value' },
         },
         api_key: 'sk-test-key',
@@ -448,6 +450,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'azure-key',
@@ -479,6 +482,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'foundry-key',
@@ -511,6 +515,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'anthropic-key',
@@ -539,6 +544,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'bedrock-key',
@@ -573,6 +579,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'vertex-key',
@@ -604,6 +611,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'hf_key',
@@ -632,6 +640,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'sk-stability',
@@ -660,6 +669,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'sagemaker-key',
@@ -690,6 +700,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'sk-test-key',
@@ -722,6 +733,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: 'test-key',
@@ -743,6 +755,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         inner_provider: AIProvider.OPENAI,
@@ -768,6 +781,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
       };
@@ -875,13 +889,13 @@ describe('Request Headers Types', () => {
       expect(parsed.trace_id).toBeDefined(); // auto-generated
     });
 
-    it('should validate config with configuration_name', () => {
+    it('should validate config with optimization auto', () => {
       const config = {
         agent_name: 'test-agent',
         skill_name: 'test-skill',
         targets: [
           {
-            configuration_name: 'my-openai-config',
+            optimization: OptimizationType.AUTO,
             api_key: 'sk-test',
           },
         ],
@@ -889,7 +903,7 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkConfigPreProcessed.parse(config)).not.toThrow();
       const parsed = IdkConfigPreProcessed.parse(config);
-      expect(parsed.targets[0].configuration_name).toBe('my-openai-config');
+      expect(parsed.targets[0].optimization).toBe(OptimizationType.AUTO);
     });
   });
 
@@ -911,6 +925,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-test',
@@ -958,6 +973,7 @@ describe('Request Headers Types', () => {
               stop: null,
               seed: null,
               additional_params: null,
+              reasoning_effort: null,
             },
             api_key: 'sk-openai',
             weight: 3,
@@ -976,6 +992,7 @@ describe('Request Headers Types', () => {
               stop: null,
               seed: null,
               additional_params: null,
+              reasoning_effort: null,
             },
             api_key: 'anthropic-key',
             weight: 1,
@@ -1031,6 +1048,7 @@ describe('Request Headers Types', () => {
               stop: null,
               seed: null,
               additional_params: null,
+              reasoning_effort: null,
             },
             vertex_project_id: 'my-project',
             vertex_region: 'us-central1',
@@ -1060,6 +1078,7 @@ describe('Request Headers Types', () => {
               stop: null,
               seed: null,
               additional_params: null,
+              reasoning_effort: null,
             },
             api_key: 'ya29...',
             // Missing vertex_project_id and vertex_region
@@ -1089,6 +1108,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'vertex-key',
@@ -1123,6 +1143,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'primary-key',
@@ -1139,6 +1160,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'fallback-key',
@@ -1184,6 +1206,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'openai-key',
@@ -1201,6 +1224,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'anthropic-key',
@@ -1241,6 +1265,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-test-key',
@@ -1278,6 +1303,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-openai',
@@ -1298,6 +1324,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'anthropic-key',
@@ -1318,6 +1345,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'azure-key',
@@ -1340,6 +1368,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             vertex_project_id: 'my-project',
@@ -1406,6 +1435,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-premium',
@@ -1435,6 +1465,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-standard',
@@ -1499,6 +1530,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-test-key',
@@ -1524,6 +1556,7 @@ describe('Request Headers Types', () => {
           presence_penalty: null,
           stop: null,
           seed: null,
+          reasoning_effort: null,
           additional_params: null,
         },
         api_key: `key-${i}`,
@@ -1561,6 +1594,7 @@ describe('Request Headers Types', () => {
               presence_penalty: null,
               stop: null,
               seed: null,
+              reasoning_effort: null,
               additional_params: null,
             },
             api_key: 'sk-test_key.with-special@chars',

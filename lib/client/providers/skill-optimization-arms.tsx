@@ -40,7 +40,7 @@ interface ArmsContextType {
 
 const ArmsContext = createContext<ArmsContextType | undefined>(undefined);
 
-export const ArmsProvider = ({
+export const SkillOptimizationArmsProvider = ({
   children,
 }: {
   children: React.ReactNode;
@@ -105,7 +105,7 @@ export const ArmsProvider = ({
   );
 };
 
-export const useArms = (): ArmsContextType => {
+export const useSkillOptimizationArms = (): ArmsContextType => {
   const context = useContext(ArmsContext);
   if (!context) {
     throw new Error('useArms must be used within an ArmsProvider');

@@ -362,7 +362,7 @@ export async function evaluateLog(
   log: Log,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params = ArgumentCorrectnessEvaluationParameters.parse(
-    evaluation.metadata,
+    evaluation.params,
   );
 
   const start_time = Date.now();

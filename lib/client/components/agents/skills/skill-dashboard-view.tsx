@@ -14,7 +14,7 @@ import { Skeleton } from '@client/components/ui/skeleton';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
-import { useClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import {
   ArrowRightIcon,
@@ -61,7 +61,7 @@ export function SkillDashboardView(): ReactElement {
     clusters: clusterStates,
     isLoading: isLoadingClusterStates,
     setSkillId: setClusterStatesSkillId,
-  } = useClusters();
+  } = useSkillOptimizationClusters();
 
   // Skill optimization evaluation runs via provider
   const {

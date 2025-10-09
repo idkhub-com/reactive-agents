@@ -4,7 +4,7 @@
 CREATE TABLE if not exists agents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL UNIQUE,
-  description TEXT,
+  description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -17,6 +17,10 @@ ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON agents FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+COMMENT ON TABLE agents IS 'Table to store information about agents.';
+
+COMMENT ON COLUMN agents.description IS 'Description of the agent. Used to generate system prompts and evaluations';
+
 -- ================================================
 -- Skills table
 -- ================================================
@@ -28,6 +32,7 @@ CREATE TABLE if not exists skills (
   metadata JSONB NOT NULL DEFAULT '{}',
   max_configurations INTEGER NOT NULL DEFAULT 3,
   num_system_prompts INTEGER NOT NULL DEFAULT 3,
+  clustering_interval INTEGER NOT NULL DEFAULT 15,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -44,6 +49,13 @@ CREATE INDEX idx_skills_name ON skills(name);
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON skills FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+COMMENT ON TABLE skills IS 'Table to store skills that an agent possesses.';
+
+COMMENT ON COLUMN skills.description IS 'Description of the skill. Used to generate system prompts and evaluations';
+COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations (clusters)';
+COMMENT ON COLUMN skills.num_system_prompts IS 'Number of system prompts to generate for the skill';
+COMMENT ON COLUMN skills.clustering_interval IS 'Recompute the centroid of the clusters every N requests so that they can better represent the last N requests.';
 
 -- ================================================
 -- Tools table
@@ -505,7 +517,7 @@ CREATE TABLE if not exists skill_optimization_evaluations (
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   evaluation_method TEXT NOT NULL,
-  metadata JSONB NOT NULL DEFAULT '{}',
+  params JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -518,7 +530,7 @@ CREATE TRIGGER update_skill_optimization_evaluations_updated_at BEFORE UPDATE ON
 
 COMMENT ON COLUMN skill_optimization_evaluations.evaluation_method IS 'The method used for evaluating the skill';
 
-COMMENT ON COLUMN skill_optimization_evaluations.metadata IS 'Additional metadata for the evaluation run configuration and settings';
+COMMENT ON COLUMN skill_optimization_evaluations.params IS 'The parameters used for the evaluation run configuration and settings';
 
 CREATE INDEX idx_skill_optimization_evaluations_agent_id ON skill_optimization_evaluations(agent_id);
 

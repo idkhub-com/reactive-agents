@@ -14,6 +14,7 @@ export async function getOrCreateAgent(
     const newAgent = await userDataStorageConnector.createAgent({
       name: agentName,
       metadata: {},
+      description: 'The agent must be setup before it can be used.',
     });
     return newAgent;
   }

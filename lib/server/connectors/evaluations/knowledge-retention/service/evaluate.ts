@@ -463,7 +463,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
 ): Promise<SkillOptimizationEvaluationResult> {
-  const params = evaluation.metadata as KnowledgeRetentionEvaluationParameters;
+  const params = evaluation.params as KnowledgeRetentionEvaluationParameters;
 
   const llmJudge = createLLMJudge({
     model: params.model,

@@ -9,12 +9,6 @@ import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
 import { ArmDetailView } from './skills/arms/arm-detail-view';
 import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
 import { ClustersView } from './skills/clusters/clusters-view';
-import { DatasetDetailsView } from './skills/datasets';
-import { CreateDatasetView } from './skills/datasets/create-dataset-view';
-import { DatasetsView } from './skills/datasets/datasets-view';
-import { CreateEvaluationRunView } from './skills/evaluation-runs/create-evaluation-run-view';
-import { EvaluationRunDetailsView } from './skills/evaluation-runs/evaluation-run-details-view';
-import { EvaluationRunsView } from './skills/evaluation-runs/evaluation-runs-view';
 import { LogDetailsView, LogsView } from './skills/logs';
 import { ModelsView } from './skills/models/models-view';
 
@@ -69,42 +63,6 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Log Detail">
             <LogDetailsView />
-          </AgentErrorBoundary>
-        );
-      case 'evaluations':
-        return (
-          <AgentErrorBoundary sectionName="Evaluations">
-            <EvaluationRunsView />
-          </AgentErrorBoundary>
-        );
-      case 'evaluation-detail':
-        return (
-          <AgentErrorBoundary sectionName="Evaluation Detail">
-            <EvaluationRunDetailsView />
-          </AgentErrorBoundary>
-        );
-      case 'datasets':
-        return (
-          <AgentErrorBoundary sectionName="Datasets">
-            <DatasetsView />
-          </AgentErrorBoundary>
-        );
-      case 'dataset-detail':
-        return (
-          <AgentErrorBoundary sectionName="Dataset Detail">
-            <DatasetDetailsView />
-          </AgentErrorBoundary>
-        );
-      case 'create-evaluation':
-        return (
-          <AgentErrorBoundary sectionName="Create Evaluation">
-            <CreateEvaluationRunView />
-          </AgentErrorBoundary>
-        );
-      case 'create-dataset':
-        return (
-          <AgentErrorBoundary sectionName="Create Dataset">
-            <CreateDatasetView />
           </AgentErrorBoundary>
         );
       case 'models':

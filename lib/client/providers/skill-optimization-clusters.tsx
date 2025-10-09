@@ -34,7 +34,7 @@ const ClustersContext = createContext<ClustersContextType | undefined>(
   undefined,
 );
 
-export const ClustersProvider = ({
+export const SkillOptimizationClustersProvider = ({
   children,
 }: {
   children: React.ReactNode;
@@ -94,7 +94,7 @@ export const ClustersProvider = ({
   );
 };
 
-export const useClusters = (): ClustersContextType => {
+export const useSkillOptimizationClusters = (): ClustersContextType => {
   const context = useContext(ClustersContext);
   if (!context) {
     throw new Error('useClusters must be used within a ClustersProvider');

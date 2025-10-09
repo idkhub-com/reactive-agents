@@ -451,7 +451,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
 ): Promise<SkillOptimizationEvaluationResult> {
-  const params = TaskCompletionEvaluationParameters.parse(evaluation.metadata);
+  const params = TaskCompletionEvaluationParameters.parse(evaluation.params);
 
   const llmJudge = createLLMJudge({
     model: params.model,

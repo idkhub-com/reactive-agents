@@ -197,6 +197,7 @@ describe('Task Completion Evaluation', () => {
         async_mode: true,
         verbose_mode: false,
         batch_size: 10,
+        task: '',
       };
 
       expect(validParams.threshold).toBe(0.7);
@@ -223,6 +224,7 @@ describe('Task Completion Evaluation', () => {
           temperature: 0.1,
           max_tokens: 1000,
           batch_size: 5,
+          task: '',
         };
 
         const evalRunOptions = {
@@ -272,6 +274,7 @@ describe('Task Completion Evaluation', () => {
         temperature: 0.1,
         max_tokens: 1000,
         batch_size: 5,
+        task: '',
       };
 
       const evalRunOptions = {
@@ -311,6 +314,7 @@ describe('Task Completion Evaluation', () => {
         temperature: 0.1,
         max_tokens: 1000,
         batch_size: 5,
+        task: '',
       };
 
       const evalRunOptions = {
@@ -388,6 +392,7 @@ describe('Task Completion Evaluation', () => {
         temperature: 0.1,
         max_tokens: 1000,
         batch_size: 5,
+        task: '',
       };
 
       const evalRunOptions = {
@@ -427,6 +432,7 @@ describe('Task Completion Evaluation', () => {
           temperature: 0.2,
           max_tokens: 1500,
           batch_size: 5,
+          task: '',
         };
 
         const evalRunOptions = {

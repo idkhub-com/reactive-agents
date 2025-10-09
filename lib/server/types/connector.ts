@@ -78,10 +78,7 @@ import type {
   ToolCreateParams,
   ToolQueryParams,
 } from '@shared/types/data/tool';
-import type {
-  EvaluationMethodDetails,
-  EvaluationRunJobDetails,
-} from '@shared/types/idkhub/evaluations/evaluations';
+import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations/evaluations';
 import type { Hook, HookResult } from '@shared/types/middleware/hooks';
 import type { z } from 'zod';
 
@@ -266,10 +263,6 @@ export interface HooksConnector {
 
 export interface EvaluationMethodConnector {
   getDetails: () => EvaluationMethodDetails;
-  evaluate: (
-    jobDetails: EvaluationRunJobDetails,
-    userDataStorageConnector: UserDataStorageConnector,
-  ) => Promise<EvaluationRun>;
   evaluateLog: (
     evaluation: SkillOptimizationEvaluation,
     log: Log,
