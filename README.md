@@ -69,13 +69,14 @@ idk
 
 ***Streaming mode not yet implemented***
 
-| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers |
-| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- |
-| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛            |
-| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛            |
-| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛            |
-| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛            |
-| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛            |
+| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | Vision | MCP Servers |
+| ---------------- | -------- | ---------- | ----------- | ----------------- | ------ | ------------- |
+| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
+| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
+| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
+| OpenRouter       | ✅       | ✅         | ✅          | ✅                | ✅     | ⬛            |
+| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛     | ⬛            |
+| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
 
 ### Responses API
 
@@ -86,15 +87,17 @@ idk
 | Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ✅            |
 | Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ✅            |
 | OpenAI           | ✅       | ✅         | ✅          | ✅                | ✅            |
+| Gemini (Google)  | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
+| XAI              | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
+| Anthropic        | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
 
-### Embeddings API
-
-| AI Provider      | Text     | Batch Text |
-| ---------------- | -------- | ---------- |
-| OpenAI           | ✅       | ✅         |
-
-- ✅: Supported
+- ✅: Fully supported
+- 🟡: Partial support (configuration exists but has known issues)
 - ⬛: Not yet implemented
+
+### Notes
+- **Anthropic Streaming**: Configuration exists but currently returns 500 errors due to server-side issues
+- **Responses API**: Only OpenAI-compatible providers (OpenAI, Azure OpenAI, XAI) support the Responses API
 
 ## 📚 Learn More
 - [Supabase Documentation](https://supabase.com/docs)

@@ -18,10 +18,10 @@ import type {
 import type { ErrorResponseBody } from '@shared/types/api/response';
 
 import type {
-  ChatCompletionFinishReason,
   ChatCompletionRequestBody,
   ChatCompletionResponseBody,
 } from '@shared/types/api/routes/chat-completions-api';
+import { ChatCompletionFinishReason } from '@shared/types/api/routes/chat-completions-api';
 import {
   type ChatCompletionContentType,
   type ChatCompletionMessage,
@@ -33,6 +33,23 @@ import type {
   ChatCompletionToolCall,
 } from '@shared/types/api/routes/shared/tools';
 import { AIProvider, fileExtensionMimeTypeMap } from '@shared/types/constants';
+
+// Map Anthropic stop_reason values to OpenAI finish_reason values
+const mapStopReasonToFinishReason = (
+  stopReason: string,
+): ChatCompletionFinishReason => {
+  switch (stopReason) {
+    case 'end_turn':
+    case 'stop_sequence':
+      return ChatCompletionFinishReason.STOP;
+    case 'max_tokens':
+      return ChatCompletionFinishReason.LENGTH;
+    case 'tool_use':
+      return ChatCompletionFinishReason.TOOL_CALLS;
+    default:
+      return ChatCompletionFinishReason.STOP;
+  }
+};
 
 // TODO: this configuration does not enforce the maximum token limit for the input parameter. If you want to enforce this, you might need to add a custom validation function or a max property to the ParameterConfig interface, and then use it in the input configuration. However, this might be complex because the token count is not a simple length check, but depends on the specific tokenization method used by the model.
 
@@ -320,6 +337,7 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
   max_tokens: {
     param: 'max_tokens',
     required: true,
+    default: 4096,
   },
   max_completion_tokens: {
     param: 'max_tokens',
@@ -493,7 +511,7 @@ export const anthropicChatCompleteResponseTransform: ResponseTransformFunction =
             },
             index: 0,
             logprobs: null,
-            finish_reason: response.stop_reason,
+            finish_reason: mapStopReasonToFinishReason(response.stop_reason),
           },
         ],
         usage: {
@@ -617,7 +635,9 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
           {
             index: 0,
             delta: {},
-            finish_reason: parsedChunk.delta?.stop_reason,
+            finish_reason: parsedChunk.delta?.stop_reason
+              ? mapStopReasonToFinishReason(parsedChunk.delta.stop_reason)
+              : null,
           },
         ],
         usage: {
@@ -686,7 +706,9 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
           },
           index: 0,
           logprobs: null,
-          finish_reason: parsedChunk.delta?.stop_reason ?? null,
+          finish_reason: parsedChunk.delta?.stop_reason
+            ? mapStopReasonToFinishReason(parsedChunk.delta.stop_reason)
+            : null,
         },
       ],
     })}\n\n`;
