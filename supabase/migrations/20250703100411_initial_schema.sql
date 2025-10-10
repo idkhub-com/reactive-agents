@@ -4,7 +4,7 @@
 CREATE TABLE if not exists agents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL UNIQUE,
-  description TEXT,
+  description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -17,6 +17,10 @@ ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON agents FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+COMMENT ON TABLE agents IS 'Table to store information about agents.';
+
+COMMENT ON COLUMN agents.description IS 'Description of the agent. Used to generate system prompts and evaluations';
+
 -- ================================================
 -- Skills table
 -- ================================================
@@ -24,8 +28,11 @@ CREATE TABLE if not exists skills (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   agent_id UUID NOT NULL,
   name TEXT NOT NULL,
-  description TEXT,
+  description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
+  max_configurations INTEGER NOT NULL DEFAULT 3,
+  num_system_prompts INTEGER NOT NULL DEFAULT 3,
+  clustering_interval INTEGER NOT NULL DEFAULT 15,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -42,6 +49,13 @@ CREATE INDEX idx_skills_name ON skills(name);
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON skills FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+COMMENT ON TABLE skills IS 'Table to store skills that an agent possesses.';
+
+COMMENT ON COLUMN skills.description IS 'Description of the skill. Used to generate system prompts and evaluations';
+COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations (clusters)';
+COMMENT ON COLUMN skills.num_system_prompts IS 'Number of system prompts to generate for the skill';
+COMMENT ON COLUMN skills.clustering_interval IS 'Recompute the centroid of the clusters every N requests so that they can better represent the last N requests.';
 
 -- ================================================
 -- Tools table
@@ -109,6 +123,7 @@ CREATE TABLE IF NOT EXISTS logs (
   ai_provider_request_log JSONB NOT NULL,
   hook_logs JSONB NOT NULL,
   metadata JSONB NOT NULL,
+  embedding FLOAT[] DEFAULT NULL,
   -- Cache info
   cache_status cache_status_enum NOT NULL,
   -- Tracing info
@@ -275,8 +290,8 @@ CREATE TABLE if not exists evaluation_runs (
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
-  FOREIGN KEY (agent_id) REFERENCES agents(id),
-  FOREIGN KEY (skill_id) REFERENCES skills(id)
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 );
 
 CREATE TRIGGER update_evaluation_runs_updated_at BEFORE UPDATE ON evaluation_runs
@@ -338,6 +353,7 @@ ALTER TABLE log_outputs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON log_outputs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+
 -- ================================================
 -- Cache table
 -- ================================================
@@ -350,3 +366,201 @@ CREATE TABLE IF NOT EXISTS cache (
 ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- AI Provider API Keys
+-- ================================================
+CREATE TABLE IF NOT EXISTS ai_provider_api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ai_provider TEXT NOT NULL,
+  name TEXT NOT NULL,
+  api_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(ai_provider, name)
+);
+
+CREATE TRIGGER ai_provider_api_keys_updated_at BEFORE UPDATE ON ai_provider_api_keys
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_ai_provider_api_keys_ai_provider ON ai_provider_api_keys(ai_provider);
+
+CREATE INDEX idx_ai_provider_api_keys_name ON ai_provider_api_keys(name);
+
+ALTER TABLE ai_provider_api_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Models table
+-- ================================================
+CREATE TABLE IF NOT EXISTS models (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ai_provider_api_key_id UUID NOT NULL,
+  model_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ai_provider_api_key_id) REFERENCES ai_provider_api_keys(id) ON DELETE CASCADE,
+  UNIQUE(ai_provider_api_key_id, model_name)
+);
+
+CREATE TRIGGER update_models_updated_at BEFORE UPDATE ON models
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_models_ai_provider_api_key_id ON models(ai_provider_api_key_id);
+
+CREATE INDEX idx_models_model_name ON models(model_name);
+
+ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON models FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Skill Models bridge table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_models (
+  skill_id UUID NOT NULL,
+  model_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (skill_id, model_id),
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_skill_models_skill_id ON skill_models(skill_id);
+
+CREATE INDEX idx_skill_models_model_id ON skill_models(model_id);
+
+ALTER TABLE skill_models ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_models FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+COMMENT ON TABLE models IS 'AI models tied to specific API keys';
+COMMENT ON COLUMN models.ai_provider_api_key_id IS 'The API key that enables access to this model';
+COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-4, claude-3-opus)';
+COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they can use';
+COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations allowed for this skill';
+
+
+-- ================================================
+-- Skill Optimization Clusters table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  total_steps BIGINT NOT NULL,
+  centroid FLOAT[] NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+CREATE TRIGGER update_skill_optimization_clusters_updated_at BEFORE UPDATE ON skill_optimization_clusters
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    
+CREATE INDEX idx_skill_optimization_clusters_name ON skill_optimization_clusters(name);
+
+CREATE INDEX idx_skill_optimization_clusters_agent_id ON skill_optimization_clusters(agent_id);
+
+CREATE INDEX idx_skill_optimization_clusters_skill_id ON skill_optimization_clusters(skill_id);
+
+ALTER TABLE skill_optimization_clusters ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_clusters FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Skill Optimization Arms table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_arms (
+  id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  cluster_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  params JSONB NOT NULL,
+  stats JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE CASCADE
+);
+
+CREATE TRIGGER update_skill_optimization_arms_updated_at BEFORE UPDATE ON skill_optimization_arms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_skill_optimization_arms_name ON skill_optimization_arms(name);
+
+CREATE INDEX idx_skill_optimization_arms_agent_id ON skill_optimization_arms(agent_id);
+
+CREATE INDEX idx_skill_optimization_arms_skill_id ON skill_optimization_arms(skill_id);
+
+ALTER TABLE skill_optimization_arms ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_arms FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+
+-- ================================================
+-- Skill Optimization Evaluations Table
+-- ================================================
+CREATE TABLE if not exists skill_optimization_evaluations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  evaluation_method TEXT NOT NULL,
+  params JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE (agent_id, skill_id, evaluation_method)
+);
+
+CREATE TRIGGER update_skill_optimization_evaluations_updated_at BEFORE UPDATE ON skill_optimization_evaluations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON COLUMN skill_optimization_evaluations.evaluation_method IS 'The method used for evaluating the skill';
+
+COMMENT ON COLUMN skill_optimization_evaluations.params IS 'The parameters used for the evaluation run configuration and settings';
+
+CREATE INDEX idx_skill_optimization_evaluations_agent_id ON skill_optimization_evaluations(agent_id);
+
+CREATE INDEX idx_skill_optimization_evaluations_evaluation_method ON skill_optimization_evaluations(evaluation_method);
+
+ALTER TABLE skill_optimization_evaluations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_evaluations FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Skill Optimization Evaluation Runs table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_runs (
+  id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  cluster_id UUID NOT NULL,
+  results JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_skill_optimization_evaluation_runs_agent_id ON skill_optimization_evaluation_runs(agent_id);
+
+CREATE INDEX idx_skill_optimization_evaluation_runs_skill_id ON skill_optimization_evaluation_runs(skill_id);
+
+ALTER TABLE skill_optimization_evaluation_runs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access" ON skill_optimization_evaluation_runs FOR ALL TO service_role USING (true) WITH CHECK (true);

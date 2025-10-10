@@ -12,7 +12,17 @@ export * from './improved-response';
 export * from './log';
 // Log Output types
 export * from './log-output';
+// Model types
+export * from './model';
 // Skill types
 export * from './skill';
+// Skill Optimization Arm types
+export * from './skill-optimization-arm';
+// Skill Optimization Cluster types
+export * from './skill-optimization-cluster';
+// Skill Optimization Evaluation types
+export * from './skill-optimization-evaluation';
+// Skill Optimization Evaluation Run types
+export * from './skill-optimization-evaluation-run';
 // Tool types
 export * from './tool';

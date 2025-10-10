@@ -68,6 +68,41 @@ describe('getOrCreateSkill', () => {
       getLogOutputs: vi.fn(),
       createLogOutput: vi.fn(),
       deleteLogOutput: vi.fn(),
+      // AI Provider API Key methods
+      getAIProviderAPIKeys: vi.fn(),
+      getAIProviderAPIKeyById: vi.fn(),
+      createAIProviderAPIKey: vi.fn(),
+      updateAIProviderAPIKey: vi.fn(),
+      deleteAIProviderAPIKey: vi.fn(),
+      // Model methods
+      getModels: vi.fn(),
+      createModel: vi.fn(),
+      updateModel: vi.fn(),
+      deleteModel: vi.fn(),
+      // Skill-Model relationship methods
+      getSkillModels: vi.fn(),
+      addModelsToSkill: vi.fn(),
+      removeModelsFromSkill: vi.fn(),
+      // Skill Optimization Cluster methods
+      getSkillOptimizationClusters: vi.fn(),
+      createSkillOptimizationClusters: vi.fn(),
+      updateSkillOptimizationCluster: vi.fn(),
+      deleteSkillOptimizationCluster: vi.fn(),
+      // Skill Optimization Arm methods
+      getSkillOptimizationArms: vi.fn(),
+      createSkillOptimizationArms: vi.fn(),
+      updateSkillOptimizationArm: vi.fn(),
+      deleteSkillOptimizationArm: vi.fn(),
+      deleteSkillOptimizationArmsForSkill: vi.fn(),
+      // Skill Optimization Evaluation methods
+      getSkillOptimizationEvaluations: vi.fn(),
+      createSkillOptimizationEvaluations: vi.fn(),
+      deleteSkillOptimizationEvaluation: vi.fn(),
+      deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+      // Skill Optimization Evaluation Run methods
+      getSkillOptimizationEvaluationRuns: vi.fn(),
+      createSkillOptimizationEvaluationRun: vi.fn(),
+      deleteSkillOptimizationEvaluationRun: vi.fn(),
     } as UserDataStorageConnector;
   });
 
@@ -78,9 +113,14 @@ describe('getOrCreateSkill', () => {
         agent_id: testAgentId,
         name: 'existing-skill',
         description: 'Existing skill description',
-        metadata: { type: 'chat-completion' },
+        metadata: {
+          last_clustering_at: '2023-01-01T00:00:00.000Z',
+          last_clustering_log_start_time: 1234567890,
+        },
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
@@ -106,18 +146,28 @@ describe('getOrCreateSkill', () => {
           agent_id: testAgentId,
           name: 'duplicate-skill',
           description: 'First skill',
-          metadata: { version: '1.0' },
+          metadata: {
+            last_clustering_at: '2023-01-01T00:00:00.000Z',
+            last_clustering_log_start_time: 1234567890,
+          },
+          max_configurations: 5,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
+          num_system_prompts: 0,
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
           agent_id: testAgentId,
           name: 'duplicate-skill',
           description: 'Second skill',
-          metadata: { version: '2.0' },
+          metadata: {
+            last_clustering_at: '2023-01-02T00:00:00.000Z',
+            last_clustering_log_start_time: 1234567890,
+          },
+          max_configurations: 5,
           created_at: '2023-01-02T00:00:00.000Z',
           updated_at: '2023-01-02T00:00:00.000Z',
+          num_system_prompts: 0,
         },
       ];
 
@@ -140,10 +190,12 @@ describe('getOrCreateSkill', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'new-skill',
-        description: null,
+        description: 'New skill description',
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -163,7 +215,10 @@ describe('getOrCreateSkill', () => {
       expect(mockConnector.createSkill).toHaveBeenCalledWith({
         agent_id: testAgentId,
         name: 'new-skill',
+        description: 'This skill must be set up before it can be optimized.',
         metadata: {},
+        max_configurations: 3,
+        num_system_prompts: 0,
       } as SkillCreateParams);
       expect(console.log).not.toHaveBeenCalledWith(
         expect.stringContaining('Skill already exists'),
@@ -175,10 +230,12 @@ describe('getOrCreateSkill', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'test-skill',
-        description: null,
+        description: 'Test skill description',
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -189,7 +246,10 @@ describe('getOrCreateSkill', () => {
       expect(mockConnector.createSkill).toHaveBeenCalledWith({
         agent_id: testAgentId,
         name: 'test-skill',
+        description: 'This skill must be set up before it can be optimized.',
         metadata: {},
+        max_configurations: 3,
+        num_system_prompts: 0,
       });
     });
   });
@@ -221,10 +281,12 @@ describe('getOrCreateSkill', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: '',
-        description: null,
+        description: 'Empty name skill description',
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -240,7 +302,10 @@ describe('getOrCreateSkill', () => {
       expect(mockConnector.createSkill).toHaveBeenCalledWith({
         agent_id: testAgentId,
         name: '',
+        description: 'This skill must be set up before it can be optimized.',
         metadata: {},
+        max_configurations: 3,
+        num_system_prompts: 0,
       });
     });
 
@@ -250,10 +315,12 @@ describe('getOrCreateSkill', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: specialName,
-        description: null,
+        description: 'Special characters skill description',
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -278,10 +345,12 @@ describe('getOrCreateSkill', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: longName,
-        description: null,
+        description: 'Long name skill description',
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -308,10 +377,12 @@ describe('getOrCreateSkill', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: skillName,
-        description: null,
+        description: 'Concurrent skill description',
         metadata: {},
+        max_configurations: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       // First call finds no skill, second call finds the skill created by first call
@@ -333,81 +404,6 @@ describe('getOrCreateSkill', () => {
 
       // Only first call should create the skill (due to our mock setup)
       expect(mockConnector.createSkill).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('skill-specific scenarios', () => {
-    it('should handle skills with complex metadata', async () => {
-      const complexMetadata = {
-        type: 'image-generation',
-        model: 'dall-e-3',
-        parameters: {
-          quality: 'hd',
-          size: '1024x1024',
-          style: 'vivid',
-        },
-        capabilities: ['image-generation', 'text-to-image'],
-      };
-
-      const newSkill: Skill = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        agent_id: testAgentId,
-        name: 'image-skill',
-        description: 'Image generation skill',
-        metadata: complexMetadata,
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-      };
-
-      vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(newSkill);
-
-      const result = await getOrCreateSkill(
-        mockConnector,
-        testAgentId,
-        'image-skill',
-      );
-
-      expect(result).toEqual(newSkill);
-      expect(mockConnector.createSkill).toHaveBeenCalledWith({
-        agent_id: testAgentId,
-        name: 'image-skill',
-        metadata: {},
-      });
-    });
-
-    it('should handle skills for different AI provider types', async () => {
-      const skillTypes = [
-        'chat-completion',
-        'text-completion',
-        'image-generation',
-        'speech-to-text',
-        'text-to-speech',
-        'embeddings',
-      ];
-
-      for (const skillType of skillTypes) {
-        const skill: Skill = {
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          agent_id: testAgentId,
-          name: `${skillType}-skill`,
-          description: `${skillType} skill`,
-          metadata: { type: skillType },
-          created_at: '2023-01-01T00:00:00.000Z',
-          updated_at: '2023-01-01T00:00:00.000Z',
-        };
-
-        vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-        vi.mocked(mockConnector.createSkill).mockResolvedValue(skill);
-
-        const result = await getOrCreateSkill(
-          mockConnector,
-          testAgentId,
-          `${skillType}-skill`,
-        );
-
-        expect(result).toEqual(skill);
-      }
     });
   });
 });

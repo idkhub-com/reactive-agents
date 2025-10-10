@@ -22,7 +22,8 @@ function MainContent({ children }: { children: ReactNode }): ReactElement {
     pathname.startsWith('/agents/') &&
     pathname !== '/agents' &&
     !pathname.includes('/agents/create') &&
-    !pathname.includes('/skills/create')
+    !pathname.includes('/skills/create') &&
+    !pathname.includes('/evaluations-2/create')
   ) {
     return (
       <ErrorBoundary

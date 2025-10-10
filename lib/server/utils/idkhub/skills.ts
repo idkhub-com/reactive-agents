@@ -16,7 +16,10 @@ export async function getOrCreateSkill(
     const newSkill = await userDataStorageConnector.createSkill({
       agent_id: agentId,
       name: skillName,
+      description: 'This skill must be set up before it can be optimized.',
       metadata: {},
+      max_configurations: 3,
+      num_system_prompts: 0,
     });
     return newSkill;
   }

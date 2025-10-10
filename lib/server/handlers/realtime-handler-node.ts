@@ -15,7 +15,7 @@ export async function realTimeHandlerNode(
     const idkConfig = c.get('idk_config');
     const idkRequestData = c.get('idk_request_data');
 
-    const provider = idkConfig?.targets[0]?.provider;
+    const provider = idkConfig?.targets[0]?.configuration.ai_provider;
     if (!provider) {
       throw new Error('Provider not found');
     }

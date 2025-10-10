@@ -1,6 +1,5 @@
 import type {
   ConversationCompletenessAverageResult,
-  ConversationCompletenessEvaluationParameters,
   ConversationCompletenessResult,
 } from '@server/connectors/evaluations/conversation-completeness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
@@ -10,11 +9,26 @@ import {
   extractEvaluationOutputIds,
 } from '@server/evaluations/utils/statistics';
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
+import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
+import { formatMessagesForExtraction } from '@server/utils/messages';
+import type {
+  ChatCompletionRequestData,
+  ResponsesRequestData,
+  StreamChatCompletionRequestData,
+} from '@shared/types/api/request';
+import { IdkResponseBody } from '@shared/types/api/response';
+import type {
+  LogOutput,
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
+import type { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 /**
  * Evaluate conversation completeness for a single log
@@ -28,51 +42,30 @@ export async function evaluateConversationCompleteness(
     model: params.model,
     temperature: params.temperature,
     max_tokens: params.max_tokens,
-    timeout: params.timeout,
   });
 
-  // Extract context and response from log
-  let context = '';
-  let response = '';
+  // Extract messages and outputs using standard utilities
+  const idkRequestData = produceIdkRequestData(
+    log.ai_provider_request_log.method,
+    log.ai_provider_request_log.request_url,
+    {},
+    log.ai_provider_request_log.request_body,
+  );
+  const responseBody = IdkResponseBody.parse(
+    log.ai_provider_request_log.response_body,
+  );
 
-  // Try to extract context from various possible fields
-  const requestBody = (log.ai_provider_request_log as Record<string, unknown>)
-    ?.request_body as Record<string, unknown>;
-  if (typeof requestBody?.context === 'string') {
-    context = requestBody.context;
-  } else if (typeof requestBody?.text === 'string') {
-    context = requestBody.text;
-  } else if (typeof requestBody?.prompt === 'string') {
-    context = requestBody.prompt;
-  } else if (typeof requestBody?.message === 'string') {
-    context = requestBody.message;
-  } else {
-    context = JSON.stringify(requestBody);
-  }
-
-  // Try to extract response from various possible fields
-  const groundTruth = log.metadata?.ground_truth as Record<string, unknown>;
-  if (typeof groundTruth?.text === 'string') {
-    response = groundTruth.text;
-  } else if (typeof groundTruth?.response === 'string') {
-    response = groundTruth.response;
-  } else if (typeof groundTruth?.output === 'string') {
-    response = groundTruth.output;
-  } else if (typeof groundTruth?.result === 'string') {
-    response = groundTruth.result;
-  } else if (typeof log.metadata?.response === 'string') {
-    response = log.metadata.response;
-  } else {
-    response = JSON.stringify(groundTruth);
-  }
-
-  // Validate that we have both context and response
-  if (!context || !response) {
-    throw new Error('Missing context or response in log');
-  }
+  const messages = extractMessagesFromRequestData(
+    idkRequestData as
+      | ChatCompletionRequestData
+      | StreamChatCompletionRequestData
+      | ResponsesRequestData,
+  );
+  const input = formatMessagesForExtraction(messages);
+  const output = extractOutputFromResponseBody(responseBody);
 
   // Create a simple evaluation prompt that won't trigger template-based evaluation
-  const evaluationText = `Analyze the following conversation for completeness quality. CONVERSATION: ${context} ASSISTANT RESPONSE: ${response} Consider how well the assistant completes the conversation by satisfying user needs. Look for: Whether all user intentions were identified and addressed, if the conversation feels complete and resolved, whether there are any unresolved user requests, and the overall satisfaction of user needs throughout the conversation. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+  const evaluationText = `Analyze the following conversation for completeness quality. CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant completes the conversation by satisfying user needs. Look for: Whether all user intentions were identified and addressed, if the conversation feels complete and resolved, whether there are any unresolved user requests, and the overall satisfaction of user needs throughout the conversation. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
 
   // Evaluate using LLM judge with conversation completeness criteria
   const result = await llmJudge.evaluate({
@@ -255,9 +248,9 @@ export async function evaluateConversationCompletenessMain(
 
 export async function evaluateOneLogForConversationCompleteness(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -280,20 +273,23 @@ export async function evaluateOneLogForConversationCompleteness(
   );
 
   // Create log output
-  await userDataStorageConnector.createLogOutput(evaluationRunId, {
-    log_id: log.id,
-    score: result.score,
-    output: {
+  const logOutput = await userDataStorageConnector.createLogOutput(
+    evaluationRunId,
+    {
+      log_id: log.id,
       score: result.score,
-      reasoning: result.reasoning,
-      passed: result.score >= (params.threshold || 0.5),
-      threshold: params.threshold || 0.5,
-      execution_time_ms: 0,
-      evaluated_at: new Date().toISOString(),
-      evaluation_run_id: evaluationRunId,
+      output: {
+        score: result.score,
+        reasoning: result.reasoning,
+        passed: result.score >= (params.threshold || 0.5),
+        threshold: params.threshold || 0.5,
+        execution_time_ms: 0,
+        evaluated_at: new Date().toISOString(),
+        evaluation_run_id: evaluationRunId,
+      },
+      metadata: result.metadata || {},
     },
-    metadata: result.metadata || {},
-  });
+  );
 
   // Get all log outputs for this evaluation run to calculate new average
   const allLogOutputs = await userDataStorageConnector.getLogOutputs(
@@ -313,4 +309,35 @@ export async function evaluateOneLogForConversationCompleteness(
     evaluationOutputIds,
     userDataStorageConnector,
   });
+
+  return logOutput;
+}
+
+export async function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
+  log: Log,
+): Promise<SkillOptimizationEvaluationResult> {
+  const params =
+    evaluation.params as ConversationCompletenessEvaluationParameters;
+
+  const start_time = Date.now();
+
+  // Evaluate the log using the existing function
+  const result = await evaluateConversationCompleteness(log, params);
+
+  const execution_time = Date.now() - start_time;
+
+  const evaluationResult: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
+    score: result.score,
+    extra_data: {
+      reasoning: result.reasoning,
+      metadata: result.metadata,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
+    },
+  };
+
+  return evaluationResult;
 }

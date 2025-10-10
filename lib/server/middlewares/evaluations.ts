@@ -1,6 +1,5 @@
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import type { AppEnv } from '@server/types/hono';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type { MiddlewareHandler } from 'hono';
 import type { Factory } from 'hono/factory';
 
@@ -13,9 +12,7 @@ export const evaluationMethodConnectors = (
 ): MiddlewareHandler<AppEnv> =>
   factory.createMiddleware(async (c, next) => {
     // Create connectors map directly from provided connectors
-    const connectorsMap: Partial<
-      Record<EvaluationMethodName, EvaluationMethodConnector>
-    > = {};
+    const connectorsMap: Record<string, EvaluationMethodConnector> = {};
 
     for (const connector of connectors) {
       const details = connector.getDetails();

@@ -1,20 +1,18 @@
-import type { AppEnv } from '@server/types/hono';
+import type { AppContext } from '@server/types/hono';
 import type { HttpMethod } from '@server/types/http';
 
-import { IdkConfig } from '@shared/types/api/request/headers';
+import { IdkConfigPreProcessed } from '@shared/types/api/request/headers';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
+import type { Next } from 'hono';
+import { createMiddleware } from 'hono/factory';
 
-import type { MiddlewareHandler } from 'hono';
-import type { Factory } from 'hono/factory';
 import z from 'zod';
 
 /**
  * Middleware to set common variables in the context
  */
-export const commonVariablesMiddleware = (
-  factory: Factory<AppEnv>,
-): MiddlewareHandler =>
-  factory.createMiddleware(async (c, next) => {
+export const commonVariablesMiddleware = createMiddleware(
+  async (c: AppContext, next: Next) => {
     // Only set variables for  API requests
     if (c.req.url.includes('/v1/')) {
       // Don't set variables for IDK API requests
@@ -25,21 +23,24 @@ export const commonVariablesMiddleware = (
         }
         const rawConfig = JSON.parse(configString);
 
-        const idkConfig = IdkConfig.safeParse(rawConfig, {
-          error: (error) => `Invalid IDK config as ${error.message}`,
-        });
-        if (idkConfig.error) {
-          const prettyError = z.prettifyError(idkConfig.error);
+        const idkConfigPreProcessed = IdkConfigPreProcessed.safeParse(
+          rawConfig,
+          {
+            error: (error) => `Invalid IDK config as ${error.message}`,
+          },
+        );
+        if (idkConfigPreProcessed.error) {
+          const prettyError = z.prettifyError(idkConfigPreProcessed.error);
 
           return c.json(
             {
               error: `--Invalid IDK config--\n ${prettyError}`,
-              details: idkConfig.error.message,
+              details: idkConfigPreProcessed.error.message,
             },
             422,
           );
         }
-        c.set('idk_config', idkConfig.data);
+        c.set('idk_config_pre_processed', idkConfigPreProcessed.data);
 
         const body = await c.req.json();
 
@@ -53,4 +54,5 @@ export const commonVariablesMiddleware = (
       }
     }
     await next();
-  });
+  },
+);

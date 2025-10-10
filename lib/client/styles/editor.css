@@ -48,6 +48,53 @@
   --novel-highlight-orange: #5c3a1a;
   --novel-highlight-pink: #5c1a3a;
   --novel-highlight-gray: #3a3a3a;
+
+  /* Jinja syntax highlighting colors */
+  --jinja-variable-bg: #e0f2fe;
+  --jinja-variable-border: #0284c7;
+  --jinja-variable-text: #0c4a6e;
+  --jinja-block-bg: #fef3c7;
+  --jinja-block-border: #d97706;
+  --jinja-block-text: #92400e;
+  --jinja-comment-bg: #f3f4f6;
+  --jinja-comment-border: #6b7280;
+  --jinja-comment-text: #4b5563;
+}
+
+.dark-theme {
+  --novel-black: rgb(255 255 255);
+  --novel-white: rgb(25 25 25);
+  --novel-stone-50: rgb(35 35 34);
+  --novel-stone-100: rgb(41 37 36);
+  --novel-stone-200: rgb(66 69 71);
+  --novel-stone-300: rgb(112 118 123);
+  --novel-stone-400: rgb(160 167 173);
+  --novel-stone-500: rgb(193 199 204);
+  --novel-stone-600: rgb(212 217 221);
+  --novel-stone-700: rgb(229 232 235);
+  --novel-stone-800: rgb(232 234 235);
+  --novel-stone-900: rgb(240, 240, 241);
+
+  --novel-highlight-default: #000000;
+  --novel-highlight-purple: #3f2c4b;
+  --novel-highlight-red: #5c1a1a;
+  --novel-highlight-yellow: #5c4b1a;
+  --novel-highlight-blue: #1a3d5c;
+  --novel-highlight-green: #1a5c20;
+  --novel-highlight-orange: #5c3a1a;
+  --novel-highlight-pink: #5c1a3a;
+  --novel-highlight-gray: #3a3a3a;
+
+  /* Jinja syntax highlighting colors - dark theme */
+  --jinja-variable-bg: #164e63;
+  --jinja-variable-border: #0ea5e9;
+  --jinja-variable-text: #7dd3fc;
+  --jinja-block-bg: #92400e;
+  --jinja-block-border: #f59e0b;
+  --jinja-block-text: #fbbf24;
+  --jinja-comment-bg: #374151;
+  --jinja-comment-border: #9ca3af;
+  --jinja-comment-text: #d1d5db;
 }
 
 /* .ProseMirror {
@@ -383,4 +430,53 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
     @apply !text-gray-50;
     @apply !bg-blue-500;
   }
+}
+
+/* Jinja syntax highlighting styles */
+.jinja-variable {
+  background-color: var(--jinja-variable-bg);
+  border: 1px solid var(--jinja-variable-border);
+  color: var(--jinja-variable-text);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-weight: 600;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.875em;
+  line-height: 1;
+}
+
+.jinja-block {
+  background-color: var(--jinja-block-bg);
+  border: 1px solid var(--jinja-block-border);
+  color: var(--jinja-block-text);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-weight: 600;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.875em;
+  line-height: 1;
+}
+
+.jinja-comment {
+  background-color: var(--jinja-comment-bg);
+  border: 1px solid var(--jinja-comment-border);
+  color: var(--jinja-comment-text);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-style: italic;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.875em;
+  line-height: 1;
+}
+
+/* Jinja editor specific styles */
+.jinja-editor .ProseMirror {
+  /* Enhanced editor styles for Jinja template editing */
+  font-feature-settings: "liga" 0; /* Disable ligatures for better template readability */
 }

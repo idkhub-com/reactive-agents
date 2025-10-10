@@ -16,11 +16,19 @@ export interface NavigationState {
   currentView:
     | 'skills-list'
     | 'skill-dashboard'
+    | 'edit-skill'
     | 'logs'
     | 'evaluations'
     | 'datasets'
+    | 'configurations'
+    | 'models'
+    | 'clusters'
+    | 'cluster-arms'
+    | 'arm-detail'
     | 'create-evaluation'
     | 'create-dataset'
+    | 'create-configuration'
+    | 'edit-configuration'
     | 'log-detail'
     | 'evaluation-detail'
     | 'dataset-detail';
@@ -29,6 +37,8 @@ export interface NavigationState {
   logId?: string;
   evalId?: string;
   datasetId?: string;
+  clusterId?: string;
+  armId?: string;
   breadcrumbs: BreadcrumbSegment[];
 }
 
@@ -63,6 +73,20 @@ export interface NavigationContextType {
     datasetId: string,
   ) => void;
   navigateToCreateDataset: (agentName: string, skillName: string) => void;
+  navigateToConfigurations: (agentName: string, skillName: string) => void;
+  navigateToModels: (agentName: string, skillName: string) => void;
+  navigateToClusters: (agentName: string, skillName: string) => void;
+  navigateToClusterArms: (
+    agentName: string,
+    skillName: string,
+    clusterId: string,
+  ) => void;
+  navigateToArmDetail: (
+    agentName: string,
+    skillName: string,
+    clusterId: string,
+    armId: string,
+  ) => void;
   navigateBack: (targetSegmentIndex: number) => void;
   updateBreadcrumbs: (segments: BreadcrumbSegment[]) => void;
 }

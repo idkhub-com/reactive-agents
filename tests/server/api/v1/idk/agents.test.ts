@@ -25,6 +25,31 @@ const mockUserDataStorageConnector = {
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
+  // System prompt methods
+  getSystemPrompts: vi.fn(),
+  createSystemPrompt: vi.fn(),
+  updateSystemPrompt: vi.fn(),
+  deleteSystemPrompt: vi.fn(),
+  // Skill Optimization Cluster methods
+  getSkillOptimizationClusters: vi.fn(),
+  createSkillOptimizationClusters: vi.fn(),
+  updateSkillOptimizationCluster: vi.fn(),
+  deleteSkillOptimizationCluster: vi.fn(),
+  // Skill Optimization Arm methods
+  getSkillOptimizationArms: vi.fn(),
+  createSkillOptimizationArms: vi.fn(),
+  updateSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArmsForSkill: vi.fn(),
+  // Skill Optimization Evaluation methods
+  getSkillOptimizationEvaluations: vi.fn(),
+  createSkillOptimizationEvaluations: vi.fn(),
+  deleteSkillOptimizationEvaluation: vi.fn(),
+  deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+  // Skill Optimization Evaluation Run methods
+  getSkillOptimizationEvaluationRuns: vi.fn(),
+  createSkillOptimizationEvaluationRun: vi.fn(),
+  deleteSkillOptimizationEvaluationRun: vi.fn(),
   // Tool methods
   getTools: vi.fn(),
   createTool: vi.fn(),
@@ -50,6 +75,22 @@ const mockUserDataStorageConnector = {
   getLogOutputs: vi.fn(),
   createLogOutput: vi.fn(),
   deleteLogOutput: vi.fn(),
+  // AI Provider API Key methods
+  getAIProviderAPIKeys: vi.fn(),
+  getAIProviderAPIKeyById: vi.fn(),
+  createAIProviderAPIKey: vi.fn(),
+  updateAIProviderAPIKey: vi.fn(),
+  deleteAIProviderAPIKey: vi.fn(),
+  // Model methods
+  getModels: vi.fn(),
+  getModelById: vi.fn(),
+  createModel: vi.fn(),
+  updateModel: vi.fn(),
+  deleteModel: vi.fn(),
+  // Skill-Model relationship methods
+  getSkillModels: vi.fn(),
+  addModelsToSkill: vi.fn(),
+  removeModelsFromSkill: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector

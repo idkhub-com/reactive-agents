@@ -2,17 +2,19 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@server/types/connector';
-import { error, info, warn } from '@shared/console-logging';
-import type { EvaluationRun } from '@shared/types/data/evaluation-run';
-import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
-import type { Log } from '@shared/types/data/log';
+import { info, warn } from '@shared/console-logging';
+import type {
+  Log,
+  LogOutput,
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
-  type EvaluationRunJobDetails,
 } from '@shared/types/idkhub/evaluations';
 import { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+
 import type { ToolCall } from './types';
 
 // Pure functions for tool evaluation logic
@@ -421,7 +423,7 @@ const generateReason = (
   return `Partial match: ${matchedCount}/${expected_tools.length} expected tools were called correctly. Expected: ${expectedNames.join(', ')}, Called: ${calledNames.join(', ')}.`;
 };
 
-const evaluateLog = (
+const evaluateLogInternal = (
   log: Log,
   parameters: ToolCorrectnessEvaluationParameters,
 ): {
@@ -514,11 +516,11 @@ const evaluateLog = (
   };
 };
 
-async function evaluateOneLogForToolCorrectness(
+export async function evaluateOneLogForToolCorrectness(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -532,27 +534,27 @@ async function evaluateOneLogForToolCorrectness(
     evaluationRun.metadata?.parameters || {},
   );
 
-  // Convert IdkRequestLog to Log format for compatibility
-  const logForEvaluation: Log = log as Log;
-
   // Evaluate the single log
-  const logResult = evaluateLog(logForEvaluation, params);
+  const logResult = evaluateLogInternal(log, params);
 
   // Create log output record
-  await userDataStorageConnector.createLogOutput(evaluationRunId, {
-    log_id: log.id,
-    output: {
-      tools_called: logResult.tools_called,
-      expected_tools: logResult.expected_tools,
+  const logOutput = await userDataStorageConnector.createLogOutput(
+    evaluationRunId,
+    {
+      log_id: log.id,
+      output: {
+        tools_called: logResult.tools_called,
+        expected_tools: logResult.expected_tools,
+        score: logResult.score,
+        reason: logResult.reason,
+      },
       score: logResult.score,
-      reason: logResult.reason,
+      metadata: {
+        evaluation_method: 'tool_correctness',
+        parameters: params,
+      },
     },
-    score: logResult.score,
-    metadata: {
-      evaluation_method: 'tool_correctness',
-      parameters: params,
-    },
-  });
+  );
 
   // Get all log outputs for this evaluation run to calculate new average
   const allLogOutputs = await userDataStorageConnector.getLogOutputs(
@@ -591,6 +593,37 @@ async function evaluateOneLogForToolCorrectness(
       threshold_used: thresholdUsed,
     },
   });
+
+  return logOutput;
+}
+
+export function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
+  log: Log,
+): Promise<SkillOptimizationEvaluationResult> {
+  const params = ToolCorrectnessEvaluationParameters.parse(evaluation.params);
+
+  const start_time = Date.now();
+
+  // Evaluate using the internal evaluateLogInternal function
+  const logResult = evaluateLogInternal(log, params);
+
+  const execution_time = Date.now() - start_time;
+
+  const evaluationResult: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.TOOL_CORRECTNESS,
+    score: logResult.score,
+    extra_data: {
+      tools_called: logResult.tools_called,
+      expected_tools: logResult.expected_tools,
+      reasoning: logResult.reason,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
+    },
+  };
+
+  return Promise.resolve(evaluationResult);
 }
 
 // Tool correctness connector constant instance
@@ -603,150 +636,139 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
     };
   },
 
-  async evaluate(
-    jobDetails: EvaluationRunJobDetails,
-    userDataStorageConnector: UserDataStorageConnector,
-  ): Promise<EvaluationRun> {
-    const { agent_id, skill_id, dataset_id, parameters } = jobDetails;
+  // async evaluate(
+  //   jobDetails: EvaluationRunJobDetails,
+  //   userDataStorageConnector: UserDataStorageConnector,
+  // ): Promise<EvaluationRun> {
+  //   const { agent_id, skill_id, dataset_id, parameters } = jobDetails;
 
-    // Parameters are now directly ToolCorrectnessEvaluationMethodDetails with defaults from schema
-    const toolCorrectnessParams =
-      ToolCorrectnessEvaluationParameters.parse(parameters);
+  //   // Parameters are now directly ToolCorrectnessEvaluationMethodDetails with defaults from schema
+  //   const toolCorrectnessParams =
+  //     ToolCorrectnessEvaluationParameters.parse(parameters);
 
-    // Create evaluation run
-    const evaluationRun = await userDataStorageConnector.createEvaluationRun({
-      dataset_id,
-      agent_id,
-      skill_id,
-      evaluation_method: EvaluationMethodName.TOOL_CORRECTNESS,
-      name:
-        jobDetails.name ||
-        `Tool Correctness Evaluation - ${new Date().toISOString()}`,
-      description:
-        jobDetails.description || 'Evaluation of tool calling correctness',
-      metadata: {
-        parameters: toolCorrectnessParams,
-      },
-    });
+  //   // Create evaluation run
+  //   const evaluationRun = await userDataStorageConnector.createEvaluationRun({
+  //     dataset_id,
+  //     agent_id,
+  //     skill_id,
+  //     evaluation_method: EvaluationMethodName.TOOL_CORRECTNESS,
+  //     name:
+  //       jobDetails.name ||
+  //       `Tool Correctness Evaluation - ${new Date().toISOString()}`,
+  //     description:
+  //       jobDetails.description || 'Evaluation of tool calling correctness',
+  //     metadata: {
+  //       parameters: toolCorrectnessParams,
+  //     },
+  //   });
 
-    try {
-      // Update status to running
-      await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
-        status: EvaluationRunStatus.RUNNING,
-        started_at: new Date().toISOString(),
-      });
+  //   try {
+  //     // Update status to running
+  //     await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
+  //       status: EvaluationRunStatus.RUNNING,
+  //       started_at: new Date().toISOString(),
+  //     });
 
-      // Get dataset logs
-      const logs = await userDataStorageConnector.getDatasetLogs(
-        dataset_id,
-        {},
-      );
+  //     // Get dataset logs
+  //     const logs = await userDataStorageConnector.getDatasetLogs(
+  //       dataset_id,
+  //       {},
+  //     );
 
-      const results = {
-        total_logs: logs.length,
-        evaluated_logs: 0,
-        average_score: 0,
-        passed_count: 0,
-        failed_count: 0,
-        threshold_used: toolCorrectnessParams.threshold || 0.5,
-        scores: [] as Array<{
-          log_id: string;
-          score: number;
-          reason?: string;
-          tools_called: ToolCall[];
-          expected_tools: ToolCall[];
-        }>,
-      };
+  //     const results = {
+  //       total_logs: logs.length,
+  //       evaluated_logs: 0,
+  //       average_score: 0,
+  //       passed_count: 0,
+  //       failed_count: 0,
+  //       threshold_used: toolCorrectnessParams.threshold || 0.5,
+  //       scores: [] as Array<{
+  //         log_id: string;
+  //         score: number;
+  //         reason?: string;
+  //         tools_called: ToolCall[];
+  //         expected_tools: ToolCall[];
+  //       }>,
+  //     };
 
-      let totalScore = 0;
+  //     let totalScore = 0;
 
-      for (const log of logs) {
-        try {
-          const logResult = evaluateLog(
-            log,
-            toolCorrectnessParams as ToolCorrectnessEvaluationParameters,
-          );
+  //     for (const log of logs) {
+  //       try {
+  //         const logResult = evaluateLogInternal(
+  //           log,
+  //           toolCorrectnessParams as ToolCorrectnessEvaluationParameters,
+  //         );
 
-          results.scores.push(logResult);
-          totalScore += logResult.score;
-          results.evaluated_logs++;
+  //         results.scores.push(logResult);
+  //         totalScore += logResult.score;
+  //         results.evaluated_logs++;
 
-          // Count passed/failed based on threshold
-          if (logResult.score >= results.threshold_used) {
-            results.passed_count++;
-          } else {
-            results.failed_count++;
-          }
+  //         // Count passed/failed based on threshold
+  //         if (logResult.score >= results.threshold_used) {
+  //           results.passed_count++;
+  //         } else {
+  //           results.failed_count++;
+  //         }
 
-          // Create log output
-          try {
-            await userDataStorageConnector.createLogOutput(evaluationRun.id, {
-              log_id: log.id,
-              output: {
-                tools_called: logResult.tools_called,
-                expected_tools: logResult.expected_tools,
-                score: logResult.score,
-                reason: logResult.reason,
-              },
-              score: logResult.score,
-              metadata: {
-                evaluation_method: 'tool_correctness',
-                parameters: toolCorrectnessParams,
-              },
-            });
-          } catch (outputError) {
-            error(`Error creating log output for ${log.id}:`, outputError);
-            // Continue with other logs even if output creation fails
-          }
-        } catch (e) {
-          error(`Error evaluating log ${log.id}:`, e);
-          // Continue with other logs
-        }
-      }
+  //         // Create log output
+  //         try {
+  //           await userDataStorageConnector.createLogOutput(evaluationRun.id, {
+  //             log_id: log.id,
+  //             output: {
+  //               tools_called: logResult.tools_called,
+  //               expected_tools: logResult.expected_tools,
+  //               score: logResult.score,
+  //               reason: logResult.reason,
+  //             },
+  //             score: logResult.score,
+  //             metadata: {
+  //               evaluation_method: 'tool_correctness',
+  //               parameters: toolCorrectnessParams,
+  //             },
+  //           });
+  //         } catch (outputError) {
+  //           error(`Error creating log output for ${log.id}:`, outputError);
+  //           // Continue with other logs even if output creation fails
+  //         }
+  //       } catch (e) {
+  //         error(`Error evaluating log ${log.id}:`, e);
+  //         // Continue with other logs
+  //       }
+  //     }
 
-      // Calculate average score
-      if (results.evaluated_logs > 0) {
-        results.average_score = totalScore / results.evaluated_logs;
-      }
+  //     // Calculate average score
+  //     if (results.evaluated_logs > 0) {
+  //       results.average_score = totalScore / results.evaluated_logs;
+  //     }
 
-      // Update evaluation run with results
-      await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
-        status: EvaluationRunStatus.COMPLETED,
-        results,
-        completed_at: new Date().toISOString(),
-      });
+  //     // Update evaluation run with results
+  //     await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
+  //       status: EvaluationRunStatus.COMPLETED,
+  //       results,
+  //       completed_at: new Date().toISOString(),
+  //     });
 
-      const updatedRuns = await userDataStorageConnector.getEvaluationRuns({
-        id: evaluationRun.id,
-      });
-      return updatedRuns[0];
-    } catch (e) {
-      error('Error during tool correctness evaluation:', e);
+  //     const updatedRuns = await userDataStorageConnector.getEvaluationRuns({
+  //       id: evaluationRun.id,
+  //     });
+  //     return updatedRuns[0];
+  //   } catch (e) {
+  //     error('Error during tool correctness evaluation:', e);
 
-      // Update evaluation run with error status
-      await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
-        status: EvaluationRunStatus.FAILED,
-        results: {
-          error: e instanceof Error ? e.message : 'Unknown error',
-        },
-        completed_at: new Date().toISOString(),
-      });
+  //     // Update evaluation run with error status
+  //     await userDataStorageConnector.updateEvaluationRun(evaluationRun.id, {
+  //       status: EvaluationRunStatus.FAILED,
+  //       results: {
+  //         error: e instanceof Error ? e.message : 'Unknown error',
+  //       },
+  //       completed_at: new Date().toISOString(),
+  //     });
 
-      throw e;
-    }
-  },
+  //     throw e;
+  //   }
+  // },
 
-  async evaluateOneLog(
-    evaluationRunId: string,
-    log: IdkRequestLog,
-    userDataStorageConnector: UserDataStorageConnector,
-  ): Promise<void> {
-    await evaluateOneLogForToolCorrectness(
-      evaluationRunId,
-      log,
-      userDataStorageConnector,
-    );
-  },
-
+  evaluateLog,
   getParameterSchema: ToolCorrectnessEvaluationParameters,
 };

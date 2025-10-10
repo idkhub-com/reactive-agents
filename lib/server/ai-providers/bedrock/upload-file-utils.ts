@@ -84,7 +84,6 @@ const transformAssistantMessageForAnthropic = (
   msg: ChatCompletionMessage,
 ): AnthropicMessage => {
   const content: AnthropicContentItem[] = [];
-  const containsToolCalls = msg.tool_calls?.length;
 
   if (msg.content && typeof msg.content === 'string') {
     content.push({
@@ -103,7 +102,7 @@ const transformAssistantMessageForAnthropic = (
       });
     }
   }
-  if (containsToolCalls) {
+  if (msg.tool_calls && msg.tool_calls.length > 0) {
     msg.tool_calls.forEach((toolCall: ChatCompletionToolCall) => {
       content.push({
         type: 'tool_use',

@@ -1,0 +1,271 @@
+import { SkillsProvider, useSkills } from '@client/providers/skills';
+import type { Skill } from '@shared/types/data/skill';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock the API module
+vi.mock('@client/api/v1/idk/skills', () => ({
+  getSkills: vi.fn(),
+  createSkill: vi.fn(),
+  updateSkill: vi.fn(),
+  deleteSkill: vi.fn(),
+}));
+
+import { getSkills } from '@client/api/v1/idk/skills';
+
+const mockSkills: Skill[] = [
+  {
+    id: '1',
+    agent_id: 'agent-1',
+    name: 'Skill 1',
+    description: 'Test skill 1',
+    metadata: {},
+    max_configurations: 10,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    num_system_prompts: 0,
+  },
+  {
+    id: '2',
+    agent_id: 'agent-2',
+    name: 'Skill 2',
+    description: 'Test skill 2',
+    metadata: {},
+    max_configurations: 10,
+    created_at: '2024-01-02T00:00:00Z',
+    updated_at: '2024-01-02T00:00:00Z',
+    num_system_prompts: 0,
+  },
+];
+
+describe('SkillsProvider', () => {
+  let queryClient: QueryClient;
+
+  const setupPaginationMock = () => {
+    const firstPage = [mockSkills[0]];
+    const secondPage = [mockSkills[1]];
+
+    let callCount = 0;
+    vi.mocked(getSkills).mockImplementation((params) => {
+      callCount++;
+      if (callCount === 1) {
+        expect(params).toEqual({ limit: 20, offset: 0 });
+        return Promise.resolve(mockSkills);
+      } else if (callCount === 2) {
+        expect(params).toEqual({ limit: 1, offset: 0 });
+        return Promise.resolve(firstPage);
+      } else if (callCount === 3) {
+        expect(params).toEqual({ limit: 1, offset: 1 });
+        return Promise.resolve(secondPage);
+      }
+      return Promise.resolve([]);
+    });
+
+    return { firstPage, secondPage };
+  };
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          gcTime: 0,
+          staleTime: 0,
+        },
+      },
+    });
+    vi.clearAllMocks();
+  });
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <SkillsProvider>{children}</SkillsProvider>
+    </QueryClientProvider>
+  );
+
+  it('should fetch skills', async () => {
+    vi.mocked(getSkills).mockResolvedValue(mockSkills);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.skills).toEqual(mockSkills);
+    expect(getSkills).toHaveBeenCalledWith({
+      limit: 20,
+      offset: 0,
+    });
+  });
+
+  it('should fetch with custom limit', async () => {
+    const firstPage = [mockSkills[0]];
+    vi.mocked(getSkills).mockResolvedValue(firstPage);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    // Set custom limit
+    act(() => {
+      result.current.setQueryParams({ limit: 1 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.skills).toEqual(firstPage);
+    expect(result.current.hasNextPage).toBe(true);
+    expect(getSkills).toHaveBeenCalledWith({
+      limit: 1,
+      offset: 0,
+    });
+  });
+
+  it('should fetch next page', async () => {
+    const { firstPage } = setupPaginationMock();
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Set query params to trigger new query
+    act(() => {
+      result.current.setQueryParams({ limit: 1 });
+    });
+
+    // Wait for the query with new params to complete
+    await waitFor(() => {
+      expect(result.current.skills).toEqual(firstPage);
+    });
+
+    // Fetch next page
+    act(() => {
+      result.current.fetchNextPage();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isFetchingNextPage).toBe(false);
+      expect(result.current.skills).toEqual(mockSkills);
+    });
+
+    expect(getSkills).toHaveBeenCalledTimes(3);
+  });
+
+  it('should handle pagination with no more pages', async () => {
+    const lastPage: Skill[] = [];
+    vi.mocked(getSkills).mockResolvedValue(lastPage);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.skills).toEqual([]);
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
+  it('should filter skills by agent_id', async () => {
+    const filteredSkills = [mockSkills[0]];
+    vi.mocked(getSkills).mockResolvedValue(filteredSkills);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    // Set query params to filter by agent_id
+    act(() => {
+      result.current.setQueryParams({ agent_id: 'agent-1' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.skills).toEqual(filteredSkills);
+    expect(getSkills).toHaveBeenCalledWith({
+      agent_id: 'agent-1',
+      limit: 20,
+      offset: 0,
+    });
+  });
+
+  it('should filter skills by name', async () => {
+    const filteredSkills = [mockSkills[0]];
+    vi.mocked(getSkills).mockResolvedValue(filteredSkills);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    // Set query params to filter by name
+    act(() => {
+      result.current.setQueryParams({ name: 'Skill 1' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.skills).toEqual(filteredSkills);
+    expect(getSkills).toHaveBeenCalledWith({
+      name: 'Skill 1',
+      limit: 20,
+      offset: 0,
+    });
+  });
+
+  it('should get skill by id', async () => {
+    vi.mocked(getSkills).mockResolvedValue(mockSkills);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const skill = result.current.getSkillById('1');
+    expect(skill).toEqual(mockSkills[0]);
+
+    const nonExistentSkill = result.current.getSkillById('999');
+    expect(nonExistentSkill).toBeUndefined();
+  });
+
+  it('should handle selected skill state', async () => {
+    vi.mocked(getSkills).mockResolvedValue(mockSkills);
+
+    const { result } = renderHook(() => useSkills(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.selectedSkill).toBeNull();
+
+    // Set selected skill
+    act(() => {
+      result.current.setSelectedSkill(mockSkills[0]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedSkill).toEqual(mockSkills[0]);
+    });
+
+    // Clear selected skill
+    act(() => {
+      result.current.setSelectedSkill(null);
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedSkill).toBeNull();
+    });
+  });
+
+  it('should throw error when used outside provider', () => {
+    expect(() => {
+      renderHook(() => useSkills());
+    }).toThrow('useSkills must be used within a SkillsProvider');
+  });
+});

@@ -5,6 +5,7 @@ import {
   type AgentCreateParams,
   type AgentQueryParams,
   type AgentUpdateParams,
+  SkillOptimizationEvaluationRun,
 } from '@shared/types/data';
 import { hc } from 'hono/client';
 
@@ -67,4 +68,22 @@ export async function deleteAgent(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete agent');
   }
+}
+
+export async function getAgentEvaluationRuns(
+  agentId: string,
+): Promise<SkillOptimizationEvaluationRun[]> {
+  const response = await client.v1.idk.agents[':agentId'][
+    'evaluation-runs'
+  ].$get({
+    param: {
+      agentId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch agent evaluation runs');
+  }
+
+  return SkillOptimizationEvaluationRun.array().parse(await response.json());
 }

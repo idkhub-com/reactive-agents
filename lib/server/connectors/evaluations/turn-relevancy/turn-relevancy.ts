@@ -9,12 +9,8 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
-import {
-  evaluateOneLogForTurnRelevancy,
-  evaluateTurnRelevancyDataset,
-} from './service/evaluate';
+import { evaluateLog, evaluateTurnRelevancyDataset } from './service/evaluate';
 
 const methodConfig: EvaluationMethodDetails = {
   method: EvaluationMethodName.TURN_RELEVANCY,
@@ -23,7 +19,7 @@ const methodConfig: EvaluationMethodDetails = {
     'Evaluates whether a conversation turn is relevant to the prior context',
 } as const;
 
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -46,21 +42,8 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForTurnRelevancy(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 export const turnRelevancyEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => methodConfig,
-  evaluate: runEvaluation,
-  evaluateOneLog,
+  evaluateLog,
   getParameterSchema: TurnRelevancyEvaluationParameters,
 };

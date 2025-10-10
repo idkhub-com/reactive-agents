@@ -2,6 +2,12 @@ import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/rol
 import type { RoleAdherenceAverageResult } from '@server/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
+import { IdkResponseBody } from '@shared/types/api/response';
+import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -11,11 +17,11 @@ import type { Log } from '@shared/types/data/log';
 import type {
   LogOutput as EvaluationOutput,
   LogOutputCreateParams as EvaluationOutputCreateParams,
+  LogOutput,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
 import { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { v4 as uuidv4 } from 'uuid';
 
 function pickRoleData(
@@ -28,14 +34,21 @@ function pickRoleData(
 } {
   const role_definition =
     params.role_definition || (log.metadata?.role_definition as string) || '';
-  const assistant_output =
-    params.assistant_output ||
-    (log.ai_provider_request_log?.response_body
-      ? typeof log.ai_provider_request_log.response_body === 'string'
-        ? log.ai_provider_request_log.response_body
-        : JSON.stringify(log.ai_provider_request_log.response_body)
-      : (log.metadata?.assistant_output as string) || '') ||
-    '';
+
+  // Extract assistant output using standard utilities
+  let assistant_output = params.assistant_output;
+  if (!assistant_output) {
+    try {
+      const responseBody = IdkResponseBody.parse(
+        log.ai_provider_request_log.response_body,
+      );
+      assistant_output = extractOutputFromResponseBody(responseBody);
+    } catch {
+      // Fallback to metadata if parsing fails
+      assistant_output = (log.metadata?.assistant_output as string) || '';
+    }
+  }
+
   const instructions =
     params.instructions || (log.metadata?.instructions as string);
   return { role_definition, assistant_output, instructions };
@@ -141,9 +154,9 @@ async function evaluateSingleLog(
 
 export async function evaluateOneLogForRoleAdherence(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -167,7 +180,7 @@ export async function evaluateOneLogForRoleAdherence(
   });
 
   // Evaluate the single log
-  await evaluateSingleLog(
+  const logOutput = await evaluateSingleLog(
     logForEvaluation,
     params,
     evaluationRunId,
@@ -212,6 +225,8 @@ export async function evaluateOneLogForRoleAdherence(
       evaluation_outputs: allLogOutputs.map((o) => o.id),
     },
   });
+
+  return logOutput;
 }
 
 export async function evaluateRoleAdherenceDataset(
@@ -353,4 +368,62 @@ export async function evaluateRoleAdherenceDataset(
     });
     throw error;
   }
+}
+
+export async function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
+  log: Log,
+): Promise<SkillOptimizationEvaluationResult> {
+  const params = RoleAdherenceEvaluationParameters.parse(evaluation.params);
+
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
+
+  const start_time = Date.now();
+
+  const { role_definition, assistant_output, instructions } = pickRoleData(
+    log,
+    params,
+  );
+
+  const tpl = getRoleAdherenceMainTemplate({
+    role_definition,
+    assistant_output,
+    instructions,
+    strict_mode: params.strict_mode || false,
+    verbose_mode: params.verbose_mode ?? true,
+    include_reason: params.include_reason ?? true,
+  });
+
+  const judgeResult = await llmJudge.evaluate({
+    text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
+  });
+
+  let final_score = judgeResult.score;
+  if (params.strict_mode) {
+    final_score = final_score === 1.0 ? 1.0 : 0.0;
+  }
+
+  const execution_time = Date.now() - start_time;
+
+  const evaluationResult: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.ROLE_ADHERENCE,
+    score: final_score,
+    extra_data: {
+      reasoning: judgeResult.reasoning,
+      role_definition,
+      assistant_output,
+      instructions,
+      strict_mode: params.strict_mode,
+      metadata: judgeResult.metadata,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
+    },
+  };
+
+  return evaluationResult;
 }

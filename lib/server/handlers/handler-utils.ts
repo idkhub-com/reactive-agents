@@ -1,4 +1,9 @@
 import { providerConfigs } from '@server/ai-providers';
+import {
+  UNSUPPORTED_REASONING_MODELS,
+  UNSUPPORTED_TEMPERATURE_MODELS,
+  UNSUPPORTED_TOP_P_MODELS,
+} from '@server/constants';
 import { GatewayError } from '@server/errors/gateway';
 import { HttpError } from '@server/errors/http';
 import { RouterError } from '@server/errors/router';
@@ -10,12 +15,12 @@ import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
 import { getCachedResponse } from '@server/utils/cache';
 import { inputHookHandler, outputHookHandler } from '@server/utils/hooks';
-import { constructRequest } from '@server/utils/idkhub/request';
+import { constructRequest } from '@server/utils/idkhub/requests';
 import {
   type CommonRequestOptions,
   type CreateResponseOptions,
   createResponse,
-} from '@server/utils/idkhub/response';
+} from '@server/utils/idkhub/responses';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 import type {
@@ -24,6 +29,9 @@ import type {
 } from '@shared/types/api/request/body';
 import type { IdkConfig, IdkTarget } from '@shared/types/api/request/headers';
 import { HeaderKey, StrategyModes } from '@shared/types/api/request/headers';
+import type { ChatCompletionRequestBody } from '@shared/types/api/routes/chat-completions-api';
+import type { ResponsesRequestBody } from '@shared/types/api/routes/responses-api';
+import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import { AIProvider, ContentTypeName } from '@shared/types/constants';
 import { CacheStatus } from '@shared/types/middleware/cache';
 import { HookType } from '@shared/types/middleware/hooks';
@@ -66,6 +74,67 @@ function getProxyPath(
   return proxyPath;
 }
 
+function getHyperParamDefaults(
+  functionName: FunctionName,
+  idkTarget: IdkTarget,
+) {
+  // Apply configuration params as defaults (before override params)
+  const configDefaults: Record<string, unknown> = {
+    model: idkTarget.configuration.model,
+  };
+
+  // Only copy over fields that exist in the request body interface
+  if (
+    idkTarget.configuration.temperature !== null &&
+    !UNSUPPORTED_TEMPERATURE_MODELS.includes(idkTarget.configuration.model)
+  ) {
+    configDefaults.temperature = idkTarget.configuration.temperature;
+  }
+  if (idkTarget.configuration.max_tokens !== null) {
+    configDefaults.max_tokens = idkTarget.configuration.max_tokens;
+  }
+  if (
+    idkTarget.configuration.top_p !== null &&
+    !UNSUPPORTED_TOP_P_MODELS.includes(idkTarget.configuration.model)
+  ) {
+    configDefaults.top_p = idkTarget.configuration.top_p;
+  }
+  if (idkTarget.configuration.frequency_penalty !== null) {
+    configDefaults.frequency_penalty =
+      idkTarget.configuration.frequency_penalty;
+  }
+  if (idkTarget.configuration.presence_penalty !== null) {
+    configDefaults.presence_penalty = idkTarget.configuration.presence_penalty;
+  }
+  if (idkTarget.configuration.stop !== null) {
+    configDefaults.stop = idkTarget.configuration.stop;
+  }
+  if (idkTarget.configuration.seed !== null) {
+    configDefaults.seed = idkTarget.configuration.seed;
+  }
+  if (
+    idkTarget.configuration.reasoning_effort !== null &&
+    UNSUPPORTED_REASONING_MODELS.includes(idkTarget.configuration.model)
+  ) {
+    switch (functionName) {
+      case FunctionName.STREAM_CHAT_COMPLETE:
+      case FunctionName.CHAT_COMPLETE:
+        configDefaults.reasoning_effort =
+          idkTarget.configuration.reasoning_effort;
+        break;
+      case FunctionName.CREATE_MODEL_RESPONSE:
+        configDefaults.reasoning = {
+          effort: idkTarget.configuration.reasoning_effort,
+        };
+        break;
+      default:
+        throw new Error(`Unsupported function name: ${functionName}`);
+    }
+  }
+
+  return configDefaults;
+}
+
 /**
  * Makes a POST request to a provider and returns the response.
  * The POST request is constructed using the provider, apiKey, and requestBody parameters.
@@ -78,12 +147,94 @@ export async function tryPost(
   idkRequestData: IdkRequestData,
   currentIndex: number,
 ): Promise<Response> {
-  const overrideParams = idkConfig?.override_params || {};
+  const hyperParamDefaults = getHyperParamDefaults(
+    idkRequestData.functionName,
+    idkTarget,
+  );
 
+  const overrideParams = idkConfig?.override_params || {};
+  // Merge: base request body -> config defaults -> override params
   const overriddenIdkRequestBody: IdkRequestBody = {
     ...(idkRequestData.requestBody as Record<string, unknown>),
+    ...hyperParamDefaults,
     ...overrideParams,
-  };
+  } as IdkRequestBody;
+
+  if (
+    idkTarget.configuration.system_prompt &&
+    (idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE ||
+      idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+      idkRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
+  ) {
+    // Handle system prompt with template variables
+    const systemPrompt = idkTarget.configuration.system_prompt;
+
+    // Add system prompt if not overridden by the user
+    switch (idkRequestData.functionName) {
+      case FunctionName.CHAT_COMPLETE:
+      case FunctionName.STREAM_CHAT_COMPLETE: {
+        const messages = (overriddenIdkRequestBody as ChatCompletionRequestBody)
+          .messages;
+
+        // Find existing system message or add new one at the beginning
+        const systemMessageIndex = messages.findIndex(
+          (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
+        );
+        const systemMessage = {
+          role: ChatCompletionMessageRole.SYSTEM,
+          content: systemPrompt,
+        };
+
+        if (systemMessageIndex >= 0) {
+          // Replace existing system message
+          messages[systemMessageIndex] = systemMessage;
+        } else {
+          // Add system message at the beginning
+          messages.unshift(systemMessage);
+        }
+
+        (overriddenIdkRequestBody as ChatCompletionRequestBody).messages =
+          messages;
+        break;
+      }
+      case FunctionName.CREATE_MODEL_RESPONSE: {
+        const inputPreview = (overriddenIdkRequestBody as ResponsesRequestBody)
+          .input;
+
+        let input: Record<string, unknown>[] = [];
+        // If inputPreview is not an array, convert it to an array so that we can add the system prompt
+        if (!Array.isArray(inputPreview)) {
+          input = [
+            {
+              role: ChatCompletionMessageRole.USER,
+              content: inputPreview,
+            },
+          ];
+        } else {
+          input = inputPreview;
+        }
+
+        // Find existing system message or add new one at the beginning
+        const systemMessageIndex = input.findIndex(
+          (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
+        );
+        const systemMessage = {
+          role: ChatCompletionMessageRole.SYSTEM,
+          content: systemPrompt,
+        };
+
+        if (systemMessageIndex >= 0) {
+          // Replace existing system message
+          input[systemMessageIndex] = systemMessage;
+        } else {
+          // Add system message at the beginning
+          input.unshift(systemMessage);
+        }
+
+        (overriddenIdkRequestBody as Record<string, unknown>).input = input;
+      }
+    }
+  }
 
   let isStreamingMode = false;
   if ('stream' in overriddenIdkRequestBody) {
@@ -102,11 +253,12 @@ export async function tryPost(
   }
 
   // Mapping providers to corresponding URLs
-  const internalProviderConfig = providerConfigs[idkTarget.provider];
+  const internalProviderConfig =
+    providerConfigs[idkTarget.configuration.ai_provider];
 
   if (!internalProviderConfig) {
     throw new Error(
-      `Provider config not found for provider: ${idkTarget.provider}`,
+      `Provider config not found for provider: ${idkTarget.configuration.ai_provider}`,
     );
   }
 
@@ -131,7 +283,7 @@ export async function tryPost(
     overriddenIdkRequestData.functionName === FunctionName.PROXY
       ? getProxyPath(
           overriddenIdkRequestData.url,
-          idkTarget.provider,
+          idkTarget.configuration.ai_provider,
           overriddenIdkRequestData.url.indexOf('/v1/proxy') > -1
             ? '/v1/proxy'
             : '/v1',
@@ -146,11 +298,13 @@ export async function tryPost(
     (hook) => hook.type === HookType.OUTPUT_HOOK && hook.await === true,
   );
 
+  c.set('idk_request_data', overriddenIdkRequestData);
+
   const commonRequestOptions: CommonRequestOptions = {
     idkRequestData: overriddenIdkRequestData,
     aiProviderRequestURL: url,
     isStreamingMode,
-    provider: idkTarget.provider,
+    provider: idkTarget.configuration.ai_provider,
     strictOpenAiCompliance,
     areSyncHooksAvailable: outputSyncHooks?.length > 0,
     currentIndex,
@@ -197,7 +351,7 @@ export async function tryPost(
     aiProviderRequestBody =
       overriddenIdkRequestData.method === HttpMethod.POST
         ? transformToProviderRequest(
-            idkTarget.provider,
+            idkTarget.configuration.ai_provider,
             idkTarget,
             overriddenIdkRequestData,
           )
@@ -468,10 +622,11 @@ export async function recursiveOutputHookHandler(
 
   const { retry } = idkTarget;
 
-  const provider = idkTarget.provider || AIProvider.OPENAI;
-  const providerConfig = providerConfigs[provider];
+  const providerConfig = providerConfigs[idkTarget.configuration.ai_provider];
   if (!providerConfig) {
-    throw new Error(`Provider ${provider} not found`);
+    throw new Error(
+      `Provider ${idkTarget.configuration.ai_provider} not found`,
+    );
   }
   const requestHandlers = providerConfig.requestHandlers;
   let requestHandler: (() => Promise<Response>) | undefined;
@@ -511,7 +666,7 @@ export async function recursiveOutputHookHandler(
   } = await responseHandler(
     response,
     isStreamingMode,
-    provider,
+    idkTarget.configuration.ai_provider,
     idkRequestData.functionName,
     aiProviderRequestURL,
     CacheStatus.MISS,

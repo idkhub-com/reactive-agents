@@ -5,14 +5,12 @@ import { useNavigation } from '@client/providers/navigation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';
-import { SkillDashboardView, SkillsListView } from './skills';
-import { DatasetDetailsView } from './skills/datasets';
-import { CreateDatasetView } from './skills/datasets/create-dataset-view';
-import { DatasetsView } from './skills/datasets/datasets-view';
-import { CreateEvaluationRunView } from './skills/evaluation-runs/create-evaluation-run-view';
-import { EvaluationRunDetailsView } from './skills/evaluation-runs/evaluation-run-details-view';
-import { EvaluationRunsView } from './skills/evaluation-runs/evaluation-runs-view';
+import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
+import { ArmDetailView } from './skills/arms/arm-detail-view';
+import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
+import { ClustersView } from './skills/clusters/clusters-view';
 import { LogDetailsView, LogsView } from './skills/logs';
+import { ModelsView } from './skills/models/models-view';
 
 export function AgentsView(): ReactElement {
   const { navigationState } = useNavigation();
@@ -49,6 +47,12 @@ export function AgentsView(): ReactElement {
             <SkillDashboardView />
           </AgentErrorBoundary>
         );
+      case 'edit-skill':
+        return (
+          <AgentErrorBoundary sectionName="Edit Skill">
+            <EditSkillView />
+          </AgentErrorBoundary>
+        );
       case 'logs':
         return (
           <AgentErrorBoundary sectionName="Logs">
@@ -61,40 +65,28 @@ export function AgentsView(): ReactElement {
             <LogDetailsView />
           </AgentErrorBoundary>
         );
-      case 'evaluations':
+      case 'models':
         return (
-          <AgentErrorBoundary sectionName="Evaluations">
-            <EvaluationRunsView />
+          <AgentErrorBoundary sectionName="Models">
+            <ModelsView />
           </AgentErrorBoundary>
         );
-      case 'evaluation-detail':
+      case 'clusters':
         return (
-          <AgentErrorBoundary sectionName="Evaluation Detail">
-            <EvaluationRunDetailsView />
+          <AgentErrorBoundary sectionName="Clusters">
+            <ClustersView />
           </AgentErrorBoundary>
         );
-      case 'datasets':
+      case 'cluster-arms':
         return (
-          <AgentErrorBoundary sectionName="Datasets">
-            <DatasetsView />
+          <AgentErrorBoundary sectionName="Cluster Arms">
+            <ClusterArmsView />
           </AgentErrorBoundary>
         );
-      case 'dataset-detail':
+      case 'arm-detail':
         return (
-          <AgentErrorBoundary sectionName="Dataset Detail">
-            <DatasetDetailsView />
-          </AgentErrorBoundary>
-        );
-      case 'create-evaluation':
-        return (
-          <AgentErrorBoundary sectionName="Create Evaluation">
-            <CreateEvaluationRunView />
-          </AgentErrorBoundary>
-        );
-      case 'create-dataset':
-        return (
-          <AgentErrorBoundary sectionName="Create Dataset">
-            <CreateDatasetView />
+          <AgentErrorBoundary sectionName="Arm Detail">
+            <ArmDetailView />
           </AgentErrorBoundary>
         );
       default:

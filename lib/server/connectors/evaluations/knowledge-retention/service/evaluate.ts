@@ -1,6 +1,19 @@
 import type { KnowledgeRetentionAverageResult } from '@server/connectors/evaluations/knowledge-retention/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
+import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
+import { formatMessagesForExtraction } from '@server/utils/messages';
+import type {
+  ChatCompletionRequestData,
+  ResponsesRequestData,
+  StreamChatCompletionRequestData,
+} from '@shared/types/api/request';
+import { IdkResponseBody } from '@shared/types/api/response';
+import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationResult,
+} from '@shared/types/data';
 import type {
   EvaluationRun,
   EvaluationRunCreateParams,
@@ -8,101 +21,13 @@ import type {
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import type { Log } from '@shared/types/data/log';
 import type {
-  LogOutput as EvaluationOutput,
-  LogOutputCreateParams as EvaluationOutputCreateParams,
+  LogOutput,
+  LogOutputCreateParams,
 } from '@shared/types/data/log-output';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import type { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
 import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
-
-/**
- * Extract context and response from log with standardized fallback logic
- * @param log The log to extract content from
- * @returns Object containing context and response strings
- */
-function extractLogContent(log: Log): {
-  context: string;
-  response: string;
-} {
-  // Input sanitization and length limits
-  const MAX_CONTENT_LENGTH = 10000; // 10KB limit to prevent memory issues
-
-  function sanitizeContent(content: unknown): string {
-    if (typeof content === 'string') {
-      return content.length > MAX_CONTENT_LENGTH
-        ? `${content.substring(0, MAX_CONTENT_LENGTH)}... [truncated]`
-        : content;
-    }
-
-    try {
-      const jsonString = JSON.stringify(content);
-      return jsonString.length > MAX_CONTENT_LENGTH
-        ? `${jsonString.substring(0, MAX_CONTENT_LENGTH)}... [truncated]`
-        : jsonString;
-    } catch (_error) {
-      return '[Error: Could not serialize content]';
-    }
-  }
-  // Extract context with priority order
-  const contextFields = ['context', 'text', 'input', 'prompt', 'message'];
-  let context = '';
-
-  const requestBody = (log.ai_provider_request_log as Record<string, unknown>)
-    ?.request_body as Record<string, unknown>;
-  for (const field of contextFields) {
-    const value = requestBody?.[field];
-    if (value) {
-      context = sanitizeContent(value);
-      break;
-    }
-  }
-
-  // Fallback to entire request_body if no specific field found
-  if (!context && requestBody) {
-    context = sanitizeContent(requestBody);
-  }
-
-  // Extract response with priority order
-  const responseFields = ['text', 'response', 'output', 'result'];
-  let response = '';
-
-  // Try ground_truth first
-  const groundTruth = log.metadata?.ground_truth as Record<string, unknown>;
-  for (const field of responseFields) {
-    const value = groundTruth?.[field];
-    if (value) {
-      response = sanitizeContent(value);
-      break;
-    }
-  }
-
-  // Try metadata if no ground_truth found
-  if (!response) {
-    for (const field of responseFields) {
-      const value = log.metadata?.[field];
-      if (value) {
-        response = sanitizeContent(value);
-        break;
-      }
-    }
-  }
-
-  // Fallback to entire ground_truth if no specific field found
-  if (!response && log.metadata?.ground_truth) {
-    response = sanitizeContent(log.metadata.ground_truth);
-  }
-
-  // Final fallback to entire log
-  if (!context) {
-    context = sanitizeContent(log);
-  }
-  if (!response) {
-    response = sanitizeContent(log);
-  }
-
-  return { context, response };
-}
+import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 /**
  * Evaluate a single log for knowledge retention
@@ -113,97 +38,71 @@ async function evaluateSingleLog(
   llm_judge: LLMJudge,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput> {
+): Promise<LogOutput> {
   const start_time = Date.now();
 
-  try {
-    // Extract context and response using standardized utility function
-    const { context, response } = extractLogContent(log);
+  // Extract messages and outputs using standard utilities
+  const idkRequestData = produceIdkRequestData(
+    log.ai_provider_request_log.method,
+    log.ai_provider_request_log.request_url,
+    {},
+    log.ai_provider_request_log.request_body,
+  );
+  const responseBody = IdkResponseBody.parse(
+    log.ai_provider_request_log.response_body,
+  );
 
-    if (!context || !response) {
-      throw new Error('Missing context or response in log');
-    }
+  const messages = extractMessagesFromRequestData(
+    idkRequestData as
+      | ChatCompletionRequestData
+      | StreamChatCompletionRequestData
+      | ResponsesRequestData,
+  );
+  const input = formatMessagesForExtraction(messages);
+  const output = extractOutputFromResponseBody(responseBody);
 
-    // Create evaluation prompt that avoids triggering template detection
-    const evaluationText = `Analyze the following conversation for knowledge retention quality. CONVERSATION: ${context} ASSISTANT RESPONSE: ${response} Consider how well the assistant retains and recalls information provided by the user throughout the conversation. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+  // Create evaluation prompt that avoids triggering template detection
+  const evaluationText = `Analyze the following conversation for knowledge retention quality. CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
 
-    // Evaluate using LLM judge
-    const result = await llm_judge.evaluate({
-      text: evaluationText,
-      outputFormat: 'json',
-    });
+  // Evaluate using LLM judge
+  const result = await llm_judge.evaluate({
+    text: evaluationText,
+    outputFormat: 'json',
+  });
 
-    const execution_time = Date.now() - start_time;
+  const execution_time = Date.now() - start_time;
 
-    // Create evaluation output
-    const evaluationOutput: EvaluationOutputCreateParams = {
-      log_id: log.id,
-      output: {
-        score: result.score,
-        reasoning: result.reasoning,
-        passed: result.score >= (params.threshold || 0.6), // Use parameter threshold
-        threshold: params.threshold || 0.6,
-        knowledgeRetention: result.metadata?.knowledgeRetention,
-        execution_time,
-        execution_time_ms: execution_time,
-        evaluated_at: new Date().toISOString(),
-        evaluation_run_id,
-        ...(params.verbose_mode && { verbose_logs: result.metadata }),
-      },
+  // Create evaluation output
+  const LogOutput: LogOutputCreateParams = {
+    log_id: log.id,
+    output: {
       score: result.score,
-      metadata: {
-        evaluation_method: 'knowledge_retention',
-        parameters: params,
-        knowledgeRetention: result.metadata?.knowledgeRetention,
-        execution_time,
-        execution_time_ms: execution_time,
-        evaluated_at: new Date().toISOString(),
-        evaluation_run_id,
-      },
-    };
-
-    return await userDataStorageConnector.createLogOutput(
+      reasoning: result.reasoning,
+      passed: result.score >= (params.threshold || 0.6), // Use parameter threshold
+      threshold: params.threshold || 0.6,
+      knowledgeRetention: result.metadata?.knowledgeRetention,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
       evaluation_run_id,
-      evaluationOutput,
-    );
-  } catch (error) {
-    console.error('Error evaluating log:', error);
-    const execution_time = Date.now() - start_time;
-
-    // Sanitize error message to prevent information leakage
-    const sanitizedErrorMessage =
-      error instanceof Error
-        ? error.message.length > 200
-          ? `${error.message.substring(0, 200)}... [truncated]`
-          : error.message
-        : 'Unknown error occurred';
-
-    const evaluationOutput: EvaluationOutputCreateParams = {
-      log_id: log.id,
-      output: {
-        error: true,
-        error_message: sanitizedErrorMessage,
-        execution_time,
-        execution_time_ms: execution_time,
-        evaluated_at: new Date().toISOString(),
-        evaluation_run_id,
-      },
-      score: null, // Use null instead of 0 to avoid skewing results
-      metadata: {
-        error: true,
-        error_message: sanitizedErrorMessage,
-        execution_time,
-        execution_time_ms: execution_time,
-        evaluated_at: new Date().toISOString(),
-        evaluation_run_id,
-      },
-    };
-
-    return await userDataStorageConnector.createLogOutput(
+      ...(params.verbose_mode && { verbose_logs: result.metadata }),
+    },
+    score: result.score,
+    metadata: {
+      evaluation_method: 'knowledge_retention',
+      parameters: params,
+      knowledgeRetention: result.metadata?.knowledgeRetention,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
       evaluation_run_id,
-      evaluationOutput,
-    );
-  }
+    },
+  };
+
+  return await userDataStorageConnector.createLogOutput(
+    evaluation_run_id,
+    LogOutput,
+  );
 }
 
 /**
@@ -215,9 +114,9 @@ async function processLogsInBatches(
   llm_judge: LLMJudge,
   evaluation_run_id: string,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationOutput[]> {
+): Promise<LogOutput[]> {
   const batch_size = params.batch_size || 10;
-  const results: EvaluationOutput[] = [];
+  const results: LogOutput[] = [];
 
   for (let i = 0; i < logs.length; i += batch_size) {
     const batch = logs.slice(i, i + batch_size);
@@ -256,7 +155,7 @@ async function processLogsInBatches(
 
 /**
  * Knowledge retention evaluation function - evaluates each log individually
- * and stores EvaluationOutput records, then returns average results
+ * and stores LogOutput records, then returns average results
  */
 export async function evaluateKnowledgeRetention(
   agentId: string,
@@ -296,7 +195,6 @@ export async function evaluateKnowledgeRetention(
     model: params.model,
     temperature: params.temperature,
     max_tokens: params.max_tokens,
-    timeout: params.timeout,
   });
 
   try {
@@ -438,9 +336,9 @@ export async function evaluateKnowledgeRetention(
 
 export async function evaluateOneLogForKnowledgeRetention(
   evaluationRunId: string,
-  log: IdkRequestLog,
+  log: Log,
   userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
+): Promise<LogOutput> {
   // Get the evaluation run to access parameters
   const evaluationRuns = await userDataStorageConnector.getEvaluationRuns({
     id: evaluationRunId,
@@ -453,20 +351,16 @@ export async function evaluateOneLogForKnowledgeRetention(
   const params = (evaluationRun.metadata?.parameters ||
     {}) as KnowledgeRetentionEvaluationParameters;
 
-  // Convert IdkRequestLog to Log format for compatibility
-  const logForEvaluation: Log = log as Log;
-
   // Create LLM judge
   const llmJudge = createLLMJudge({
     model: params.model,
     temperature: params.temperature,
     max_tokens: params.max_tokens,
-    timeout: params.timeout,
   });
 
   // Evaluate the single log
-  await evaluateSingleLog(
-    logForEvaluation,
+  const evalOutput = await evaluateSingleLog(
+    log,
     params,
     llmJudge,
     evaluationRunId,
@@ -561,4 +455,67 @@ export async function evaluateOneLogForKnowledgeRetention(
       overall_retention_rate: overallRetentionRate,
     },
   });
+
+  return evalOutput;
+}
+
+export async function evaluateLog(
+  evaluation: SkillOptimizationEvaluation,
+  log: Log,
+): Promise<SkillOptimizationEvaluationResult> {
+  const params = evaluation.params as KnowledgeRetentionEvaluationParameters;
+
+  const llmJudge = createLLMJudge({
+    model: params.model,
+    temperature: params.temperature,
+    max_tokens: params.max_tokens,
+  });
+
+  const start_time = Date.now();
+
+  // Extract messages and outputs using standard utilities
+  const idkRequestData = produceIdkRequestData(
+    log.ai_provider_request_log.method,
+    log.ai_provider_request_log.request_url,
+    {},
+    log.ai_provider_request_log.request_body,
+  );
+  const responseBody = IdkResponseBody.parse(
+    log.ai_provider_request_log.response_body,
+  );
+
+  const messages = extractMessagesFromRequestData(
+    idkRequestData as
+      | ChatCompletionRequestData
+      | StreamChatCompletionRequestData
+      | ResponsesRequestData,
+  );
+  const input = formatMessagesForExtraction(messages);
+  const output = extractOutputFromResponseBody(responseBody);
+
+  // Create evaluation prompt
+  const evaluationText = `Analyze the following conversation for knowledge retention quality. CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+
+  // Evaluate using LLM judge
+  const result = await llmJudge.evaluate({
+    text: evaluationText,
+    outputFormat: 'json',
+  });
+
+  const execution_time = Date.now() - start_time;
+
+  const evaluationResult: SkillOptimizationEvaluationResult = {
+    method: EvaluationMethodName.KNOWLEDGE_RETENTION,
+    score: result.score,
+    extra_data: {
+      reasoning: result.reasoning,
+      knowledgeRetention: result.metadata?.knowledgeRetention,
+      metadata: result.metadata,
+      execution_time,
+      execution_time_ms: execution_time,
+      evaluated_at: new Date().toISOString(),
+    },
+  };
+
+  return evaluationResult;
 }

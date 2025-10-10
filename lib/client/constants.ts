@@ -1,7 +1,7 @@
 import type { SideBarDataSchema } from '@client/types/ui/side-bar';
 import { micah } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { BookOpenIcon, Settings2Icon } from 'lucide-react';
+import { BookOpenIcon, CpuIcon, KeyIcon, Settings2Icon } from 'lucide-react';
 
 export const AVATAR_SEED = '';
 
@@ -45,6 +45,28 @@ export const SideBarData: SideBarDataSchema = {
   },
   teams: [],
   sections: [
+    {
+      title: 'AI Providers',
+      url: '/ai-providers/api-keys',
+      icon: KeyIcon,
+      items: [
+        {
+          title: 'API Keys',
+          url: '/ai-providers/api-keys',
+        },
+      ],
+    },
+    {
+      title: 'Models',
+      url: '/models',
+      icon: CpuIcon,
+      items: [
+        {
+          title: 'All Models',
+          url: '/models',
+        },
+      ],
+    },
     {
       title: 'Documentation',
       url: '#',

@@ -105,6 +105,18 @@ const app = new Hono<AppEnv>()
 const client = testClient(app);
 ```
 
+**Hono Syntax**: Always use chained method syntax for proper type inference:
+```typescript
+// Use this pattern:
+const app = new Hono<AppEnv>().get().post().fetch();
+
+// Instead of:
+const app = new Hono<AppEnv>();
+app.get();
+app.post();
+app.fetch();
+```
+
 ## AI Provider System
 
 The application supports 40+ AI providers through a unified interface. Each provider implements:

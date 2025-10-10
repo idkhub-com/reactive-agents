@@ -49,7 +49,7 @@ export async function realTimeHandler(c: AppContext): Promise<Response> {
     const idkRequestData = c.get('idk_request_data');
 
     const idkConfig = c.get('idk_config');
-    const provider = idkConfig.targets[0].provider;
+    const provider = idkConfig.targets[0].configuration.ai_provider;
 
     if (!provider) {
       throw new Error('Provider not found');

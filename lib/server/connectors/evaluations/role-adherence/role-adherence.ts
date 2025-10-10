@@ -1,5 +1,5 @@
 import {
-  evaluateOneLogForRoleAdherence,
+  evaluateLog,
   evaluateRoleAdherenceDataset,
 } from '@server/connectors/evaluations/role-adherence/service/evaluate';
 import type {
@@ -13,7 +13,6 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
 const roleAdherenceMethodConfig: EvaluationMethodDetails = {
   method: EvaluationMethodName.ROLE_ADHERENCE,
@@ -22,7 +21,7 @@ const roleAdherenceMethodConfig: EvaluationMethodDetails = {
     'Evaluates whether assistant output adheres to a specified role and constraints using LLM-as-a-judge',
 } as const;
 
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -45,21 +44,8 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForRoleAdherence(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 export const roleAdherenceEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => roleAdherenceMethodConfig,
-  evaluate: runEvaluation,
-  evaluateOneLog,
+  evaluateLog,
   getParameterSchema: RoleAdherenceEvaluationParameters,
 };

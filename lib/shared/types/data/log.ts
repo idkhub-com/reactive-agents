@@ -18,11 +18,11 @@ export const Log = IdkRequestLog;
 export type Log = z.infer<typeof Log>;
 
 export const LogsQueryParams = z.object({
-  id: z.string().uuid().optional(),
-  ids: z.array(z.string().uuid()).optional(),
-  agent_id: z.string().uuid().optional(),
-  skill_id: z.string().uuid().optional(),
-  app_id: z.string().uuid().optional(),
+  id: z.uuid().optional(),
+  ids: z.array(z.uuid()).optional(),
+  agent_id: z.uuid().optional(),
+  skill_id: z.uuid().optional(),
+  app_id: z.uuid().optional(),
   after: z
     .string()
     .transform((val) => (val ? Number(val) : undefined))
@@ -39,6 +39,7 @@ export const LogsQueryParams = z.object({
     .transform((val) => (val ? Number(val) : undefined))
     .optional(),
   cache_status: z.enum(CacheStatus).optional(),
+  embedding_not_null: z.coerce.boolean().optional(),
   limit: z.string().default('50').transform(Number).optional(),
   offset: z.string().default('0').transform(Number).optional(),
 });

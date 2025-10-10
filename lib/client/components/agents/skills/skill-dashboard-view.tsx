@@ -11,43 +11,39 @@ import {
 } from '@client/components/ui/card';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
-import { useDatasets } from '@client/providers/datasets';
-import { useEvaluationRuns } from '@client/providers/evaluation-runs';
 import { useLogs } from '@client/providers/logs';
+import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
+import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import {
   ArrowRightIcon,
-  DatabaseIcon,
+  CheckCircle2,
+  CpuIcon,
   FileTextIcon,
-  PlayIcon,
+  LayersIcon,
   PlusIcon,
   RefreshCwIcon,
+  Settings,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ManageSkillEvaluationsDialog } from './manage-skill-evaluations-dialog';
+import { SkillPerformanceChart } from './skill-performance-chart';
 
 export function SkillDashboardView(): ReactElement {
   const {
     navigationState,
     navigateToLogs,
-    navigateToEvaluations,
-    navigateToDatasets,
+    navigateToModels,
+    navigateToClusters,
   } = useNavigation();
+  const router = useRouter();
 
   const { selectedSkill, selectedAgent } = navigationState;
-
-  // Use providers
-  const {
-    evaluationRuns,
-    isLoading: isLoadingEvaluations,
-    setQueryParams: setEvalQueryParams,
-  } = useEvaluationRuns();
-  const {
-    datasets,
-    isLoading: isLoadingDatasets,
-    setQueryParams: setDatasetQueryParams,
-  } = useDatasets();
+  const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
 
   // Logs via provider
   const {
@@ -57,26 +53,22 @@ export function SkillDashboardView(): ReactElement {
     setQueryParams: setLogsQueryParams,
   } = useLogs();
 
-  // Update evaluation runs query params
-  useEffect(() => {
-    if (!selectedAgent || !selectedSkill) return;
-    setEvalQueryParams({
-      agent_id: selectedAgent.id,
-      skill_id: selectedSkill.id,
-      limit: 100,
-      offset: 0,
-    });
-  }, [selectedAgent, selectedSkill, setEvalQueryParams]);
+  // Models via provider
+  const { skillModels, isLoadingSkillModels, setSkillId } = useModels();
 
-  // Update datasets query params
-  useEffect(() => {
-    if (!selectedAgent) return;
-    setDatasetQueryParams({
-      agent_id: selectedAgent.id,
-      limit: 100,
-      offset: 0,
-    });
-  }, [selectedAgent, setDatasetQueryParams]);
+  // Cluster states via provider
+  const {
+    clusters: clusterStates,
+    isLoading: isLoadingClusterStates,
+    setSkillId: setClusterStatesSkillId,
+  } = useSkillOptimizationClusters();
+
+  // Skill optimization evaluation runs via provider
+  const {
+    evaluationRuns: skillEvaluationRuns,
+    isLoading: isLoadingSkillEvaluationRuns,
+    setSkillId: setSkillEvaluationRunsSkillId,
+  } = useSkillOptimizationEvaluationRuns();
 
   // Update logs query params
   useEffect(() => {
@@ -89,9 +81,32 @@ export function SkillDashboardView(): ReactElement {
     });
   }, [selectedAgent, selectedSkill, setLogsQueryParams]);
 
-  // Use provider data directly
-  const recentEvaluations = evaluationRuns.slice(0, 10);
-  const associatedDatasets = datasets.slice(0, 5);
+  // Update models query params
+  useEffect(() => {
+    if (!selectedSkill) {
+      setSkillId(null);
+      return;
+    }
+    setSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillId]);
+
+  // Update cluster states skill ID
+  useEffect(() => {
+    if (!selectedSkill) {
+      setClusterStatesSkillId(null);
+      return;
+    }
+    setClusterStatesSkillId(selectedSkill.id);
+  }, [selectedSkill, setClusterStatesSkillId]);
+
+  // Update skill evaluation runs skill ID
+  useEffect(() => {
+    if (!selectedSkill) {
+      setSkillEvaluationRunsSkillId(null);
+      return;
+    }
+    setSkillEvaluationRunsSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillEvaluationRunsSkillId]);
 
   // Early return if no skill or agent selected - AFTER all hooks
   if (!selectedSkill || !selectedAgent) {
@@ -116,18 +131,105 @@ export function SkillDashboardView(): ReactElement {
         title={selectedSkill.name}
         description={selectedSkill.description || 'No description available'}
         actions={
-          <Button
-            onClick={() =>
-              navigateToEvaluations(selectedAgent.name, selectedSkill.name)
-            }
-          >
-            <PlayIcon className="h-4 w-4 mr-2" />
-            Run Evaluation
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/edit`,
+                )
+              }
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Edit Skill
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setIsManageEvaluationsOpen(true)}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Manage Evaluations
+            </Button>
+          </div>
         }
       />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Performance Chart - Full Width */}
+        <Card>
+          <CardContent className="pt-6">
+            {isLoadingSkillEvaluationRuns ? (
+              <div className="h-64 flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ) : (
+              <SkillPerformanceChart evaluationRuns={skillEvaluationRuns} />
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
+          {/* Clusters Card */}
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() =>
+              navigateToClusters(selectedAgent.name, selectedSkill.name)
+            }
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-medium">
+                  Clusters
+                </CardTitle>
+                <CardDescription>Optimization clusters</CardDescription>
+              </div>
+              <LayersIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingClusterStates ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map(() => (
+                    <Skeleton key={nanoid()} className="h-4 w-full" />
+                  ))}
+                </div>
+              ) : clusterStates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No clusters found
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {clusterStates.slice(0, 3).map((cluster, index) => (
+                    <div
+                      key={cluster.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="truncate flex-1">
+                        Cluster {index + 1}
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {cluster.total_steps.toString()} reqs
+                      </Badge>
+                    </div>
+                  ))}
+                  {clusterStates.length > 3 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        +{clusterStates.length - 3} more
+                      </span>
+                      <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-4">
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRightIcon className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Recent Logs Card */}
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -207,61 +309,50 @@ export function SkillDashboardView(): ReactElement {
             </CardContent>
           </Card>
 
-          {/* Evaluations Status Card */}
+          {/* Models Card */}
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() =>
-              navigateToEvaluations(selectedAgent.name, selectedSkill.name)
+              navigateToModels(selectedAgent.name, selectedSkill.name)
             }
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
-                <CardTitle className="text-base font-medium">
-                  Evaluations
-                </CardTitle>
-                <CardDescription>Recent evaluation runs</CardDescription>
+                <CardTitle className="text-base font-medium">Models</CardTitle>
+                <CardDescription>Available AI models</CardDescription>
               </div>
-              <PlayIcon className="h-4 w-4 text-muted-foreground" />
+              <CpuIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingEvaluations ? (
+              {isLoadingSkillModels ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map(() => (
                     <Skeleton key={nanoid()} className="h-4 w-full" />
                   ))}
                 </div>
-              ) : recentEvaluations.length === 0 ? (
+              ) : skillModels.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No evaluations yet
+                  No models configured
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {recentEvaluations.slice(0, 3).map((evaluation) => (
+                  {skillModels.slice(0, 3).map((model) => (
                     <div
-                      key={evaluation.id}
+                      key={model.id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="truncate flex-1">{evaluation.name}</span>
-                      <Badge
-                        variant={
-                          evaluation.status === 'completed'
-                            ? 'default'
-                            : evaluation.status === 'running'
-                              ? 'secondary'
-                              : evaluation.status === 'failed'
-                                ? 'destructive'
-                                : 'outline'
-                        }
-                        className="ml-2"
-                      >
-                        {evaluation.status}
+                      <span className="truncate flex-1">
+                        {model.model_name}
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        Model
                       </Badge>
                     </div>
                   ))}
-                  {recentEvaluations.length > 3 && (
+                  {skillModels.length > 3 && (
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs text-muted-foreground">
-                        +{recentEvaluations.length - 3} more
+                        +{skillModels.length - 3} more
                       </span>
                       <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
                     </div>
@@ -269,112 +360,28 @@ export function SkillDashboardView(): ReactElement {
                 </div>
               )}
               <div className="flex items-center justify-between pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigateToEvaluations(
-                      selectedAgent.name,
-                      selectedSkill.name,
-                    );
-                  }}
-                >
+                <Button variant="ghost" size="sm">
                   <PlusIcon className="h-3 w-3 mr-1" />
-                  Create
+                  Add
                 </Button>
                 <Button variant="ghost" size="sm">
                   View All
                   <ArrowRightIcon className="h-3 w-3 ml-1" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Associated Datasets Card */}
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() =>
-              navigateToDatasets(selectedAgent.name, selectedSkill.name)
-            }
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base font-medium">
-                  Datasets
-                </CardTitle>
-                <CardDescription>Associated datasets</CardDescription>
-              </div>
-              <DatabaseIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoadingDatasets ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map(() => (
-                    <Skeleton key={nanoid()} className="h-4 w-full" />
-                  ))}
-                </div>
-              ) : associatedDatasets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No datasets available
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {associatedDatasets.map((dataset) => (
-                    <div
-                      key={dataset.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="truncate flex-1">{dataset.name}</span>
-                      <Badge variant="outline" className="ml-2">
-                        Dataset
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-4">
-                <Button variant="ghost" size="sm">
-                  <PlusIcon className="h-3 w-3 mr-1" />
-                  Create
-                </Button>
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRightIcon className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{recentLogs.length}</div>
-              <p className="text-xs text-muted-foreground">Recent requests</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">
-                {evaluationRuns.filter((e) => e.status === 'completed').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Completed evaluations
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{datasets.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Available datasets
-              </p>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Manage Evaluations Dialog */}
+      {selectedSkill && (
+        <ManageSkillEvaluationsDialog
+          open={isManageEvaluationsOpen}
+          onOpenChange={setIsManageEvaluationsOpen}
+          skillId={selectedSkill.id}
+        />
+      )}
     </>
   );
 }

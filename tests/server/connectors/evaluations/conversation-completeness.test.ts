@@ -88,7 +88,6 @@ describe('Conversation Completeness Evaluation', () => {
       model: 'gpt-4o-mini',
       temperature: 0.1,
       max_tokens: 1000,
-      timeout: 30000,
       include_reason: true,
       strict_mode: false,
       async_mode: true,
@@ -173,7 +172,6 @@ describe('Conversation Completeness Evaluation', () => {
       expect(result.data.threshold).toBe(0.6);
       expect(result.data.model).toBe('gpt-4');
       expect(result.data.temperature).toBe(0.1);
-      expect(result.data.timeout).toBe(30000);
     }
   });
 
@@ -304,8 +302,29 @@ describe('Conversation Completeness Evaluation', () => {
         output:
           'I can help you with your project. What specifically do you need?',
         ai_provider_request_log: {
+          method: 'POST',
+          request_url: 'http://localhost:3000/v1/responses',
           request_body: {
+            input: 'User wants help with their project',
+            model: 'gpt-4',
             context: 'User conversation about project help',
+          },
+          response_body: {
+            id: 'chatcmpl-123',
+            object: 'chat.completion',
+            created: 1677652288,
+            model: 'gpt-4',
+            choices: [
+              {
+                index: 0,
+                finish_reason: 'stop',
+                message: {
+                  role: 'assistant',
+                  content:
+                    'I can help you with your project. What specifically do you need?',
+                },
+              },
+            ],
           },
         },
         metadata: {
@@ -336,6 +355,7 @@ describe('Conversation Completeness Evaluation', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -384,6 +404,7 @@ describe('Conversation Completeness Evaluation', () => {
         score: 0.8,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       // Mock existing log outputs retrieval
@@ -395,6 +416,7 @@ describe('Conversation Completeness Evaluation', () => {
           score: 0.9,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
         {
           id: 'new-output-id',
@@ -403,6 +425,7 @@ describe('Conversation Completeness Evaluation', () => {
           score: 0.8,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 
@@ -463,7 +486,29 @@ describe('Conversation Completeness Evaluation', () => {
         input: 'Simple question',
         output: 'Simple answer',
         ai_provider_request_log: {
-          request_body: { context: 'Simple conversation' },
+          method: 'POST',
+          request_url: 'http://localhost:3000/v1/responses',
+          request_body: {
+            input: 'Simple question',
+            model: 'gpt-4',
+            context: 'Simple conversation',
+          },
+          response_body: {
+            id: 'chatcmpl-456',
+            object: 'chat.completion',
+            created: 1677652288,
+            model: 'gpt-4',
+            choices: [
+              {
+                index: 0,
+                finish_reason: 'stop',
+                message: {
+                  role: 'assistant',
+                  content: 'Simple answer',
+                },
+              },
+            ],
+          },
         },
         metadata: {
           ground_truth: { text: 'Simple answer that lacks depth' },
@@ -489,6 +534,7 @@ describe('Conversation Completeness Evaluation', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -521,6 +567,7 @@ describe('Conversation Completeness Evaluation', () => {
         score: 0.4,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       mockedGetLogOutputs.mockResolvedValue([
@@ -531,6 +578,7 @@ describe('Conversation Completeness Evaluation', () => {
           score: 0.4,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 

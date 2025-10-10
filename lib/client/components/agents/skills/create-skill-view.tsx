@@ -21,10 +21,11 @@ import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
+import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillCreateParams } from '@shared/types/data/skill';
-import { sanitizeDescription, sanitizeUserInput } from '@shared/utils/security';
+import { sanitizeUserInput } from '@shared/utils/security';
 import { Bot, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -36,7 +37,7 @@ const CreateSkillFormSchema = z
     name: z
       .string()
       .min(1, 'Skill name is required')
-      .max(100, 'Skill name must be less than 100 characters')
+      .max(255, 'Skill name must be less than 255 characters')
       .refine(
         (name) => {
           // Basic validation for potentially dangerous content
@@ -49,8 +50,19 @@ const CreateSkillFormSchema = z
       ),
     description: z
       .string()
-      .max(2000, 'Description must be less than 2000 characters')
-      .optional(),
+      .min(25)
+      .max(10000, 'Description must be less than 10000 characters'),
+    max_configurations: z
+      .number()
+      .int()
+      .min(1, 'Min configurations must be at least 1')
+      .max(25, 'Max configurations cannot exceed 25'),
+
+    num_system_prompts: z
+      .number()
+      .int()
+      .min(1, 'Min system prompts must be at least 1')
+      .max(25, 'Max system prompts cannot exceed 25'),
   })
   .strict();
 
@@ -59,6 +71,7 @@ type CreateSkillFormData = z.infer<typeof CreateSkillFormSchema>;
 export function CreateSkillView(): React.ReactElement {
   const { agents, selectedAgent } = useAgents();
   const { createSkill, isCreating } = useSkills();
+  const { setSelectedSkill } = useNavigation();
   const router = useRouter();
   const params = useParams();
   const agentName = params.agentName as string;
@@ -78,6 +91,8 @@ export function CreateSkillView(): React.ReactElement {
     defaultValues: {
       name: '',
       description: '',
+      max_configurations: 3,
+      num_system_prompts: 3,
     },
   });
 
@@ -91,18 +106,25 @@ export function CreateSkillView(): React.ReactElement {
       const skillParams: SkillCreateParams = {
         agent_id: currentAgent.id,
         name: sanitizeUserInput(data.name),
-        description: sanitizeDescription(data.description || ''),
+        description: sanitizeUserInput(data.description),
         metadata: {},
+        max_configurations: data.max_configurations,
+        num_system_prompts: data.num_system_prompts,
       };
 
-      await createSkill(skillParams);
+      const newSkill = await createSkill(skillParams);
 
       // Reset form after successful creation
       form.reset();
 
-      // Navigate back to agent's agent page
+      // Set the newly created skill as selected
+      setSelectedSkill(newSkill);
+
+      // Navigate to evaluations setup page
       if (agentName) {
-        router.push(`/agents/${encodeURIComponent(agentName)}`);
+        router.push(
+          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/evaluations-2/create`,
+        );
       } else {
         router.push('/agents');
       }
@@ -114,6 +136,14 @@ export function CreateSkillView(): React.ReactElement {
 
   // No need to update form since agent is fixed
 
+  const handleBack = () => {
+    if (agentName) {
+      router.push(`/agents/${encodeURIComponent(agentName)}?skip_create=true`);
+    } else {
+      router.push('/agents');
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -123,6 +153,7 @@ export function CreateSkillView(): React.ReactElement {
             ? `Define a new capability for ${currentAgent.name}`
             : 'Define a new capability for this agent'
         }
+        onBack={handleBack}
       />
       <div className="container mx-auto py-6 max-w-2xl">
         {/* Agent Context Card */}
@@ -157,7 +188,7 @@ export function CreateSkillView(): React.ReactElement {
             <div className="flex items-center gap-3">
               <Wrench className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle>Skill Configuration</CardTitle>
+                <CardTitle>Skill Optimization</CardTitle>
                 <CardDescription>
                   Define your skill's basic information and purpose
                 </CardDescription>
@@ -177,7 +208,7 @@ export function CreateSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Skill Name *
+                        Skill Name
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -202,7 +233,7 @@ export function CreateSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description (Optional)
+                        Description
                       </FormLabel>
                       <FormControl>
                         <Textarea
@@ -222,13 +253,70 @@ export function CreateSkillView(): React.ReactElement {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="max_configurations"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">
+                        Max Configurations
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="h-11"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                          disabled={isCreating}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Maximum number of configurations allowed for this skill.
+                        Each configuration represents a unique AI model setup
+                        with specific prompts and parameters.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="num_system_prompts"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">
+                        Number of System Prompts
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="h-11"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                          disabled={isCreating}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The number of system prompts that will be generated for
+                        this skill.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <Button
                     type="button"
                     variant="outline"
                     size="lg"
-                    onClick={() => router.back()}
+                    onClick={handleBack}
                     disabled={isCreating}
                     className="flex-1"
                   >

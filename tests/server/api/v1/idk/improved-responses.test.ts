@@ -2,6 +2,7 @@ import { improvedResponsesRouter } from '@server/api/v1/idk/improved-responses';
 import { authenticatedMiddleware } from '@server/middlewares/auth';
 import { userDataMiddleware } from '@server/middlewares/user-data';
 import { commonVariablesMiddleware } from '@server/middlewares/variables';
+import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppEnv } from '@server/types/hono';
 import type { ImprovedResponse } from '@shared/types/data/improved-response';
 import { Hono } from 'hono';
@@ -47,20 +48,65 @@ const mockUserDataStorageConnector = {
   // Log methods (required by interface)
   getLogs: vi.fn(),
   deleteLog: vi.fn(),
+
   // Dataset-Log Bridge methods (required by interface)
   getDatasetLogs: vi.fn(),
   addLogsToDataset: vi.fn(),
   removeLogsFromDataset: vi.fn(),
+
   // Evaluation run methods
   getEvaluationRuns: vi.fn(),
   createEvaluationRun: vi.fn(),
   updateEvaluationRun: vi.fn(),
   deleteEvaluationRun: vi.fn(),
+
   // Log Output methods (required by interface)
   getLogOutputs: vi.fn(),
   createLogOutput: vi.fn(),
   deleteLogOutput: vi.fn(),
-};
+
+  // AI Provider API Key methods
+  getAIProviderAPIKeys: vi.fn(),
+  getAIProviderAPIKeyById: vi.fn(),
+  createAIProviderAPIKey: vi.fn(),
+  updateAIProviderAPIKey: vi.fn(),
+  deleteAIProviderAPIKey: vi.fn(),
+
+  // Model methods
+  getModels: vi.fn(),
+  createModel: vi.fn(),
+  updateModel: vi.fn(),
+  deleteModel: vi.fn(),
+
+  // Skill-Model relationship methods
+  getSkillModels: vi.fn(),
+  addModelsToSkill: vi.fn(),
+  removeModelsFromSkill: vi.fn(),
+
+  // Skill Optimization Cluster methods
+  getSkillOptimizationClusters: vi.fn(),
+  createSkillOptimizationClusters: vi.fn(),
+  updateSkillOptimizationCluster: vi.fn(),
+  deleteSkillOptimizationCluster: vi.fn(),
+
+  // Skill Optimization Arm methods
+  getSkillOptimizationArms: vi.fn(),
+  createSkillOptimizationArms: vi.fn(),
+  updateSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArmsForSkill: vi.fn(),
+
+  // Skill Optimization Evaluation methods
+  getSkillOptimizationEvaluations: vi.fn(),
+  createSkillOptimizationEvaluations: vi.fn(),
+  deleteSkillOptimizationEvaluation: vi.fn(),
+  deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+
+  // Skill Optimization Evaluation Run methods
+  getSkillOptimizationEvaluationRuns: vi.fn(),
+  createSkillOptimizationEvaluationRun: vi.fn(),
+  deleteSkillOptimizationEvaluationRun: vi.fn(),
+} as UserDataStorageConnector;
 
 // Mock for crypto.randomUUID
 vi.stubGlobal('crypto', {
@@ -108,9 +154,9 @@ describe('Improved Responses API', () => {
       };
 
       // Setup mock response
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue([
-        mockImprovedResponse,
-      ]);
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue([mockImprovedResponse]);
 
       // Make request
       const res = await app.request(
@@ -138,7 +184,9 @@ describe('Improved Responses API', () => {
 
     it('should return empty array if improved response not found', async () => {
       // Setup mock response
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue([]);
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue([]);
 
       // Make request
       const res = await app.request(
@@ -166,9 +214,9 @@ describe('Improved Responses API', () => {
       };
 
       // Setup mock response
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue([
-        mockImprovedResponse,
-      ]);
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue([mockImprovedResponse]);
 
       // Make request
       const res = await app.request(
@@ -196,7 +244,9 @@ describe('Improved Responses API', () => {
 
     it('should return empty array if improved response not found', async () => {
       // Setup mock response
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue([]);
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue([]);
 
       // Make request
       const res = await app.request(
@@ -228,9 +278,9 @@ describe('Improved Responses API', () => {
       };
 
       // Setup mock response
-      mockUserDataStorageConnector.createImprovedResponse.mockResolvedValue(
-        createdImprovedResponse,
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.createImprovedResponse,
+      ).mockResolvedValue(createdImprovedResponse);
 
       // Make request
       const res = await app.request('/improved-responses', {
@@ -267,9 +317,9 @@ describe('Improved Responses API', () => {
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      mockUserDataStorageConnector.createImprovedResponse.mockResolvedValue(
-        createdImprovedResponse,
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.createImprovedResponse,
+      ).mockResolvedValue(createdImprovedResponse);
 
       await app.request('/improved-responses', {
         method: 'POST',
@@ -427,9 +477,9 @@ describe('Improved Responses API', () => {
         updated_at: '2023-01-02T00:00:00.000Z',
       };
 
-      mockUserDataStorageConnector.updateImprovedResponse.mockResolvedValue(
-        updatedImprovedResponse,
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.updateImprovedResponse,
+      ).mockResolvedValue(updatedImprovedResponse);
 
       await app.request(
         '/improved-responses/123e4567-e89b-12d3-a456-426614174000',
@@ -510,9 +560,9 @@ describe('Improved Responses API', () => {
     });
 
     it('should return 500 on database error', async () => {
-      mockUserDataStorageConnector.updateImprovedResponse.mockRejectedValue(
-        new Error('Database update failed'),
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.updateImprovedResponse,
+      ).mockRejectedValue(new Error('Database update failed'));
 
       const res = await app.request(
         '/improved-responses/123e4567-e89b-12d3-a456-426614174000',
@@ -542,9 +592,9 @@ describe('Improved Responses API', () => {
       const improvedResponseId = '123e4567-e89b-12d3-a456-426614174000';
 
       // Only mock the delete call - no GET call should be made
-      mockUserDataStorageConnector.deleteImprovedResponse.mockResolvedValue(
-        undefined,
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.deleteImprovedResponse,
+      ).mockResolvedValue(undefined);
 
       // Make request
       const res = await app.request(
@@ -592,9 +642,9 @@ describe('Improved Responses API', () => {
 
   describe('Error Handling', () => {
     it('should handle database errors during GET', async () => {
-      mockUserDataStorageConnector.getImprovedResponse.mockRejectedValue(
-        new Error('Database connection failed'),
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockRejectedValue(new Error('Database connection failed'));
 
       const res = await app.request(
         '/improved-responses?id=123e4567-e89b-12d3-a456-426614174000',
@@ -617,9 +667,9 @@ describe('Improved Responses API', () => {
         improved_response_body: { improved: 'content' },
       };
 
-      mockUserDataStorageConnector.createImprovedResponse.mockRejectedValue(
-        new Error('Database constraint violation'),
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.createImprovedResponse,
+      ).mockRejectedValue(new Error('Database constraint violation'));
 
       const res = await app.request('/improved-responses', {
         method: 'POST',
@@ -668,6 +718,7 @@ describe('Improved Responses API', () => {
         {
           id: '123e4567-e89b-12d3-a456-426614174000',
           agent_id: '123e4567-e89b-12d3-a456-426614174002',
+          skill_id: '123e4567-e89b-12d3-a456-426614174004',
           log_id: '123e4567-e89b-12d3-a456-426614174003',
           original_response_body: { original: 'content' },
           improved_response_body: { improved: 'content' },
@@ -677,6 +728,7 @@ describe('Improved Responses API', () => {
         {
           id: '123e4567-e89b-12d3-a456-426614174001',
           agent_id: '123e4567-e89b-12d3-a456-426614174002',
+          skill_id: '123e4567-e89b-12d3-a456-426614174004',
           log_id: '123e4567-e89b-12d3-a456-426614174004',
           original_response_body: { original: 'content2' },
           improved_response_body: { improved: 'content2' },
@@ -685,9 +737,9 @@ describe('Improved Responses API', () => {
         },
       ];
 
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue(
-        allResponses,
-      );
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue(allResponses);
 
       // Test with valid parameters defined in the schema
       // Note: In URLs, limit and offset are strings, but Zod coerces them to numbers
@@ -974,7 +1026,7 @@ describe('Improved Responses API', () => {
       authenticatedApp = new Hono<AppEnv>();
 
       // Add middleware stack
-      authenticatedApp.use('*', commonVariablesMiddleware(factory));
+      authenticatedApp.use('*', commonVariablesMiddleware);
       authenticatedApp.use(
         '*',
         userDataMiddleware(factory, mockUserDataStorageConnector),
@@ -1020,7 +1072,9 @@ describe('Improved Responses API', () => {
     });
 
     it('should accept valid bearer token authentication', async () => {
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue([]);
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue([]);
 
       const res = await authenticatedApp.request(
         '/improved-responses?id=123e4567-e89b-12d3-a456-426614174000',
@@ -1055,9 +1109,9 @@ describe('Improved Responses API', () => {
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      mockUserDataStorageConnector.getImprovedResponse.mockResolvedValue([
-        mockResponse,
-      ]);
+      vi.mocked(
+        mockUserDataStorageConnector.getImprovedResponse,
+      ).mockResolvedValue([mockResponse]);
 
       const res = await authenticatedApp.request(
         '/improved-responses?id=123e4567-e89b-12d3-a456-426614174000',

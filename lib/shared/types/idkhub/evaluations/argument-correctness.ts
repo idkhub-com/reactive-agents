@@ -13,7 +13,7 @@ export const ArgumentCorrectnessEvaluationParameters = z.object({
   batch_size: z.number().positive().default(10),
   input: z.string().optional(),
   actual_output: z.string().optional(),
-  tools_called: z.array(z.unknown()).optional(),
+  tools_called: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 
 export type ArgumentCorrectnessEvaluationParameters = z.infer<

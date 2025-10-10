@@ -15,8 +15,8 @@ const EndpointMap: Partial<Record<FunctionName, string>> = {
 
 export const azureAIInferenceAPI: InternalProviderAPIConfig = {
   getBaseURL: ({ idkTarget }) => {
-    const { provider, azure_ai_foundry_config } = idkTarget;
-    if (provider === AIProvider.GITHUB) {
+    const { configuration, azure_ai_foundry_config } = idkTarget;
+    if (configuration.ai_provider === AIProvider.GITHUB) {
       return 'https://models.inference.ai.azure.com';
     }
 

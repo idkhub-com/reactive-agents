@@ -49,7 +49,7 @@ describe('agentAndSkillMiddleware', () => {
       req: { url } as unknown,
       get: vi.fn().mockImplementation((key: string) => {
         switch (key) {
-          case 'idk_config':
+          case 'idk_config_pre_processed':
             return mockIdkConfig;
           case 'user_data_storage_connector':
             return mockConnector;
@@ -85,7 +85,7 @@ describe('agentAndSkillMiddleware', () => {
       const mockAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'test-agent',
-        description: null,
+        description: 'Test agent description',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -95,10 +95,12 @@ describe('agentAndSkillMiddleware', () => {
         id: '223e4567-e89b-12d3-a456-426614174000',
         agent_id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'test-skill',
-        description: null,
+        description: 'Test skill description',
         metadata: {},
+        max_configurations: 1,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        num_system_prompts: 0,
       };
 
       vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);
@@ -158,7 +160,7 @@ describe('agentAndSkillMiddleware', () => {
         const mockAgent: Agent = {
           id: '123e4567-e89b-12d3-a456-426614174000',
           name: 'test-agent',
-          description: null,
+          description: 'Test agent description',
           metadata: {},
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
@@ -168,10 +170,12 @@ describe('agentAndSkillMiddleware', () => {
           id: '223e4567-e89b-12d3-a456-426614174000',
           agent_id: '123e4567-e89b-12d3-a456-426614174000',
           name: 'test-skill',
-          description: null,
+          description: 'Test skill description',
           metadata: {},
+          max_configurations: 1,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
+          num_system_prompts: 0,
         };
 
         vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);
@@ -263,7 +267,7 @@ describe('agentAndSkillMiddleware', () => {
       const mockAgent: Agent = {
         id: 'custom-agent-uuid-123',
         name: 'custom-agent-123',
-        description: null,
+        description: 'Custom agent description',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -273,7 +277,7 @@ describe('agentAndSkillMiddleware', () => {
         req: { url: 'https://api.example.com/v1/chat/completions' } as unknown,
         get: vi.fn().mockImplementation((key: string) => {
           switch (key) {
-            case 'idk_config':
+            case 'idk_config_pre_processed':
               return customConfig;
             case 'user_data_storage_connector':
               return mockConnector;

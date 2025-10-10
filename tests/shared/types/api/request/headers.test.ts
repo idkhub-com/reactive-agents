@@ -1,10 +1,13 @@
 import {
   AzureAIFoundryConfig,
   AzureOpenAIConfig,
-  BaseIdkConfig,
   HeaderKey,
   IdkConfig,
+  IdkConfigPreProcessed,
   IdkTarget,
+  IdkTargetPreProcessed,
+  NonPrivateIdkConfig,
+  OptimizationType,
   RetrySettings,
   Strategy,
   StrategyModes,
@@ -251,15 +254,139 @@ describe('Request Headers Types', () => {
     });
   });
 
-  describe('IdkTarget', () => {
-    it('should validate minimal target configuration', () => {
+  describe('IdkTargetPreProcessed', () => {
+    it('should validate minimal target configuration with provider', () => {
+      const target = {
+        provider: AIProvider.OPENAI,
+        model: 'gpt-4',
+      };
+
+      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
+      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(parsed.provider).toBe(AIProvider.OPENAI);
+      expect(parsed.model).toBe('gpt-4');
+      expect(parsed.weight).toBe(1); // default value
+    });
+
+    it('should validate minimal target configuration with configuration_name', () => {
+      const target = {
+        optimization: OptimizationType.AUTO,
+      };
+
+      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
+      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(parsed.optimization).toBe(OptimizationType.AUTO);
+      expect(parsed.weight).toBe(1); // default value
+    });
+
+    it('should validate target with optimization and optimization_version', () => {
+      const target = {
+        optimization: OptimizationType.AUTO,
+        optimization_version: 1,
+      };
+
+      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
+      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(parsed.optimization).toBe(OptimizationType.AUTO);
+      expect(parsed.optimization_version).toBe(1);
+    });
+
+    it('should reject optimization_version without optimization set to auto', () => {
+      const target = {
+        provider: AIProvider.OPENAI,
+        model: 'gpt-4',
+        optimization_version: 1,
+      };
+
+      expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
+        '`optimization_version` is defined, but `optimization` is set to none. Set `optimization` to auto to use an optimization version.',
+      );
+    });
+
+    it('should reject target without provider when optimization is not auto', () => {
+      const target = {
+        api_key: 'test-key',
+      };
+
+      expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
+        '`provider` is required when optimization is not set to auto',
+      );
+    });
+
+    it('should reject provider without model', () => {
       const target = {
         provider: AIProvider.OPENAI,
       };
 
+      expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
+        'A model is required when using a provider.',
+      );
+    });
+
+    it('should validate complete pre-processed target configuration', () => {
+      const target = {
+        id: 'openai-target-1',
+        index: 0,
+        weight: 2,
+        on_status_codes: [429, 500],
+        request_timeout: 30000,
+        custom_host: 'custom.openai.com',
+        forward_headers: ['Authorization', 'User-Agent'],
+        cache: {
+          mode: CacheMode.SIMPLE,
+          ttl: 300,
+        },
+        retry: {
+          attempts: 3,
+          on_status_codes: [500, 502],
+        },
+        provider: AIProvider.OPENAI,
+        model: 'gpt-4',
+        system_prompt_variables: {
+          name: 'Assistant',
+          role: 'helpful',
+        },
+        api_key: 'sk-test-key',
+        openai_project: 'proj_123',
+        openai_organization: 'org_456',
+        openai_beta: 'assistants=v2',
+      };
+
+      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
+      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(parsed.id).toBe('openai-target-1');
+      expect(parsed.weight).toBe(2);
+      expect(parsed.provider).toBe(AIProvider.OPENAI);
+      expect(parsed.system_prompt_variables?.name).toBe('Assistant');
+      expect(parsed.openai_project).toBe('proj_123');
+    });
+  });
+
+  describe('IdkTarget', () => {
+    it('should validate minimal target configuration', () => {
+      const target = {
+        configuration: {
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+        api_key: 'sk-test-key',
+      };
+
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
-      expect(parsed.provider).toBe(AIProvider.OPENAI);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENAI);
+      expect(parsed.configuration.model).toBe('gpt-4');
+      expect(parsed.api_key).toBe('sk-test-key');
       expect(parsed.weight).toBe(1); // default value
     });
 
@@ -280,7 +407,20 @@ describe('Request Headers Types', () => {
           attempts: 3,
           on_status_codes: [500, 502],
         },
-        provider: AIProvider.OPENAI,
+        configuration: {
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: 0.7,
+          max_tokens: 1000,
+          top_p: 0.9,
+          frequency_penalty: 0,
+          presence_penalty: 0,
+          stop: ['\n'],
+          seed: 42,
+          reasoning_effort: null,
+          additional_params: { custom: 'value' },
+        },
         api_key: 'sk-test-key',
         openai_project: 'proj_123',
         openai_organization: 'org_456',
@@ -291,13 +431,28 @@ describe('Request Headers Types', () => {
       const parsed = IdkTarget.parse(target);
       expect(parsed.id).toBe('openai-target-1');
       expect(parsed.weight).toBe(2);
-      expect(parsed.provider).toBe(AIProvider.OPENAI);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENAI);
+      expect(parsed.configuration.model).toBe('gpt-4');
+      expect(parsed.configuration.temperature).toBe(0.7);
       expect(parsed.openai_project).toBe('proj_123');
     });
 
     it('should validate Azure OpenAI target', () => {
       const target = {
-        provider: AIProvider.AZURE_OPENAI,
+        configuration: {
+          ai_provider: AIProvider.AZURE_OPENAI,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         api_key: 'azure-key',
         azure_openai_config: {
           url: 'https://my-resource.openai.azure.com',
@@ -307,7 +462,8 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
-      expect(parsed.provider).toBe(AIProvider.AZURE_OPENAI);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.AZURE_OPENAI);
+      expect(parsed.configuration.model).toBe('gpt-4');
       expect(parsed.azure_openai_config?.url).toBe(
         'https://my-resource.openai.azure.com',
       );
@@ -315,7 +471,20 @@ describe('Request Headers Types', () => {
 
     it('should validate Azure AI Foundry target', () => {
       const target = {
-        provider: AIProvider.AZURE_AI_FOUNDRY,
+        configuration: {
+          ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+          model: 'meta-llama-3-8b-instruct',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         api_key: 'foundry-key',
         azure_ai_foundry_config: {
           url: 'https://my-foundry.inference.ai.azure.com',
@@ -324,7 +493,10 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
-      expect(parsed.provider).toBe(AIProvider.AZURE_AI_FOUNDRY);
+      expect(parsed.configuration.ai_provider).toBe(
+        AIProvider.AZURE_AI_FOUNDRY,
+      );
+      expect(parsed.configuration.model).toBe('meta-llama-3-8b-instruct');
       expect(parsed.azure_ai_foundry_config?.url).toBe(
         'https://my-foundry.inference.ai.azure.com',
       );
@@ -332,7 +504,20 @@ describe('Request Headers Types', () => {
 
     it('should validate Anthropic target', () => {
       const target = {
-        provider: AIProvider.ANTHROPIC,
+        configuration: {
+          ai_provider: AIProvider.ANTHROPIC,
+          model: 'claude-3-opus-20240229',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         api_key: 'anthropic-key',
         anthropic_beta: 'max-tokens-3-5-sonnet-2024-07-15',
         anthropic_version: '2023-06-01',
@@ -340,13 +525,29 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.ANTHROPIC);
+      expect(parsed.configuration.model).toBe('claude-3-opus-20240229');
       expect(parsed.anthropic_beta).toBe('max-tokens-3-5-sonnet-2024-07-15');
       expect(parsed.anthropic_version).toBe('2023-06-01');
     });
 
     it('should validate AWS Bedrock target', () => {
       const target = {
-        provider: AIProvider.BEDROCK,
+        configuration: {
+          ai_provider: AIProvider.BEDROCK,
+          model: 'anthropic.claude-3-sonnet-20240229-v1:0',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+        api_key: 'bedrock-key',
         aws_access_key_id: 'AKIA123',
         aws_secret_access_key: 'secret123',
         aws_region: 'us-east-1',
@@ -355,6 +556,10 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.BEDROCK);
+      expect(parsed.configuration.model).toBe(
+        'anthropic.claude-3-sonnet-20240229-v1:0',
+      );
       expect(parsed.aws_region).toBe('us-east-1');
       expect(parsed.aws_bedrock_model).toBe(
         'anthropic.claude-3-sonnet-20240229-v1:0',
@@ -363,7 +568,21 @@ describe('Request Headers Types', () => {
 
     it('should validate Google Vertex AI target', () => {
       const target = {
-        provider: AIProvider.GOOGLE_VERTEX_AI,
+        configuration: {
+          ai_provider: AIProvider.GOOGLE_VERTEX_AI,
+          model: 'gemini-pro',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+        api_key: 'vertex-key',
         vertex_project_id: 'my-project',
         vertex_region: 'us-central1',
         vertex_service_account_json: '{"type": "service_account"}',
@@ -371,19 +590,38 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(
+        AIProvider.GOOGLE_VERTEX_AI,
+      );
+      expect(parsed.configuration.model).toBe('gemini-pro');
       expect(parsed.vertex_project_id).toBe('my-project');
       expect(parsed.vertex_region).toBe('us-central1');
     });
 
     it('should validate Hugging Face target', () => {
       const target = {
-        provider: AIProvider.HUGGINGFACE,
+        configuration: {
+          ai_provider: AIProvider.HUGGINGFACE,
+          model: 'microsoft/DialoGPT-medium',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         api_key: 'hf_key',
         huggingface_base_url: 'https://api-inference.huggingface.co',
       };
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.HUGGINGFACE);
+      expect(parsed.configuration.model).toBe('microsoft/DialoGPT-medium');
       expect(parsed.huggingface_base_url).toBe(
         'https://api-inference.huggingface.co',
       );
@@ -391,7 +629,20 @@ describe('Request Headers Types', () => {
 
     it('should validate Stability AI target', () => {
       const target = {
-        provider: AIProvider.STABILITY_AI,
+        configuration: {
+          ai_provider: AIProvider.STABILITY_AI,
+          model: 'stable-diffusion-xl-1024-v1-0',
+          system_prompt: null,
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         api_key: 'sk-stability',
         stability_client_id: 'client123',
         stability_client_user_id: 'user456',
@@ -400,12 +651,28 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.STABILITY_AI);
+      expect(parsed.configuration.model).toBe('stable-diffusion-xl-1024-v1-0');
       expect(parsed.stability_client_id).toBe('client123');
     });
 
     it('should validate SageMaker target', () => {
       const target = {
-        provider: AIProvider.SAGEMAKER,
+        configuration: {
+          ai_provider: AIProvider.SAGEMAKER,
+          model: 'my-custom-model',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+        api_key: 'sagemaker-key',
         aws_access_key_id: 'AKIA123',
         aws_secret_access_key: 'secret123',
         aws_region: 'us-west-2',
@@ -415,12 +682,28 @@ describe('Request Headers Types', () => {
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.SAGEMAKER);
+      expect(parsed.configuration.model).toBe('my-custom-model');
       expect(parsed.amzn_sagemaker_model_name).toBe('my-model');
     });
 
     it('should apply default values', () => {
       const target = {
-        provider: AIProvider.OPENAI,
+        configuration: {
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+        api_key: 'sk-test-key',
       };
 
       const parsed = IdkTarget.parse(target);
@@ -429,34 +712,81 @@ describe('Request Headers Types', () => {
       expect(parsed.retry.attempts).toBe(0);
     });
 
-    it('should reject missing provider', () => {
+    it('should reject missing configuration', () => {
       const target = {
         api_key: 'test-key',
       };
 
-      expect(() => IdkTarget.parse(target)).toThrow('Provider is required');
+      expect(() => IdkTarget.parse(target)).toThrow();
     });
 
-    it('should reject invalid provider', () => {
+    it('should reject invalid configuration provider', () => {
       const target = {
-        provider: 'invalid-provider',
+        configuration: {
+          ai_provider: 'invalid-provider',
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+        api_key: 'test-key',
       };
 
-      expect(() => IdkTarget.parse(target)).toThrow(
-        'Invalid provider: invalid-provider',
-      );
+      expect(() => IdkTarget.parse(target)).toThrow();
     });
 
     it('should handle inner_provider for proxied requests', () => {
       const target = {
-        provider: AIProvider.OPENROUTER,
+        configuration: {
+          ai_provider: AIProvider.OPENROUTER,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         inner_provider: AIProvider.OPENAI,
         api_key: 'test-key',
       };
 
       expect(() => IdkTarget.parse(target)).not.toThrow();
       const parsed = IdkTarget.parse(target);
+      expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENROUTER);
       expect(parsed.inner_provider).toBe(AIProvider.OPENAI);
+    });
+
+    it('should require api_key', () => {
+      const target = {
+        configuration: {
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
+      };
+
+      expect(() => IdkTarget.parse(target)).toThrow();
     });
   });
 
@@ -467,8 +797,8 @@ describe('Request Headers Types', () => {
         skill_name: 'test-skill',
       };
 
-      expect(() => BaseIdkConfig.parse(config)).not.toThrow();
-      const parsed = BaseIdkConfig.parse(config);
+      expect(() => NonPrivateIdkConfig.parse(config)).not.toThrow();
+      const parsed = NonPrivateIdkConfig.parse(config);
       expect(parsed.agent_name).toBe('test-agent');
       expect(parsed.skill_name).toBe('test-skill');
     });
@@ -493,8 +823,8 @@ describe('Request Headers Types', () => {
         },
       };
 
-      expect(() => BaseIdkConfig.parse(config)).not.toThrow();
-      const parsed = BaseIdkConfig.parse(config);
+      expect(() => NonPrivateIdkConfig.parse(config)).not.toThrow();
+      const parsed = NonPrivateIdkConfig.parse(config);
       expect(parsed.agent_name).toBe('my-agent');
       expect(parsed.override_params).toBeDefined();
       expect(parsed.force_refresh).toBe(true);
@@ -506,7 +836,7 @@ describe('Request Headers Types', () => {
         skill_name: 'test-skill',
       };
 
-      expect(() => BaseIdkConfig.parse(config)).toThrow(
+      expect(() => NonPrivateIdkConfig.parse(config)).toThrow(
         'Agent name is required',
       );
     });
@@ -516,7 +846,7 @@ describe('Request Headers Types', () => {
         agent_name: 'test-agent',
       };
 
-      expect(() => BaseIdkConfig.parse(config)).toThrow(
+      expect(() => NonPrivateIdkConfig.parse(config)).toThrow(
         'Skill name is required',
       );
     });
@@ -528,9 +858,52 @@ describe('Request Headers Types', () => {
         strict_open_ai_compliance: false,
       };
 
-      expect(() => BaseIdkConfig.parse(config)).not.toThrow();
-      const parsed = BaseIdkConfig.parse(config);
+      expect(() => NonPrivateIdkConfig.parse(config)).not.toThrow();
+      const parsed = NonPrivateIdkConfig.parse(config);
       expect(parsed.strict_open_ai_compliance).toBe(false);
+    });
+  });
+
+  describe('IdkConfigPreProcessed', () => {
+    it('should validate minimal IDK config pre-processed', () => {
+      const config = {
+        agent_name: 'test-agent',
+        skill_name: 'test-skill',
+        targets: [
+          {
+            provider: AIProvider.OPENAI,
+            model: 'gpt-4',
+            api_key: 'sk-test',
+          },
+        ],
+      };
+
+      expect(() => IdkConfigPreProcessed.parse(config)).not.toThrow();
+      const parsed = IdkConfigPreProcessed.parse(config);
+      expect(parsed.agent_name).toBe('test-agent');
+      expect(parsed.targets).toHaveLength(1);
+      expect(parsed.targets[0].provider).toBe(AIProvider.OPENAI);
+      expect(parsed.targets[0].model).toBe('gpt-4');
+      expect(parsed.strategy.mode).toBe(StrategyModes.SINGLE); // default
+      expect(parsed.hooks).toEqual([]); // default
+      expect(parsed.trace_id).toBeDefined(); // auto-generated
+    });
+
+    it('should validate config with optimization auto', () => {
+      const config = {
+        agent_name: 'test-agent',
+        skill_name: 'test-skill',
+        targets: [
+          {
+            optimization: OptimizationType.AUTO,
+            api_key: 'sk-test',
+          },
+        ],
+      };
+
+      expect(() => IdkConfigPreProcessed.parse(config)).not.toThrow();
+      const parsed = IdkConfigPreProcessed.parse(config);
+      expect(parsed.targets[0].optimization).toBe(OptimizationType.AUTO);
     });
   });
 
@@ -541,7 +914,20 @@ describe('Request Headers Types', () => {
         skill_name: 'test-skill',
         targets: [
           {
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'sk-test',
           },
         ],
@@ -551,6 +937,10 @@ describe('Request Headers Types', () => {
       const parsed = IdkConfig.parse(config);
       expect(parsed.agent_name).toBe('test-agent');
       expect(parsed.targets).toHaveLength(1);
+      expect(parsed.targets[0].configuration.ai_provider).toBe(
+        AIProvider.OPENAI,
+      );
+      expect(parsed.targets[0].configuration.model).toBe('gpt-4');
       expect(parsed.strategy.mode).toBe(StrategyModes.SINGLE); // default
       expect(parsed.hooks).toEqual([]); // default
       expect(parsed.trace_id).toBeDefined(); // auto-generated
@@ -571,13 +961,39 @@ describe('Request Headers Types', () => {
         targets: [
           {
             id: 'openai-primary',
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: 0.7,
+              max_tokens: 1000,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+              reasoning_effort: null,
+            },
             api_key: 'sk-openai',
             weight: 3,
           },
           {
             id: 'anthropic-fallback',
-            provider: AIProvider.ANTHROPIC,
+            configuration: {
+              ai_provider: AIProvider.ANTHROPIC,
+              model: 'claude-3-opus-20240229',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: 0.5,
+              max_tokens: 2000,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+              reasoning_effort: null,
+            },
             api_key: 'anthropic-key',
             weight: 1,
           },
@@ -604,6 +1020,12 @@ describe('Request Headers Types', () => {
       expect(parsed.strategy.mode).toBe('loadbalance');
       expect(parsed.targets).toHaveLength(2);
       expect(parsed.targets[0].id).toBe('openai-primary');
+      expect(parsed.targets[0].configuration.ai_provider).toBe(
+        AIProvider.OPENAI,
+      );
+      expect(parsed.targets[1].configuration.ai_provider).toBe(
+        AIProvider.ANTHROPIC,
+      );
       expect(parsed.trace_id).toBe('custom-trace-123');
       expect(parsed.user_human_name).toBe('John Doe');
     });
@@ -614,7 +1036,20 @@ describe('Request Headers Types', () => {
         skill_name: 'vertex-skill',
         targets: [
           {
-            provider: AIProvider.GOOGLE_VERTEX_AI,
+            configuration: {
+              ai_provider: AIProvider.GOOGLE_VERTEX_AI,
+              model: 'gemini-pro',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+              reasoning_effort: null,
+            },
             vertex_project_id: 'my-project',
             vertex_region: 'us-central1',
             api_key: 'ya29...',
@@ -631,7 +1066,20 @@ describe('Request Headers Types', () => {
         skill_name: 'vertex-skill',
         targets: [
           {
-            provider: AIProvider.GOOGLE_VERTEX_AI,
+            configuration: {
+              ai_provider: AIProvider.GOOGLE_VERTEX_AI,
+              model: 'gemini-pro',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+              reasoning_effort: null,
+            },
             api_key: 'ya29...',
             // Missing vertex_project_id and vertex_region
           },
@@ -649,7 +1097,21 @@ describe('Request Headers Types', () => {
         skill_name: 'vertex-skill',
         targets: [
           {
-            provider: AIProvider.GOOGLE_VERTEX_AI,
+            configuration: {
+              ai_provider: AIProvider.GOOGLE_VERTEX_AI,
+              model: 'gemini-pro',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
+            api_key: 'vertex-key',
             vertex_region: 'us-central1',
             vertex_service_account_json:
               '{"type": "service_account", "project_id": "my-project"}',
@@ -670,11 +1132,37 @@ describe('Request Headers Types', () => {
         },
         targets: [
           {
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'primary-key',
           },
           {
-            provider: AIProvider.ANTHROPIC,
+            configuration: {
+              ai_provider: AIProvider.ANTHROPIC,
+              model: 'claude-3-opus-20240229',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'fallback-key',
           },
         ],
@@ -707,12 +1195,38 @@ describe('Request Headers Types', () => {
         targets: [
           {
             id: 'openai-target',
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'openai-key',
           },
           {
             id: 'anthropic-target',
-            provider: AIProvider.ANTHROPIC,
+            configuration: {
+              ai_provider: AIProvider.ANTHROPIC,
+              model: 'claude-3-opus-20240229',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'anthropic-key',
           },
         ],
@@ -740,7 +1254,21 @@ describe('Request Headers Types', () => {
         skill_name: 'test-skill',
         targets: [
           {
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
+            api_key: 'sk-test-key',
           },
         ],
       };
@@ -764,7 +1292,20 @@ describe('Request Headers Types', () => {
           // OpenAI
           {
             id: 'openai-gpt4',
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'sk-openai',
             openai_project: 'proj_123',
             weight: 2,
@@ -772,7 +1313,20 @@ describe('Request Headers Types', () => {
           // Anthropic
           {
             id: 'anthropic-claude',
-            provider: AIProvider.ANTHROPIC,
+            configuration: {
+              ai_provider: AIProvider.ANTHROPIC,
+              model: 'claude-3-opus-20240229',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'anthropic-key',
             anthropic_version: '2023-06-01',
             weight: 1,
@@ -780,7 +1334,20 @@ describe('Request Headers Types', () => {
           // Azure OpenAI
           {
             id: 'azure-openai',
-            provider: AIProvider.AZURE_OPENAI,
+            configuration: {
+              ai_provider: AIProvider.AZURE_OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'azure-key',
             azure_openai_config: {
               url: 'https://my-resource.openai.azure.com',
@@ -790,7 +1357,20 @@ describe('Request Headers Types', () => {
           // Google Vertex AI
           {
             id: 'vertex-ai',
-            provider: AIProvider.GOOGLE_VERTEX_AI,
+            configuration: {
+              ai_provider: AIProvider.GOOGLE_VERTEX_AI,
+              model: 'gemini-pro',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             vertex_project_id: 'my-project',
             vertex_region: 'us-central1',
             api_key: 'ya29...',
@@ -807,7 +1387,7 @@ describe('Request Headers Types', () => {
       expect(() => IdkConfig.parse(config)).not.toThrow();
       const parsed = IdkConfig.parse(config);
       expect(parsed.targets).toHaveLength(4);
-      expect(parsed.targets.map((t) => t.provider)).toEqual([
+      expect(parsed.targets.map((t) => t.configuration.ai_provider)).toEqual([
         AIProvider.OPENAI,
         AIProvider.ANTHROPIC,
         AIProvider.AZURE_OPENAI,
@@ -844,7 +1424,20 @@ describe('Request Headers Types', () => {
         targets: [
           {
             id: 'openai-premium',
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'sk-premium',
             custom_host: 'premium.openai.com',
             request_timeout: 45000,
@@ -861,7 +1454,20 @@ describe('Request Headers Types', () => {
           },
           {
             id: 'openai-standard',
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'sk-standard',
             retry: {
               attempts: 2,
@@ -911,7 +1517,25 @@ describe('Request Headers Types', () => {
       const config = {
         agent_name: '',
         skill_name: 'test-skill',
-        targets: [{ provider: AIProvider.OPENAI }],
+        targets: [
+          {
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
+            api_key: 'sk-test-key',
+          },
+        ],
       };
 
       expect(() => IdkConfig.parse(config)).not.toThrow();
@@ -921,7 +1545,20 @@ describe('Request Headers Types', () => {
     it('should handle very large configuration', () => {
       const targets = Array.from({ length: 10 }, (_, i) => ({
         id: `target-${i}`,
-        provider: AIProvider.OPENAI,
+        configuration: {
+          ai_provider: AIProvider.OPENAI,
+          model: 'gpt-4',
+          system_prompt: 'You are a helpful assistant.',
+          temperature: null,
+          max_tokens: null,
+          top_p: null,
+          frequency_penalty: null,
+          presence_penalty: null,
+          stop: null,
+          seed: null,
+          reasoning_effort: null,
+          additional_params: null,
+        },
         api_key: `key-${i}`,
         weight: i + 1,
       }));
@@ -946,7 +1583,20 @@ describe('Request Headers Types', () => {
         skill_name: 'test-skill-ü-💯',
         targets: [
           {
-            provider: AIProvider.OPENAI,
+            configuration: {
+              ai_provider: AIProvider.OPENAI,
+              model: 'gpt-4',
+              system_prompt: 'You are a helpful assistant.',
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              reasoning_effort: null,
+              additional_params: null,
+            },
             api_key: 'sk-test_key.with-special@chars',
           },
         ],

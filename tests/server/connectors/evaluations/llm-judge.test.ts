@@ -65,6 +65,7 @@ describe('LLM Judge', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -168,6 +169,7 @@ describe('LLM Judge', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -189,6 +191,7 @@ describe('LLM Judge', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -226,6 +229,7 @@ describe('LLM Judge', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -263,6 +267,7 @@ describe('LLM Judge', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -314,6 +319,7 @@ describe('LLM Judge', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -364,6 +370,7 @@ describe('LLM Judge', () => {
       .mockRejectedValueOnce(new Error('Connection timeout'))
       .mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockResponse)),
         json: () => Promise.resolve(mockResponse),
       });
 
@@ -422,6 +429,22 @@ describe('LLM Judge', () => {
     // Mock fetch to fail with a non-retryable error (parse error)
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            output: [
+              {
+                type: 'message',
+                content: [
+                  {
+                    type: 'output_text',
+                    text: 'invalid json',
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
       json: () =>
         Promise.resolve({
           output: [
@@ -463,6 +486,22 @@ describe('LLM Judge', () => {
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
           ok: true,
+          text: () =>
+            Promise.resolve(
+              JSON.stringify({
+                output: [
+                  {
+                    type: 'message',
+                    content: [
+                      {
+                        type: 'output_text',
+                        text: 'invalid json',
+                      },
+                    ],
+                  },
+                ],
+              }),
+            ),
           json: () =>
             Promise.resolve({
               output: [
@@ -530,6 +569,7 @@ describe('LLM Judge', () => {
         .mockRejectedValueOnce(new Error('Connection timeout'))
         .mockResolvedValueOnce({
           ok: true,
+          text: () => Promise.resolve(JSON.stringify(mockResponse)),
           json: () => Promise.resolve(mockResponse),
         });
 
@@ -574,6 +614,7 @@ describe('LLM Judge', () => {
         .mockRejectedValueOnce(new Error('Too many requests'))
         .mockResolvedValueOnce({
           ok: true,
+          text: () => Promise.resolve(JSON.stringify(mockResponse)),
           json: () => Promise.resolve(mockResponse),
         });
 
@@ -618,6 +659,7 @@ describe('LLM Judge', () => {
         .mockRejectedValueOnce(new Error('Service unavailable'))
         .mockResolvedValueOnce({
           ok: true,
+          text: () => Promise.resolve(JSON.stringify(mockResponse)),
           json: () => Promise.resolve(mockResponse),
         });
 
@@ -698,6 +740,7 @@ describe('LLM Judge', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockResponse)),
         json: () => Promise.resolve(mockResponse),
       });
 

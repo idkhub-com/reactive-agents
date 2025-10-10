@@ -58,6 +58,7 @@ describe('Turn Relevancy Evaluator', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -101,6 +102,7 @@ describe('Turn Relevancy Evaluator', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockResponse)),
       json: () => Promise.resolve(mockResponse),
     });
 
@@ -189,6 +191,7 @@ describe('Turn Relevancy Evaluator', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -238,6 +241,7 @@ describe('Turn Relevancy Evaluator', () => {
         score: 0.9,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       // Mock existing log outputs retrieval
@@ -249,6 +253,7 @@ describe('Turn Relevancy Evaluator', () => {
           score: 0.8,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
         {
           id: 'new-output-id',
@@ -257,6 +262,7 @@ describe('Turn Relevancy Evaluator', () => {
           score: 0.9,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 
@@ -337,6 +343,7 @@ describe('Turn Relevancy Evaluator', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -371,6 +378,7 @@ describe('Turn Relevancy Evaluator', () => {
         score: 0.3,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       mockedGetLogOutputs.mockResolvedValue([
@@ -381,6 +389,7 @@ describe('Turn Relevancy Evaluator', () => {
           score: 0.3,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 
@@ -459,6 +468,7 @@ describe('Turn Relevancy Evaluator', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -495,6 +505,7 @@ describe('Turn Relevancy Evaluator', () => {
         score: 0.95,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       mockedGetLogOutputs.mockResolvedValue([
@@ -505,6 +516,7 @@ describe('Turn Relevancy Evaluator', () => {
           score: 0.95,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 

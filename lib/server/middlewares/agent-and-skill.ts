@@ -12,7 +12,7 @@ export const agentAndSkillMiddleware = createMiddleware(
     if (url.pathname.startsWith('/v1/')) {
       // Don't set variables for IDK API requests
       if (!url.pathname.startsWith('/v1/idk')) {
-        const idkConfig = c.get('idk_config');
+        const idkConfig = c.get('idk_config_pre_processed');
         const agent = await getOrCreateAgent(
           c.get('user_data_storage_connector'),
           idkConfig.agent_name,

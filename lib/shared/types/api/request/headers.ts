@@ -1,4 +1,6 @@
 import { IdkRequestBody } from '@shared/types/api/request/body';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
+
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
 import { CacheMode, CacheSettings } from '@shared/types/middleware/cache';
 import { Hook } from '@shared/types/middleware/hooks';
@@ -39,7 +41,14 @@ export const AzureAIFoundryConfig = z.object({
     .transform(removeEndingPath),
 });
 
-export const IdkTarget = z.object({
+export const AnthropicConfig = z.object({
+  url: z
+    .url({ error: '`url` is required' })
+    .transform(removeTrailingSlash)
+    .transform(removeEndingPath),
+});
+
+export const IdkTargetBase = z.object({
   // Target Details
   id: z.string().optional(),
   index: z.number().optional(),
@@ -53,21 +62,19 @@ export const IdkTarget = z.object({
   cache: CacheSettings.default({ mode: CacheMode.DISABLED }),
   retry: RetrySettings.default({ attempts: 0 }),
 
-  // Provider Details
-  provider: z.enum(AIProvider, {
-    error: (err) => {
-      if (err.input === undefined) {
-        return 'Provider is required';
-      }
-      return `Invalid provider: ${err.input}`;
-    },
-  }),
-  // model: z.string(), // TODO: Make use of this field
   inner_provider: z.enum(AIProvider).optional(),
+  // TODO: Remove this required field and allow defining through the UI
   api_key: z
     .string()
     .optional()
     .describe('The API key for the provider if not defined through the UI'),
+
+  // Reference to stored API key - alternative to direct api_key
+  api_key_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('Reference to stored API key ID from ai_provider_api_keys table'),
 
   // Anthropic specific
   anthropic_beta: z.string().optional(),
@@ -146,6 +153,105 @@ export const IdkTarget = z.object({
   stability_url_to_fetch: z.string().optional(),
 });
 
+export type IdkTargetBase = z.infer<typeof IdkTargetBase>;
+
+export enum OptimizationType {
+  AUTO = 'auto',
+  NONE = 'none',
+}
+
+export const IdkTargetPreProcessed = IdkTargetBase.extend({
+  /** IdkHub optimization type */
+  optimization: z
+    .enum(OptimizationType)
+    .optional()
+    .default(OptimizationType.NONE)
+    .describe('The name of the IdkHub configuration to use'),
+
+  /** IdkHub optimization version */
+  optimization_version: z
+    .number()
+    .min(0)
+    .optional()
+    .describe('The version of the IdkHub configuration to use'),
+
+  /** Variables for the system prompt template in the IdkHub configuration */
+  system_prompt_variables: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'The variables for the system prompt template in the IdkHub configuration',
+    ),
+
+  /** The AI provider to use if no configuration is provided */
+  provider: z
+    .enum(AIProvider, {
+      error: (err) => {
+        return `Invalid provider: ${err.input}`;
+      },
+    })
+    .optional()
+    .describe('The AI provider to use if no configuration is provided'),
+
+  /** The AI model to use if no configuration is provided */
+  model: z
+    .string()
+    .optional()
+    .describe('The AI model to use if no configuration is provided'),
+})
+  .refine((data) => {
+    if (!data.provider && data.optimization === OptimizationType.NONE) {
+      return false;
+    }
+    return true;
+  }, '`provider` is required when optimization is not set to auto')
+  .refine((data) => {
+    if (
+      data.optimization_version &&
+      data.optimization === OptimizationType.NONE
+    ) {
+      return false;
+    }
+    return true;
+  }, '`optimization_version` is defined, but `optimization` is set to none. Set `optimization` to auto to use an optimization version.')
+  .refine((data) => {
+    if (data.provider && !data.model) {
+      return false;
+    }
+    return true;
+  }, 'A model is required when using a provider.');
+
+export type IdkTargetPreProcessed = z.infer<typeof IdkTargetPreProcessed>;
+
+// Configuration parameters - the AI parameters for a specific version
+export const TargetConfigurationParams = z.object({
+  ai_provider: z.enum(AIProvider),
+  model: z.string().min(1),
+  system_prompt: z.string().min(1).nullable(),
+  temperature: z.number().min(0).max(2).nullable(),
+  max_tokens: z.number().int().positive().nullable(),
+  top_p: z.number().min(0).max(1).nullable(),
+  frequency_penalty: z.number().min(-2).max(2).nullable(),
+  presence_penalty: z.number().min(-2).max(2).nullable(),
+  stop: z.array(z.string()).nullable(),
+  seed: z.number().int().nullable(),
+  reasoning_effort: z.enum(ReasoningEffort).nullable(),
+  // Additional provider-specific parameters can be added here
+  additional_params: z.record(z.string(), z.unknown()).nullable(),
+});
+export type TargetConfigurationParams = z.infer<
+  typeof TargetConfigurationParams
+>;
+
+/** IdkHub Target with configuration name and version validated and processed.
+ * The configuration options have already been applied to the target.
+ *
+ * For example, the `provider` and `model` fields have already been set to the value of the configuration. */
+export const IdkTarget = IdkTargetBase.extend({
+  configuration: TargetConfigurationParams,
+  api_key: z.string().describe('The API key for the provider'),
+});
+
 export type IdkTarget = z.infer<typeof IdkTarget>;
 
 export enum StrategyModes {
@@ -171,7 +277,7 @@ export const Strategy = z.object({
 
 export type Strategy = z.infer<typeof Strategy>;
 
-export const BaseIdkConfig = z.object({
+export const NonPrivateIdkConfig = z.object({
   agent_name: z.string({ error: 'Agent name is required' }),
   skill_name: z.string({ error: 'Skill name is required' }),
   override_params: IdkRequestBody.optional(),
@@ -183,13 +289,12 @@ export const BaseIdkConfig = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type BaseIdkConfig = z.infer<typeof BaseIdkConfig>;
+export type NonPrivateIdkConfig = z.infer<typeof NonPrivateIdkConfig>;
 
-export const IdkConfig = BaseIdkConfig.extend({
+export const BaseIdkConfig = NonPrivateIdkConfig.extend({
   strategy: Strategy.default({
     mode: StrategyModes.SINGLE,
   }),
-  targets: z.array(IdkTarget),
   hooks: z.array(Hook).default([]),
 
   // Observability
@@ -199,13 +304,19 @@ export const IdkConfig = BaseIdkConfig.extend({
   span_name: z.string().optional(),
   parent_span_id: z.string().optional(),
   user_human_name: z.string().optional(),
+});
+
+export type BaseIdkConfig = z.infer<typeof BaseIdkConfig>;
+
+export const IdkConfig = BaseIdkConfig.extend({
+  targets: z.array(IdkTarget),
 })
   // Validate Google Vertex AI specific fields
   .refine(
     (value) => {
       for (const target of value.targets) {
         const isGoogleVertexAIProvider =
-          target.provider === AIProvider.GOOGLE_VERTEX_AI;
+          target.configuration.ai_provider === AIProvider.GOOGLE_VERTEX_AI;
         const hasGoogleVertexAIFields =
           (target.vertex_project_id && target.vertex_region) ||
           (target.vertex_region && target.vertex_service_account_json);
@@ -221,3 +332,9 @@ export const IdkConfig = BaseIdkConfig.extend({
   );
 
 export type IdkConfig = z.infer<typeof IdkConfig>;
+
+export const IdkConfigPreProcessed = BaseIdkConfig.extend({
+  targets: z.array(IdkTargetPreProcessed),
+});
+
+export type IdkConfigPreProcessed = z.infer<typeof IdkConfigPreProcessed>;

@@ -79,6 +79,7 @@ describe('Role Adherence Evaluator', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockEvaluationResponse)),
       json: () => Promise.resolve(mockEvaluationResponse),
     });
 
@@ -138,6 +139,7 @@ describe('Role Adherence Evaluator', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockEvaluationResponse)),
       json: () => Promise.resolve(mockEvaluationResponse),
     });
 
@@ -172,6 +174,7 @@ describe('Role Adherence Evaluator', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockEvaluationResponse)),
       json: () => Promise.resolve(mockEvaluationResponse),
     });
 
@@ -258,6 +261,7 @@ describe('Role Adherence Evaluator', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -307,6 +311,7 @@ describe('Role Adherence Evaluator', () => {
         score: 0.85,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       // Mock existing log outputs retrieval
@@ -318,6 +323,7 @@ describe('Role Adherence Evaluator', () => {
           score: 0.9,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
         {
           id: 'new-output-id',
@@ -326,6 +332,7 @@ describe('Role Adherence Evaluator', () => {
           score: 0.85,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 
@@ -407,6 +414,7 @@ describe('Role Adherence Evaluator', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
         json: () => Promise.resolve(mockLLMResponse),
       });
 
@@ -439,6 +447,7 @@ describe('Role Adherence Evaluator', () => {
         score: 0.4,
         metadata: {},
         created_at: new Date().toISOString(),
+        evaluation_run_id: '',
       });
 
       mockedGetLogOutputs.mockResolvedValue([
@@ -449,6 +458,7 @@ describe('Role Adherence Evaluator', () => {
           score: 0.4,
           metadata: {},
           created_at: new Date().toISOString(),
+          evaluation_run_id: '',
         },
       ]);
 

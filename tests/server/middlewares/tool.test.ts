@@ -69,18 +69,8 @@ describe('toolMiddleware', () => {
       updated_at: '2024-01-01T00:00:00Z',
     });
 
+    // Create a mock connector with all required methods
     mockConnector = {
-      // Feedback methods
-      getFeedback: vi.fn(),
-      createFeedback: vi.fn(),
-      deleteFeedback: vi.fn(),
-
-      // Improved response methods
-      getImprovedResponse: vi.fn(),
-      createImprovedResponse: vi.fn(),
-      updateImprovedResponse: vi.fn(),
-      deleteImprovedResponse: vi.fn(),
-
       // Agent methods
       getAgents: vi.fn(),
       createAgent: vi.fn(),
@@ -93,6 +83,17 @@ describe('toolMiddleware', () => {
       updateSkill: vi.fn(),
       deleteSkill: vi.fn(),
 
+      // Feedback methods
+      getFeedback: vi.fn(),
+      createFeedback: vi.fn(),
+      deleteFeedback: vi.fn(),
+
+      // Improved response methods
+      getImprovedResponse: vi.fn(),
+      createImprovedResponse: vi.fn(),
+      updateImprovedResponse: vi.fn(),
+      deleteImprovedResponse: vi.fn(),
+
       // Tool methods
       getTools: vi.fn(),
       createTool: mockCreateTool,
@@ -104,6 +105,7 @@ describe('toolMiddleware', () => {
       updateDataset: vi.fn(),
       deleteDataset: vi.fn(),
 
+      // Evaluation runs
       // Log methods (required by interface)
       getLogs: vi.fn(),
       deleteLog: vi.fn(),
@@ -120,7 +122,42 @@ describe('toolMiddleware', () => {
       getLogOutputs: vi.fn(),
       createLogOutput: vi.fn(),
       deleteLogOutput: vi.fn(),
-    };
+      // AI Provider API Key methods
+      getAIProviderAPIKeys: vi.fn(),
+      getAIProviderAPIKeyById: vi.fn(),
+      createAIProviderAPIKey: vi.fn(),
+      updateAIProviderAPIKey: vi.fn(),
+      deleteAIProviderAPIKey: vi.fn(),
+      // Model methods
+      getModels: vi.fn(),
+      createModel: vi.fn(),
+      updateModel: vi.fn(),
+      deleteModel: vi.fn(),
+      // Skill-Model relationship methods
+      getSkillModels: vi.fn(),
+      addModelsToSkill: vi.fn(),
+      removeModelsFromSkill: vi.fn(),
+      // Skill Optimization Cluster methods
+      getSkillOptimizationClusters: vi.fn(),
+      createSkillOptimizationClusters: vi.fn(),
+      updateSkillOptimizationCluster: vi.fn(),
+      deleteSkillOptimizationCluster: vi.fn(),
+      // Skill Optimization Arm methods
+      getSkillOptimizationArms: vi.fn(),
+      createSkillOptimizationArms: vi.fn(),
+      updateSkillOptimizationArm: vi.fn(),
+      deleteSkillOptimizationArm: vi.fn(),
+      deleteSkillOptimizationArmsForSkill: vi.fn(),
+      // Skill Optimization Evaluation methods
+      getSkillOptimizationEvaluations: vi.fn(),
+      createSkillOptimizationEvaluations: vi.fn(),
+      deleteSkillOptimizationEvaluation: vi.fn(),
+      deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+      // Skill Optimization Evaluation Run methods
+      getSkillOptimizationEvaluationRuns: vi.fn(),
+      createSkillOptimizationEvaluationRun: vi.fn(),
+      deleteSkillOptimizationEvaluationRun: vi.fn(),
+    } as UserDataStorageConnector;
 
     // Mock crypto.subtle.digest to return our mock digest
     vi.mocked(crypto.subtle.digest).mockResolvedValue(mockDigest.buffer);

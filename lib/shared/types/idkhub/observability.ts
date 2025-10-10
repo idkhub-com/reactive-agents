@@ -65,6 +65,7 @@ export const IdkRequestLog = z.object({
   ai_provider_request_log: AIProviderRequestLog,
   hook_logs: z.array(HookLog),
   metadata: z.record(z.string(), z.unknown()),
+  embedding: z.array(z.number()).nullable().default(null),
 
   // Cache info
   cache_status: z.enum(CacheStatus),

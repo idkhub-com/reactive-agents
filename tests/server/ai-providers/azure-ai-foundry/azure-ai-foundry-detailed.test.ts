@@ -99,7 +99,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should return GitHub Models URL when provider is GITHUB', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
         idkTarget: {
-          provider: AIProvider.GITHUB,
+          configuration: {
+            ai_provider: AIProvider.GITHUB,
+            model: 'gpt-4',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
         },
       } as unknown as TestContext);
 
@@ -109,7 +122,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should return Azure AI Foundry URL from config', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_ai_foundry_config: {
             url: 'https://my-foundry-endpoint.inference.ai.azure.com',
           },
@@ -125,7 +151,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       expect(() => {
         azureAIInferenceAPI.getBaseURL({
           idkTarget: {
-            provider: AIProvider.AZURE_AI_FOUNDRY,
+            configuration: {
+              ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+              model: 'meta-llama-3-8b-instruct',
+              system_prompt: null,
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+            },
+            api_key: 'test-key',
           },
         } as unknown as TestContext);
       }).toThrow('`azure_ai_foundry_config` is required in target');
@@ -134,7 +173,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should return correct headers with API key authentication', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
           api_key: 'test-api-key',
           azure_extra_params: 'pass-through',
         },
@@ -149,7 +200,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should default extra-parameters to drop when not specified', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
           api_key: 'test-api-key',
         },
       } as unknown as TestContext);
@@ -163,7 +226,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should handle Azure AD token authentication', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_ad_token: 'Bearer ad-token-123',
         },
       } as unknown as TestContext);
@@ -177,7 +253,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should strip Bearer prefix from Azure AD token', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_ad_token: 'Bearer ad-token-123',
         },
       } as unknown as TestContext);
@@ -194,7 +283,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_auth_mode: 'entra',
           azure_entra_tenant_id: 'tenant-123',
           azure_entra_client_id: 'client-123',
@@ -217,7 +319,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_auth_mode: 'managed',
           azure_managed_client_id: 'managed-client-123',
         },
@@ -232,7 +347,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should return headers without authorization when no auth method specified', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
         },
       } as unknown as TestContext);
 
@@ -912,7 +1039,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should construct complete request URLs for Azure AI Foundry', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_ai_foundry_config: {
             url: 'https://my-foundry-endpoint.inference.ai.azure.com',
           },
@@ -935,7 +1075,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should construct complete request URLs for GitHub Models', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
         idkTarget: {
-          provider: AIProvider.GITHUB,
+          configuration: {
+            ai_provider: AIProvider.GITHUB,
+            model: 'gpt-4',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
         },
       } as unknown as TestContext);
 
@@ -984,7 +1137,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       expect(async () => {
         await azureAIInferenceAPI.headers({
           idkTarget: {
-            provider: AIProvider.AZURE_AI_FOUNDRY,
+            configuration: {
+              ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+              model: 'meta-llama-3-8b-instruct',
+              system_prompt: null,
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+            },
             api_key: 'test-key',
             azure_extra_params: 'pass-through',
           },
@@ -994,7 +1159,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       expect(async () => {
         await azureAIInferenceAPI.headers({
           idkTarget: {
-            provider: AIProvider.AZURE_AI_FOUNDRY,
+            configuration: {
+              ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+              model: 'meta-llama-3-8b-instruct',
+              system_prompt: null,
+              temperature: null,
+              max_tokens: null,
+              top_p: null,
+              frequency_penalty: null,
+              presence_penalty: null,
+              stop: null,
+              seed: null,
+              additional_params: null,
+            },
             api_key: 'test-key',
             azure_extra_params: 'error',
           },
@@ -1020,7 +1197,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should handle missing Entra ID credentials gracefully', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
           azure_auth_mode: 'entra',
           // Missing tenant_id, client_id, client_secret
         },
@@ -1034,7 +1223,19 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should handle partial Entra ID credentials', async () => {
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
           azure_auth_mode: 'entra',
           azure_entra_tenant_id: 'tenant-123',
           // Missing client_id and client_secret
@@ -1055,7 +1256,20 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
       const headers = await azureAIInferenceAPI.headers({
         idkTarget: {
-          provider: AIProvider.AZURE_AI_FOUNDRY,
+          configuration: {
+            ai_provider: AIProvider.AZURE_AI_FOUNDRY,
+            model: 'meta-llama-3-8b-instruct',
+            system_prompt: null,
+            temperature: null,
+            max_tokens: null,
+            top_p: null,
+            frequency_penalty: null,
+            presence_penalty: null,
+            stop: null,
+            seed: null,
+            additional_params: null,
+          },
+          api_key: 'test-key',
           azure_auth_mode: 'managed',
           // No managed client ID specified
         },
