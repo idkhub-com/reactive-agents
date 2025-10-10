@@ -50,6 +50,7 @@ import type {
   ChatCompletionToolFunction,
 } from '@shared/types/api/routes/shared/tools';
 import { AIProvider } from '@shared/types/constants';
+import { nanoid } from 'nanoid';
 import { SYSTEM_INSTRUCTION_DISABLED_MODELS } from '../google/chat-complete';
 import {
   RoleIdkToGemini,
@@ -469,7 +470,7 @@ export const vertexGoogleChatCompleteResponseTransform: ResponseTransformFunctio
       } = response.usageMetadata as Record<string, unknown>;
 
       const chatCompletionResponse: ChatCompletionResponseBody = {
-        id: `portkey-${crypto.randomUUID()}`,
+        id: nanoid(4),
         object: 'chat.completion',
         created: Math.floor(Date.now() / 1000),
         model: response.modelVersion as string,
@@ -482,7 +483,7 @@ export const vertexGoogleChatCompleteResponseTransform: ResponseTransformFunctio
               for (const part of generation.content?.parts ?? []) {
                 if (part.functionCall) {
                   toolCalls.push({
-                    id: `portkey-${crypto.randomUUID()}`,
+                    id: nanoid(4),
                     type: 'function',
                     function: {
                       name: part.functionCall.name,
@@ -669,20 +670,22 @@ export const vertexGoogleChatCompleteStreamChunkTransform: ResponseChunkStreamTr
           } else if (generation.content?.parts[0]?.functionCall) {
             message = {
               role: ChatCompletionMessageRole.ASSISTANT,
-              tool_calls: generation.content.parts.map((part, idx) => {
-                if (part.functionCall) {
-                  return {
-                    index: idx,
-                    id: `idk-${crypto.randomUUID()}`,
-                    type: 'function',
-                    function: {
-                      name: part.functionCall.name,
-                      arguments: JSON.stringify(part.functionCall.args),
-                    },
-                  };
-                }
-                return undefined;
-              }),
+              tool_calls: generation.content.parts
+                .map((part) => {
+                  if (part.functionCall) {
+                    const toolCall: ChatCompletionToolCall = {
+                      id: nanoid(4),
+                      type: 'function',
+                      function: {
+                        name: part.functionCall.name,
+                        arguments: JSON.stringify(part.functionCall.args),
+                      },
+                    };
+                    return toolCall;
+                  }
+                  return undefined;
+                })
+                .filter((toolCall) => toolCall !== undefined),
               content: '',
             };
           }
@@ -976,7 +979,7 @@ export const vertexLlamaChatCompleteResponseTransform: ResponseTransformFunction
     }
     if ('choices' in response) {
       const chatCompletionResponse = {
-        id: crypto.randomUUID(),
+        id: nanoid(4),
         created: Math.floor(Date.now() / 1000),
         ...response,
       } as ChatCompletionResponseBody;

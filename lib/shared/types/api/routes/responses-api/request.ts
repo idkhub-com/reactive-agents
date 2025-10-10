@@ -1,4 +1,8 @@
 import { ChatCompletionMessage } from '@shared/types/api/routes/shared/messages';
+import {
+  ReasoningEffort,
+  ReasoningSummary,
+} from '@shared/types/api/routes/shared/thinking';
 import { z } from 'zod';
 import {
   McpApprovalRequest,
@@ -588,6 +592,19 @@ export const ResponsesAPITool = z.object({
   output: z.string(),
 });
 
+export const ReasoningConfig = z.object({
+  /**
+   * The effort level of the reasoning process. One of minimal, low, medium, or high.
+   */
+  effort: z.enum(ReasoningEffort).optional().default(ReasoningEffort.MEDIUM),
+  /** Deprecated. Use `summary` instead. */
+  generate_summary: z.enum(ReasoningSummary).optional(),
+  /**
+   * The level of detail in the summary. One of auto, concise, or detailed.
+   */
+  summary: z.enum(ReasoningSummary).optional().default(ReasoningSummary.AUTO),
+});
+
 export const ResponsesRequestBody = z.object({
   input: z.union([
     z.string(),
@@ -616,16 +633,8 @@ export const ResponsesRequestBody = z.object({
   modalities: z.array(z.string()).optional(),
   parallel_tool_calls: z.boolean().optional(),
   previous_response_id: z.string().optional(),
-  reasoning: z
-    .object({
-      effort: z
-        .union([z.literal('low'), z.literal('medium'), z.literal('high')])
-        .optional(),
-    })
-    .optional(),
-  reasoning_effort: z
-    .union([z.literal('low'), z.literal('medium'), z.literal('high')])
-    .optional(),
+  reasoning: ReasoningConfig.optional(),
+  reasoning_effort: z.enum(ReasoningEffort).optional(),
   store: z.boolean().optional(),
   stream: z.boolean().optional(),
   temperature: z.number().optional(),

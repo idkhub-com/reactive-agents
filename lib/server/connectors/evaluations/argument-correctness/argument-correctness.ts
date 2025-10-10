@@ -10,12 +10,8 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName as Names } from '@shared/types/idkhub/evaluations';
 import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 
-import {
-  evaluateArgumentCorrectness,
-  evaluateOneLogForArgumentCorrectness,
-} from './service/evaluate';
+import { evaluateArgumentCorrectness, evaluateLog } from './service/evaluate';
 
 const methodConfig: EvaluationMethodDetails = {
   method: Names.ARGUMENT_CORRECTNESS as unknown as EvaluationMethodName,
@@ -24,7 +20,7 @@ const methodConfig: EvaluationMethodDetails = {
     'Evaluates whether an agent generated correct tool call arguments given the input and task using LLM-as-a-judge',
 } as const;
 
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -47,22 +43,9 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForArgumentCorrectness(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 export const argumentCorrectnessEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => methodConfig,
-    evaluate: runEvaluation,
-    evaluateOneLog,
+    evaluateLog,
     getParameterSchema: ArgumentCorrectnessEvaluationParameters,
   };

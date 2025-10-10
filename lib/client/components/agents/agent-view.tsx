@@ -15,7 +15,7 @@ import { Separator } from '@client/components/ui/separator';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
 import type { Agent } from '@shared/types/data';
-import { sanitizeDescription, sanitizeMetadata } from '@shared/utils/security';
+import { sanitizeMetadata, sanitizeUserInput } from '@shared/utils/security';
 import { format } from 'date-fns';
 import {
   Bot,
@@ -297,7 +297,9 @@ export function AgentView({
                     />
                   ) : (
                     <p className="text-sm bg-muted/50 p-2 rounded min-h-[60px]">
-                      {sanitizeDescription(currentAgent.description) || (
+                      {currentAgent.description ? (
+                        sanitizeUserInput(currentAgent.description)
+                      ) : (
                         <span className="text-muted-foreground italic">
                           No description provided
                         </span>

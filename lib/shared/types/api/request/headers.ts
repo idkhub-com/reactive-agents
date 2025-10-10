@@ -1,4 +1,6 @@
 import { IdkRequestBody } from '@shared/types/api/request/body';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
+
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
 import { CacheMode, CacheSettings } from '@shared/types/middleware/cache';
 import { Hook } from '@shared/types/middleware/hooks';
@@ -153,16 +155,23 @@ export const IdkTargetBase = z.object({
 
 export type IdkTargetBase = z.infer<typeof IdkTargetBase>;
 
+export enum OptimizationType {
+  AUTO = 'auto',
+  NONE = 'none',
+}
+
 export const IdkTargetPreProcessed = IdkTargetBase.extend({
-  /** IdkHub Configuration name */
-  configuration_name: z
-    .string()
+  /** IdkHub optimization type */
+  optimization: z
+    .enum(OptimizationType)
     .optional()
+    .default(OptimizationType.NONE)
     .describe('The name of the IdkHub configuration to use'),
 
-  /** IdkHub Configuration version */
-  configuration_version: z
-    .string()
+  /** IdkHub optimization version */
+  optimization_version: z
+    .number()
+    .min(0)
     .optional()
     .describe('The version of the IdkHub configuration to use'),
 
@@ -191,17 +200,20 @@ export const IdkTargetPreProcessed = IdkTargetBase.extend({
     .describe('The AI model to use if no configuration is provided'),
 })
   .refine((data) => {
-    if (!(data.provider || data.configuration_name)) {
+    if (!data.provider && data.optimization === OptimizationType.NONE) {
       return false;
     }
     return true;
-  }, '`provider` or `configuration_name` is required.')
+  }, '`provider` is required when optimization is not set to auto')
   .refine((data) => {
-    if (data.configuration_version && !data.configuration_name) {
+    if (
+      data.optimization_version &&
+      data.optimization === OptimizationType.NONE
+    ) {
       return false;
     }
     return true;
-  }, '`configuration_version` is defined, but `configuration_name` is not. Please provide a valid configuration name.')
+  }, '`optimization_version` is defined, but `optimization` is set to none. Set `optimization` to auto to use an optimization version.')
   .refine((data) => {
     if (data.provider && !data.model) {
       return false;
@@ -223,6 +235,7 @@ export const TargetConfigurationParams = z.object({
   presence_penalty: z.number().min(-2).max(2).nullable(),
   stop: z.array(z.string()).nullable(),
   seed: z.number().int().nullable(),
+  reasoning_effort: z.enum(ReasoningEffort).nullable(),
   // Additional provider-specific parameters can be added here
   additional_params: z.record(z.string(), z.unknown()).nullable(),
 });

@@ -27,9 +27,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Test helper - use unknown casting for test contexts
 type TestContext = Parameters<typeof googleAPIConfig.getBaseURL>[0];
 
-// Mock uuid
-vi.mock('uuid', () => ({
-  v4: vi.fn(() => 'test-uuid-1234'),
+// Mock nanoid (used by response transforms)
+vi.mock('nanoid', () => ({
+  nanoid: vi.fn(() => 'test-uuid-1234'),
 }));
 
 describe('Google AI Provider Tests', () => {
@@ -227,7 +227,7 @@ describe('Google AI Provider Tests', () => {
         {} as IdkRequestData,
       ) as ChatCompletionResponseBody;
 
-      expect(result.id).toBe('idk-test-uuid-1234');
+      expect(result.id).toBe('test-uuid-1234');
       expect(result.object).toBe('chat.completion');
       expect(result.model).toBe('gemini-1.5-pro-001');
       expect(result.choices).toHaveLength(1);
@@ -278,10 +278,10 @@ describe('Google AI Provider Tests', () => {
       ) as ChatCompletionResponseBody;
 
       expect(result.choices[0].message.tool_calls).toHaveLength(1);
-      expect(result.choices[0].message.tool_calls[0].function.name).toBe(
+      expect(result.choices[0].message.tool_calls?.[0].function.name).toBe(
         'get_weather',
       );
-      expect(result.choices[0].message.tool_calls[0].function.arguments).toBe(
+      expect(result.choices[0].message.tool_calls?.[0].function.arguments).toBe(
         JSON.stringify({ location: 'San Francisco' }),
       );
     });

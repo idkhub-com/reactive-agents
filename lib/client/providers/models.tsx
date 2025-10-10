@@ -1,7 +1,7 @@
 'use client';
 
 import { getModels } from '@client/api/v1/idk/models';
-import { getModelsBySkillId } from '@client/api/v1/idk/skills';
+import { getSkillModels } from '@client/api/v1/idk/skills';
 import type { Model, ModelQueryParams } from '@shared/types/data/model';
 import {
   createContext,
@@ -76,7 +76,7 @@ export function ModelsProvider({ children }: ModelsProviderProps) {
     setSkillModelsError(null);
 
     try {
-      const fetchedSkillModels = await getModelsBySkillId(skillId);
+      const fetchedSkillModels = await getSkillModels(skillId);
       setSkillModels(fetchedSkillModels);
     } catch (err) {
       setSkillModelsError(

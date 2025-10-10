@@ -1,6 +1,7 @@
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
 // Import IDKHub OpenAI provider types for better schema handling
 import type { ResponseCreateParamsNonStreaming } from '@server/types/model-response';
+import { error } from '@shared/console-logging';
 import type { ResponsesResponseBody } from '@shared/types/api/routes/responses-api/response';
 import { AIProvider } from '@shared/types/constants';
 import type {
@@ -291,6 +292,7 @@ async function callIDKHubOpenAIResponsesAPI(
   api_key: string,
 ): Promise<ResponsesResponseBody> {
   const controller = new AbortController();
+
   const timeoutId = setTimeout(() => controller.abort(), config.timeout);
 
   try {
@@ -351,6 +353,7 @@ async function callIDKHubOpenAIResponsesAPI(
       targets: [
         {
           provider: AIProvider.OPENAI,
+          model: config.model,
           cache: {
             mode: CacheMode.SIMPLE,
           },
@@ -384,10 +387,13 @@ async function callIDKHubOpenAIResponsesAPI(
       );
     }
 
-    return (await response.json()) as ResponsesResponseBody;
-  } catch (error) {
+    const body = await response.text();
+
+    return JSON.parse(body) as ResponsesResponseBody;
+  } catch (e) {
+    error('Error in OpenAI Responses API:', e);
     clearTimeout(timeoutId);
-    throw error;
+    throw e;
   }
 }
 

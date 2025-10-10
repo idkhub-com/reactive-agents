@@ -30,10 +30,14 @@ export const modelsRouter = new Hono<AppEnv>()
     const userDataStorageConnector = c.get('user_data_storage_connector');
     const { id } = c.req.valid('param');
 
-    const model = await userDataStorageConnector.getModelById(id);
-    if (!model) {
+    const models = await userDataStorageConnector.getModels({
+      id,
+    });
+    if (!models || models.length === 0) {
       return c.json({ error: 'Model not found' }, 404);
     }
+
+    const model = models[0];
 
     return c.json(model);
   })

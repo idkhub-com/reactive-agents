@@ -11,6 +11,7 @@ import type {
   IdkConfigPreProcessed,
 } from '@shared/types/api/request/headers';
 import type { IdkResponseBody } from '@shared/types/api/response';
+import type { SkillOptimizationArm } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
 import type { LogsClient } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
@@ -31,8 +32,10 @@ export interface AppEnv {
     idk_config: IdkConfig;
     idk_config_pre_processed: IdkConfigPreProcessed;
     idk_request_data: IdkRequestData;
+    embedding: number[] | null;
     agent: Agent;
     skill: Skill;
+    pulled_arm?: SkillOptimizationArm;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     cache_storage_connector: CacheStorageConnector;
@@ -42,9 +45,11 @@ export interface AppEnv {
     addLogsClient: (clientId: string, client: LogsClient) => void;
     removeLogsClient: (clientId: string) => void;
     hooks_connectors_map: Record<string, HooksConnector>;
-    evaluation_connectors_map: Partial<
-      Record<EvaluationMethodName, EvaluationMethodConnector>
+    evaluation_connectors_map: Record<
+      EvaluationMethodName,
+      EvaluationMethodConnector
     >;
+
     executeHooks: (
       c: AppContext,
       hookType: HookType,

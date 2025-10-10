@@ -2,12 +2,14 @@ import {
   ChatCompletionMessage,
   ChatCompletionThinking,
 } from '@shared/types/api/routes/shared/messages';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import {
   ChatCompletionTool,
   ChatCompletionToolChoice,
   ChatCompletionToolFunction,
 } from '@shared/types/api/routes/shared/tools';
 import { z } from 'zod';
+
 /**
  * The parameters for the chat completions API request.
  * Used for the /v1/chat/completions endpoint.
@@ -53,6 +55,8 @@ export const ChatCompletionRequestBody = z.object({
   tools: z.array(ChatCompletionTool).optional(),
   /** Controls which (if any) tool is called by the model. */
   tool_choice: ChatCompletionToolChoice.optional(),
+  /** Controls the effort level of the reasoning process. One of minimal, low, medium, or high. */
+  reasoning_effort: z.enum(ReasoningEffort).optional(),
   /** An object specifying the format that the model must output. */
   response_format: z
     .object({

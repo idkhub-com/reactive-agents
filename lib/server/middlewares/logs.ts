@@ -1,3 +1,4 @@
+import { autoClusterSkill } from '@server/middlewares/optimizer/clustering';
 import type {
   EvaluationMethodConnector,
   LogsStorageConnector,
@@ -6,23 +7,26 @@ import type {
 import type { AppEnv } from '@server/types/hono';
 import type { HttpMethod } from '@server/types/http';
 import {
-  findRealtimeEvaluations,
+  runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
-  triggerRealtimeEvaluations,
 } from '@server/utils/realtime-evaluations';
 import type { FunctionName } from '@shared/types/api/request';
 import {
   type IdkConfig,
   NonPrivateIdkConfig,
 } from '@shared/types/api/request/headers';
+import type {
+  SkillOptimizationArm,
+  SkillOptimizationEvaluationResult,
+  SkillOptimizationEvaluationRunCreateParams,
+} from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
-import type { LogMessage, LogsClient } from '@shared/types/data/log';
+import type { Log, LogMessage, LogsClient } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
 import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type {
   AIProviderRequestLog,
   HookLog,
-  IdkRequestLog,
   LogResponseBodyError,
 } from '@shared/types/idkhub/observability';
 import type { MiddlewareHandler } from 'hono';
@@ -90,12 +94,14 @@ interface ProcessLogsParams {
   skill: Skill;
   startTime: number;
   aiProviderLog: AIProviderRequestLog;
+  embedding: number[] | null;
   hookLogs: HookLog[];
   logsStorageConnector: LogsStorageConnector;
-  userDataStorageConnector?: UserDataStorageConnector;
+  userDataStorageConnector: UserDataStorageConnector;
   evaluationConnectorsMap?: Partial<
     Record<EvaluationMethodName, EvaluationMethodConnector>
   >;
+  pulledArm?: SkillOptimizationArm;
 }
 
 async function processLogs({
@@ -108,11 +114,12 @@ async function processLogs({
   skill,
   startTime,
   aiProviderLog,
+  embedding,
   hookLogs,
   logsStorageConnector,
   userDataStorageConnector,
   evaluationConnectorsMap,
-}: ProcessLogsParams): Promise<void> {
+}: ProcessLogsParams): Promise<SkillOptimizationEvaluationResult[]> {
   const endTime = Date.now();
   const duration = endTime - startTime;
 
@@ -120,10 +127,10 @@ async function processLogs({
 
   if (!('model' in aiProviderLog.request_body)) {
     console.error('No model found in request body');
-    return;
+    return [];
   }
 
-  const log: IdkRequestLog = {
+  const log: Log = {
     id: uuidv4(),
     agent_id: agent.id,
     skill_id: skill.id,
@@ -138,6 +145,7 @@ async function processLogs({
     hook_logs: hookLogs,
     function_name: functionName,
     ai_provider_request_log: aiProviderLog,
+    embedding: embedding,
     endpoint: url.pathname,
     base_idk_config: baseIdkConfig,
     ai_provider: aiProviderLog.provider,
@@ -172,36 +180,28 @@ async function processLogs({
     console.error(error);
   }
 
-  // Trigger realtime evaluations if conditions are met
+  // Trigger evaluations if conditions are met
   if (
     shouldTriggerRealtimeEvaluation(status, url) &&
     userDataStorageConnector &&
     evaluationConnectorsMap
   ) {
-    try {
-      const realtimeEvaluations = await findRealtimeEvaluations(
-        agent.id,
-        skill.id,
-        userDataStorageConnector,
-      );
+    const evaluations =
+      await userDataStorageConnector.getSkillOptimizationEvaluations({
+        agent_id: skill.agent_id,
+        skill_id: skill.id,
+      });
 
-      if (realtimeEvaluations.length > 0) {
-        // Run realtime evaluations asynchronously to not block the response
-        // We don't await this to ensure the main request flow isn't delayed
-        triggerRealtimeEvaluations(
-          log,
-          realtimeEvaluations,
-          evaluationConnectorsMap,
-          userDataStorageConnector,
-        ).catch((error) => {
-          console.error('Error in async realtime evaluations:', error);
-        });
-      }
-    } catch (error) {
-      console.error('Error triggering realtime evaluations:', error);
-      // Don't throw - we don't want to break the main request flow
+    if (evaluations.length > 0) {
+      const results = await runEvaluationsForLog(
+        log,
+        evaluations,
+        evaluationConnectorsMap,
+      );
+      return results;
     }
   }
+  return [];
 }
 
 const shouldLogRequest = (url: URL): boolean => {
@@ -217,6 +217,103 @@ const shouldLogRequest = (url: URL): boolean => {
 
   return true;
 };
+
+async function updatePulledArm(
+  userDataStorageConnector: UserDataStorageConnector,
+  arm: SkillOptimizationArm,
+  evaluationResults: SkillOptimizationEvaluationResult[],
+) {
+  // Calculate average score from all evaluations (normalized 0-1)
+  const scores = evaluationResults.map((result) => result.score);
+
+  const reward = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  await updateArmStats(userDataStorageConnector, arm, reward);
+}
+
+async function updateArmStats(
+  userDataStorageConnector: UserDataStorageConnector,
+  arm: SkillOptimizationArm,
+  reward: number,
+) {
+  // Update arm statistics using incremental update formulas for Thompson Sampling
+  const newN = arm.stats.n + 1;
+  const newTotalReward = arm.stats.total_reward + reward;
+  const newMean = newTotalReward / newN;
+  const newN2 = arm.stats.n2 + reward * reward;
+
+  await userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+    stats: {
+      n: newN,
+      mean: newMean,
+      n2: newN2,
+      total_reward: newTotalReward,
+    },
+  });
+}
+
+async function addSkillOptimizationEvaluationRun(
+  userDataStorageConnector: UserDataStorageConnector,
+  arm: SkillOptimizationArm,
+  evaluationResults: SkillOptimizationEvaluationResult[],
+) {
+  const createParams: SkillOptimizationEvaluationRunCreateParams = {
+    agent_id: arm.agent_id,
+    skill_id: arm.skill_id,
+    cluster_id: arm.cluster_id,
+    results: evaluationResults,
+  };
+
+  await userDataStorageConnector.createSkillOptimizationEvaluationRun(
+    createParams,
+  );
+}
+
+async function updateClusterState(
+  userDataStorageConnector: UserDataStorageConnector,
+  pulledArm: SkillOptimizationArm,
+) {
+  const clusters = await userDataStorageConnector.getSkillOptimizationClusters({
+    id: pulledArm.cluster_id,
+  });
+
+  if (!clusters) {
+    throw new Error(`Cluster not found`);
+  }
+
+  const cluster = clusters[0];
+
+  await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
+    total_steps: cluster.total_steps + 1,
+  });
+}
+
+async function processLogsAndOptimizeSkill(
+  processLogsParams: ProcessLogsParams,
+) {
+  const evaluationResults = await processLogs(processLogsParams);
+  if (evaluationResults.length > 0 && processLogsParams.pulledArm) {
+    await updatePulledArm(
+      processLogsParams.userDataStorageConnector,
+      processLogsParams.pulledArm,
+      evaluationResults,
+    );
+    await addSkillOptimizationEvaluationRun(
+      processLogsParams.userDataStorageConnector,
+      processLogsParams.pulledArm,
+      evaluationResults,
+    );
+    await updateClusterState(
+      processLogsParams.userDataStorageConnector,
+      processLogsParams.pulledArm,
+    );
+    await autoClusterSkill(
+      processLogsParams.functionName,
+      processLogsParams.userDataStorageConnector,
+      processLogsParams.logsStorageConnector,
+      processLogsParams.skill,
+    );
+  }
+}
 
 export const logsMiddleware = (
   factory: Factory<AppEnv>,
@@ -249,6 +346,7 @@ export const logsMiddleware = (
     const hookLogs = c.get('hook_logs') || [];
 
     const idkRequestData = c.get('idk_request_data');
+    const pulledArm = c.get('pulled_arm');
 
     const processLogsParams: ProcessLogsParams = {
       url,
@@ -260,15 +358,17 @@ export const logsMiddleware = (
       skill: c.get('skill'),
       startTime,
       aiProviderLog,
+      embedding: c.get('embedding'),
       hookLogs,
       logsStorageConnector: c.get('logs_storage_connector'),
       userDataStorageConnector: c.get('user_data_storage_connector'),
       evaluationConnectorsMap: c.get('evaluation_connectors_map'),
+      pulledArm,
     };
 
     if (getRuntimeKey() === 'workerd') {
-      c.executionCtx.waitUntil(processLogs(processLogsParams));
+      c.executionCtx.waitUntil(processLogsAndOptimizeSkill(processLogsParams));
     } else {
-      processLogs(processLogsParams);
+      processLogsAndOptimizeSkill(processLogsParams);
     }
   });

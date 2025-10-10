@@ -10,10 +10,10 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+
 import {
   evaluateConversationCompletenessMain,
-  evaluateOneLogForConversationCompleteness,
+  evaluateLog,
 } from './service/evaluate';
 
 // Simplified method configuration constant - only essential fields for standardization
@@ -25,7 +25,7 @@ const conversationCompletenessMethodConfig: EvaluationMethodDetails = {
 } as const;
 
 // Dataset evaluation function
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -48,23 +48,10 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForConversationCompleteness(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 // Evaluation connector constant
 export const conversationCompletenessEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => conversationCompletenessMethodConfig,
-    evaluate: runEvaluation,
-    evaluateOneLog,
+    evaluateLog,
     getParameterSchema: ConversationCompletenessEvaluationParameters,
   };

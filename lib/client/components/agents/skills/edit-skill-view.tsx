@@ -24,7 +24,7 @@ import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillUpdateParams } from '@shared/types/data/skill';
-import { sanitizeDescription } from '@shared/utils/security';
+import { sanitizeUserInput } from '@shared/utils/security';
 import { Bot, Settings, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -35,14 +35,18 @@ const EditSkillFormSchema = z
   .object({
     description: z
       .string()
-      .max(2000, 'Description must be less than 2000 characters')
-      .optional(),
+      .min(25)
+      .max(10000, 'Description must be less than 10000 characters'),
     max_configurations: z
       .number()
       .int()
-      .positive('Max configurations must be a positive number')
-      .min(1, 'Max configurations must be at least 1')
-      .max(100, 'Max configurations cannot exceed 100'),
+      .min(1, 'Min configurations must be at least 1')
+      .max(25, 'Max configurations cannot exceed 25'),
+    num_system_prompts: z
+      .number()
+      .int()
+      .min(1, 'Min system prompts must be at least 1')
+      .max(25, 'Max system prompts cannot exceed 25'),
   })
   .strict();
 
@@ -64,7 +68,7 @@ export function EditSkillView(): React.ReactElement {
     resolver: zodResolver(EditSkillFormSchema),
     defaultValues: {
       description: '',
-      max_configurations: 10,
+      max_configurations: 3,
     },
   });
 
@@ -74,6 +78,7 @@ export function EditSkillView(): React.ReactElement {
       form.reset({
         description: currentSkill.description || '',
         max_configurations: currentSkill.max_configurations,
+        num_system_prompts: currentSkill.num_system_prompts,
       });
     }
   }, [currentSkill, form]);
@@ -86,8 +91,9 @@ export function EditSkillView(): React.ReactElement {
 
     try {
       const updateParams: SkillUpdateParams = {
-        description: sanitizeDescription(data.description || ''),
+        description: sanitizeUserInput(data.description),
         max_configurations: data.max_configurations,
+        num_system_prompts: data.num_system_prompts,
       };
 
       await updateSkill(currentSkill.id, updateParams);
@@ -169,9 +175,7 @@ export function EditSkillView(): React.ReactElement {
                 <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">
-                  Skill Name (Read-only)
-                </div>
+                <div className="text-sm text-muted-foreground">Skill Name</div>
                 <div className="font-semibold text-lg text-blue-800 dark:text-blue-200">
                   {currentSkill.name}
                 </div>
@@ -209,7 +213,7 @@ export function EditSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description (Optional)
+                        Description
                       </FormLabel>
                       <FormControl>
                         <Textarea
@@ -240,9 +244,6 @@ export function EditSkillView(): React.ReactElement {
                       <FormControl>
                         <Input
                           type="number"
-                          min="1"
-                          max="100"
-                          placeholder="10"
                           className="h-11"
                           {...field}
                           onChange={(e) =>
@@ -255,6 +256,34 @@ export function EditSkillView(): React.ReactElement {
                         Maximum number of configurations allowed for this skill.
                         Each configuration represents a unique AI model setup
                         with specific prompts and parameters.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="num_system_prompts"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">
+                        Number of System Prompts
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="h-11"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                          disabled={isUpdating}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The number of system prompts that will be generated for
+                        this skill.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

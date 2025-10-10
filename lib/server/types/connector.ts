@@ -1,4 +1,9 @@
 import type {
+  LogOutput,
+  LogOutputCreateParams,
+  LogOutputQueryParams,
+} from '@shared/types/data';
+import type {
   Agent,
   AgentCreateParams,
   AgentQueryParams,
@@ -34,11 +39,6 @@ import type {
 } from '@shared/types/data/improved-response';
 import type { Log, LogsQueryParams } from '@shared/types/data/log';
 import type {
-  LogOutput,
-  LogOutputCreateParams,
-  LogOutputQueryParams,
-} from '@shared/types/data/log-output';
-import type {
   Model,
   ModelCreateParams,
   ModelQueryParams,
@@ -51,21 +51,34 @@ import type {
   SkillUpdateParams,
 } from '@shared/types/data/skill';
 import type {
-  SkillConfiguration,
-  SkillConfigurationCreateParams,
-  SkillConfigurationQueryParams,
-  SkillConfigurationUpdateParams,
-} from '@shared/types/data/skill-configuration';
+  SkillOptimizationArm,
+  SkillOptimizationArmCreateParams,
+  SkillOptimizationArmQueryParams,
+  SkillOptimizationArmUpdateParams,
+} from '@shared/types/data/skill-optimization-arm';
+import type {
+  SkillOptimizationCluster,
+  SkillOptimizationClusterCreateParams,
+  SkillOptimizationClusterQueryParams,
+  SkillOptimizationClusterUpdateParams,
+} from '@shared/types/data/skill-optimization-cluster';
+import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationCreateParams,
+  SkillOptimizationEvaluationQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation';
+import type {
+  SkillOptimizationEvaluationResult,
+  SkillOptimizationEvaluationRun,
+  SkillOptimizationEvaluationRunCreateParams,
+  SkillOptimizationEvaluationRunQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation-run';
 import type {
   Tool,
   ToolCreateParams,
   ToolQueryParams,
 } from '@shared/types/data/tool';
-import type {
-  EvaluationMethodDetails,
-  EvaluationRunJobDetails,
-} from '@shared/types/idkhub/evaluations/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations/evaluations';
 import type { Hook, HookResult } from '@shared/types/middleware/hooks';
 import type { z } from 'zod';
 
@@ -102,19 +115,6 @@ export interface UserDataStorageConnector {
   updateSkill(id: string, update: SkillUpdateParams): Promise<Skill> | Skill;
   deleteSkill(id: string): Promise<void> | void;
 
-  // Skill Configurations
-  getSkillConfigurations(
-    queryParams: SkillConfigurationQueryParams,
-  ): Promise<SkillConfiguration[]> | SkillConfiguration[];
-  createSkillConfiguration(
-    skillConfiguration: SkillConfigurationCreateParams,
-  ): Promise<SkillConfiguration> | SkillConfiguration;
-  updateSkillConfiguration(
-    id: string,
-    update: SkillConfigurationUpdateParams,
-  ): Promise<SkillConfiguration> | SkillConfiguration;
-  deleteSkillConfiguration(id: string): Promise<void> | void;
-
   // Tools
   getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];
   createTool(tool: ToolCreateParams): Promise<Tool> | Tool;
@@ -128,10 +128,6 @@ export interface UserDataStorageConnector {
     update: DatasetUpdateParams,
   ): Promise<Dataset> | Dataset;
   deleteDataset(id: string): Promise<void> | void;
-
-  // Logs
-  getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
-  deleteLog(id: string): Promise<void> | void;
 
   // Dataset-Log Bridge
   getDatasetLogs(
@@ -185,26 +181,72 @@ export interface UserDataStorageConnector {
 
   // Models
   getModels(queryParams: ModelQueryParams): Promise<Model[]> | Model[];
-  getModelById(id: string): Promise<Model | null> | Model | null;
   createModel(model: ModelCreateParams): Promise<Model> | Model;
   updateModel(id: string, update: ModelUpdateParams): Promise<Model> | Model;
   deleteModel(id: string): Promise<void> | void;
 
   // Skill-Model Relationships
-  getModelsBySkillId(skillId: string): Promise<Model[]> | Model[];
-  getSkillsByModelId(modelId: string): Promise<Skill[]> | Skill[];
+  getSkillModels(skillId: string): Promise<Model[]> | Model[];
   addModelsToSkill(skillId: string, modelIds: string[]): Promise<void> | void;
   removeModelsFromSkill(
     skillId: string,
     modelIds: string[],
   ): Promise<void> | void;
+
+  // Skill Optimization Cluster
+  getSkillOptimizationClusters(
+    queryParams: SkillOptimizationClusterQueryParams,
+  ): Promise<SkillOptimizationCluster[]> | SkillOptimizationCluster[];
+  createSkillOptimizationClusters(
+    params_list: SkillOptimizationClusterCreateParams[],
+  ): Promise<SkillOptimizationCluster[]> | SkillOptimizationCluster[];
+  updateSkillOptimizationCluster(
+    id: string,
+    update: SkillOptimizationClusterUpdateParams,
+  ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
+  deleteSkillOptimizationCluster(id: string): Promise<void> | void;
+
+  // Skill Optimization Arms
+  getSkillOptimizationArms(
+    queryParams: SkillOptimizationArmQueryParams,
+  ): Promise<SkillOptimizationArm[]> | SkillOptimizationArm[];
+  createSkillOptimizationArms(
+    params_list: SkillOptimizationArmCreateParams[],
+  ): Promise<SkillOptimizationArm[]> | SkillOptimizationArm[];
+  updateSkillOptimizationArm(
+    id: string,
+    update: SkillOptimizationArmUpdateParams,
+  ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
+  deleteSkillOptimizationArm(id: string): Promise<void> | void;
+  deleteSkillOptimizationArmsForSkill(skillId: string): Promise<void> | void;
+
+  // Skill Optimization Evaluations
+  getSkillOptimizationEvaluations(
+    queryParams: SkillOptimizationEvaluationQueryParams,
+  ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
+  createSkillOptimizationEvaluations(
+    params_list: SkillOptimizationEvaluationCreateParams[],
+  ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
+  deleteSkillOptimizationEvaluation(id: string): Promise<void> | void;
+  deleteSkillOptimizationEvaluationsForSkill(
+    skillId: string,
+  ): Promise<void> | void;
+
+  // Skill Optimization Evaluation Run
+  getSkillOptimizationEvaluationRuns(
+    queryParams: SkillOptimizationEvaluationRunQueryParams,
+  ):
+    | Promise<SkillOptimizationEvaluationRun[]>
+    | SkillOptimizationEvaluationRun[];
+  createSkillOptimizationEvaluationRun(
+    params: SkillOptimizationEvaluationRunCreateParams,
+  ): Promise<SkillOptimizationEvaluationRun> | SkillOptimizationEvaluationRun;
+  deleteSkillOptimizationEvaluationRun(id: string): Promise<void> | void;
 }
 
 export interface LogsStorageConnector {
-  getLogs(
-    queryParams: LogsQueryParams,
-  ): Promise<IdkRequestLog[]> | IdkRequestLog[];
-  createLog(log: IdkRequestLog): Promise<IdkRequestLog> | IdkRequestLog;
+  getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
+  createLog(log: Log): Promise<Log> | Log;
   deleteLog(id: string): Promise<void> | void;
 }
 
@@ -221,14 +263,9 @@ export interface HooksConnector {
 
 export interface EvaluationMethodConnector {
   getDetails: () => EvaluationMethodDetails;
-  evaluate: (
-    jobDetails: EvaluationRunJobDetails,
-    userDataStorageConnector: UserDataStorageConnector,
-  ) => Promise<EvaluationRun>;
-  evaluateOneLog: (
-    evaluationRunId: string,
-    log: IdkRequestLog,
-    userDataStorageConnector: UserDataStorageConnector,
-  ) => Promise<void>;
+  evaluateLog: (
+    evaluation: SkillOptimizationEvaluation,
+    log: Log,
+  ) => Promise<SkillOptimizationEvaluationResult>;
   getParameterSchema: z.ZodType;
 }

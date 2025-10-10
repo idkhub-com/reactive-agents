@@ -30,11 +30,26 @@ const mockUserDataStorageConnector = {
   createSystemPrompt: vi.fn(),
   updateSystemPrompt: vi.fn(),
   deleteSystemPrompt: vi.fn(),
-  // Skill configuration methods
-  getSkillConfigurations: vi.fn(),
-  createSkillConfiguration: vi.fn(),
-  updateSkillConfiguration: vi.fn(),
-  deleteSkillConfiguration: vi.fn(),
+  // Skill Optimization Cluster methods
+  getSkillOptimizationClusters: vi.fn(),
+  createSkillOptimizationClusters: vi.fn(),
+  updateSkillOptimizationCluster: vi.fn(),
+  deleteSkillOptimizationCluster: vi.fn(),
+  // Skill Optimization Arm methods
+  getSkillOptimizationArms: vi.fn(),
+  createSkillOptimizationArms: vi.fn(),
+  updateSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArmsForSkill: vi.fn(),
+  // Skill Optimization Evaluation methods
+  getSkillOptimizationEvaluations: vi.fn(),
+  createSkillOptimizationEvaluations: vi.fn(),
+  deleteSkillOptimizationEvaluation: vi.fn(),
+  deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+  // Skill Optimization Evaluation Run methods
+  getSkillOptimizationEvaluationRuns: vi.fn(),
+  createSkillOptimizationEvaluationRun: vi.fn(),
+  deleteSkillOptimizationEvaluationRun: vi.fn(),
   // Tool methods
   getTools: vi.fn(),
   createTool: vi.fn(),
@@ -73,8 +88,7 @@ const mockUserDataStorageConnector = {
   updateModel: vi.fn(),
   deleteModel: vi.fn(),
   // Skill-Model relationship methods
-  getModelsBySkillId: vi.fn(),
-  getSkillsByModelId: vi.fn(),
+  getSkillModels: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
 };

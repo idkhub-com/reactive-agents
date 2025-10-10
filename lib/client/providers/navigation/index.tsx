@@ -83,6 +83,7 @@ export function NavigationProvider({
     const logId = params.logId as string;
     const evalId = params.evalId as string;
     const datasetId = params.datasetId as string;
+    const _clusterId = params.clusterId as string;
 
     // Determine view based on URL structure
     if (pathSegments.length === 1) return 'skills-list'; // /agents
@@ -113,6 +114,17 @@ export function NavigationProvider({
     }
     if (subPath === 'models') {
       return 'models';
+    }
+    if (subPath === 'clusters') {
+      // Check if it's /clusters/[clusterId]/arms/[armId]
+      if (pathSegments[4] && pathSegments[5] === 'arms' && pathSegments[6]) {
+        return 'arm-detail';
+      }
+      // Check if it's /clusters/[clusterId]/arms
+      if (pathSegments[4] && pathSegments[5] === 'arms') {
+        return 'cluster-arms';
+      }
+      return 'clusters';
     }
     if (subPath === 'edit') {
       return 'edit-skill';
@@ -221,6 +233,8 @@ export function NavigationProvider({
     const logId = params.logId as string;
     const evalId = params.evalId as string;
     const datasetId = params.datasetId as string;
+    const clusterId = params.clusterId as string;
+    const armId = params.armId as string;
 
     setNavigationState((prev) => {
       const newState: NavigationState = {
@@ -250,6 +264,8 @@ export function NavigationProvider({
       if (logId) newState.logId = logId;
       if (evalId) newState.evalId = evalId;
       if (datasetId) newState.datasetId = datasetId;
+      if (clusterId) newState.clusterId = clusterId;
+      if (armId) newState.armId = armId;
 
       // Build breadcrumbs based on current path
       const breadcrumbs: BreadcrumbSegment[] = [
@@ -306,6 +322,39 @@ export function NavigationProvider({
             label: 'Models',
             path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/models`,
           });
+        } else if (currentView === 'clusters') {
+          breadcrumbs.push({
+            label: 'Clusters',
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
+          });
+        } else if (currentView === 'cluster-arms') {
+          breadcrumbs.push({
+            label: 'Clusters',
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
+          });
+          if (clusterId) {
+            breadcrumbs.push({
+              label: 'Arms',
+              path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters/${clusterId}/arms`,
+            });
+          }
+        } else if (currentView === 'arm-detail') {
+          breadcrumbs.push({
+            label: 'Clusters',
+            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
+          });
+          if (clusterId) {
+            breadcrumbs.push({
+              label: 'Arms',
+              path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters/${clusterId}/arms`,
+            });
+          }
+          if (armId) {
+            breadcrumbs.push({
+              label: 'Arm Detail',
+              path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters/${clusterId}/arms/${armId}`,
+            });
+          }
         }
       } else if (newState.selectedAgent && currentView === 'skills-list') {
         breadcrumbs.push({

@@ -9,11 +9,7 @@ import type {
 } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
 import { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
-import {
-  evaluateKnowledgeRetention,
-  evaluateOneLogForKnowledgeRetention,
-} from './service/evaluate';
+import { evaluateKnowledgeRetention, evaluateLog } from './service/evaluate';
 
 // Simplified method configuration constant - only essential fields for standardization
 const knowledgeRetentionMethodConfig: EvaluationMethodDetails = {
@@ -24,7 +20,7 @@ const knowledgeRetentionMethodConfig: EvaluationMethodDetails = {
 } as const;
 
 // Dataset evaluation function
-async function runEvaluation(
+async function _runEvaluation(
   jobDetails: EvaluationRunJobDetails,
   userDataStorageConnector: UserDataStorageConnector,
 ): Promise<EvaluationRun> {
@@ -48,23 +44,10 @@ async function runEvaluation(
   return evaluationRun;
 }
 
-async function evaluateOneLog(
-  evaluationRunId: string,
-  log: IdkRequestLog,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<void> {
-  await evaluateOneLogForKnowledgeRetention(
-    evaluationRunId,
-    log,
-    userDataStorageConnector,
-  );
-}
-
 // Evaluation connector constant
 export const knowledgeRetentionEvaluationConnector: EvaluationMethodConnector =
   {
     getDetails: () => knowledgeRetentionMethodConfig,
-    evaluate: runEvaluation,
-    evaluateOneLog,
+    evaluateLog,
     getParameterSchema: KnowledgeRetentionEvaluationParameters,
   };

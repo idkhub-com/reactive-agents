@@ -21,9 +21,10 @@ import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
+import { useNavigation } from '@client/providers/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { AgentCreateParams } from '@shared/types/data';
-import { sanitizeDescription, sanitizeUserInput } from '@shared/utils/security';
+import { sanitizeUserInput } from '@shared/utils/security';
 import { Bot, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
@@ -57,6 +58,7 @@ type CreateAgentFormData = z.infer<typeof CreateAgentFormSchema>;
 
 export function CreateAgentView(): React.ReactElement {
   const { createAgent, isCreating } = useAgents();
+  const { setSelectedAgent } = useNavigation();
   const router = useRouter();
 
   const form = useForm<CreateAgentFormData>({
@@ -71,7 +73,7 @@ export function CreateAgentView(): React.ReactElement {
     try {
       const agentParams: AgentCreateParams = {
         name: sanitizeUserInput(data.name),
-        description: sanitizeDescription(data.description || ''),
+        description: sanitizeUserInput(data.description || ''),
         metadata: {},
       };
 
@@ -80,8 +82,8 @@ export function CreateAgentView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Navigate to the agent's skills page
-      router.push(`/agents/${encodeURIComponent(newAgent.name)}`);
+      // Set the selected agent and navigate to the agent's skills page
+      setSelectedAgent(newAgent);
     } catch (error) {
       console.error('Error creating agent:', error);
       // Error is already handled by the agents provider
@@ -126,7 +128,7 @@ export function CreateAgentView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Agent Name *
+                        Agent Name
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -151,7 +153,7 @@ export function CreateAgentView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description (Optional)
+                        Description
                       </FormLabel>
                       <FormControl>
                         <Textarea

@@ -3,10 +3,10 @@ import { completionsRouter } from '@server/api/v1/completions';
 import { embeddingsRouter } from '@server/api/v1/embeddings';
 import { idkRouter } from '@server/api/v1/idk';
 import { responsesRouter } from '@server/api/v1/responses';
-import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
+// import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
-import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
+// import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
 import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
 import { turnRelevancyEvaluationConnector } from '@server/connectors/evaluations/turn-relevancy';
@@ -50,6 +50,7 @@ app.use('*', commonVariablesMiddleware);
 app.use('*', userDataMiddleware(factory, supabaseUserDataStorageConnector));
 
 // Use logs middleware for all routes
+// Runs skill optimizer after processing logs
 app.use('*', logsMiddleware(factory, supabaseLogsStorageConnector));
 
 // Use hooks middleware for all routes
@@ -59,10 +60,10 @@ app.use('*', hooksMiddleware(factory, []));
 app.use(
   '*',
   evaluationMethodConnectors(factory, [
-    argumentCorrectnessEvaluationConnector,
+    // argumentCorrectnessEvaluationConnector,
     conversationCompletenessEvaluationConnector,
     knowledgeRetentionEvaluationConnector,
-    roleAdherenceEvaluationConnector,
+    // roleAdherenceEvaluationConnector,
     taskCompletionEvaluationConnector,
     toolCorrectnessEvaluationConnector,
     turnRelevancyEvaluationConnector,
@@ -75,11 +76,11 @@ app.use('*', cacheMiddleware(factory, supabaseCacheStorageConnector));
 // Use authenticated middleware for all routes
 app.use('*', authenticatedMiddleware(factory));
 
-// Use IdkHub configuration injector middleware for all routes
-app.use('*', idkHubConfigurationInjectorMiddleware);
-
 // Use agent and skill middleware for all routes
 app.use('*', agentAndSkillMiddleware);
+
+// Use IdkHub configuration injector middleware for all routes
+app.use('*', idkHubConfigurationInjectorMiddleware);
 
 // Use tool middleware for all routes
 app.use(toolMiddleware);

@@ -34,11 +34,11 @@ describe('getOrCreateAgent', () => {
       updateSystemPrompt: vi.fn(),
       deleteSystemPrompt: vi.fn(),
 
-      // Skill configuration methods
-      getSkillConfigurations: vi.fn(),
-      createSkillConfiguration: vi.fn(),
-      updateSkillConfiguration: vi.fn(),
-      deleteSkillConfiguration: vi.fn(),
+      // Skill Optimization Cluster methods
+      getSkillOptimizationClusters: vi.fn(),
+      createSkillOptimizationClusters: vi.fn(),
+      updateSkillOptimizationCluster: vi.fn(),
+      deleteSkillOptimizationCluster: vi.fn(),
 
       // Feedback methods
       getFeedback: vi.fn(),
@@ -91,10 +91,24 @@ describe('getOrCreateAgent', () => {
       updateModel: vi.fn(),
       deleteModel: vi.fn(),
       // Skill-Model relationship methods
-      getModelsBySkillId: vi.fn(),
-      getSkillsByModelId: vi.fn(),
+      getSkillModels: vi.fn(),
       addModelsToSkill: vi.fn(),
       removeModelsFromSkill: vi.fn(),
+      // Skill Optimization Arm methods
+      getSkillOptimizationArms: vi.fn(),
+      createSkillOptimizationArms: vi.fn(),
+      updateSkillOptimizationArm: vi.fn(),
+      deleteSkillOptimizationArm: vi.fn(),
+      deleteSkillOptimizationArmsForSkill: vi.fn(),
+      // Skill Optimization Evaluation methods
+      getSkillOptimizationEvaluations: vi.fn(),
+      createSkillOptimizationEvaluations: vi.fn(),
+      deleteSkillOptimizationEvaluation: vi.fn(),
+      deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+      // Skill Optimization Evaluation Run methods
+      getSkillOptimizationEvaluationRuns: vi.fn(),
+      createSkillOptimizationEvaluationRun: vi.fn(),
+      deleteSkillOptimizationEvaluationRun: vi.fn(),
     } as UserDataStorageConnector;
   });
 
@@ -154,7 +168,7 @@ describe('getOrCreateAgent', () => {
       const newAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'new-agent',
-        description: null,
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -171,6 +185,7 @@ describe('getOrCreateAgent', () => {
       });
       expect(mockConnector.createAgent).toHaveBeenCalledWith({
         name: 'new-agent',
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
       } as AgentCreateParams);
       expect(console.log).not.toHaveBeenCalledWith(
@@ -182,7 +197,7 @@ describe('getOrCreateAgent', () => {
       const newAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'test-agent',
-        description: null,
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -195,6 +210,7 @@ describe('getOrCreateAgent', () => {
 
       expect(mockConnector.createAgent).toHaveBeenCalledWith({
         name: 'test-agent',
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
       });
     });
@@ -226,7 +242,7 @@ describe('getOrCreateAgent', () => {
       const newAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: '',
-        description: null,
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -241,6 +257,7 @@ describe('getOrCreateAgent', () => {
       expect(mockConnector.getAgents).toHaveBeenCalledWith({ name: '' });
       expect(mockConnector.createAgent).toHaveBeenCalledWith({
         name: '',
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
       });
     });
@@ -250,7 +267,7 @@ describe('getOrCreateAgent', () => {
       const newAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: specialName,
-        description: null,
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -272,7 +289,7 @@ describe('getOrCreateAgent', () => {
       const newAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: longName,
-        description: null,
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -294,7 +311,7 @@ describe('getOrCreateAgent', () => {
       const existingAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: agentName,
-        description: null,
+        description: 'The agent must be setup before it can be used.',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',

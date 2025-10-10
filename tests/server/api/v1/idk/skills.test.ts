@@ -4,6 +4,13 @@ import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock the system prompt generation to avoid OpenAI API calls
+vi.mock('@server/optimization/utils/system-prompt', () => ({
+  generateSystemPromptForSkill: vi
+    .fn()
+    .mockResolvedValue('Generated system prompt'),
+}));
+
 // Create a mock UserDataStorageConnector with all required methods
 const mockUserDataStorageConnector = {
   // Feedback methods
@@ -30,11 +37,26 @@ const mockUserDataStorageConnector = {
   createSystemPrompt: vi.fn(),
   updateSystemPrompt: vi.fn(),
   deleteSystemPrompt: vi.fn(),
-  // Skill configuration methods
-  getSkillConfigurations: vi.fn(),
-  createSkillConfiguration: vi.fn(),
-  updateSkillConfiguration: vi.fn(),
-  deleteSkillConfiguration: vi.fn(),
+  // Skill Optimization Cluster methods
+  getSkillOptimizationClusters: vi.fn(),
+  createSkillOptimizationClusters: vi.fn(),
+  updateSkillOptimizationCluster: vi.fn(),
+  deleteSkillOptimizationCluster: vi.fn(),
+  // Skill Optimization Arm methods
+  getSkillOptimizationArms: vi.fn(),
+  createSkillOptimizationArms: vi.fn(),
+  updateSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArm: vi.fn(),
+  deleteSkillOptimizationArmsForSkill: vi.fn(),
+  // Skill Optimization Evaluation methods
+  getSkillOptimizationEvaluations: vi.fn(),
+  createSkillOptimizationEvaluations: vi.fn(),
+  deleteSkillOptimizationEvaluation: vi.fn(),
+  deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
+  // Skill Optimization Evaluation Run methods
+  getSkillOptimizationEvaluationRuns: vi.fn(),
+  createSkillOptimizationEvaluationRun: vi.fn(),
+  deleteSkillOptimizationEvaluationRun: vi.fn(),
   // Tool methods
   getTools: vi.fn(),
   createTool: vi.fn(),
@@ -73,8 +95,7 @@ const mockUserDataStorageConnector = {
   updateModel: vi.fn(),
   deleteModel: vi.fn(),
   // Skill-Model relationship methods
-  getModelsBySkillId: vi.fn(),
-  getSkillsByModelId: vi.fn(),
+  getSkillModels: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
 };
@@ -100,19 +121,29 @@ describe('Skills API Status Codes', () => {
         id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-skill',
-        description: 'Test skill description',
+        description:
+          'This is a test skill description with at least 25 characters',
         metadata: { test: true },
+        max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
       mockUserDataStorageConnector.createSkill.mockResolvedValue(mockSkill);
+      mockUserDataStorageConnector.createSkillOptimizationClusters.mockResolvedValue(
+        [],
+      );
 
       const res = await client.index.$post({
         json: {
           agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-skill',
-          description: 'Test skill description',
-          metadata: { test: true },
+          description:
+            'This is a test skill description with at least 25 characters',
+          metadata: {
+            last_clustering_at: '2023-01-01T00:00:00.000Z',
+            last_clustering_log_start_time: 1234567890,
+          },
         },
       });
 
@@ -130,6 +161,8 @@ describe('Skills API Status Codes', () => {
         json: {
           agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-skill',
+          description:
+            'This is a test skill description with at least 25 characters',
           metadata: {},
         },
       });
@@ -160,8 +193,11 @@ describe('Skills API Status Codes', () => {
           id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
           name: 'test-skill',
-          description: 'Test skill description',
+          description:
+            'This is a test skill description with at least 25 characters',
           metadata: { test: true },
+          max_configurations: 10,
+          num_system_prompts: 5,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
         },
@@ -202,16 +238,59 @@ describe('Skills API Status Codes', () => {
         id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'test-skill',
-        description: 'updated description',
+        description:
+          'This is an updated skill description with at least 25 characters',
         metadata: { test: true },
+        max_configurations: 10,
+        num_system_prompts: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-02T00:00:00.000Z',
       };
+      const mockCluster = {
+        id: 'cluster-1',
+        agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+        skill_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+        name: 'Cluster 1',
+        total_steps: 0,
+        centroid: [0.5],
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+      const mockModel = {
+        id: 'model-1',
+        ai_provider: 'anthropic',
+        name: 'claude-3-sonnet',
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+
+      // Mocks for updateSkill operation
       mockUserDataStorageConnector.updateSkill.mockResolvedValue(mockSkill);
+
+      // Mocks for handleGenerateArms operation (called when description is updated)
+      mockUserDataStorageConnector.getSkills.mockResolvedValue([mockSkill]);
+      mockUserDataStorageConnector.deleteSkillOptimizationArmsForSkill.mockResolvedValue(
+        undefined,
+      );
+      mockUserDataStorageConnector.getSkillOptimizationClusters.mockResolvedValue(
+        [mockCluster],
+      );
+      mockUserDataStorageConnector.updateSkillOptimizationCluster.mockResolvedValue(
+        mockCluster,
+      );
+      mockUserDataStorageConnector.getSkillModels.mockResolvedValue([
+        mockModel,
+      ]);
+      mockUserDataStorageConnector.createSkillOptimizationArms.mockResolvedValue(
+        [],
+      );
 
       const res = await client[':skillId'].$patch({
         param: { skillId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
-        json: { description: 'updated description' },
+        json: {
+          description:
+            'This is an updated skill description with at least 25 characters',
+        },
       });
 
       expect(res.status).toBe(200);
@@ -226,7 +305,10 @@ describe('Skills API Status Codes', () => {
 
       const res = await client[':skillId'].$patch({
         param: { skillId: 'c13d1678-150a-466b-804f-ecc82de3680e' },
-        json: { description: 'updated description' },
+        json: {
+          description:
+            'This is an updated skill description with at least 25 characters',
+        },
       });
 
       expect(res.status).toBe(500);
@@ -237,7 +319,10 @@ describe('Skills API Status Codes', () => {
     it('should return 400 for invalid UUID', async () => {
       const res = await client[':skillId'].$patch({
         param: { skillId: 'invalid-uuid' },
-        json: { description: 'updated description' },
+        json: {
+          description:
+            'This is an updated skill description with at least 25 characters',
+        },
       });
 
       expect(res.status).toBe(400);

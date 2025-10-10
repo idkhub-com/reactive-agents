@@ -4,9 +4,14 @@ import {
   Model,
   Skill,
   type SkillCreateParams,
+  SkillOptimizationArm,
+  SkillOptimizationEvaluationRun,
   type SkillQueryParams,
   type SkillUpdateParams,
 } from '@shared/types/data';
+import { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
+import { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
+import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { hc } from 'hono/client';
 
 const client = hc<IdkRoute>(API_URL);
@@ -71,7 +76,7 @@ export async function deleteSkill(id: string): Promise<void> {
   }
 }
 
-export async function getModelsBySkillId(skillId: string): Promise<Model[]> {
+export async function getSkillModels(skillId: string): Promise<Model[]> {
   const response = await client.v1.idk.skills[':skillId'].models.$get({
     param: {
       skillId,
@@ -109,10 +114,132 @@ export async function removeModelsFromSkill(
     param: {
       skillId,
     },
-    json: { modelIds },
+    query: { ids: modelIds },
   });
 
   if (!response.ok) {
     throw new Error('Failed to remove models from skill');
+  }
+}
+
+export async function getSkillClusterStates(
+  skillId: string,
+): Promise<SkillOptimizationCluster[]> {
+  const response = await client.v1.idk.skills[':skillId'].clusters.$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch cluster states for skill');
+  }
+
+  return SkillOptimizationCluster.array().parse(await response.json());
+}
+
+export async function getSkillArms(
+  skillId: string,
+): Promise<SkillOptimizationArm[]> {
+  const response = await client.v1.idk.skills[':skillId'].arms.$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill arms');
+  }
+
+  return SkillOptimizationArm.array().parse(await response.json());
+}
+
+export async function generateSkillArms(
+  skillId: string,
+): Promise<SkillOptimizationArm[]> {
+  const response = await client.v1.idk.skills[':skillId'][
+    'generate-arms'
+  ].$post({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate skill arms');
+  }
+
+  return SkillOptimizationArm.array().parse(await response.json());
+}
+
+export async function getSkillEvaluationRuns(
+  skillId: string,
+): Promise<SkillOptimizationEvaluationRun[]> {
+  const response = await client.v1.idk.skills[':skillId'][
+    'evaluation-runs'
+  ].$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch evaluation runs');
+  }
+
+  return SkillOptimizationEvaluationRun.array().parse(await response.json());
+}
+
+export async function getSkillEvaluations(
+  skillId: string,
+): Promise<SkillOptimizationEvaluation[]> {
+  const response = await client.v1.idk.skills[':skillId'].evaluations.$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill evaluations');
+  }
+
+  return SkillOptimizationEvaluation.array().parse(await response.json());
+}
+
+export async function createSkillEvaluation(
+  skillId: string,
+  methods: EvaluationMethodName[],
+): Promise<SkillOptimizationEvaluation[]> {
+  const response = await client.v1.idk.skills[':skillId'].evaluations.$post({
+    param: {
+      skillId,
+    },
+    json: {
+      methods,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to create skill evaluation');
+  }
+
+  return SkillOptimizationEvaluation.array().parse(await response.json());
+}
+
+export async function deleteSkillEvaluation(
+  skillId: string,
+  evaluationId: string,
+): Promise<void> {
+  const response = await client.v1.idk.skills[':skillId'].evaluations[
+    ':evaluationId'
+  ].$delete({
+    param: {
+      skillId,
+      evaluationId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete skill evaluation');
   }
 }

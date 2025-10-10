@@ -6,7 +6,6 @@ export const ConversationCompletenessEvaluationParameters = z
     model: z.string().default('gpt-4'),
     temperature: z.number().min(0).max(2).default(0.1),
     max_tokens: z.number().int().positive().default(1000),
-    timeout: z.number().int().positive().default(30000),
     include_reason: z.boolean().default(true),
     strict_mode: z.boolean().default(false),
     async_mode: z.boolean().default(false),

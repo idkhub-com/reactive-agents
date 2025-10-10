@@ -1,10 +1,5 @@
 import crypto from 'node:crypto';
-import {
-  AI_PROVIDER_API_KEY_ENCRYPTION_KEY,
-  SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_URL,
-} from '@server/constants';
+import { AI_PROVIDER_API_KEY_ENCRYPTION_KEY } from '@server/constants';
 import type {
   CacheStorageConnector,
   LogsStorageConnector,
@@ -62,11 +57,25 @@ import {
   type SkillUpdateParams,
 } from '@shared/types/data/skill';
 import {
-  SkillConfiguration,
-  type SkillConfigurationCreateParams,
-  type SkillConfigurationQueryParams,
-  type SkillConfigurationUpdateParams,
-} from '@shared/types/data/skill-configuration';
+  SkillOptimizationArm,
+  type SkillOptimizationArmCreateParams,
+  type SkillOptimizationArmQueryParams,
+  type SkillOptimizationArmUpdateParams,
+} from '@shared/types/data/skill-optimization-arm';
+import {
+  SkillOptimizationCluster,
+  type SkillOptimizationClusterCreateParams,
+  type SkillOptimizationClusterQueryParams,
+  type SkillOptimizationClusterUpdateParams,
+} from '@shared/types/data/skill-optimization-cluster';
+import {
+  SkillOptimizationEvaluation,
+  type SkillOptimizationEvaluationQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation';
+import {
+  SkillOptimizationEvaluationRun,
+  type SkillOptimizationEvaluationRunQueryParams,
+} from '@shared/types/data/skill-optimization-evaluation-run';
 import {
   Tool,
   type ToolCreateParams,
@@ -75,20 +84,14 @@ import {
 import { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CachedValue } from '@shared/types/middleware/cache';
 import { z } from 'zod';
+import {
+  deleteFromSupabase,
+  insertIntoSupabase,
+  selectFromSupabase,
+  updateInSupabase,
+} from './base';
 import type { DatasetLogBridgeCreateParams } from './types';
 import { DatasetLogBridge } from './types';
-
-const checkEnvironmentVariables = (): void => {
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
-  }
-  if (!SUPABASE_URL) {
-    throw new Error('SUPABASE_URL is not set');
-  }
-  if (!SUPABASE_ANON_KEY) {
-    throw new Error('SUPABASE_ANON_KEY is not set');
-  }
-};
 
 const encryptAPIKey = (plaintext: string): string => {
   const algorithm = 'aes-256-gcm';
@@ -133,191 +136,6 @@ const decryptAPIKey = (encryptedData: string): string => {
   decrypted += decipher.final('utf8');
 
   return decrypted;
-};
-
-const selectFromSupabase = async <T extends z.ZodType>(
-  table: string,
-  queryParams: Record<string, string | undefined>,
-  schema: T,
-): Promise<z.infer<T>> => {
-  checkEnvironmentVariables();
-
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
-
-  for (const [key, value] of Object.entries(queryParams)) {
-    if (value !== undefined) {
-      url.searchParams.set(key, value);
-    }
-  }
-
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `\
-Failed to fetch from Supabase:
-${response.status} - ${response.statusText}
-${await response.text()}`,
-    );
-  }
-
-  const data = await response.json();
-  try {
-    const parsedData = schema.parse(data);
-    return parsedData;
-  } catch (error) {
-    throw new Error(`Failed to parse data from Supabase: ${error}`);
-  }
-};
-
-const insertIntoSupabase = async <
-  InputSchema extends z.ZodType,
-  OutputSchema extends z.ZodType | null,
->(
-  table: string,
-  data: z.infer<InputSchema>,
-  schema: OutputSchema,
-  upsert = false,
-): Promise<
-  // If schema is not provided, return void
-  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
-> => {
-  checkEnvironmentVariables();
-
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
-
-  const preferArr = [];
-
-  if (upsert) {
-    preferArr.push('resolution=merge-duplicates');
-  }
-
-  if (schema) {
-    preferArr.push('return=representation');
-  }
-
-  const prefer = preferArr.join(', ');
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
-      Prefer: prefer,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `\
-Failed to insert into Supabase:
-${response.status} - ${response.statusText}
-${await response.text()}`,
-    );
-  }
-
-  if (!schema) {
-    return undefined as OutputSchema extends z.ZodType ? never : undefined;
-  }
-
-  const rawInsertedData = await response.json();
-  try {
-    return schema.parse(rawInsertedData) as OutputSchema extends z.ZodType
-      ? never
-      : undefined;
-  } catch (error) {
-    throw new Error(`Failed to parse data from Supabase: ${error}`);
-  }
-};
-
-const updateInSupabase = async <
-  InputSchema extends z.ZodType,
-  OutputSchema extends z.ZodType,
->(
-  table: string,
-  id: string,
-  data: z.infer<InputSchema>,
-  schema: OutputSchema | null,
-): Promise<
-  // If schema is not provided, return void
-  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
-> => {
-  checkEnvironmentVariables();
-
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
-  url.searchParams.set('id', `eq.${id}`);
-
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
-      Prefer: 'return=representation',
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `\
-Failed to update in Supabase:
-${response.status} - ${response.statusText}
-${await response.text()}`,
-    );
-  }
-
-  const rawUpdatedData = await response.json();
-  try {
-    if (!schema) {
-      return undefined as OutputSchema extends z.ZodType ? never : undefined;
-    }
-    return schema.parse(rawUpdatedData) as OutputSchema extends z.ZodType
-      ? never
-      : undefined;
-  } catch (error) {
-    throw new Error(`Failed to parse data from Supabase: ${error}`);
-  }
-};
-
-const deleteFromSupabase = async (
-  table: string,
-  params: Record<string, string>,
-): Promise<void> => {
-  checkEnvironmentVariables();
-
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined) {
-      url.searchParams.set(key, value);
-    }
-  }
-
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_SERVICE_ROLE_KEY!,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `\
-Failed to delete from Supabase:
-${response.status} - ${response.statusText}
-${await response.text()}`,
-    );
-  }
 };
 
 export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
@@ -526,156 +344,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     await deleteFromSupabase('skills', { id: `eq.${id}` });
   },
 
-  getSkillConfigurations: async (
-    queryParams: SkillConfigurationQueryParams,
-  ): Promise<SkillConfiguration[]> => {
-    const postgrestParams: Record<string, string> = {};
-
-    if (queryParams.id) {
-      postgrestParams.id = `eq.${queryParams.id}`;
-    }
-    if (queryParams.agent_id) {
-      postgrestParams.agent_id = `eq.${queryParams.agent_id}`;
-    }
-    if (queryParams.skill_id) {
-      postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
-    }
-    if (queryParams.name) {
-      postgrestParams.name = `eq.${queryParams.name}`;
-    }
-    if (queryParams.limit) {
-      postgrestParams.limit = queryParams.limit.toString();
-    }
-    if (queryParams.offset) {
-      postgrestParams.offset = queryParams.offset.toString();
-    }
-
-    const skillConfigurations = await selectFromSupabase(
-      'skill_configurations',
-      postgrestParams,
-      z.array(SkillConfiguration),
-    );
-
-    return skillConfigurations;
-  },
-
-  createSkillConfiguration: async (
-    skillConfiguration: SkillConfigurationCreateParams,
-  ): Promise<SkillConfiguration> => {
-    const now = new Date().toISOString();
-
-    // Generate 6-character unique hash (content + timestamp to ensure uniqueness)
-    const dataString = JSON.stringify(skillConfiguration.data) + now;
-    const hashBuffer = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(dataString),
-    );
-    const hash = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-      .substring(0, 6);
-
-    // Create versioned data structure with 'current' key
-    const versionedData = {
-      current: {
-        hash,
-        created_at: now,
-        params: skillConfiguration.data,
-      },
-    };
-
-    const skillConfigWithTimestamps = {
-      id: crypto.randomUUID(),
-      agent_id: skillConfiguration.agent_id,
-      skill_id: skillConfiguration.skill_id,
-      name: skillConfiguration.name,
-      description: skillConfiguration.description,
-      data: versionedData,
-      created_at: now,
-      updated_at: now,
-    };
-
-    const insertedSkillConfiguration = await insertIntoSupabase(
-      'skill_configurations',
-      skillConfigWithTimestamps,
-      z.array(SkillConfiguration),
-    );
-    return insertedSkillConfiguration[0];
-  },
-
-  updateSkillConfiguration: async (
-    id: string,
-    update: SkillConfigurationUpdateParams,
-  ): Promise<SkillConfiguration> => {
-    const now = new Date().toISOString();
-    let updateWithTimestamp: Record<string, unknown> = {
-      ...update,
-      updated_at: now,
-    };
-
-    // If we're updating the data, we need to handle versioning
-    if (update.data) {
-      // First, get the current configuration to access existing data
-      const existing = await selectFromSupabase(
-        'skill_configurations',
-        { id: `eq.${id}` },
-        z.array(SkillConfiguration),
-      );
-
-      if (existing.length === 0) {
-        throw new Error(`Skill configuration with id ${id} not found`);
-      }
-
-      const currentConfig = existing[0];
-      const dataString = JSON.stringify(update.data) + now;
-      const hashBuffer = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(dataString),
-      );
-      const newHash = Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')
-        .substring(0, 6);
-
-      // Get the current hash to preserve history
-      const currentVersion = currentConfig.data.current;
-      const currentHash = currentVersion.hash;
-
-      // Create new versioned data structure
-      const newVersionedData = {
-        ...currentConfig.data, // Keep all existing versions
-        current: {
-          hash: newHash,
-          created_at: now,
-          params: update.data,
-        },
-      };
-
-      // If the hash is different, store the previous version
-      if (newHash !== currentHash) {
-        (newVersionedData as Record<string, unknown>)[currentHash] =
-          currentVersion;
-      }
-
-      updateWithTimestamp = {
-        ...updateWithTimestamp,
-        data: newVersionedData,
-      };
-    }
-
-    const updatedSkillConfiguration = await updateInSupabase(
-      'skill_configurations',
-      id,
-      updateWithTimestamp,
-      z.array(SkillConfiguration),
-    );
-    return updatedSkillConfiguration[0];
-  },
-
-  deleteSkillConfiguration: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skill_configurations', { id: `eq.${id}` });
-  },
-
   getTools: async (queryParams: ToolQueryParams): Promise<Tool[]> => {
     const postgrestParams: Record<string, string> = {};
 
@@ -844,66 +512,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   deleteEvaluationRun: async (id: string): Promise<void> => {
     await deleteFromSupabase('evaluation_runs', { id: `eq.${id}` });
-  },
-
-  // Logs
-  getLogs: async (queryParams: LogsQueryParams): Promise<Log[]> => {
-    const postgrestParams: Record<string, string> = {};
-
-    if (queryParams.id) {
-      postgrestParams.id = `eq.${queryParams.id}`;
-    }
-    if (queryParams.ids) {
-      postgrestParams.id = `in.(${queryParams.ids.join(',')})`;
-    }
-    if (queryParams.agent_id) {
-      postgrestParams.agent_id = `eq.${queryParams.agent_id}`;
-    }
-    if (queryParams.skill_id) {
-      postgrestParams.skill_id = `eq.${queryParams.skill_id}`;
-    }
-    if (queryParams.app_id) {
-      postgrestParams.app_id = `eq.${queryParams.app_id}`;
-    }
-    if (queryParams.method) {
-      postgrestParams.method = `eq.${queryParams.method}`;
-    }
-    if (queryParams.endpoint) {
-      postgrestParams.endpoint = `eq.${queryParams.endpoint}`;
-    }
-    if (queryParams.function_name) {
-      postgrestParams.function_name = `eq.${queryParams.function_name}`;
-    }
-    if (queryParams.status) {
-      postgrestParams.status = `eq.${queryParams.status}`;
-    }
-    if (queryParams.cache_status) {
-      postgrestParams.cache_status = `eq.${queryParams.cache_status}`;
-    }
-    if (queryParams.after) {
-      postgrestParams.start_time = `gte.${queryParams.after}`;
-    }
-    if (queryParams.before) {
-      postgrestParams.start_time = `lte.${queryParams.before}`;
-    }
-    if (queryParams.limit) {
-      postgrestParams.limit = queryParams.limit.toString();
-    }
-    if (queryParams.offset) {
-      postgrestParams.offset = queryParams.offset.toString();
-    }
-
-    const logs = await selectFromSupabase(
-      'logs',
-      postgrestParams,
-      z.array(Log),
-    );
-
-    return logs;
-  },
-
-  deleteLog: async (id: string): Promise<void> => {
-    await deleteFromSupabase('logs', { id: `eq.${id}` });
   },
 
   // Dataset-Log Bridge
@@ -1252,15 +860,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return await selectFromSupabase('models', postgrestParams, z.array(Model));
   },
 
-  getModelById: async (id: string): Promise<Model | null> => {
-    const models = await selectFromSupabase(
-      'models',
-      { id: `eq.${id}` },
-      z.array(Model),
-    );
-    return models.length > 0 ? models[0] : null;
-  },
-
   createModel: async (model: ModelCreateParams): Promise<Model> => {
     const newModels = await insertIntoSupabase(
       'models',
@@ -1276,7 +875,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   ): Promise<Model> => {
     const updatedModels = await updateInSupabase(
       'models',
-      `id=eq.${id}`,
+      id,
       update,
       z.array(Model),
     );
@@ -1288,7 +887,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   // Skill-Model Relationships
-  getModelsBySkillId: async (skillId: string): Promise<Model[]> => {
+  getSkillModels: async (skillId: string): Promise<Model[]> => {
     // Join skill_models bridge table with models table
     const models = await selectFromSupabase(
       'skill_models',
@@ -1296,16 +895,6 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       z.array(z.object({ models: Model })),
     );
     return models.map((item) => item.models);
-  },
-
-  getSkillsByModelId: async (modelId: string): Promise<Skill[]> => {
-    // Join skill_models bridge table with skills table
-    const skills = await selectFromSupabase(
-      'skill_models',
-      { model_id: `eq.${modelId}`, select: 'skills(*)' },
-      z.array(z.object({ skills: Skill })),
-    );
-    return skills.map((item) => item.skills);
   },
 
   addModelsToSkill: async (
@@ -1329,6 +918,253 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
         model_id: `eq.${modelId}`,
       });
     }
+  },
+
+  // SkillOptimizationCluster
+  getSkillOptimizationClusters: async (
+    queryParams: SkillOptimizationClusterQueryParams,
+  ): Promise<SkillOptimizationCluster[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const skillConfigurations = await selectFromSupabase(
+      'skill_optimization_clusters',
+      postgRESTParams,
+      z.array(SkillOptimizationCluster),
+    );
+
+    return skillConfigurations;
+  },
+
+  createSkillOptimizationClusters: async (
+    params_list: SkillOptimizationClusterCreateParams[],
+  ): Promise<SkillOptimizationCluster[]> => {
+    const insertedSkillConfigurations = await insertIntoSupabase(
+      'skill_optimization_clusters',
+      params_list,
+      z.array(SkillOptimizationCluster),
+    );
+    return insertedSkillConfigurations;
+  },
+
+  updateSkillOptimizationCluster: async (
+    id: string,
+    params: SkillOptimizationClusterUpdateParams,
+  ): Promise<SkillOptimizationCluster> => {
+    const updatedSkillOptimizationClusterStates = await updateInSupabase(
+      'skill_optimization_clusters',
+      id,
+      params,
+      z.array(SkillOptimizationCluster),
+    );
+    return updatedSkillOptimizationClusterStates[0];
+  },
+
+  deleteSkillOptimizationCluster: async (id: string): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_clusters', {
+      id: `eq.${id}`,
+    });
+  },
+
+  //SkillOptimizationArm
+  getSkillOptimizationArms: async (
+    queryParams: SkillOptimizationArmQueryParams,
+  ): Promise<SkillOptimizationArm[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const skillConfigurations = await selectFromSupabase(
+      'skill_optimization_arms',
+      postgRESTParams,
+      z.array(SkillOptimizationArm),
+    );
+
+    return skillConfigurations;
+  },
+
+  createSkillOptimizationArms: async (
+    params_list: SkillOptimizationArmCreateParams[],
+  ): Promise<SkillOptimizationArm[]> => {
+    const createdSkillOptimizationArms = await insertIntoSupabase(
+      'skill_optimization_arms',
+      params_list,
+      z.array(SkillOptimizationArm),
+    );
+
+    return createdSkillOptimizationArms;
+  },
+
+  updateSkillOptimizationArm: async (
+    id: string,
+    params: SkillOptimizationArmUpdateParams,
+  ): Promise<SkillOptimizationArm> => {
+    const updatedSkillOptimizationArms = await updateInSupabase(
+      'skill_optimization_arms',
+      id,
+      params,
+      z.array(SkillOptimizationArm),
+    );
+
+    return updatedSkillOptimizationArms[0];
+  },
+
+  deleteSkillOptimizationArm: async (id: string): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_arms', { id: `eq.${id}` });
+  },
+
+  deleteSkillOptimizationArmsForSkill: async (
+    skillId: string,
+  ): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_arms', {
+      skill_id: `eq.${skillId}`,
+    });
+  },
+
+  // SkillOptimizationEvaluation
+  getSkillOptimizationEvaluations: async (
+    queryParams: SkillOptimizationEvaluationQueryParams,
+  ): Promise<SkillOptimizationEvaluation[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.evaluation_method) {
+      postgRESTParams.evaluation_method = `eq.${queryParams.evaluation_method}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const evaluations = await selectFromSupabase(
+      'skill_optimization_evaluations',
+      postgRESTParams,
+      z.array(SkillOptimizationEvaluation),
+    );
+
+    return evaluations;
+  },
+
+  async createSkillOptimizationEvaluations(
+    params: SkillOptimizationEvaluation[],
+  ): Promise<SkillOptimizationEvaluation[]> {
+    const createdEvaluations = await insertIntoSupabase(
+      'skill_optimization_evaluations',
+      params,
+      z.array(SkillOptimizationEvaluation),
+    );
+
+    return createdEvaluations;
+  },
+
+  async deleteSkillOptimizationEvaluation(id: string): Promise<void> {
+    await deleteFromSupabase('skill_optimization_evaluations', {
+      id: `eq.${id}`,
+    });
+  },
+
+  async deleteSkillOptimizationEvaluationsForSkill(
+    skillId: string,
+  ): Promise<void> {
+    await deleteFromSupabase('skill_optimization_evaluations', {
+      skill_id: `eq.${skillId}`,
+    });
+  },
+
+  // SkillOptimizationEvaluationRun
+  getSkillOptimizationEvaluationRuns: async (
+    queryParams: SkillOptimizationEvaluationRunQueryParams,
+  ): Promise<SkillOptimizationEvaluationRun[]> => {
+    const postgRESTParams: Record<string, string> = {
+      order: 'created_at.desc',
+    };
+
+    if (queryParams.id) {
+      postgRESTParams.id = `eq.${queryParams.id}`;
+    }
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.limit) {
+      postgRESTParams.limit = queryParams.limit.toString();
+    }
+    if (queryParams.offset) {
+      postgRESTParams.offset = queryParams.offset.toString();
+    }
+
+    const evaluationRuns = await selectFromSupabase(
+      'skill_optimization_evaluation_runs',
+      postgRESTParams,
+      z.array(SkillOptimizationEvaluationRun),
+    );
+
+    return evaluationRuns;
+  },
+
+  async createSkillOptimizationEvaluationRun(
+    params: SkillOptimizationEvaluationRun,
+  ): Promise<SkillOptimizationEvaluationRun> {
+    const createdEvaluationRuns = await insertIntoSupabase(
+      'skill_optimization_evaluation_runs',
+      params,
+      z.array(SkillOptimizationEvaluationRun),
+    );
+
+    return createdEvaluationRuns[0];
+  },
+
+  async deleteSkillOptimizationEvaluationRun(id: string): Promise<void> {
+    await deleteFromSupabase('skill_optimization_evaluation_runs', {
+      id: `eq.${id}`,
+    });
   },
 };
 
@@ -1398,6 +1234,10 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     }
     if (queryParams.offset) {
       postgRESTQuery.offset = queryParams.offset.toString();
+    }
+
+    if (queryParams.embedding_not_null) {
+      postgRESTQuery.embedding = 'not.is.null';
     }
 
     if (queryParams.after) {

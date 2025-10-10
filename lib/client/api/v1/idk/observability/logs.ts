@@ -21,6 +21,7 @@ export async function queryLogs(
       endpoint: params.endpoint,
       status: params.status?.toString(),
       cache_status: params.cache_status,
+      embedding_not_null: params.embedding_not_null ? 'true' : 'false',
       limit: params.limit?.toString(),
       offset: params.offset?.toString(),
     },

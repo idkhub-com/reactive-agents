@@ -76,32 +76,6 @@ export function sanitizeUserInput(input: string): string {
 }
 
 /**
- * Validates and sanitizes a description field
- */
-export function sanitizeDescription(
-  description: string | null | undefined,
-): string | null {
-  if (!description || typeof description !== 'string') {
-    return null;
-  }
-
-  const sanitized = sanitizeUserInput(description);
-
-  // Additional validation for description field
-  if (sanitized.length === 0) {
-    return null;
-  }
-
-  // Limit length to prevent abuse (adjust as needed)
-  const maxLength = 2000;
-  if (sanitized.length > maxLength) {
-    return `${sanitized.substring(0, maxLength)}...`;
-  }
-
-  return sanitized;
-}
-
-/**
  * Sanitizes agent metadata object keys and values
  */
 export function sanitizeMetadata(
