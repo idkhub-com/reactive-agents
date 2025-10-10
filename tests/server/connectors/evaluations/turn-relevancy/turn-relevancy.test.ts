@@ -7,6 +7,7 @@ import type { UserDataStorageConnector } from '@server/types/connector';
 import type { EvaluationRun } from '@shared/types/data/evaluation-run';
 import { EvaluationRunStatus } from '@shared/types/data/evaluation-run';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
+import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
 import type { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -572,6 +573,42 @@ describe('Turn Relevancy Evaluator', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('window_size functionality', () => {
+    it('should use default window_size of 10', () => {
+      const params = TurnRelevancyEvaluationParameters.parse({});
+      expect(params.window_size).toBe(10);
+    });
+
+    it('should accept custom window_size', () => {
+      const params = TurnRelevancyEvaluationParameters.parse({
+        window_size: 5,
+      });
+      expect(params.window_size).toBe(5);
+    });
+
+    it('should validate window_size is positive', () => {
+      expect(() => {
+        TurnRelevancyEvaluationParameters.parse({
+          window_size: 0,
+        });
+      }).toThrow();
+
+      expect(() => {
+        TurnRelevancyEvaluationParameters.parse({
+          window_size: -1,
+        });
+      }).toThrow();
+    });
+
+    it('should validate window_size is an integer', () => {
+      expect(() => {
+        TurnRelevancyEvaluationParameters.parse({
+          window_size: 5.5,
+        });
+      }).toThrow();
     });
   });
 });

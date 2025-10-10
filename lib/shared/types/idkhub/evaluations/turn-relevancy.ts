@@ -11,6 +11,7 @@ export const TurnRelevancyEvaluationParameters = z
     async_mode: z.boolean().default(true),
     verbose_mode: z.boolean().default(false),
     batch_size: z.number().int().positive().default(10),
+    window_size: z.number().int().positive().default(10),
     conversation_history: z.string().optional(),
     current_turn: z.string().optional(),
     instructions: z.string().optional(),

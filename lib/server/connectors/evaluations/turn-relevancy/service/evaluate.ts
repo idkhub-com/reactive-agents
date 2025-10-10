@@ -4,7 +4,10 @@ import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
 import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
-import { formatMessagesForExtraction } from '@server/utils/messages';
+import {
+  applyMessageWindow,
+  formatMessagesForExtraction,
+} from '@server/utils/messages';
 import type {
   ChatCompletionRequestData,
   ResponsesRequestData,
@@ -64,12 +67,18 @@ function pickTurnRelevancyData(
         {},
         log.ai_provider_request_log.request_body,
       );
-      const messages = extractMessagesFromRequestData(
+      let messages = extractMessagesFromRequestData(
         idkRequestData as
           | ChatCompletionRequestData
           | StreamChatCompletionRequestData
           | ResponsesRequestData,
       );
+
+      // Apply window size if specified
+      if (params.window_size && params.window_size > 0) {
+        messages = applyMessageWindow(messages, params.window_size);
+      }
+
       conversation_history = formatMessagesForExtraction(messages);
     } catch {
       // Fallback to metadata if parsing fails
@@ -162,6 +171,7 @@ async function evaluateSingleLog(
         strict_mode: params.strict_mode,
         verbose_mode: params.verbose_mode,
         include_reason: params.include_reason,
+        window_size: params.window_size,
         threshold,
         execution_time,
         evaluation_run_id,

@@ -3,6 +3,62 @@ import {
   ChatCompletionMessageRole,
 } from '@shared/types/api/routes/shared/messages';
 
+export function applyMessageWindow(
+  messages: ChatCompletionMessage[],
+  windowSize: number,
+): ChatCompletionMessage[] {
+  if (windowSize <= 0) {
+    return messages;
+  }
+
+  // Filter to user/assistant messages only (exclude system/developer)
+  const conversationMessages = messages.filter(
+    (msg) =>
+      msg.role !== ChatCompletionMessageRole.SYSTEM &&
+      msg.role !== ChatCompletionMessageRole.DEVELOPER,
+  );
+
+  // Count turns (user+assistant pairs)
+  const turns: ChatCompletionMessage[][] = [];
+  let currentTurn: ChatCompletionMessage[] = [];
+
+  for (const message of conversationMessages) {
+    if (message.role === ChatCompletionMessageRole.USER) {
+      // Start a new turn
+      if (currentTurn.length > 0) {
+        turns.push([...currentTurn]);
+      }
+      currentTurn = [message];
+    } else if (message.role === ChatCompletionMessageRole.ASSISTANT) {
+      // Add to current turn
+      currentTurn.push(message);
+    }
+  }
+
+  // Add the last turn if it exists
+  if (currentTurn.length > 0) {
+    turns.push(currentTurn);
+  }
+
+  // If we have fewer turns than window size, return all
+  if (turns.length <= windowSize) {
+    return messages;
+  }
+
+  // Take last N turns
+  const windowedTurns = turns.slice(-windowSize);
+  const windowedMessages = windowedTurns.flat();
+
+  // Preserve system messages at the beginning
+  const systemMessages = messages.filter(
+    (msg) =>
+      msg.role === ChatCompletionMessageRole.SYSTEM ||
+      msg.role === ChatCompletionMessageRole.DEVELOPER,
+  );
+
+  return [...systemMessages, ...windowedMessages];
+}
+
 export function formatMessagesForExtraction(
   messages: ChatCompletionMessage[],
 ): string {
