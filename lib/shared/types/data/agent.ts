@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const Agent = z.object({
   id: z.uuid(),
   name: z.string().min(1),
-  description: z.string(),
+  description: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -24,7 +24,7 @@ export type AgentQueryParams = z.infer<typeof AgentQueryParams>;
 export const AgentCreateParams = z
   .object({
     name: z.string().min(1),
-    description: z.string(),
+    description: z.string().nullable(),
     metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
