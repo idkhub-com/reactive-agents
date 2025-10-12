@@ -1,9 +1,4 @@
 import type {
-  LogOutput,
-  LogOutputCreateParams,
-  LogOutputQueryParams,
-} from '@shared/types/data';
-import type {
   Agent,
   AgentCreateParams,
   AgentQueryParams,
@@ -15,18 +10,6 @@ import type {
   AIProviderAPIKeyQueryParams,
   AIProviderAPIKeyUpdateParams,
 } from '@shared/types/data/ai-provider-api-key';
-import type {
-  Dataset,
-  DatasetCreateParams,
-  DatasetQueryParams,
-  DatasetUpdateParams,
-} from '@shared/types/data/dataset';
-import type {
-  EvaluationRun,
-  EvaluationRunCreateParams,
-  EvaluationRunQueryParams,
-  EvaluationRunUpdateParams,
-} from '@shared/types/data/evaluation-run';
 import type {
   Feedback,
   FeedbackCreateParams,
@@ -119,49 +102,6 @@ export interface UserDataStorageConnector {
   getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];
   createTool(tool: ToolCreateParams): Promise<Tool> | Tool;
   deleteTool(id: string): Promise<void> | void;
-
-  // Datasets
-  getDatasets(queryParams: DatasetQueryParams): Promise<Dataset[]> | Dataset[];
-  createDataset(dataset: DatasetCreateParams): Promise<Dataset> | Dataset;
-  updateDataset(
-    id: string,
-    update: DatasetUpdateParams,
-  ): Promise<Dataset> | Dataset;
-  deleteDataset(id: string): Promise<void> | void;
-
-  // Dataset-Log Bridge
-  getDatasetLogs(
-    datasetId: string,
-    queryParams: LogsQueryParams,
-  ): Promise<Log[]> | Log[];
-  addLogsToDataset(datasetId: string, logIds: string[]): Promise<void> | void;
-  removeLogsFromDataset(
-    datasetId: string,
-    logIds: string[],
-  ): Promise<void> | void;
-
-  getEvaluationRuns(
-    queryParams: EvaluationRunQueryParams,
-  ): Promise<EvaluationRun[]> | EvaluationRun[];
-  createEvaluationRun(
-    evaluationRun: EvaluationRunCreateParams,
-  ): Promise<EvaluationRun> | EvaluationRun;
-  updateEvaluationRun(
-    id: string,
-    update: EvaluationRunUpdateParams,
-  ): Promise<EvaluationRun> | EvaluationRun;
-  deleteEvaluationRun(id: string): Promise<void> | void;
-
-  // Log Outputs
-  getLogOutputs(
-    evaluationRunId: string,
-    queryParams: LogOutputQueryParams,
-  ): Promise<LogOutput[]> | LogOutput[];
-  createLogOutput(
-    evaluationRunId: string,
-    logOutput: LogOutputCreateParams,
-  ): Promise<LogOutput> | LogOutput;
-  deleteLogOutput(evaluationRunId: string, id: string): Promise<void> | void;
 
   // AI Provider API Keys
   getAIProviderAPIKeys(

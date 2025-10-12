@@ -1,16 +1,6 @@
-import {
-  evaluateLog,
-  evaluateRoleAdherenceDataset,
-} from '@server/connectors/evaluations/role-adherence/service/evaluate';
-import type {
-  EvaluationMethodConnector,
-  UserDataStorageConnector,
-} from '@server/types/connector';
-import type { EvaluationRun } from '@shared/types/data/evaluation-run';
-import type {
-  EvaluationMethodDetails,
-  EvaluationRunJobDetails,
-} from '@shared/types/idkhub/evaluations';
+import { evaluateLog } from '@server/connectors/evaluations/role-adherence/service/evaluate';
+import type { EvaluationMethodConnector } from '@server/types/connector';
+import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations';
 import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
 
@@ -20,29 +10,6 @@ const roleAdherenceMethodConfig: EvaluationMethodDetails = {
   description:
     'Evaluates whether assistant output adheres to a specified role and constraints using LLM-as-a-judge',
 } as const;
-
-async function _runEvaluation(
-  jobDetails: EvaluationRunJobDetails,
-  userDataStorageConnector: UserDataStorageConnector,
-): Promise<EvaluationRun> {
-  const parsedParams = RoleAdherenceEvaluationParameters.parse(
-    jobDetails.parameters,
-  );
-
-  const { evaluationRun } = await evaluateRoleAdherenceDataset(
-    jobDetails.agent_id,
-    jobDetails.skill_id,
-    jobDetails.dataset_id,
-    parsedParams,
-    userDataStorageConnector,
-    {
-      name: jobDetails.name,
-      description: jobDetails.description,
-    },
-  );
-
-  return evaluationRun;
-}
 
 export const roleAdherenceEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => roleAdherenceMethodConfig,
