@@ -1,5 +1,5 @@
 'use client';
-
+// TODO: We need to save changes to the database. Right now, we just save them to localStorage, for proof of concept.
 import { queryLogs } from '@client/api/v1/idk/observability/logs';
 import { useToast } from '@client/hooks/use-toast';
 import { useAgents } from '@client/providers/agents';
