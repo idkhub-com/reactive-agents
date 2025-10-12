@@ -4,7 +4,7 @@ import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

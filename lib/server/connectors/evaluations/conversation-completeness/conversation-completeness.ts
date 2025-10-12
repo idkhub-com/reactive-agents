@@ -1,9 +1,9 @@
+import { ConversationCompletenessEvaluationParameters } from '@server/connectors/evaluations/conversation-completeness/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
-
-import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations';
-import { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-
+import {
+  type EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
 import { evaluateLog } from './service/evaluate';
 
 // Simplified method configuration constant - only essential fields for standardization

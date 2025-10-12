@@ -1,8 +1,10 @@
 import { evaluateLog } from '@server/connectors/evaluations/task-completion/service/evaluate';
+import { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
-import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
-import { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
+import {
+  type EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
 
 // Simplified method configuration constant - only essential fields for standardization
 const taskCompletionMethodConfig: EvaluationMethodDetails = {

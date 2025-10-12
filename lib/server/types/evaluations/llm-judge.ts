@@ -15,13 +15,13 @@ export type LLMJudgeConfig = z.infer<typeof LLMJudgeConfigSchema>;
 /**
  * Result from LLM Judge evaluation
  */
-export const LLMJudgeResultSchema = z.object({
+export const LLMJudgeResult = z.object({
   score: z.number().min(0).max(1),
   reasoning: z.string(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type LLMJudgeResult = z.infer<typeof LLMJudgeResultSchema>;
+export type LLMJudgeResult = z.infer<typeof LLMJudgeResult>;
 
 /**
  * Evaluation criteria structure

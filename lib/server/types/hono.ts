@@ -13,13 +13,13 @@ import type {
 import type { IdkResponseBody } from '@shared/types/api/response';
 import type { SkillOptimizationArm } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
-import type { LogsClient } from '@shared/types/data/log';
-import type { Skill } from '@shared/types/data/skill';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
 import type {
   AIProviderRequestLog,
   HookLog,
-} from '@shared/types/idkhub/observability';
+  LogsClient,
+} from '@shared/types/data/log';
+import type { Skill } from '@shared/types/data/skill';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 import type {
   CacheSettings,
   GetFromCacheResult,

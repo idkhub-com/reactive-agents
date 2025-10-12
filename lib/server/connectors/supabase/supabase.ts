@@ -26,7 +26,7 @@ import {
   type ImprovedResponseQueryParams,
   type ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
-import type { LogsQueryParams } from '@shared/types/data/log';
+import { Log, type LogsQueryParams } from '@shared/types/data/log';
 import {
   Model,
   type ModelCreateParams,
@@ -64,7 +64,6 @@ import {
   type ToolCreateParams,
   type ToolQueryParams,
 } from '@shared/types/data/tool';
-import { IdkRequestLog } from '@shared/types/idkhub/observability';
 import { CachedValue } from '@shared/types/middleware/cache';
 import { z } from 'zod';
 import {
@@ -842,7 +841,7 @@ export const supabaseCacheStorageConnector: CacheStorageConnector = {
 };
 
 export const supabaseLogsStorageConnector: LogsStorageConnector = {
-  getLogs: async (queryParams: LogsQueryParams): Promise<IdkRequestLog[]> => {
+  getLogs: async (queryParams: LogsQueryParams): Promise<Log[]> => {
     const postgRESTQuery: Record<string, string> = {
       order: 'start_time.desc',
     };
@@ -899,21 +898,13 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
       }
     }
 
-    const logs = await selectFromSupabase(
-      'logs',
-      postgRESTQuery,
-      z.array(IdkRequestLog),
-    );
+    const logs = await selectFromSupabase('logs', postgRESTQuery, z.array(Log));
 
     return logs;
   },
 
-  createLog: async (log: IdkRequestLog): Promise<IdkRequestLog> => {
-    const insertedLog = await insertIntoSupabase(
-      'logs',
-      log,
-      z.array(IdkRequestLog),
-    );
+  createLog: async (log: Log): Promise<Log> => {
+    const insertedLog = await insertIntoSupabase('logs', log, z.array(Log));
     return insertedLog[0];
   },
 

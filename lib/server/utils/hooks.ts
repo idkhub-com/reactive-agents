@@ -4,8 +4,8 @@ import type {
   IdkRequestData,
 } from '@shared/types/api/request/body';
 import type { IdkResponseBody } from '@shared/types/api/response/body';
+import type { HookLog } from '@shared/types/data';
 
-import type { HookLog } from '@shared/types/idkhub/observability';
 import { HookType } from '@shared/types/middleware/hooks';
 
 function createHookResponse(

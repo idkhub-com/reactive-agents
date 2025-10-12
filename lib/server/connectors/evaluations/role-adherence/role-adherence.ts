@@ -1,8 +1,10 @@
 import { evaluateLog } from '@server/connectors/evaluations/role-adherence/service/evaluate';
+import { RoleAdherenceEvaluationParameters } from '@server/connectors/evaluations/role-adherence/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
-import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
-import { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
+import {
+  type EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
 
 const roleAdherenceMethodConfig: EvaluationMethodDetails = {
   method: EvaluationMethodName.ROLE_ADHERENCE,

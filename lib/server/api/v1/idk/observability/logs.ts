@@ -1,7 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
-import { LogsQueryParams } from '@shared/types/data/log';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import { type Log, LogsQueryParams } from '@shared/types/data/log';
 import { Hono } from 'hono';
 
 const app = new Hono<AppEnv>().get(
@@ -18,7 +17,7 @@ const app = new Hono<AppEnv>().get(
   async (c) => {
     try {
       const params = c.req.valid('query');
-      let logs: IdkRequestLog[] = [];
+      let logs: Log[] = [];
       try {
         logs = await c.get('logs_storage_connector').getLogs(params);
       } catch (error) {

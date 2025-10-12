@@ -1,4 +1,7 @@
-import type { ConversationCompletenessResult } from '@server/connectors/evaluations/conversation-completeness/types';
+import type {
+  ConversationCompletenessEvaluationParameters,
+  ConversationCompletenessResult,
+} from '@server/connectors/evaluations/conversation-completeness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
 import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
@@ -14,8 +17,7 @@ import type {
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
-import type { ConversationCompletenessEvaluationParameters } from '@shared/types/idkhub/evaluations/conversation-completeness';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 /**

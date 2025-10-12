@@ -9,11 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from '@client/components/ui/table';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log } from '@shared/types/data';
 import type { ReactElement } from 'react';
 
 interface LogListProps {
-  logs: IdkRequestLog[];
+  logs: Log[];
 }
 
 export function LogsList({ logs }: LogListProps): ReactElement {

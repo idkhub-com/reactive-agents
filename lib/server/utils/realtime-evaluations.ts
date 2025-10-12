@@ -1,16 +1,16 @@
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import type {
+  Log,
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 
 /**
  * Run realtime evaluations for a single log using skill optimization evaluations
  */
 export async function runEvaluationsForLog(
-  log: IdkRequestLog,
+  log: Log,
   skillOptimizationEvaluations: SkillOptimizationEvaluation[],
   evaluationConnectorsMap: Partial<
     Record<EvaluationMethodName, EvaluationMethodConnector>

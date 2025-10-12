@@ -1,14 +1,11 @@
 import { API_URL } from '@client/constants';
 import type { IdkRoute } from '@server/api/v1';
-import type { LogsQueryParams } from '@shared/types/data/log';
-import { IdkRequestLog } from '@shared/types/idkhub/observability';
+import { Log, type LogsQueryParams } from '@shared/types/data/log';
 import { hc } from 'hono/client';
 
 const client = hc<IdkRoute>(API_URL);
 
-export async function queryLogs(
-  params: LogsQueryParams,
-): Promise<IdkRequestLog[]> {
+export async function queryLogs(params: LogsQueryParams): Promise<Log[]> {
   const response = await client.v1.idk.observability.logs.$get({
     query: {
       agent_id: params.agent_id,
@@ -31,5 +28,5 @@ export async function queryLogs(
     throw new Error(`Failed to fetch logs`);
   }
 
-  return IdkRequestLog.array().parse(await response.json());
+  return Log.array().parse(await response.json());
 }

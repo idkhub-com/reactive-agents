@@ -68,7 +68,7 @@ vi.mock('@client/providers/navigation', () => ({
 // Now import everything
 import { LogsProvider, useLogs } from '@client/providers/logs';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log } from '@shared/types/data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -129,7 +129,7 @@ function TestComponent(): React.ReactElement {
                 ],
               },
             },
-          } as unknown as IdkRequestLog)
+          } as unknown as Log)
         }
       >
         Select

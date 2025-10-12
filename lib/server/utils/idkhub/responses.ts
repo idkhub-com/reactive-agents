@@ -5,7 +5,7 @@ import type { FunctionName } from '@shared/types/api/request';
 import type { IdkRequestData } from '@shared/types/api/request/body';
 import type { IdkResponseBody } from '@shared/types/api/response';
 import type { AIProvider } from '@shared/types/constants';
-import type { AIProviderRequestLog } from '@shared/types/idkhub/observability';
+import type { AIProviderRequestLog } from '@shared/types/data';
 import type {
   CacheSettings,
   CacheStatus,

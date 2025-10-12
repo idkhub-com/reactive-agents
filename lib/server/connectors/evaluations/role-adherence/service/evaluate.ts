@@ -1,4 +1,5 @@
 import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/role-adherence/templates/main';
+import { RoleAdherenceEvaluationParameters } from '@server/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
 import { IdkResponseBody } from '@shared/types/api/response';
@@ -7,8 +8,7 @@ import type {
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import { RoleAdherenceEvaluationParameters } from '@shared/types/idkhub/evaluations/role-adherence';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 
 function pickRoleData(
   log: Log,

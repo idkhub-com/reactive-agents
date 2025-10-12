@@ -1,3 +1,4 @@
+import type { KnowledgeRetentionEvaluationParameters } from '@server/connectors/evaluations/knowledge-retention/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
 import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
@@ -13,8 +14,7 @@ import type {
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import type { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 export async function evaluateLog(

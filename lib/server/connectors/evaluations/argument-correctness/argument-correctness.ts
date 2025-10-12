@@ -1,15 +1,13 @@
+import { ArgumentCorrectnessEvaluationParameters } from '@server/connectors/evaluations/argument-correctness/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
-import type {
-  EvaluationMethodDetails,
+import {
+  type EvaluationMethodDetails,
   EvaluationMethodName,
-} from '@shared/types/idkhub/evaluations';
-import { EvaluationMethodName as Names } from '@shared/types/idkhub/evaluations';
-import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
-
+} from '@shared/types/evaluations';
 import { evaluateLog } from './service/evaluate';
 
 const methodConfig: EvaluationMethodDetails = {
-  method: Names.ARGUMENT_CORRECTNESS as unknown as EvaluationMethodName,
+  method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
   name: 'Argument Correctness',
   description:
     'Evaluates whether an agent generated correct tool call arguments given the input and task using LLM-as-a-judge',

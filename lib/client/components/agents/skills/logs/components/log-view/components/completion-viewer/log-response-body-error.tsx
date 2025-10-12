@@ -1,7 +1,7 @@
 'use client';
 
 import { GenericViewer } from '@client/components/agents/skills/logs/components/log-view/components/generic-viewer';
-import type { LogResponseBodyError } from '@shared/types/idkhub/observability';
+import type { LogResponseBodyError } from '@shared/types/data';
 
 export function LogResponseBodyErrorViewer({
   logId,

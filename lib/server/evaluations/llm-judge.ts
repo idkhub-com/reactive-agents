@@ -1,21 +1,20 @@
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import {
+  evaluationCriteria,
+  scoringGuidelinesText,
+} from '@server/evaluations/generic-judge-defaults';
+import {
+  type EvaluationInput,
+  type LLMJudge,
+  type LLMJudgeConfig,
+  LLMJudgeResult,
+} from '@server/types/evaluations/llm-judge';
 // Import IDKHub OpenAI provider types for better schema handling
 import type { ResponseCreateParamsNonStreaming } from '@server/types/model-response';
 import { error } from '@shared/console-logging';
 import type { ResponsesResponseBody } from '@shared/types/api/routes/responses-api/response';
 import { AIProvider } from '@shared/types/constants';
-import type {
-  EvaluationInput,
-  LLMJudge,
-  LLMJudgeConfig,
-  LLMJudgeResult,
-} from '@shared/types/idkhub/evaluations/llm-judge';
-import { LLMJudgeResultSchema } from '@shared/types/idkhub/evaluations/llm-judge';
 import { CacheMode } from '@shared/types/middleware/cache';
-import {
-  evaluationCriteria,
-  scoringGuidelinesText,
-} from './generic-judge-defaults';
 
 // Constants for retry logic
 const LLM_JUDGE_MAX_RETRIES = 3;
@@ -426,7 +425,7 @@ function parseResponseData(
   }
 
   // For regular evaluation, use the standard schema
-  return LLMJudgeResultSchema.parse(parsed);
+  return LLMJudgeResult.parse(parsed);
 }
 
 /**

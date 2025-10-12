@@ -1,6 +1,5 @@
+import type { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
-
-import type { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
 
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
