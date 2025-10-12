@@ -10,7 +10,7 @@ import {
   SkillQueryParams,
   SkillUpdateParams,
 } from '@shared/types/data/skill';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { Hono } from 'hono';
 import { z } from 'zod';
 

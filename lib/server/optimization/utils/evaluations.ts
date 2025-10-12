@@ -3,7 +3,7 @@ import type { EvaluationMethodConnector } from '@server/types/connector';
 
 import type { Skill } from '@shared/types/data';
 import type { SkillOptimizationEvaluationCreateParams } from '@shared/types/data/skill-optimization-evaluation';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
 import z from 'zod';

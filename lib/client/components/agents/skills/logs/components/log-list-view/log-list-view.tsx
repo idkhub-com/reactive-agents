@@ -17,14 +17,13 @@ import {
   SelectValue,
 } from '@client/components/ui/select';
 import { useLogs } from '@client/providers/logs';
-import { LogsQueryParams } from '@shared/types/data/log';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import { type Log, LogsQueryParams } from '@shared/types/data/log';
 import { useEffect, useState } from 'react';
 import { LogsList } from './components/log-list';
 
 export function LogListView(): React.ReactElement {
   const { logs, refetch, isLoading: isQueryLoading } = useLogs();
-  const [visibleLogs, setVisibleLogs] = useState<IdkRequestLog[]>([]);
+  const [visibleLogs, setVisibleLogs] = useState<Log[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 

@@ -1,7 +1,7 @@
 'use client';
 
 import type { SkillOptimizationEvaluationRun } from '@shared/types/data/skill-optimization-evaluation-run';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 import {
   CategoryScale,
   Chart as ChartJS,

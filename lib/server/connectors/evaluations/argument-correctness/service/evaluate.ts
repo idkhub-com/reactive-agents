@@ -1,4 +1,5 @@
 import { getArgumentCorrectnessTemplate } from '@server/connectors/evaluations/argument-correctness/templates/main';
+import { ArgumentCorrectnessEvaluationParameters } from '@server/connectors/evaluations/argument-correctness/types';
 import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { extractMessagesFromRequestData } from '@server/utils/embeddings';
@@ -15,8 +16,7 @@ import type {
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
-import { ArgumentCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/argument-correctness';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 // Use a template builder to construct prompts

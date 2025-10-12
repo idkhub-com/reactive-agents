@@ -1,4 +1,4 @@
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { z } from 'zod';
 
 /**

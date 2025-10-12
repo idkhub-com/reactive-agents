@@ -1,8 +1,11 @@
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import type { Log } from '@shared/types/data/log';
 import type { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
-import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations/evaluations';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
+import {
+  type EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
+
 import { describe, expect, it, type MockedFunction, vi } from 'vitest';
 import { z } from 'zod';
 

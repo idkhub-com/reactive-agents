@@ -8,10 +8,8 @@ import type {
 import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
-} from '@shared/types/idkhub/evaluations';
-import { ToolCorrectnessEvaluationParameters } from '@shared/types/idkhub/evaluations/tool-correctness';
-
-import type { ToolCall } from './types';
+} from '@shared/types/evaluations';
+import { type ToolCall, ToolCorrectnessEvaluationParameters } from './types';
 
 // Pure functions for tool evaluation logic
 const extractToolsCalled = (log: Log): ToolCall[] => {

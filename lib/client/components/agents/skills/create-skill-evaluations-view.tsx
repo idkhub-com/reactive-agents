@@ -14,7 +14,7 @@ import { Label } from '@client/components/ui/label';
 import { PageHeader } from '@client/components/ui/page-header';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';

@@ -1,4 +1,5 @@
 import { getTurnRelevancyTemplate } from '@server/connectors/evaluations/turn-relevancy/templates/main';
+import { TurnRelevancyEvaluationParameters } from '@server/connectors/evaluations/turn-relevancy/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
 import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
@@ -15,9 +16,8 @@ import type {
 } from '@shared/types/data';
 
 import type { Log } from '@shared/types/data/log';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import { TurnRelevancyEvaluationParameters } from '@shared/types/idkhub/evaluations/turn-relevancy';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 function pickTurnRelevancyData(

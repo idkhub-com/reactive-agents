@@ -12,11 +12,11 @@ import { useLogs } from '@client/providers/logs';
 import { micah } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import { PrettyFunctionName } from '@shared/types/api/request/function-name';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log } from '@shared/types/data';
 import { format } from 'date-fns';
 import type { KeyboardEvent, ReactElement } from 'react';
 
-export function LogRow({ log }: { log: IdkRequestLog }): ReactElement {
+export function LogRow({ log }: { log: Log }): ReactElement {
   const { setSelectedLog, setLogsViewOpen } = useLogs();
 
   // Function to format timestamp

@@ -6,7 +6,7 @@ import {
   getSkillEvaluations,
 } from '@client/api/v1/idk/skills';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 import type { ReactElement, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
 

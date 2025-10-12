@@ -17,7 +17,7 @@ import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useLogs } from '@client/providers/logs';
 import { useNavigation } from '@client/providers/navigation';
 import type { IdkRequestData } from '@shared/types/api/request/body';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log } from '@shared/types/data';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 import { format } from 'date-fns';
 import { AlertTriangle, ArrowLeftIcon } from 'lucide-react';
@@ -31,7 +31,7 @@ export function LogDetailsView(): ReactElement {
   const [idkRequestData, setIdkRequestData] = useState<IdkRequestData | null>(
     null,
   );
-  const [selectedLog, setSelectedLog] = useState<IdkRequestLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

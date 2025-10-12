@@ -4,8 +4,8 @@ import type { IdkRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
 import type { IdkConfig } from '@shared/types/api/request/headers';
 import type { IdkResponseBody } from '@shared/types/api/response/body';
+import type { HookLog } from '@shared/types/data';
 
-import type { HookLog } from '@shared/types/idkhub/observability';
 import { CacheStatus } from '@shared/types/middleware/cache';
 import {
   type Hook,

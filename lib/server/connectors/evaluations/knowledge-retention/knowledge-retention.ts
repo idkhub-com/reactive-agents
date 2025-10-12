@@ -1,7 +1,9 @@
+import { KnowledgeRetentionEvaluationParameters } from '@server/connectors/evaluations/knowledge-retention/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
-import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import { KnowledgeRetentionEvaluationParameters } from '@shared/types/idkhub/evaluations/knowledge-retention';
+import {
+  type EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
 import { evaluateLog } from './service/evaluate';
 
 // Simplified method configuration constant - only essential fields for standardization

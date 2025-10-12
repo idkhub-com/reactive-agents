@@ -7,8 +7,8 @@ import { createLLMJudge } from '@server/evaluations/llm-judge';
 import type {
   GenericEvaluationInput,
   GenericEvaluator,
-} from '@shared/types/idkhub/evaluations/generic';
-import type { LLMJudgeResult } from '@shared/types/idkhub/evaluations/llm-judge';
+} from '@server/types/evaluations/generic';
+import type { LLMJudgeResult } from '@server/types/evaluations/llm-judge';
 import { z } from 'zod';
 
 export const TurnRelevancyCriteriaSchema = z.object({

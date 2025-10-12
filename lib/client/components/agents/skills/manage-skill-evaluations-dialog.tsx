@@ -14,7 +14,7 @@ import {
 import { Label } from '@client/components/ui/label';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';

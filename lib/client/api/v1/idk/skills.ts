@@ -11,7 +11,7 @@ import {
 } from '@shared/types/data';
 import { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
-import type { EvaluationMethodName } from '@shared/types/idkhub/evaluations';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 import { hc } from 'hono/client';
 
 const client = hc<IdkRoute>(API_URL);

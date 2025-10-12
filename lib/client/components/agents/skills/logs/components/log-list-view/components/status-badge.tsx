@@ -3,14 +3,14 @@
 import { Badge } from '@client/components/ui/badge';
 import { Separator } from '@client/components/ui/separator';
 import { cn } from '@client/utils/ui/utils';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log } from '@shared/types/data';
 import type { ReactElement } from 'react';
 
 export function StatusBadge({
   log,
   score,
 }: {
-  log: IdkRequestLog;
+  log: Log;
   score: number | null;
 }): ReactElement {
   const bgColor = (color: string): string => {
@@ -38,7 +38,7 @@ export function StatusBadge({
   };
 
   const getBorderColor = (
-    status: IdkRequestLog['status'],
+    status: Log['status'],
     score: number | null,
   ): string => {
     const statusPassed = status >= 200 && status < 300;
@@ -54,7 +54,7 @@ export function StatusBadge({
   };
 
   const getSeparatorColor = (
-    status: IdkRequestLog['status'],
+    status: Log['status'],
     score: number | null,
   ): string => {
     const statusPassed = status >= 200 && status < 300;
@@ -69,9 +69,7 @@ export function StatusBadge({
     return className;
   };
 
-  const getStatusBackgroundColor = (
-    status: IdkRequestLog['status'],
-  ): string => {
+  const getStatusBackgroundColor = (status: Log['status']): string => {
     if (status >= 200 && status < 300) {
       return bgColor('green');
     } else if (status >= 400) {
@@ -81,7 +79,7 @@ export function StatusBadge({
     }
   };
 
-  const getStatusTextColor = (status: IdkRequestLog['status']): string => {
+  const getStatusTextColor = (status: Log['status']): string => {
     if (status >= 200 && status < 300) {
       return textColor('green');
     } else if (status >= 400) {

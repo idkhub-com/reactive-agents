@@ -1,4 +1,4 @@
-import { createLLMJudge } from '@server/evaluations';
+import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the constants

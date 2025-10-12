@@ -1,6 +1,8 @@
 import { extractTaskAndOutcome } from '@server/connectors/evaluations/task-completion/service/task-and-outcome';
 import getTaskCompletionVerdictTemplate from '@server/connectors/evaluations/task-completion/templates/verdict';
-import { createLLMJudge } from '@server/evaluations';
+import { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
+import { createLLMJudge } from '@server/evaluations/llm-judge';
+import type { LLMJudge } from '@server/types/evaluations/llm-judge';
 import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
 import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
 import { formatMessagesForExtraction } from '@server/utils/messages';
@@ -15,9 +17,7 @@ import type {
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
-import { EvaluationMethodName } from '@shared/types/idkhub/evaluations/evaluations';
-import type { LLMJudge } from '@shared/types/idkhub/evaluations/llm-judge';
-import { TaskCompletionEvaluationParameters } from '@shared/types/idkhub/evaluations/task-completion';
+import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 
 /**

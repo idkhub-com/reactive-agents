@@ -4,16 +4,12 @@ import { Button } from '@client/components/ui/button';
 import { useLogs } from '@client/providers/logs';
 import { cn } from '@client/utils/ui/utils';
 import { PrettyFunctionName } from '@shared/types/api/request';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log } from '@shared/types/data';
 
-export function LogMap({
-  logs,
-}: {
-  logs: IdkRequestLog[];
-}): React.ReactElement {
+export function LogMap({ logs }: { logs: Log[] }): React.ReactElement {
   const { selectedLog } = useLogs();
 
-  const isCurrentLog = (log: IdkRequestLog): boolean => {
+  const isCurrentLog = (log: Log): boolean => {
     return log.id === selectedLog?.id;
   };
 

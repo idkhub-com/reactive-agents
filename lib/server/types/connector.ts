@@ -61,7 +61,7 @@ import type {
   ToolCreateParams,
   ToolQueryParams,
 } from '@shared/types/data/tool';
-import type { EvaluationMethodDetails } from '@shared/types/idkhub/evaluations/evaluations';
+import type { EvaluationMethodDetails } from '@shared/types/evaluations';
 import type { Hook, HookResult } from '@shared/types/middleware/hooks';
 import type { z } from 'zod';
 

@@ -30,8 +30,7 @@ import {
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useLogs } from '@client/providers/logs';
 import { useNavigation } from '@client/providers/navigation';
-import type { LogsQueryParams } from '@shared/types/data';
-import type { IdkRequestLog } from '@shared/types/idkhub/observability';
+import type { Log, LogsQueryParams } from '@shared/types/data';
 import { format } from 'date-fns';
 import { CalendarIcon, RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -76,7 +75,7 @@ export function LogsView(): ReactElement {
 
   const { selectedSkill, selectedAgent } = navigationState;
 
-  const filteredLogs = logs.filter((log: IdkRequestLog) => {
+  const filteredLogs = logs.filter((log: Log) => {
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
       return (
@@ -101,7 +100,7 @@ export function LogsView(): ReactElement {
     smartBack(fallbackUrl);
   };
 
-  const handleLogClick = (log: IdkRequestLog) => {
+  const handleLogClick = (log: Log) => {
     navigateToLogDetail(selectedAgent.name, selectedSkill.name, log.id);
   };
 
