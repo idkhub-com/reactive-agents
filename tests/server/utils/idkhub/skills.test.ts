@@ -117,10 +117,10 @@ describe('getOrCreateSkill', () => {
           last_clustering_at: '2023-01-01T00:00:00.000Z',
           last_clustering_log_start_time: 1234567890,
         },
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
@@ -150,10 +150,10 @@ describe('getOrCreateSkill', () => {
             last_clustering_at: '2023-01-01T00:00:00.000Z',
             last_clustering_log_start_time: 1234567890,
           },
-          max_configurations: 5,
+          configuration_count: 5,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
@@ -164,10 +164,10 @@ describe('getOrCreateSkill', () => {
             last_clustering_at: '2023-01-02T00:00:00.000Z',
             last_clustering_log_start_time: 1234567890,
           },
-          max_configurations: 5,
+          configuration_count: 5,
           created_at: '2023-01-02T00:00:00.000Z',
           updated_at: '2023-01-02T00:00:00.000Z',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
         },
       ];
 
@@ -192,10 +192,10 @@ describe('getOrCreateSkill', () => {
         name: 'new-skill',
         description: 'New skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -217,8 +217,8 @@ describe('getOrCreateSkill', () => {
         name: 'new-skill',
         description: 'This skill must be set up before it can be optimized.',
         metadata: {},
-        max_configurations: 3,
-        num_system_prompts: 0,
+        configuration_count: 3,
+        system_prompt_count: 0,
       } as SkillCreateParams);
       expect(console.log).not.toHaveBeenCalledWith(
         expect.stringContaining('Skill already exists'),
@@ -232,10 +232,10 @@ describe('getOrCreateSkill', () => {
         name: 'test-skill',
         description: 'Test skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -283,10 +283,10 @@ describe('getOrCreateSkill', () => {
         name: '',
         description: 'Empty name skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -317,10 +317,10 @@ describe('getOrCreateSkill', () => {
         name: specialName,
         description: 'Special characters skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -347,10 +347,10 @@ describe('getOrCreateSkill', () => {
         name: longName,
         description: 'Long name skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
@@ -379,10 +379,10 @@ describe('getOrCreateSkill', () => {
         name: skillName,
         description: 'Concurrent skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       // First call finds no skill, second call finds the skill created by first call

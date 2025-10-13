@@ -91,10 +91,10 @@ describe('Skills API functions', () => {
       last_clustering_at: '2023-01-01T00:00:00Z',
       last_clustering_log_start_time: 1234567890,
     },
-    max_configurations: 10,
+    configuration_count: 10,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
-    num_system_prompts: 0,
+    system_prompt_count: 0,
   };
 
   beforeEach(() => {
@@ -140,9 +140,9 @@ describe('Skills API functions', () => {
           agent_id: 'agent-456',
           name: 'test-skill',
           metadata: {},
-          max_configurations: 10,
+          configuration_count: 10,
           description: '',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
         }),
       ).rejects.toThrow('Failed to create skill');
     });

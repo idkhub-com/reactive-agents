@@ -178,8 +178,8 @@ describe('Skill Data Transforms and Validation', () => {
 
       const result = SkillCreateParams.parse(inputData);
 
-      expect(result.max_configurations).toBe(3);
-      expect(result.num_system_prompts).toBe(3);
+      expect(result.configuration_count).toBe(3);
+      expect(result.system_prompt_count).toBe(3);
     });
   });
 
@@ -241,7 +241,7 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result.description).toBe(
         'Updated description with sufficient length for validation',
       );
-      expect(result.max_configurations).toBe(5);
+      expect(result.configuration_count).toBe(5);
       expect(result.metadata).toBeUndefined();
     });
 

@@ -30,9 +30,11 @@ CREATE TABLE if not exists skills (
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
-  max_configurations INTEGER NOT NULL DEFAULT 3,
-  num_system_prompts INTEGER NOT NULL DEFAULT 3,
+  optimize BOOLEAN NOT NULL DEFAULT TRUE,
+  configuration_count INTEGER NOT NULL DEFAULT 3,
+  system_prompt_count INTEGER NOT NULL DEFAULT 3,
   clustering_interval INTEGER NOT NULL DEFAULT 15,
+  reflection_min_requests_per_arm INTEGER NOT NULL DEFAULT 3,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -53,9 +55,11 @@ CREATE POLICY "service_role_full_access" ON skills FOR ALL TO service_role USING
 COMMENT ON TABLE skills IS 'Table to store skills that an agent possesses.';
 
 COMMENT ON COLUMN skills.description IS 'Description of the skill. Used to generate system prompts and evaluations';
-COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations (clusters)';
-COMMENT ON COLUMN skills.num_system_prompts IS 'Number of system prompts to generate for the skill';
+COMMENT ON COLUMN skills.optimize IS 'Whether to optimize the skill';
+COMMENT ON COLUMN skills.configuration_count IS 'Number of configurations (clusters)';
+COMMENT ON COLUMN skills.system_prompt_count IS 'Number of system prompts to generate for the skill';
 COMMENT ON COLUMN skills.clustering_interval IS 'Recompute the centroid of the clusters every N requests so that they can better represent the last N requests.';
+COMMENT ON COLUMN skills.reflection_min_requests_per_arm IS 'Minimum number of requests per arm in a configuration (cluster) to trigger reflection. This is to ensure that the arms for the cluster have convergence.';
 
 -- ================================================
 -- Tools table
@@ -303,7 +307,6 @@ COMMENT ON TABLE models IS 'AI models tied to specific API keys';
 COMMENT ON COLUMN models.ai_provider_api_key_id IS 'The API key that enables access to this model';
 COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-4, claude-3-opus)';
 COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they can use';
-COMMENT ON COLUMN skills.max_configurations IS 'Maximum number of configurations allowed for this skill';
 
 
 -- ================================================
@@ -367,7 +370,6 @@ CREATE INDEX idx_skill_optimization_arms_skill_id ON skill_optimization_arms(ski
 ALTER TABLE skill_optimization_arms ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_full_access" ON skill_optimization_arms FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 
 
 -- ================================================

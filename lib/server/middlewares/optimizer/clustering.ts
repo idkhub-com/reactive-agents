@@ -32,7 +32,7 @@ function extractEmbeddings(logs: Log[]): number[][] {
 }
 
 export function getClusters(skill: Skill, logs: Log[]): ClusterResult | null {
-  const numberOfClusters = skill.max_configurations;
+  const numberOfClusters = skill.configuration_count;
 
   try {
     const embeddings = extractEmbeddings(logs);

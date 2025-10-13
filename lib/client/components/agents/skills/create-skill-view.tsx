@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import { Checkbox } from '@client/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -26,18 +27,28 @@ import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillCreateParams } from '@shared/types/data/skill';
 import { sanitizeUserInput } from '@shared/utils/security';
-import { Bot, Wrench } from 'lucide-react';
+import { Bot, ChevronDown, ChevronUp, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+// Form field constraints
+const CONSTRAINTS = {
+  name: { min: 1, max: 255 },
+  description: { min: 25, max: 10000 },
+  configuration_count: { min: 1, max: 25 },
+  system_prompt_count: { min: 1, max: 25 },
+  clustering_interval: { min: 1, max: 1000 },
+  reflection_min_requests_per_arm: { min: 1, max: 1000 },
+} as const;
+
 const CreateSkillFormSchema = z
   .object({
     name: z
       .string()
-      .min(1, 'Skill name is required')
-      .max(255, 'Skill name must be less than 255 characters')
+      .min(CONSTRAINTS.name.min, 'Skill name is required')
+      .max(CONSTRAINTS.name.max, 'Skill name must be less than 255 characters')
       .refine(
         (name) => {
           // Basic validation for potentially dangerous content
@@ -50,19 +61,56 @@ const CreateSkillFormSchema = z
       ),
     description: z
       .string()
-      .min(25)
-      .max(10000, 'Description must be less than 10000 characters'),
-    max_configurations: z
+      .min(CONSTRAINTS.description.min)
+      .max(
+        CONSTRAINTS.description.max,
+        'Description must be less than 10000 characters',
+      ),
+    optimize: z.boolean(),
+    configuration_count: z
       .number()
       .int()
-      .min(1, 'Min configurations must be at least 1')
-      .max(25, 'Max configurations cannot exceed 25'),
-
-    num_system_prompts: z
+      .min(
+        CONSTRAINTS.configuration_count.min,
+        'Configuration count must be at least 1',
+      )
+      .max(
+        CONSTRAINTS.configuration_count.max,
+        'Configuration count cannot exceed 25',
+      ),
+    system_prompt_count: z
       .number()
       .int()
-      .min(1, 'Min system prompts must be at least 1')
-      .max(25, 'Max system prompts cannot exceed 25'),
+      .min(
+        CONSTRAINTS.system_prompt_count.min,
+        'System prompt count must be at least 1',
+      )
+      .max(
+        CONSTRAINTS.system_prompt_count.max,
+        'System prompt count cannot exceed 25',
+      ),
+    clustering_interval: z
+      .number()
+      .int()
+      .min(
+        CONSTRAINTS.clustering_interval.min,
+        'Clustering interval must be at least 1',
+      )
+      .max(
+        CONSTRAINTS.clustering_interval.max,
+        'Clustering interval cannot exceed 1000',
+      ),
+    reflection_min_requests_per_arm: z
+      .number()
+      .int()
+      .min(
+        CONSTRAINTS.reflection_min_requests_per_arm.min,
+        'Min requests per arms must be at least 1',
+      )
+      .max(
+        CONSTRAINTS.reflection_min_requests_per_arm.max,
+        'Requests per arms cannot exceed 1000',
+      ),
   })
   .strict();
 
@@ -86,15 +134,22 @@ export function CreateSkillView(): React.ReactElement {
   // Use agent from URL if available, otherwise use selected agent
   const currentAgent = agentFromUrl || selectedAgent;
 
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+
   const form = useForm<CreateSkillFormData>({
     resolver: zodResolver(CreateSkillFormSchema),
     defaultValues: {
       name: '',
       description: '',
-      max_configurations: 3,
-      num_system_prompts: 3,
+      optimize: true,
+      configuration_count: 3,
+      system_prompt_count: 3,
+      clustering_interval: 15,
+      reflection_min_requests_per_arm: 3,
     },
   });
+
+  const optimizeEnabled = form.watch('optimize');
 
   const onSubmit = async (data: CreateSkillFormData) => {
     if (!currentAgent) {
@@ -108,8 +163,11 @@ export function CreateSkillView(): React.ReactElement {
         name: sanitizeUserInput(data.name),
         description: sanitizeUserInput(data.description),
         metadata: {},
-        max_configurations: data.max_configurations,
-        num_system_prompts: data.num_system_prompts,
+        optimize: data.optimize,
+        configuration_count: data.configuration_count,
+        system_prompt_count: data.system_prompt_count,
+        clustering_interval: data.clustering_interval,
+        reflection_min_requests_per_arm: data.reflection_min_requests_per_arm,
       };
 
       const newSkill = await createSkill(skillParams);
@@ -210,6 +268,10 @@ export function CreateSkillView(): React.ReactElement {
                       <FormLabel className="text-base font-medium">
                         Skill Name
                       </FormLabel>
+                      <FormDescription>
+                        Choose a descriptive name that reflects the skill's
+                        specific capability or function.
+                      </FormDescription>
                       <FormControl>
                         <Input
                           placeholder="e.g., Data Analysis, Email Templates, Code Review"
@@ -218,10 +280,6 @@ export function CreateSkillView(): React.ReactElement {
                           disabled={isCreating}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Choose a descriptive name that reflects the skill's
-                        specific capability or function.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -235,6 +293,14 @@ export function CreateSkillView(): React.ReactElement {
                       <FormLabel className="text-base font-medium">
                         Description
                       </FormLabel>
+                      <FormDescription>
+                        Provide additional context about the skill's
+                        functionality, use cases, and any special requirements
+                        or limitations. This description is{' '}
+                        <span className="font-bold">crucial</span> so that the
+                        system can create accurate system prompts and
+                        evaluations for the skill.
+                      </FormDescription>
                       <FormControl>
                         <Textarea
                           placeholder="Describe what this skill does, how it works, and when to use it. For example: 'Analyzes datasets and generates statistical reports with visualizations. Useful for data-driven decision making and trend analysis.'"
@@ -243,11 +309,6 @@ export function CreateSkillView(): React.ReactElement {
                           disabled={isCreating}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Provide additional context about the skill's
-                        functionality, use cases, and any special requirements
-                        or limitations.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -255,28 +316,57 @@ export function CreateSkillView(): React.ReactElement {
 
                 <FormField
                   control={form.control}
-                  name="max_configurations"
+                  name="optimize"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isCreating}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-base font-medium">
+                          Enable Optimization
+                        </FormLabel>
+                        <FormDescription>
+                          Automatically optimize this skill by testing multiple
+                          configurations and prompts to find the best
+                          performance. Disable to use default settings.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="configuration_count"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Max Configurations
+                        Number of Partitions
                       </FormLabel>
+                      <FormDescription>
+                        Each request to the skill will be routed to one of the
+                        partitions. Each partition has its own optimal
+                        configuration consisting of its own model, system
+                        prompt, and hyperparameters.
+                      </FormDescription>
                       <FormControl>
                         <Input
                           type="number"
-                          className="h-11"
+                          min={CONSTRAINTS.configuration_count.min}
+                          max={CONSTRAINTS.configuration_count.max}
+                          className="h-11 max-w-xs"
                           {...field}
                           onChange={(e) =>
                             field.onChange(Number(e.target.value))
                           }
-                          disabled={isCreating}
+                          disabled={isCreating || !optimizeEnabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Maximum number of configurations allowed for this skill.
-                        Each configuration represents a unique AI model setup
-                        with specific prompts and parameters.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -284,31 +374,129 @@ export function CreateSkillView(): React.ReactElement {
 
                 <FormField
                   control={form.control}
-                  name="num_system_prompts"
+                  name="system_prompt_count"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Number of System Prompts
+                        System Prompts per Partition
                       </FormLabel>
+                      <FormDescription>
+                        Number of prompt variations to generate while optimizing
+                        each skill partition.
+                      </FormDescription>
                       <FormControl>
                         <Input
                           type="number"
-                          className="h-11"
+                          min={CONSTRAINTS.system_prompt_count.min}
+                          max={CONSTRAINTS.system_prompt_count.max}
+                          className="h-11 max-w-xs"
                           {...field}
                           onChange={(e) =>
                             field.onChange(Number(e.target.value))
                           }
-                          disabled={isCreating}
+                          disabled={isCreating || !optimizeEnabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        The number of system prompts that will be generated for
-                        this skill.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* Advanced Settings Toggle */}
+                {optimizeEnabled && (
+                  <div className="pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="w-full justify-between text-muted-foreground hover:text-foreground"
+                    >
+                      <span className="text-sm font-medium">
+                        Advanced Settings
+                      </span>
+                      {showAdvanced ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Advanced Settings Section */}
+                {showAdvanced && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="clustering_interval"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-medium">
+                            Skill Partitioning Interval
+                          </FormLabel>
+                          <FormDescription>
+                            The number of requests between running the
+                            partitioning algorithm. The algorithm uses all the
+                            requests since the algorithm was last ran to
+                            partition the skill semantically.
+                          </FormDescription>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={CONSTRAINTS.clustering_interval.min}
+                              max={CONSTRAINTS.clustering_interval.max}
+                              className="h-11 max-w-xs"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                              disabled={isCreating || !optimizeEnabled}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="reflection_min_requests_per_arm"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-medium">
+                            Minimum Requests Per Arm Reflection Threshold
+                          </FormLabel>
+                          <FormDescription>
+                            Ensures that all configurations in a partition have
+                            each received at least this number of requests
+                            before generating new system prompts. This helps
+                            make sure that the system has better data to create
+                            new system prompts on.
+                          </FormDescription>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={
+                                CONSTRAINTS.reflection_min_requests_per_arm.min
+                              }
+                              max={
+                                CONSTRAINTS.reflection_min_requests_per_arm.max
+                              }
+                              className="h-11 max-w-xs"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                              disabled={isCreating || !optimizeEnabled}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">

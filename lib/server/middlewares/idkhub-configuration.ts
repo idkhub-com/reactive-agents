@@ -128,7 +128,7 @@ async function validateTargetConfiguration(
       if (clusters.length === 0) {
         // Create initial clusters with equally spaced centroids
         const initialCentroids = getInitialClusterCentroids(
-          skill.max_configurations,
+          skill.configuration_count,
         );
         const clusterParams: SkillOptimizationClusterCreateParams[] =
           initialCentroids.map((centroid, index) => ({

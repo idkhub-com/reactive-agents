@@ -97,10 +97,10 @@ describe('agentAndSkillMiddleware', () => {
         name: 'test-skill',
         description: 'Test skill description',
         metadata: {},
-        max_configurations: 1,
+        configuration_count: 1,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
       };
 
       vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);
@@ -172,10 +172,10 @@ describe('agentAndSkillMiddleware', () => {
           name: 'test-skill',
           description: 'Test skill description',
           metadata: {},
-          max_configurations: 1,
+          configuration_count: 1,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
         };
 
         vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);

@@ -1,5 +1,5 @@
 import { BaseArmsParams } from '@server/optimization/base-arms';
-import { generateSystemPromptForSkill } from '@server/optimization/utils/system-prompt';
+import { generateSeedSystemPromptForSkill } from '@server/optimization/utils/system-prompt';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import type {
@@ -50,11 +50,11 @@ export async function handleGenerateArms(
     return c.json({ error: 'Skill models or clusters not found' }, 404);
   }
 
-  const numberOfSystemPrompts = skill.num_system_prompts;
+  const numberOfSystemPrompts = skill.system_prompt_count;
 
   const systemPromptPromises = [];
   for (let i = 0; i < numberOfSystemPrompts; i++) {
-    systemPromptPromises.push(generateSystemPromptForSkill(skill));
+    systemPromptPromises.push(generateSeedSystemPromptForSkill(skill));
   }
   const systemPrompts = await Promise.all(systemPromptPromises);
 

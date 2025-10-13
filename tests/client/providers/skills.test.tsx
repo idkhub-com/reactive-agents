@@ -22,10 +22,10 @@ const mockSkills: Skill[] = [
     name: 'Skill 1',
     description: 'Test skill 1',
     metadata: {},
-    max_configurations: 10,
+    configuration_count: 10,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-    num_system_prompts: 0,
+    system_prompt_count: 0,
   },
   {
     id: '2',
@@ -33,10 +33,10 @@ const mockSkills: Skill[] = [
     name: 'Skill 2',
     description: 'Test skill 2',
     metadata: {},
-    max_configurations: 10,
+    configuration_count: 10,
     created_at: '2024-01-02T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
-    num_system_prompts: 0,
+    system_prompt_count: 0,
   },
 ];
 
