@@ -50,7 +50,7 @@ export async function generateSeedSystemPromptForSkill(skill: Skill) {
       },
     ],
     agent_name: 'IdkHub Optimizer Agent',
-    skill_name: 'create-system-prompts',
+    skill_name: 'system-prompt-seeding',
   };
 
   const systemPrompt = getSeederSystemPrompt();
@@ -162,7 +162,7 @@ export async function generateReflectiveSystemPromptForSkill(
       },
     ],
     agent_name: 'IdkHub Optimizer Agent',
-    skill_name: 'create-system-prompts',
+    skill_name: 'system-prompt-reflection',
   };
 
   const systemPrompt = getReflectorSystemPrompt();

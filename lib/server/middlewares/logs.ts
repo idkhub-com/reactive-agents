@@ -1,4 +1,10 @@
-import { autoClusterSkill } from '@server/middlewares/optimizer/clustering';
+import {
+  autoClusterSkill,
+  updateClusterState,
+} from '@server/middlewares/optimizer/clusters';
+import { addSkillOptimizationEvaluationRun } from '@server/middlewares/optimizer/evaluations';
+import { updatePulledArm } from '@server/middlewares/optimizer/hyperparameters';
+import { autoGenerateSystemPromptsForSkill } from '@server/middlewares/optimizer/system-prompt';
 import type {
   EvaluationMethodConnector,
   LogsStorageConnector,
@@ -10,6 +16,7 @@ import {
   runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
+import { error } from '@shared/console-logging';
 import type { FunctionName } from '@shared/types/api/request';
 import {
   type IdkConfig,
@@ -18,13 +25,12 @@ import {
 import type {
   SkillOptimizationArm,
   SkillOptimizationEvaluationResult,
-  SkillOptimizationEvaluationRunCreateParams,
 } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
 import type {
   AIProviderRequestLog,
   HookLog,
-  Log,
+  LogCreateParams,
   LogMessage,
   LogResponseBodyError,
   LogsClient,
@@ -34,7 +40,6 @@ import type { EvaluationMethodName } from '@shared/types/evaluations';
 import type { MiddlewareHandler } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
 import type { Factory } from 'hono/factory';
-import { v4 as uuidv4 } from 'uuid';
 
 let logId = 0;
 const MAX_RESPONSE_LENGTH = 100000;
@@ -121,6 +126,7 @@ async function processLogs({
   logsStorageConnector,
   userDataStorageConnector,
   evaluationConnectorsMap,
+  pulledArm,
 }: ProcessLogsParams): Promise<SkillOptimizationEvaluationResult[]> {
   const endTime = Date.now();
   const duration = endTime - startTime;
@@ -128,14 +134,14 @@ async function processLogs({
   const baseIdkConfig = NonPrivateIdkConfig.parse(idkConfig);
 
   if (!('model' in aiProviderLog.request_body)) {
-    console.error('No model found in request body');
+    error('No model found in request body');
     return [];
   }
 
-  const log: Log = {
-    id: uuidv4(),
+  const createParams: LogCreateParams = {
     agent_id: agent.id,
     skill_id: skill.id,
+    cluster_id: pulledArm?.cluster_id,
     start_time: startTime,
     end_time: endTime,
     duration: duration,
@@ -147,22 +153,22 @@ async function processLogs({
     hook_logs: hookLogs,
     function_name: functionName,
     ai_provider_request_log: aiProviderLog,
-    embedding: embedding,
+    embedding: embedding ?? undefined,
     endpoint: url.pathname,
     base_idk_config: baseIdkConfig,
     ai_provider: aiProviderLog.provider,
     cache_status: aiProviderLog.cache_status,
-    parent_span_id: idkConfig.parent_span_id || null,
-    span_id: idkConfig.span_id || null,
-    span_name: idkConfig.span_name || null,
-    app_id: idkConfig.app_id || null,
+    parent_span_id: idkConfig.parent_span_id,
+    span_id: idkConfig.span_id,
+    span_name: idkConfig.span_name,
+    app_id: idkConfig.app_id,
     external_user_id:
-      (aiProviderLog.request_body.user as string | null) || null,
-    external_user_human_name: idkConfig.user_human_name || null,
-    user_metadata: null,
+      (aiProviderLog.request_body.user as string | null) || undefined,
+    external_user_human_name: idkConfig.user_human_name || undefined,
+    user_metadata: undefined,
   };
 
-  const responseString = JSON.stringify(log);
+  const responseString = JSON.stringify(createParams);
 
   if (responseString.length > MAX_RESPONSE_LENGTH) {
     const error: LogResponseBodyError = {
@@ -170,38 +176,38 @@ async function processLogs({
         'The response was too large to be processed. It has been truncated.',
       response: `${responseString.substring(0, MAX_RESPONSE_LENGTH)}...`,
     };
-    log.ai_provider_request_log.response_body = error;
+    createParams.ai_provider_request_log.response_body = error;
   }
 
-  await broadcastLog(JSON.stringify(log));
+  await broadcastLog(JSON.stringify(createParams));
 
   // Store the log in the configured logs storage connector
   try {
-    await logsStorageConnector.createLog(log);
-  } catch (error) {
-    console.error(error);
-  }
+    const insertedLog = await logsStorageConnector.createLog(createParams);
 
-  // Trigger evaluations if conditions are met
-  if (
-    shouldTriggerRealtimeEvaluation(status, url) &&
-    userDataStorageConnector &&
-    evaluationConnectorsMap
-  ) {
-    const evaluations =
-      await userDataStorageConnector.getSkillOptimizationEvaluations({
-        agent_id: skill.agent_id,
-        skill_id: skill.id,
-      });
+    // Trigger evaluations if conditions are met
+    if (
+      shouldTriggerRealtimeEvaluation(status, url) &&
+      userDataStorageConnector &&
+      evaluationConnectorsMap
+    ) {
+      const evaluations =
+        await userDataStorageConnector.getSkillOptimizationEvaluations({
+          agent_id: skill.agent_id,
+          skill_id: skill.id,
+        });
 
-    if (evaluations.length > 0) {
-      const results = await runEvaluationsForLog(
-        log,
-        evaluations,
-        evaluationConnectorsMap,
-      );
-      return results;
+      if (evaluations.length > 0) {
+        const results = await runEvaluationsForLog(
+          insertedLog,
+          evaluations,
+          evaluationConnectorsMap,
+        );
+        return results;
+      }
     }
+  } catch (e) {
+    error('Error creating log', e);
   }
   return [];
 }
@@ -219,75 +225,6 @@ const shouldLogRequest = (url: URL): boolean => {
 
   return true;
 };
-
-async function updatePulledArm(
-  userDataStorageConnector: UserDataStorageConnector,
-  arm: SkillOptimizationArm,
-  evaluationResults: SkillOptimizationEvaluationResult[],
-) {
-  // Calculate average score from all evaluations (normalized 0-1)
-  const scores = evaluationResults.map((result) => result.score);
-
-  const reward = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  await updateArmStats(userDataStorageConnector, arm, reward);
-}
-
-async function updateArmStats(
-  userDataStorageConnector: UserDataStorageConnector,
-  arm: SkillOptimizationArm,
-  reward: number,
-) {
-  // Update arm statistics using incremental update formulas for Thompson Sampling
-  const newN = arm.stats.n + 1;
-  const newTotalReward = arm.stats.total_reward + reward;
-  const newMean = newTotalReward / newN;
-  const newN2 = arm.stats.n2 + reward * reward;
-
-  await userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
-    stats: {
-      n: newN,
-      mean: newMean,
-      n2: newN2,
-      total_reward: newTotalReward,
-    },
-  });
-}
-
-async function addSkillOptimizationEvaluationRun(
-  userDataStorageConnector: UserDataStorageConnector,
-  arm: SkillOptimizationArm,
-  evaluationResults: SkillOptimizationEvaluationResult[],
-) {
-  const createParams: SkillOptimizationEvaluationRunCreateParams = {
-    agent_id: arm.agent_id,
-    skill_id: arm.skill_id,
-    cluster_id: arm.cluster_id,
-    results: evaluationResults,
-  };
-
-  await userDataStorageConnector.createSkillOptimizationEvaluationRun(
-    createParams,
-  );
-}
-
-async function updateClusterState(
-  userDataStorageConnector: UserDataStorageConnector,
-  pulledArm: SkillOptimizationArm,
-) {
-  const clusters = await userDataStorageConnector.getSkillOptimizationClusters({
-    id: pulledArm.cluster_id,
-  });
-
-  if (!clusters) {
-    throw new Error(`Cluster not found`);
-  }
-
-  const cluster = clusters[0];
-
-  await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
-    total_steps: cluster.total_steps + 1,
-  });
-}
 
 async function processLogsAndOptimizeSkill(
   processLogsParams: ProcessLogsParams,
@@ -309,6 +246,12 @@ async function processLogsAndOptimizeSkill(
       processLogsParams.pulledArm,
     );
     await autoClusterSkill(
+      processLogsParams.functionName,
+      processLogsParams.userDataStorageConnector,
+      processLogsParams.logsStorageConnector,
+      processLogsParams.skill,
+    );
+    await autoGenerateSystemPromptsForSkill(
       processLogsParams.functionName,
       processLogsParams.userDataStorageConnector,
       processLogsParams.logsStorageConnector,

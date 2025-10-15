@@ -20,7 +20,11 @@ import type {
   ImprovedResponseQueryParams,
   ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
-import type { Log, LogsQueryParams } from '@shared/types/data/log';
+import type {
+  Log,
+  LogCreateParams,
+  LogsQueryParams,
+} from '@shared/types/data/log';
 import type {
   Model,
   ModelCreateParams,
@@ -159,6 +163,9 @@ export interface UserDataStorageConnector {
   ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
   deleteSkillOptimizationArm(id: string): Promise<void> | void;
   deleteSkillOptimizationArmsForSkill(skillId: string): Promise<void> | void;
+  deleteSkillOptimizationArmsForCluster(
+    clusterId: string,
+  ): Promise<void> | void;
 
   // Skill Optimization Evaluations
   getSkillOptimizationEvaluations(
@@ -186,7 +193,7 @@ export interface UserDataStorageConnector {
 
 export interface LogsStorageConnector {
   getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
-  createLog(log: Log): Promise<Log> | Log;
+  createLog(createParams: LogCreateParams): Promise<Log> | Log;
   deleteLog(id: string): Promise<void> | void;
 }
 

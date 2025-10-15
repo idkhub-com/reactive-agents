@@ -114,7 +114,7 @@ function getHyperParamDefaults(
   }
   if (
     idkTarget.configuration.reasoning_effort !== null &&
-    UNSUPPORTED_REASONING_MODELS.includes(idkTarget.configuration.model)
+    !UNSUPPORTED_REASONING_MODELS.includes(idkTarget.configuration.model)
   ) {
     switch (functionName) {
       case FunctionName.STREAM_CHAT_COMPLETE:

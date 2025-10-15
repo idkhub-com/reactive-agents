@@ -15,7 +15,7 @@ import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
-import { LayersIcon, RefreshCwIcon } from 'lucide-react';
+import { ArrowRightIcon, LayersIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
@@ -131,14 +131,7 @@ export function ClustersView(): ReactElement {
             clusters.map((cluster, index) => (
               <Card
                 key={cluster.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() =>
-                  navigateToClusterArms(
-                    selectedAgent.name,
-                    selectedSkill.name,
-                    cluster.id,
-                  )
-                }
+                className="hover:shadow-lg transition-shadow"
               >
                 <CardHeader>
                   <CardTitle className="text-lg">Cluster {index + 1}</CardTitle>
@@ -173,6 +166,23 @@ export function ClustersView(): ReactElement {
                           cluster.id,
                         )}
                       />
+                    </div>
+                    <div className="pt-3">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="w-full"
+                        onClick={() =>
+                          navigateToClusterArms(
+                            selectedAgent.name,
+                            selectedSkill.name,
+                            cluster.id,
+                          )
+                        }
+                      >
+                        View Details
+                        <ArrowRightIcon className="h-4 w-4 ml-2" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

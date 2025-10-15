@@ -60,6 +60,7 @@ export async function handleGenerateArms(
 
   const createParamsList: SkillOptimizationArmCreateParams[] = [];
 
+  // Used to give arms a human-readable name
   let humanArmIndex = 1;
   for (const cluster of skillClusters) {
     for (const model of skillModels) {

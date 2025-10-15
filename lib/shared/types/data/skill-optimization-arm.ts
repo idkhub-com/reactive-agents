@@ -37,9 +37,13 @@ export type SkillOptimizationArmParams = z.infer<
 >;
 
 export const SkillOptimizationArmStats = z.object({
+  /** Number of times the arm was played */
   n: z.number().min(0),
+  /** Mean reward */
   mean: z.number().min(0).max(1),
+  /** Sum of squares of rewards */
   n2: z.number().min(0),
+  /** Total reward */
   total_reward: z.number().min(0),
 });
 export type SkillOptimizationArmStats = z.infer<

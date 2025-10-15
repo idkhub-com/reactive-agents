@@ -227,10 +227,11 @@ async function validateTargetConfiguration(
         additional_params: null,
         stop: null,
       };
-    } catch (error) {
+    } catch (e) {
+      error(e);
       return c.json(
         {
-          error: `Failed to load optimization parameters: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: `Failed to load optimization parameters: ${e instanceof Error ? e.message : 'Unknown error'}`,
         },
         500,
       );

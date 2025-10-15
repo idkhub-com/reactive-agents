@@ -9,7 +9,10 @@ export async function queryLogs(params: LogsQueryParams): Promise<Log[]> {
   const response = await client.v1.idk.observability.logs.$get({
     query: {
       agent_id: params.agent_id,
+      skill_id: params.skill_id,
+      cluster_id: params.cluster_id,
       id: params.id,
+      ids: params.ids,
       app_id: params.app_id,
       function_name: params.function_name,
       before: params.before?.toString(),

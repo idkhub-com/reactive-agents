@@ -698,6 +698,14 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     });
   },
 
+  deleteSkillOptimizationArmsForCluster: async (
+    clusterId: string,
+  ): Promise<void> => {
+    await deleteFromSupabase('skill_optimization_arms', {
+      cluster_id: `eq.${clusterId}`,
+    });
+  },
+
   // SkillOptimizationEvaluation
   getSkillOptimizationEvaluations: async (
     queryParams: SkillOptimizationEvaluationQueryParams,
