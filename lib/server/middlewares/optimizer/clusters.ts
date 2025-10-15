@@ -5,7 +5,7 @@ import type {
 import { calculateDistance, kMeansClustering } from '@server/utils/math';
 import { error } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
-import type { Log, Skill } from '@shared/types/data';
+import type { Log, Skill, SkillOptimizationArm } from '@shared/types/data';
 import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/skill-optimization-cluster';
 import type { ClusterResult } from '@shared/utils/math';
 
@@ -32,7 +32,7 @@ function extractEmbeddings(logs: Log[]): number[][] {
 }
 
 export function getClusters(skill: Skill, logs: Log[]): ClusterResult | null {
-  const numberOfClusters = skill.max_configurations;
+  const numberOfClusters = skill.configuration_count;
 
   try {
     const embeddings = extractEmbeddings(logs);
@@ -68,7 +68,7 @@ export async function autoClusterSkill(
     return;
   }
 
-  const interval = 15;
+  const interval = skill.clustering_interval;
 
   const logs = await logsStorageConnector.getLogs({
     skill_id: skill.id,
@@ -170,4 +170,23 @@ export async function autoClusterSkill(
       error(`[OPTIMIZER] Error during optimization for skill ${skill.id}:`, e);
     }
   }
+}
+
+export async function updateClusterState(
+  userDataStorageConnector: UserDataStorageConnector,
+  pulledArm: SkillOptimizationArm,
+) {
+  const clusters = await userDataStorageConnector.getSkillOptimizationClusters({
+    id: pulledArm.cluster_id,
+  });
+
+  if (!clusters) {
+    throw new Error(`Cluster not found`);
+  }
+
+  const cluster = clusters[0];
+
+  await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
+    total_steps: cluster.total_steps + 1,
+  });
 }

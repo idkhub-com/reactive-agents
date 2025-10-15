@@ -130,6 +130,10 @@ export function CreateAgentView(): React.ReactElement {
                       <FormLabel className="text-base font-medium">
                         Agent Name
                       </FormLabel>
+                      <FormDescription>
+                        Choose a descriptive name that reflects your agent's
+                        role and purpose.
+                      </FormDescription>
                       <FormControl>
                         <Input
                           placeholder="e.g., Customer Support Bot, Content Writer, Data Analyst"
@@ -138,10 +142,6 @@ export function CreateAgentView(): React.ReactElement {
                           disabled={isCreating}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Choose a descriptive name that reflects your agent's
-                        role and purpose.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -155,6 +155,13 @@ export function CreateAgentView(): React.ReactElement {
                       <FormLabel className="text-base font-medium">
                         Description
                       </FormLabel>
+                      <FormDescription>
+                        Provide additional context about the agent's purpose,
+                        capabilities, and expected behavior. This description is{' '}
+                        <span className="font-bold">crucial</span> for
+                        generating accurate system prompts and evaluations for
+                        each of the agent's skills.
+                      </FormDescription>
                       <FormControl>
                         <Textarea
                           placeholder="Describe what this agent will do, its capabilities, and how it should behave. For example: 'A helpful customer support agent that can answer questions about our products, handle basic troubleshooting, and escalate complex issues to human agents.'"
@@ -163,11 +170,6 @@ export function CreateAgentView(): React.ReactElement {
                           disabled={isCreating}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Provide additional context about the agent's purpose,
-                        capabilities, and expected behavior. This helps you
-                        remember what this agent is for.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -273,10 +273,10 @@ describe('CreateSkillView', () => {
     renderCreateSkillView();
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+      expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
     });
 
-    const maxConfigInput = screen.getByLabelText('Max Configurations');
+    const maxConfigInput = screen.getByLabelText('Number of Partitions');
     expect(maxConfigInput).toHaveValue(3); // Default value from schema
     expect(maxConfigInput).toHaveAttribute('type', 'number');
   });
@@ -287,10 +287,10 @@ describe('CreateSkillView', () => {
     renderCreateSkillView();
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+      expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
     });
 
-    const maxConfigInput = screen.getByLabelText('Max Configurations');
+    const maxConfigInput = screen.getByLabelText('Number of Partitions');
 
     // Test that the field is a number input
     expect(maxConfigInput).toHaveAttribute('type', 'number');
@@ -323,10 +323,10 @@ describe('CreateSkillView', () => {
     renderCreateSkillView();
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+      expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
     });
 
-    const maxConfigInput = screen.getByLabelText('Max Configurations');
+    const maxConfigInput = screen.getByLabelText('Number of Partitions');
 
     // Test that field can be edited
     fireEvent.change(maxConfigInput, { target: { value: '50' } });
@@ -341,17 +341,15 @@ describe('CreateSkillView', () => {
     renderCreateSkillView();
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+      expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
     });
 
     // Check that the description text is present
     expect(
-      screen.getByText(/maximum number of configurations allowed/i),
+      screen.getByText(/each request to the skill will be routed/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /each configuration represents a unique ai model setup/i,
-      ),
+      screen.getByText(/each partition has its own optimal configuration/i),
     ).toBeInTheDocument();
   });
 

@@ -44,10 +44,13 @@ const mockNavigationState = {
     name: 'Test Skill 1',
     description: 'Test skill description',
     metadata: {},
-    max_configurations: 15,
-    num_system_prompts: 0,
+    optimize: true,
+    configuration_count: 15,
+    system_prompt_count: 5,
     created_at: '2023-01-01T10:30:00Z',
     updated_at: '2023-01-01T10:30:00Z',
+    clustering_interval: 15,
+    reflection_min_requests_per_arm: 3,
   },
   breadcrumbs: [],
 };
@@ -230,7 +233,7 @@ describe('EditSkillView', () => {
 
     it('displays max configurations field with current value', () => {
       renderEditSkillView();
-      const maxConfigField = screen.getByLabelText('Max Configurations');
+      const maxConfigField = screen.getByLabelText('Number of Partitions');
       expect(maxConfigField).toBeInTheDocument();
       expect(maxConfigField).toHaveValue(15);
     });
@@ -260,7 +263,7 @@ describe('EditSkillView', () => {
   describe('Form Validation', () => {
     it('has max configurations field with correct constraints', () => {
       renderEditSkillView();
-      const maxConfigField = screen.getByLabelText('Max Configurations');
+      const maxConfigField = screen.getByLabelText('Number of Partitions');
 
       // Check field attributes for validation
       expect(maxConfigField).toHaveAttribute('type', 'number');
@@ -269,7 +272,7 @@ describe('EditSkillView', () => {
 
     it('allows valid input in max configurations field', () => {
       renderEditSkillView();
-      const maxConfigField = screen.getByLabelText('Max Configurations');
+      const maxConfigField = screen.getByLabelText('Number of Partitions');
 
       // Test valid values (range is 1-25)
       fireEvent.change(maxConfigField, { target: { value: '10' } });
@@ -320,7 +323,7 @@ describe('EditSkillView', () => {
 
     it('allows editing max configurations', () => {
       renderEditSkillView();
-      const maxConfigField = screen.getByLabelText('Max Configurations');
+      const maxConfigField = screen.getByLabelText('Number of Partitions');
 
       fireEvent.change(maxConfigField, { target: { value: '25' } });
 
@@ -362,7 +365,7 @@ describe('EditSkillView', () => {
       renderEditSkillView();
 
       const descriptionField = screen.getByLabelText('Description');
-      const maxConfigField = screen.getByLabelText('Max Configurations');
+      const maxConfigField = screen.getByLabelText('Number of Partitions');
 
       // Check that form is populated with current data
       expect(descriptionField).toHaveValue('Test skill description');
@@ -477,7 +480,7 @@ describe('EditSkillView', () => {
       renderEditSkillView();
 
       const descriptionField = screen.getByLabelText('Description');
-      const maxConfigField = screen.getByLabelText('Max Configurations');
+      const maxConfigField = screen.getByLabelText('Number of Partitions');
       const updateButton = screen.getByRole('button', {
         name: /update skill/i,
       });
@@ -496,9 +499,9 @@ describe('EditSkillView', () => {
       renderEditSkillView();
 
       expect(screen.getByLabelText('Description')).toBeInTheDocument();
-      expect(screen.getByLabelText('Max Configurations')).toBeInTheDocument();
+      expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Number of System Prompts'),
+        screen.getByLabelText('System Prompts per Partition'),
       ).toBeInTheDocument();
     });
 
@@ -511,14 +514,10 @@ describe('EditSkillView', () => {
         ),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(
-          /maximum number of configurations allowed for this skill/i,
-        ),
+        screen.getByText(/each request to the skill will be routed/i),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(
-          /the number of system prompts that will be generated/i,
-        ),
+        screen.getByText(/number of prompt variations to generate/i),
       ).toBeInTheDocument();
     });
 

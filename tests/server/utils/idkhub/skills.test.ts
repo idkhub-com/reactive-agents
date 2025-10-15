@@ -1,14 +1,9 @@
 import type { UserDataStorageConnector } from '@server/types/connector';
-import { getOrCreateSkill } from '@server/utils/idkhub/skills';
-import type { Skill, SkillCreateParams } from '@shared/types/data/skill';
+import { getSkill } from '@server/utils/idkhub/skills';
+import type { Skill } from '@shared/types/data/skill';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock console.log to avoid noise in tests
-vi.spyOn(console, 'log').mockImplementation(() => {
-  // Intentionally empty implementation
-});
-
-describe('getOrCreateSkill', () => {
+describe('getSkill', () => {
   let mockConnector: UserDataStorageConnector;
   const testAgentId = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -94,6 +89,7 @@ describe('getOrCreateSkill', () => {
       updateSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArmsForSkill: vi.fn(),
+      deleteSkillOptimizationArmsForCluster: vi.fn(),
       // Skill Optimization Evaluation methods
       getSkillOptimizationEvaluations: vi.fn(),
       createSkillOptimizationEvaluations: vi.fn(),
@@ -117,15 +113,18 @@ describe('getOrCreateSkill', () => {
           last_clustering_at: '2023-01-01T00:00:00.000Z',
           last_clustering_log_start_time: 1234567890,
         },
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
+        optimize: false,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
 
-      const result = await getOrCreateSkill(
+      const result = await getSkill(
         mockConnector,
         testAgentId,
         'existing-skill',
@@ -150,10 +149,13 @@ describe('getOrCreateSkill', () => {
             last_clustering_at: '2023-01-01T00:00:00.000Z',
             last_clustering_log_start_time: 1234567890,
           },
-          max_configurations: 5,
+          configuration_count: 5,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
+          optimize: false,
+          clustering_interval: 0,
+          reflection_min_requests_per_arm: 0,
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
@@ -164,16 +166,19 @@ describe('getOrCreateSkill', () => {
             last_clustering_at: '2023-01-02T00:00:00.000Z',
             last_clustering_log_start_time: 1234567890,
           },
-          max_configurations: 5,
+          configuration_count: 5,
           created_at: '2023-01-02T00:00:00.000Z',
           updated_at: '2023-01-02T00:00:00.000Z',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
+          optimize: false,
+          clustering_interval: 0,
+          reflection_min_requests_per_arm: 0,
         },
       ];
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue(skills);
 
-      const result = await getOrCreateSkill(
+      const result = await getSkill(
         mockConnector,
         testAgentId,
         'duplicate-skill',
@@ -185,72 +190,30 @@ describe('getOrCreateSkill', () => {
   });
 
   describe('when skill does not exist', () => {
-    it('should create and return new skill', async () => {
-      const newSkill: Skill = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        agent_id: testAgentId,
-        name: 'new-skill',
-        description: 'New skill description',
-        metadata: {},
-        max_configurations: 5,
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
-      };
-
+    it('should return null', async () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(newSkill);
 
-      const result = await getOrCreateSkill(
-        mockConnector,
-        testAgentId,
-        'new-skill',
-      );
+      const result = await getSkill(mockConnector, testAgentId, 'new-skill');
 
-      expect(result).toEqual(newSkill);
+      expect(result).toBeNull();
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
         name: 'new-skill',
         agent_id: testAgentId,
       });
-      expect(mockConnector.createSkill).toHaveBeenCalledWith({
-        agent_id: testAgentId,
-        name: 'new-skill',
-        description: 'This skill must be set up before it can be optimized.',
-        metadata: {},
-        max_configurations: 3,
-        num_system_prompts: 0,
-      } as SkillCreateParams);
-      expect(console.log).not.toHaveBeenCalledWith(
-        expect.stringContaining('Skill already exists'),
-      );
+      expect(mockConnector.createSkill).not.toHaveBeenCalled();
     });
 
-    it('should create skill with default metadata when none exists', async () => {
-      const newSkill: Skill = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        agent_id: testAgentId,
-        name: 'test-skill',
-        description: 'Test skill description',
-        metadata: {},
-        max_configurations: 5,
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
-      };
-
+    it('should return null for empty skill name', async () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(newSkill);
 
-      await getOrCreateSkill(mockConnector, testAgentId, 'test-skill');
+      const result = await getSkill(mockConnector, testAgentId, '');
 
-      expect(mockConnector.createSkill).toHaveBeenCalledWith({
+      expect(result).toBeNull();
+      expect(mockConnector.getSkills).toHaveBeenCalledWith({
+        name: '',
         agent_id: testAgentId,
-        name: 'test-skill',
-        description: 'This skill must be set up before it can be optimized.',
-        metadata: {},
-        max_configurations: 3,
-        num_system_prompts: 0,
       });
+      expect(mockConnector.createSkill).not.toHaveBeenCalled();
     });
   });
 
@@ -260,79 +223,34 @@ describe('getOrCreateSkill', () => {
       vi.mocked(mockConnector.getSkills).mockRejectedValue(error);
 
       await expect(
-        getOrCreateSkill(mockConnector, testAgentId, 'test-skill'),
+        getSkill(mockConnector, testAgentId, 'test-skill'),
       ).rejects.toThrow('Database connection failed');
-    });
-
-    it('should propagate errors from createSkill', async () => {
-      const error = new Error('Failed to create skill');
-      vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockRejectedValue(error);
-
-      await expect(
-        getOrCreateSkill(mockConnector, testAgentId, 'test-skill'),
-      ).rejects.toThrow('Failed to create skill');
     });
   });
 
   describe('edge cases', () => {
-    it('should handle empty skill name', async () => {
-      const newSkill: Skill = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        agent_id: testAgentId,
-        name: '',
-        description: 'Empty name skill description',
-        metadata: {},
-        max_configurations: 5,
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
-      };
-
-      vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(newSkill);
-
-      const result = await getOrCreateSkill(mockConnector, testAgentId, '');
-
-      expect(result).toEqual(newSkill);
-      expect(mockConnector.getSkills).toHaveBeenCalledWith({
-        name: '',
-        agent_id: testAgentId,
-      });
-      expect(mockConnector.createSkill).toHaveBeenCalledWith({
-        agent_id: testAgentId,
-        name: '',
-        description: 'This skill must be set up before it can be optimized.',
-        metadata: {},
-        max_configurations: 3,
-        num_system_prompts: 0,
-      });
-    });
-
     it('should handle special characters in skill name', async () => {
       const specialName = 'skill-with-special-chars_123@domain.com';
-      const newSkill: Skill = {
+      const skill: Skill = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: specialName,
         description: 'Special characters skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
+        optimize: false,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
       };
 
-      vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(newSkill);
+      vi.mocked(mockConnector.getSkills).mockResolvedValue([skill]);
 
-      const result = await getOrCreateSkill(
-        mockConnector,
-        testAgentId,
-        specialName,
-      );
+      const result = await getSkill(mockConnector, testAgentId, specialName);
 
-      expect(result).toEqual(newSkill);
+      expect(result).toEqual(skill);
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
         name: specialName,
         agent_id: testAgentId,
@@ -341,28 +259,12 @@ describe('getOrCreateSkill', () => {
 
     it('should handle very long skill names', async () => {
       const longName = 'a'.repeat(1000);
-      const newSkill: Skill = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        agent_id: testAgentId,
-        name: longName,
-        description: 'Long name skill description',
-        metadata: {},
-        max_configurations: 5,
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
-      };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(newSkill);
 
-      const result = await getOrCreateSkill(
-        mockConnector,
-        testAgentId,
-        longName,
-      );
+      const result = await getSkill(mockConnector, testAgentId, longName);
 
-      expect(result).toEqual(newSkill);
+      expect(result).toBeNull();
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
         name: longName,
         agent_id: testAgentId,
@@ -379,31 +281,26 @@ describe('getOrCreateSkill', () => {
         name: skillName,
         description: 'Concurrent skill description',
         metadata: {},
-        max_configurations: 5,
+        configuration_count: 5,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
+        optimize: false,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
       };
 
-      // First call finds no skill, second call finds the skill created by first call
-      vi.mocked(mockConnector.getSkills)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([existingSkill]);
-      vi.mocked(mockConnector.createSkill).mockResolvedValue(existingSkill);
+      vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
 
       const [result1, result2] = await Promise.all([
-        getOrCreateSkill(mockConnector, testAgentId, skillName),
-        getOrCreateSkill(mockConnector, testAgentId, skillName),
+        getSkill(mockConnector, testAgentId, skillName),
+        getSkill(mockConnector, testAgentId, skillName),
       ]);
 
       expect(result1).toEqual(existingSkill);
       expect(result2).toEqual(existingSkill);
-
-      // Both calls should check for existing skill
       expect(mockConnector.getSkills).toHaveBeenCalledTimes(2);
-
-      // Only first call should create the skill (due to our mock setup)
-      expect(mockConnector.createSkill).toHaveBeenCalledTimes(1);
+      expect(mockConnector.createSkill).not.toHaveBeenCalled();
     });
   });
 });

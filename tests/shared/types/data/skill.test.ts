@@ -31,6 +31,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
       };
 
       const result = SkillCreateParams.parse(inputData);
@@ -52,6 +53,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: customMetadata,
+        optimize: false,
       };
 
       const result = SkillCreateParams.parse(inputData);
@@ -65,6 +67,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'Too short',
         metadata: {},
+        optimize: false,
       };
 
       expect(() => SkillCreateParams.parse(inputData)).toThrow();
@@ -76,6 +79,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This has exactly 25 chars',
         metadata: {},
+        optimize: false,
       };
 
       const result = SkillCreateParams.parse(inputData);
@@ -89,6 +93,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
         id: '123e4567-e89b-12d3-a456-426614174000', // This should be ignored
       };
 
@@ -101,6 +106,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
         created_at: '2023-01-01T00:00:00.000Z', // This should be ignored
       };
 
@@ -113,6 +119,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
         updated_at: '2023-01-01T00:00:00.000Z', // This should be ignored
       };
 
@@ -125,6 +132,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
         extraField: 'should be rejected', // This should cause rejection
       };
 
@@ -145,6 +153,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: '', // Empty string should be rejected
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
       };
 
       expect(() => SkillCreateParams.parse(inputData)).toThrow();
@@ -161,6 +170,7 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: fullMetadata,
+        optimize: false,
       };
 
       const result = SkillCreateParams.parse(inputData);
@@ -168,18 +178,21 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result.metadata).toEqual(fullMetadata);
     });
 
-    it('should accept default values for max_configurations and num_system_prompts', () => {
+    it('should accept default values for configuration_count and system_prompt_count', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'Test Skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
+        optimize: false,
       };
 
       const result = SkillCreateParams.parse(inputData);
 
-      expect(result.max_configurations).toBe(3);
-      expect(result.num_system_prompts).toBe(3);
+      expect(result.configuration_count).toBe(3);
+      expect(result.system_prompt_count).toBe(3);
+      expect(result.clustering_interval).toBe(15);
+      expect(result.reflection_min_requests_per_arm).toBe(3);
     });
   });
 
@@ -233,7 +246,7 @@ describe('Skill Data Transforms and Validation', () => {
       const inputData = {
         description:
           'Updated description with sufficient length for validation',
-        max_configurations: 5,
+        configuration_count: 5,
       };
 
       const result = SkillUpdateParams.parse(inputData);
@@ -241,7 +254,7 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result.description).toBe(
         'Updated description with sufficient length for validation',
       );
-      expect(result.max_configurations).toBe(5);
+      expect(result.configuration_count).toBe(5);
       expect(result.metadata).toBeUndefined();
     });
 
@@ -359,8 +372,11 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -380,8 +396,11 @@ describe('Skill Data Transforms and Validation', () => {
           last_clustering_at: '2023-01-01T00:00:00.000Z',
           last_clustering_log_start_time: 1234567890,
         },
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -400,8 +419,11 @@ describe('Skill Data Transforms and Validation', () => {
         agent_id: testAgentId,
         name: 'Test Skill',
         metadata: {},
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -416,8 +438,11 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -434,8 +459,11 @@ describe('Skill Data Transforms and Validation', () => {
         name: '',
         description: 'A test skill with sufficient description length',
         metadata: {},
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -452,8 +480,11 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -468,8 +499,11 @@ describe('Skill Data Transforms and Validation', () => {
         name: 'Test Skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
-        max_configurations: 10,
-        num_system_prompts: 5,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 5,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
       };

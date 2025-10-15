@@ -97,25 +97,28 @@ describe('agentAndSkillMiddleware', () => {
         name: 'test-skill',
         description: 'Test skill description',
         metadata: {},
-        max_configurations: 1,
+        optimize: false,
+        configuration_count: 1,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        num_system_prompts: 0,
+        system_prompt_count: 0,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
       };
 
-      vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);
-      vi.mocked(skillsUtils.getOrCreateSkill).mockResolvedValue(mockSkill);
+      vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
+      vi.mocked(skillsUtils.getSkill).mockResolvedValue(mockSkill);
 
       const mockContext = createMockContext(
         'https://api.example.com/v1/chat/completions',
       );
       await agentAndSkillMiddleware(mockContext, mockNext);
 
-      expect(agentsUtils.getOrCreateAgent).toHaveBeenCalledWith(
+      expect(agentsUtils.getAgent).toHaveBeenCalledWith(
         mockConnector,
         'test-agent',
       );
-      expect(skillsUtils.getOrCreateSkill).toHaveBeenCalledWith(
+      expect(skillsUtils.getSkill).toHaveBeenCalledWith(
         mockConnector,
         '123e4567-e89b-12d3-a456-426614174000',
         'test-skill',
@@ -131,8 +134,8 @@ describe('agentAndSkillMiddleware', () => {
       );
       await agentAndSkillMiddleware(mockContext, mockNext);
 
-      expect(agentsUtils.getOrCreateAgent).not.toHaveBeenCalled();
-      expect(skillsUtils.getOrCreateSkill).not.toHaveBeenCalled();
+      expect(agentsUtils.getAgent).not.toHaveBeenCalled();
+      expect(skillsUtils.getSkill).not.toHaveBeenCalled();
       expect(mockContext.set).not.toHaveBeenCalled();
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
@@ -141,8 +144,8 @@ describe('agentAndSkillMiddleware', () => {
       const mockContext = createMockContext('https://api.example.com/health');
       await agentAndSkillMiddleware(mockContext, mockNext);
 
-      expect(agentsUtils.getOrCreateAgent).not.toHaveBeenCalled();
-      expect(skillsUtils.getOrCreateSkill).not.toHaveBeenCalled();
+      expect(agentsUtils.getAgent).not.toHaveBeenCalled();
+      expect(skillsUtils.getSkill).not.toHaveBeenCalled();
       expect(mockContext.set).not.toHaveBeenCalled();
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
@@ -172,23 +175,26 @@ describe('agentAndSkillMiddleware', () => {
           name: 'test-skill',
           description: 'Test skill description',
           metadata: {},
-          max_configurations: 1,
+          optimize: false,
+          configuration_count: 1,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
-          num_system_prompts: 0,
+          system_prompt_count: 0,
+          clustering_interval: 0,
+          reflection_min_requests_per_arm: 0,
         };
 
-        vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);
-        vi.mocked(skillsUtils.getOrCreateSkill).mockResolvedValue(mockSkill);
+        vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
+        vi.mocked(skillsUtils.getSkill).mockResolvedValue(mockSkill);
 
         const mockContext = createMockContext(url);
         await agentAndSkillMiddleware(mockContext, mockNext);
 
-        expect(agentsUtils.getOrCreateAgent).toHaveBeenCalledWith(
+        expect(agentsUtils.getAgent).toHaveBeenCalledWith(
           mockConnector,
           'test-agent',
         );
-        expect(skillsUtils.getOrCreateSkill).toHaveBeenCalledWith(
+        expect(skillsUtils.getSkill).toHaveBeenCalledWith(
           mockConnector,
           '123e4567-e89b-12d3-a456-426614174000',
           'test-skill',
@@ -211,8 +217,8 @@ describe('agentAndSkillMiddleware', () => {
         const mockContext = createMockContext(url);
         await agentAndSkillMiddleware(mockContext, mockNext);
 
-        expect(agentsUtils.getOrCreateAgent).not.toHaveBeenCalled();
-        expect(skillsUtils.getOrCreateSkill).not.toHaveBeenCalled();
+        expect(agentsUtils.getAgent).not.toHaveBeenCalled();
+        expect(skillsUtils.getSkill).not.toHaveBeenCalled();
         expect(mockContext.set).not.toHaveBeenCalled();
         expect(mockNext).toHaveBeenCalledTimes(1);
       });
@@ -222,8 +228,8 @@ describe('agentAndSkillMiddleware', () => {
   describe('error handling', () => {
     it('should propagate errors from getOrCreateAgent', async () => {
       const error = new Error('Failed to get or create agent');
-      vi.mocked(agentsUtils.getOrCreateAgent).mockRejectedValue(error);
-      vi.mocked(skillsUtils.getOrCreateSkill).mockResolvedValue({} as Skill);
+      vi.mocked(agentsUtils.getAgent).mockRejectedValue(error);
+      vi.mocked(skillsUtils.getSkill).mockResolvedValue({} as Skill);
 
       const mockContext = createMockContext(
         'https://api.example.com/v1/chat/completions',
@@ -238,8 +244,8 @@ describe('agentAndSkillMiddleware', () => {
 
     it('should propagate errors from getOrCreateSkill', async () => {
       const error = new Error('Failed to get or create skill');
-      vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue({} as Agent);
-      vi.mocked(skillsUtils.getOrCreateSkill).mockRejectedValue(error);
+      vi.mocked(agentsUtils.getAgent).mockResolvedValue({} as Agent);
+      vi.mocked(skillsUtils.getSkill).mockRejectedValue(error);
 
       const mockContext = createMockContext(
         'https://api.example.com/v1/chat/completions',
@@ -288,19 +294,19 @@ describe('agentAndSkillMiddleware', () => {
         set: vi.fn(),
       } as unknown;
 
-      vi.mocked(agentsUtils.getOrCreateAgent).mockResolvedValue(mockAgent);
-      vi.mocked(skillsUtils.getOrCreateSkill).mockResolvedValue({} as Skill);
+      vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
+      vi.mocked(skillsUtils.getSkill).mockResolvedValue({} as Skill);
 
       await agentAndSkillMiddleware(
         customMockContext as unknown as AppContext,
         mockNext,
       );
 
-      expect(agentsUtils.getOrCreateAgent).toHaveBeenCalledWith(
+      expect(agentsUtils.getAgent).toHaveBeenCalledWith(
         mockConnector,
         'custom-agent-123',
       );
-      expect(skillsUtils.getOrCreateSkill).toHaveBeenCalledWith(
+      expect(skillsUtils.getSkill).toHaveBeenCalledWith(
         mockConnector,
         'custom-agent-uuid-123',
         'custom-skill-456',

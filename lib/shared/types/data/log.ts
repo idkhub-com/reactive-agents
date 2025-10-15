@@ -48,6 +48,7 @@ export const Log = z.object({
   id: z.uuid(),
   agent_id: z.uuid(),
   skill_id: z.uuid(),
+  cluster_id: z.uuid().nullable(),
   method: z.enum(HttpMethod),
   endpoint: z.string(),
   function_name: z.enum(FunctionName),
@@ -65,22 +66,22 @@ export const Log = z.object({
   ai_provider_request_log: AIProviderRequestLog,
   hook_logs: z.array(HookLog),
   metadata: z.record(z.string(), z.unknown()),
-  embedding: z.array(z.number()).nullable().default(null),
+  embedding: z.array(z.number()).nullable(),
 
   // Cache info
   cache_status: z.enum(CacheStatus),
 
   // Tracing info
-  trace_id: z.string().nullable().default(null),
-  parent_span_id: z.string().nullable().default(null),
-  span_id: z.string().nullable().default(null),
-  span_name: z.string().nullable().default(null),
+  trace_id: z.string().nullable(),
+  parent_span_id: z.string().nullable(),
+  span_id: z.string().nullable(),
+  span_name: z.string().nullable(),
 
   // User metadata
-  app_id: z.string().nullable().default(null),
-  external_user_id: z.string().nullable().default(null),
-  external_user_human_name: z.string().nullable().default(null),
-  user_metadata: z.record(z.string(), z.unknown()).nullable().default(null),
+  app_id: z.string().nullable(),
+  external_user_id: z.string().nullable(),
+  external_user_human_name: z.string().nullable(),
+  user_metadata: z.record(z.string(), z.unknown()).nullable(),
 });
 
 export type Log = z.infer<typeof Log>;
@@ -100,6 +101,7 @@ export const LogsQueryParams = z.object({
   ids: z.array(z.uuid()).optional(),
   agent_id: z.uuid().optional(),
   skill_id: z.uuid().optional(),
+  cluster_id: z.uuid().optional(),
   app_id: z.uuid().optional(),
   after: z
     .string()
@@ -123,3 +125,43 @@ export const LogsQueryParams = z.object({
 });
 
 export type LogsQueryParams = z.infer<typeof LogsQueryParams>;
+
+export const LogCreateParams = z.object({
+  agent_id: z.uuid(),
+  skill_id: z.uuid(),
+  cluster_id: z.uuid().optional(),
+  method: z.enum(HttpMethod),
+  endpoint: z.string(),
+  function_name: z.enum(FunctionName),
+  status: z.int(),
+  start_time: z.number(),
+  end_time: z.number(),
+  duration: z.number(),
+  base_idk_config: z.record(z.string(), z.unknown()),
+
+  // Maybe redundant. Used for indexing.
+  ai_provider: z.enum(AIProvider),
+  model: z.string(),
+
+  // Main data
+  ai_provider_request_log: AIProviderRequestLog,
+  hook_logs: z.array(HookLog),
+  metadata: z.record(z.string(), z.unknown()),
+  embedding: z.array(z.number()).optional(),
+
+  // Cache info
+  cache_status: z.enum(CacheStatus),
+
+  // Tracing info
+  trace_id: z.string().optional(),
+  parent_span_id: z.string().optional(),
+  span_id: z.string().optional(),
+  span_name: z.string().optional(),
+
+  // User metadata
+  app_id: z.string().optional(),
+  external_user_id: z.string().optional(),
+  external_user_human_name: z.string().optional(),
+  user_metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type LogCreateParams = z.infer<typeof LogCreateParams>;

@@ -128,7 +128,7 @@ async function validateTargetConfiguration(
       if (clusters.length === 0) {
         // Create initial clusters with equally spaced centroids
         const initialCentroids = getInitialClusterCentroids(
-          skill.max_configurations,
+          skill.configuration_count,
         );
         const clusterParams: SkillOptimizationClusterCreateParams[] =
           initialCentroids.map((centroid, index) => ({
@@ -227,10 +227,11 @@ async function validateTargetConfiguration(
         additional_params: null,
         stop: null,
       };
-    } catch (error) {
+    } catch (e) {
+      error(e);
       return c.json(
         {
-          error: `Failed to load optimization parameters: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: `Failed to load optimization parameters: ${e instanceof Error ? e.message : 'Unknown error'}`,
         },
         500,
       );

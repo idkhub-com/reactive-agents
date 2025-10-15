@@ -48,9 +48,11 @@ export function LogsView(): ReactElement {
 
   // Keep provider query params in sync with filters/pagination
   useEffect(() => {
-    if (!navigationState.selectedAgent) return;
+    if (!navigationState.selectedAgent || !navigationState.selectedSkill)
+      return;
     const params: Partial<LogsQueryParams> = {
       agent_id: navigationState.selectedAgent.id,
+      skill_id: navigationState.selectedSkill.id,
       limit,
       offset: (currentPage - 1) * limit,
     } as Partial<LogsQueryParams>;
@@ -62,6 +64,7 @@ export function LogsView(): ReactElement {
     setQueryParams(params);
   }, [
     navigationState.selectedAgent,
+    navigationState.selectedSkill,
     limit,
     currentPage,
     statusFilter,

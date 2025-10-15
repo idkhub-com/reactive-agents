@@ -24,7 +24,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
       // Create initial clusters with equally spaced centroids
       const initialCentroids = getInitialClusterCentroids(
-        newSkill.max_configurations,
+        newSkill.configuration_count,
       );
       const clusterParams: SkillOptimizationClusterCreateParams[] =
         initialCentroids.map((centroid, index) => ({
@@ -73,7 +73,7 @@ export const skillsRouter = new Hono<AppEnv>()
           data,
         );
 
-        if (data.max_configurations || data.num_system_prompts) {
+        if (data.configuration_count || data.system_prompt_count) {
           const currentClusters =
             await userDataStorageConnector.getSkillOptimizationClusters({
               skill_id: updatedSkill.id,
@@ -87,7 +87,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
           // Create initial clusters with equally spaced centroids
           const initialCentroids = getInitialClusterCentroids(
-            updatedSkill.max_configurations,
+            updatedSkill.configuration_count,
           );
           const clusterParams: SkillOptimizationClusterCreateParams[] =
             initialCentroids.map((centroid, index) => ({
@@ -105,8 +105,8 @@ export const skillsRouter = new Hono<AppEnv>()
 
         if (
           data.description ||
-          data.max_configurations ||
-          data.num_system_prompts
+          data.configuration_count ||
+          data.system_prompt_count
         ) {
           await handleGenerateArms(c, userDataStorageConnector, skillId);
         }
