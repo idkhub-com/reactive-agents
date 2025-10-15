@@ -91,10 +91,13 @@ describe('Skills API functions', () => {
       last_clustering_at: '2023-01-01T00:00:00Z',
       last_clustering_log_start_time: 1234567890,
     },
+    optimize: false,
     configuration_count: 10,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
     system_prompt_count: 0,
+    clustering_interval: 0,
+    reflection_min_requests_per_arm: 0,
   };
 
   beforeEach(() => {
@@ -117,8 +120,11 @@ describe('Skills API functions', () => {
           last_clustering_at: '2023-01-01T00:00:00Z',
           last_clustering_log_start_time: 1234567890,
         },
-        max_configurations: 10,
-        num_system_prompts: 0,
+        optimize: false,
+        configuration_count: 10,
+        system_prompt_count: 0,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
       };
 
       const result = await createSkill(params);
@@ -140,9 +146,12 @@ describe('Skills API functions', () => {
           agent_id: 'agent-456',
           name: 'test-skill',
           metadata: {},
+          optimize: false,
           configuration_count: 10,
           description: '',
           system_prompt_count: 0,
+          clustering_interval: 0,
+          reflection_min_requests_per_arm: 0,
         }),
       ).rejects.toThrow('Failed to create skill');
     });

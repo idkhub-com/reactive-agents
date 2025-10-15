@@ -74,10 +74,13 @@ const mockSkills: Skill[] = [
     description: 'Test Skill Description 1',
     agent_id: '1',
     metadata: {},
+    optimize: false,
     configuration_count: 10,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     system_prompt_count: 0,
+    clustering_interval: 0,
+    reflection_min_requests_per_arm: 0,
   },
   {
     id: '2',
@@ -85,10 +88,13 @@ const mockSkills: Skill[] = [
     description: 'Test Skill Description 2',
     agent_id: '1',
     metadata: {},
+    optimize: false,
     configuration_count: 10,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     system_prompt_count: 0,
+    clustering_interval: 0,
+    reflection_min_requests_per_arm: 0,
   },
 ];
 

@@ -56,10 +56,13 @@ const mockSkills: Skill[] = [
     description: 'Handles email responses',
     agent_id: 'agent-1',
     metadata: {},
+    optimize: false,
     configuration_count: 10,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     system_prompt_count: 0,
+    clustering_interval: 0,
+    reflection_min_requests_per_arm: 0,
   },
   {
     id: 'skill-2',
@@ -67,10 +70,13 @@ const mockSkills: Skill[] = [
     description: 'Provides live chat support',
     agent_id: 'agent-1',
     metadata: {},
+    optimize: false,
     configuration_count: 10,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     system_prompt_count: 0,
+    clustering_interval: 0,
+    reflection_min_requests_per_arm: 0,
   },
 ];
 

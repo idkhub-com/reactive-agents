@@ -148,6 +148,7 @@ describe('toolMiddleware', () => {
       updateSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArmsForSkill: vi.fn(),
+      deleteSkillOptimizationArmsForCluster: vi.fn(),
       // Skill Optimization Evaluation methods
       getSkillOptimizationEvaluations: vi.fn(),
       createSkillOptimizationEvaluations: vi.fn(),

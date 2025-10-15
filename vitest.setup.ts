@@ -27,6 +27,19 @@ if (typeof process !== 'undefined' && typeof process.nextTick !== 'function') {
   };
 }
 
+// Mock ResizeObserver for components that use it (e.g., Radix UI)
+global.ResizeObserver = class ResizeObserver {
+  observe() {
+    // Mock implementation
+  }
+  unobserve() {
+    // Mock implementation
+  }
+  disconnect() {
+    // Mock implementation
+  }
+};
+
 // Soften noisy React warnings that don't affect assertions in our suite.
 // These warnings can flood output and cause OOM in CI when many async state
 // updates happen during provider effects.

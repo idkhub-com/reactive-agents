@@ -1,14 +1,9 @@
 import type { UserDataStorageConnector } from '@server/types/connector';
-import { getOrCreateAgent } from '@server/utils/idkhub/agents';
-import type { Agent, AgentCreateParams } from '@shared/types/data/agent';
+import { getAgent } from '@server/utils/idkhub/agents';
+import type { Agent } from '@shared/types/data/agent';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock console.log to avoid noise in tests
-vi.spyOn(console, 'log').mockImplementation(() => {
-  // Intentionally empty implementation
-});
-
-describe('getOrCreateAgent', () => {
+describe('getAgent', () => {
   let mockConnector: UserDataStorageConnector;
 
   beforeEach(() => {
@@ -100,6 +95,7 @@ describe('getOrCreateAgent', () => {
       updateSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArmsForSkill: vi.fn(),
+      deleteSkillOptimizationArmsForCluster: vi.fn(),
       // Skill Optimization Evaluation methods
       getSkillOptimizationEvaluations: vi.fn(),
       createSkillOptimizationEvaluations: vi.fn(),
@@ -125,7 +121,7 @@ describe('getOrCreateAgent', () => {
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);
 
-      const result = await getOrCreateAgent(mockConnector, 'existing-agent');
+      const result = await getAgent(mockConnector, 'existing-agent');
 
       expect(result).toEqual(existingAgent);
       expect(mockConnector.getAgents).toHaveBeenCalledWith({
@@ -156,7 +152,7 @@ describe('getOrCreateAgent', () => {
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue(agents);
 
-      const result = await getOrCreateAgent(mockConnector, 'duplicate-agent');
+      const result = await getAgent(mockConnector, 'duplicate-agent');
 
       expect(result).toEqual(agents[0]);
       expect(mockConnector.createAgent).not.toHaveBeenCalled();
@@ -164,55 +160,26 @@ describe('getOrCreateAgent', () => {
   });
 
   describe('when agent does not exist', () => {
-    it('should create and return new agent', async () => {
-      const newAgent: Agent = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        name: 'new-agent',
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-      };
-
+    it('should return null', async () => {
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-      vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
 
-      const result = await getOrCreateAgent(mockConnector, 'new-agent');
+      const result = await getAgent(mockConnector, 'non-existent-agent');
 
-      expect(result).toEqual(newAgent);
+      expect(result).toBeNull();
       expect(mockConnector.getAgents).toHaveBeenCalledWith({
-        name: 'new-agent',
+        name: 'non-existent-agent',
       });
-      expect(mockConnector.createAgent).toHaveBeenCalledWith({
-        name: 'new-agent',
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-      } as AgentCreateParams);
-      expect(console.log).not.toHaveBeenCalledWith(
-        expect.stringContaining('Agent already exists'),
-      );
+      expect(mockConnector.createAgent).not.toHaveBeenCalled();
     });
 
-    it('should create agent with default metadata when none exists', async () => {
-      const newAgent: Agent = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        name: 'test-agent',
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-      };
-
+    it('should return null for empty agent name', async () => {
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-      vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
 
-      await getOrCreateAgent(mockConnector, 'test-agent');
+      const result = await getAgent(mockConnector, '');
 
-      expect(mockConnector.createAgent).toHaveBeenCalledWith({
-        name: 'test-agent',
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-      });
+      expect(result).toBeNull();
+      expect(mockConnector.getAgents).toHaveBeenCalledWith({ name: '' });
+      expect(mockConnector.createAgent).not.toHaveBeenCalled();
     });
   });
 
@@ -221,64 +188,29 @@ describe('getOrCreateAgent', () => {
       const error = new Error('Database connection failed');
       vi.mocked(mockConnector.getAgents).mockRejectedValue(error);
 
-      await expect(
-        getOrCreateAgent(mockConnector, 'test-agent'),
-      ).rejects.toThrow('Database connection failed');
-    });
-
-    it('should propagate errors from createAgent', async () => {
-      const error = new Error('Failed to create agent');
-      vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-      vi.mocked(mockConnector.createAgent).mockRejectedValue(error);
-
-      await expect(
-        getOrCreateAgent(mockConnector, 'test-agent'),
-      ).rejects.toThrow('Failed to create agent');
+      await expect(getAgent(mockConnector, 'test-agent')).rejects.toThrow(
+        'Database connection failed',
+      );
     });
   });
 
   describe('edge cases', () => {
-    it('should handle empty agent name', async () => {
-      const newAgent: Agent = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        name: '',
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-      };
-
-      vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-      vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
-
-      const result = await getOrCreateAgent(mockConnector, '');
-
-      expect(result).toEqual(newAgent);
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({ name: '' });
-      expect(mockConnector.createAgent).toHaveBeenCalledWith({
-        name: '',
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-      });
-    });
-
     it('should handle special characters in agent name', async () => {
       const specialName = 'agent-with-special-chars_123@domain.com';
-      const newAgent: Agent = {
+      const agent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: specialName,
-        description: 'The agent must be setup before it can be used.',
+        description: 'Agent with special characters',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-      vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
+      vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
 
-      const result = await getOrCreateAgent(mockConnector, specialName);
+      const result = await getAgent(mockConnector, specialName);
 
-      expect(result).toEqual(newAgent);
+      expect(result).toEqual(agent);
       expect(mockConnector.getAgents).toHaveBeenCalledWith({
         name: specialName,
       });
@@ -286,21 +218,12 @@ describe('getOrCreateAgent', () => {
 
     it('should handle very long agent names', async () => {
       const longName = 'a'.repeat(1000);
-      const newAgent: Agent = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        name: longName,
-        description: 'The agent must be setup before it can be used.',
-        metadata: {},
-        created_at: '2023-01-01T00:00:00.000Z',
-        updated_at: '2023-01-01T00:00:00.000Z',
-      };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-      vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
 
-      const result = await getOrCreateAgent(mockConnector, longName);
+      const result = await getAgent(mockConnector, longName);
 
-      expect(result).toEqual(newAgent);
+      expect(result).toBeNull();
       expect(mockConnector.getAgents).toHaveBeenCalledWith({ name: longName });
     });
   });
@@ -311,31 +234,23 @@ describe('getOrCreateAgent', () => {
       const existingAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: agentName,
-        description: 'The agent must be setup before it can be used.',
+        description: 'Concurrent agent',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
-      // First call finds no agent, second call finds the agent created by first call
-      vi.mocked(mockConnector.getAgents)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([existingAgent]);
-      vi.mocked(mockConnector.createAgent).mockResolvedValue(existingAgent);
+      vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);
 
       const [result1, result2] = await Promise.all([
-        getOrCreateAgent(mockConnector, agentName),
-        getOrCreateAgent(mockConnector, agentName),
+        getAgent(mockConnector, agentName),
+        getAgent(mockConnector, agentName),
       ]);
 
       expect(result1).toEqual(existingAgent);
       expect(result2).toEqual(existingAgent);
-
-      // Both calls should check for existing agent
       expect(mockConnector.getAgents).toHaveBeenCalledTimes(2);
-
-      // Only first call should create the agent (due to our mock setup)
-      expect(mockConnector.createAgent).toHaveBeenCalledTimes(1);
+      expect(mockConnector.createAgent).not.toHaveBeenCalled();
     });
   });
 });

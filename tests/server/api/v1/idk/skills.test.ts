@@ -48,6 +48,7 @@ const mockUserDataStorageConnector = {
   updateSkillOptimizationArm: vi.fn(),
   deleteSkillOptimizationArm: vi.fn(),
   deleteSkillOptimizationArmsForSkill: vi.fn(),
+  deleteSkillOptimizationArmsForCluster: vi.fn(),
   // Skill Optimization Evaluation methods
   getSkillOptimizationEvaluations: vi.fn(),
   createSkillOptimizationEvaluations: vi.fn(),
@@ -144,6 +145,7 @@ describe('Skills API Status Codes', () => {
             last_clustering_at: '2023-01-01T00:00:00.000Z',
             last_clustering_log_start_time: 1234567890,
           },
+          optimize: false,
         },
       });
 
@@ -164,6 +166,7 @@ describe('Skills API Status Codes', () => {
           description:
             'This is a test skill description with at least 25 characters',
           metadata: {},
+          optimize: false,
         },
       });
 

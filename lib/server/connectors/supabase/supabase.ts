@@ -26,7 +26,11 @@ import {
   type ImprovedResponseQueryParams,
   type ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
-import { Log, type LogsQueryParams } from '@shared/types/data/log';
+import {
+  Log,
+  type LogCreateParams,
+  type LogsQueryParams,
+} from '@shared/types/data/log';
 import {
   Model,
   type ModelCreateParams,
@@ -911,8 +915,12 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     return logs;
   },
 
-  createLog: async (log: Log): Promise<Log> => {
-    const insertedLog = await insertIntoSupabase('logs', log, z.array(Log));
+  createLog: async (createParams: LogCreateParams): Promise<Log> => {
+    const insertedLog = await insertIntoSupabase(
+      'logs',
+      createParams,
+      z.array(Log),
+    );
     return insertedLog[0];
   },
 
