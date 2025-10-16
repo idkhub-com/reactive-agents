@@ -84,6 +84,14 @@ export function APIKeysListView(): ReactElement {
 
   const copyToClipboard = async (apiKey: AIProviderAPIKey) => {
     try {
+      if (!apiKey.api_key) {
+        toast({
+          title: 'No API key',
+          description: 'This provider does not have an API key configured.',
+          variant: 'destructive',
+        });
+        return;
+      }
       await navigator.clipboard.writeText(apiKey.api_key);
       const newCopiedKeys = new Set(copiedKeys);
       newCopiedKeys.add(apiKey.id);
@@ -277,8 +285,8 @@ export function APIKeysListView(): ReactElement {
                           <div className="flex items-center gap-2">
                             <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
                               {visibleKeys.has(apiKey.id)
-                                ? apiKey.api_key
-                                : maskAPIKey(apiKey.api_key)}
+                                ? apiKey.api_key || 'No API key'
+                                : maskAPIKey(apiKey.api_key || '')}
                             </code>
                             <Button
                               variant="ghost"

@@ -402,7 +402,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     // Decrypt the API keys before returning
     return encryptedAPIKeys.map((key) => ({
       ...key,
-      api_key: decryptAPIKey(key.api_key),
+      api_key: key.api_key ? decryptAPIKey(key.api_key) : null,
     }));
   },
 
@@ -412,16 +412,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     const encryptedAPIKeys = await selectFromSupabase(
       'ai_provider_api_keys',
       { id: `eq.${id}` },
-      z.array(
-        z.object({
-          id: z.string(),
-          ai_provider: z.string(),
-          name: z.string(),
-          api_key: z.string(),
-          created_at: z.string(),
-          updated_at: z.string(),
-        }),
-      ),
+      z.array(AIProviderAPIKey),
     );
 
     if (encryptedAPIKeys.length === 0) {
@@ -432,7 +423,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     const encryptedKey = encryptedAPIKeys[0];
     return {
       ...encryptedKey,
-      api_key: decryptAPIKey(encryptedKey.api_key),
+      api_key: encryptedKey.api_key
+        ? decryptAPIKey(encryptedKey.api_key)
+        : null,
     };
   },
 
@@ -441,7 +434,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   ): Promise<AIProviderAPIKey> => {
     const encryptedAPIKey = {
       ...apiKey,
-      api_key: encryptAPIKey(apiKey.api_key),
+      api_key: apiKey.api_key ? encryptAPIKey(apiKey.api_key) : null,
     };
 
     const insertedAPIKey = await insertIntoSupabase(
@@ -453,7 +446,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     // Decrypt before returning
     return {
       ...insertedAPIKey[0],
-      api_key: decryptAPIKey(insertedAPIKey[0].api_key),
+      api_key: insertedAPIKey[0].api_key
+        ? decryptAPIKey(insertedAPIKey[0].api_key)
+        : null,
     };
   },
 
@@ -464,8 +459,10 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     const updateData = { ...update };
 
     // Encrypt the API key if it's being updated
-    if (update.api_key) {
-      updateData.api_key = encryptAPIKey(update.api_key);
+    if (update.api_key !== undefined) {
+      updateData.api_key = update.api_key
+        ? encryptAPIKey(update.api_key)
+        : undefined;
     }
 
     const updatedAPIKey = await updateInSupabase(
@@ -478,7 +475,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     // Decrypt before returning
     return {
       ...updatedAPIKey[0],
-      api_key: decryptAPIKey(updatedAPIKey[0].api_key),
+      api_key: updatedAPIKey[0].api_key
+        ? decryptAPIKey(updatedAPIKey[0].api_key)
+        : null,
     };
   },
 

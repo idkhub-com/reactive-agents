@@ -247,7 +247,8 @@ CREATE TABLE IF NOT EXISTS ai_provider_api_keys (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   ai_provider TEXT NOT NULL,
   name TEXT NOT NULL,
-  api_key TEXT NOT NULL,
+  api_key TEXT,
+  custom_host TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(ai_provider, name)

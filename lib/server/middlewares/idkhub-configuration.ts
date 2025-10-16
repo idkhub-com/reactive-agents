@@ -110,6 +110,7 @@ async function validateTargetConfiguration(
 ): Promise<IdkTarget | Response> {
   let idkTargetConfiguration: TargetConfigurationParams;
   let resolvedApiKey: string | undefined;
+  let resolvedCustomHost: string | undefined;
 
   // Apply optimization if specified
   // Optimizations can only be applied if the embedding is provided
@@ -194,7 +195,8 @@ async function validateTargetConfiguration(
         );
       }
 
-      resolvedApiKey = apiKeyRecord.api_key;
+      resolvedApiKey = apiKeyRecord.api_key || undefined;
+      resolvedCustomHost = apiKeyRecord.custom_host || undefined;
 
       const reasoningEffort = getRandomReasoningEffortFromRange(
         optimalArm.params.thinking_min,
@@ -276,8 +278,7 @@ async function validateTargetConfiguration(
     resolvedApiKey = idkTargetPreProcessed.api_key;
   }
 
-  // Ensure we have an API key after resolution
-  if (!resolvedApiKey) {
+  if (resolvedApiKey === undefined) {
     return c.json(
       {
         error: `No API key available. Either provide an api_key directly or use a skill configuration.`,
@@ -290,6 +291,8 @@ async function validateTargetConfiguration(
     ...idkTargetPreProcessed,
     configuration: idkTargetConfiguration,
     api_key: resolvedApiKey,
+    // Use resolved custom_host from API key if available, otherwise keep any directly provided value
+    custom_host: resolvedCustomHost || idkTargetPreProcessed.custom_host,
     provider: undefined,
     configuration_name: undefined,
     configuration_version: undefined,

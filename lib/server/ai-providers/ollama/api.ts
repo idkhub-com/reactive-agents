@@ -17,6 +17,8 @@ export const ollamaAPIConfig: InternalProviderAPIConfig = {
     const customHost = idkTarget.custom_host;
     if (customHost) {
       try {
+        // SECURITY: Comprehensive URL validation for custom_host
+        // This prevents SSRF attacks and ensures only safe URLs are used
         const url = new URL(customHost);
 
         // Validate protocol

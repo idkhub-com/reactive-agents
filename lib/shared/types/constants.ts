@@ -224,3 +224,15 @@ export const documentMimeTypes = [
   fileExtensionMimeTypeMap.md,
   fileExtensionMimeTypeMap.txt,
 ];
+
+export const OPTIONAL_API_KEY_PROVIDERS: readonly AIProvider[] = [
+  AIProvider.OLLAMA,
+  AIProvider.TRITON,
+];
+
+// Default URLs for self-hosted providers
+export const DEFAULT_SELF_HOSTED_URLS: Partial<Record<AIProvider, string>> = {
+  [AIProvider.OLLAMA]: 'http://localhost:11434',
+  [AIProvider.TRITON]: 'http://localhost:8000',
+  // Add more providers as needed
+};
