@@ -2,7 +2,7 @@
 -- Agents table
 -- ================================================
 CREATE TABLE if not exists agents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   name TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
@@ -24,7 +24,7 @@ CREATE POLICY "service_role_full_access" ON agents FOR ALL TO service_role USING
 -- Skills table
 -- ================================================
 CREATE TABLE if not exists skills (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -61,7 +61,7 @@ CREATE POLICY "service_role_full_access" ON skills FOR ALL TO service_role USING
 -- Skill Optimization Clusters table
 -- ================================================
 CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   name TEXT NOT NULL,
@@ -92,7 +92,7 @@ CREATE POLICY "service_role_full_access" ON skill_optimization_clusters FOR ALL 
 -- Tools table
 -- ================================================
 CREATE TABLE if not exists tools (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   hash TEXT NOT NULL,
   type TEXT NOT NULL,
@@ -132,7 +132,7 @@ CREATE TYPE cache_status_enum AS ENUM (
 
 CREATE TABLE IF NOT EXISTS logs (
   -- Base info
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   cluster_id UUID,
@@ -186,7 +186,7 @@ CREATE POLICY "service_role_full_access" ON logs FOR ALL TO service_role USING (
 -- Feedback table
 -- ================================================
 CREATE TABLE IF NOT EXISTS feedbacks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   log_id UUID NOT NULL,
   score FLOAT CHECK (
     score >= 0
@@ -204,7 +204,7 @@ CREATE POLICY "service_role_full_access" ON feedbacks FOR ALL TO service_role US
 -- Improved responses table
 -- ================================================
 CREATE TABLE if not exists improved_responses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   log_id UUID NOT NULL,
@@ -244,7 +244,7 @@ CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING 
 -- AI Provider API Keys
 -- ================================================
 CREATE TABLE IF NOT EXISTS ai_provider_api_keys (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   ai_provider TEXT NOT NULL,
   name TEXT NOT NULL,
   api_key TEXT NOT NULL,
@@ -267,7 +267,7 @@ CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO serv
 -- Models table
 -- ================================================
 CREATE TABLE IF NOT EXISTS models (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   ai_provider_api_key_id UUID NOT NULL,
   model_name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -314,7 +314,7 @@ COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they
 -- Skill Optimization Arms table
 -- ================================================
 CREATE TABLE IF NOT EXISTS skill_optimization_arms (
-  id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   cluster_id UUID NOT NULL,
@@ -344,7 +344,7 @@ CREATE POLICY "service_role_full_access" ON skill_optimization_arms FOR ALL TO s
 -- Skill Optimization Evaluations Table
 -- ================================================
 CREATE TABLE if not exists skill_optimization_evaluations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   evaluation_method TEXT NOT NULL,
@@ -373,7 +373,7 @@ CREATE POLICY "service_role_full_access" ON skill_optimization_evaluations FOR A
 -- Skill Optimization Evaluation Runs table
 -- ================================================
 CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_runs (
-  id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   cluster_id UUID NOT NULL,
