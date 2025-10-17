@@ -14,6 +14,7 @@ import { deepSeekConfig } from '@server/ai-providers/deepseek';
 import { googleConfig } from '@server/ai-providers/google';
 import { googleVertexAIConfig } from '@server/ai-providers/google-vertex-ai';
 import { groqConfig } from '@server/ai-providers/groq';
+import { mistralAIConfig } from '@server/ai-providers/mistral-ai';
 import { ollamaConfig } from '@server/ai-providers/ollama';
 import { openAIConfig } from '@server/ai-providers/openai';
 import { openrouterConfig } from '@server/ai-providers/openrouter';
@@ -52,7 +53,7 @@ export const providerConfigs: {
   [AIProvider.LEPTON]: undefined,
   [AIProvider.LINGYI]: undefined,
   [AIProvider.MILVUS]: undefined,
-  [AIProvider.MISTRAL_AI]: undefined,
+  [AIProvider.MISTRAL_AI]: mistralAIConfig,
   [AIProvider.MONSTERAPI]: undefined,
   [AIProvider.MOONSHOT]: undefined,
   [AIProvider.NCOMPASS]: undefined,

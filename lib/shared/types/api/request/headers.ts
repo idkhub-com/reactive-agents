@@ -154,6 +154,8 @@ export const IdkTargetBase = z.object({
 
   // Ollama specific
   ollama_url_to_fetch: z.string().optional(),
+
+  // Mistral AI specific
 });
 
 export type IdkTargetBase = z.infer<typeof IdkTargetBase>;
