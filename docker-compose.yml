@@ -1,0 +1,87 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: idkhub-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+      - ./supabase/migrations/20250610025959_base_functions.sql:/docker-entrypoint-initdb.d/02-base-functions.sql:ro
+      - ./supabase/migrations/20250703100411_initial_schema.sql:/docker-entrypoint-initdb.d/03-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - idkhub-network
+
+  # PostgREST API Server
+  postgrest:
+    image: postgrest/postgrest:latest
+    container_name: idkhub-postgrest
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD:-postgres}@postgres:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - idkhub-network
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: idkhub
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Database - connect directly to PostgREST
+      POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:3000}
+      POSTGREST_SERVICE_ROLE_KEY: ${POSTGREST_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+
+      # App Config
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD:-idk}
+      BEARER_TOKEN: ${BEARER_TOKEN:-idk}
+      JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}
+      AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
+
+      # AI Provider Keys (optional - can be stored in database)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgrest:
+        condition: service_started
+    networks:
+      - idkhub-network
+
+volumes:
+  postgres_data:
+
+networks:
+  idkhub-network:
+    driver: bridge

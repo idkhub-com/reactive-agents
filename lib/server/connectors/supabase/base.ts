@@ -1,19 +1,16 @@
 import {
-  SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_URL,
+  POSTGREST_SERVICE_ROLE_KEY,
+  POSTGREST_URL,
+  SUPABASE_SECRET_KEY,
 } from '@server/constants';
 import type { z } from 'zod';
 
 const checkEnvironmentVariables = (): void => {
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  if (!POSTGREST_SERVICE_ROLE_KEY) {
+    throw new Error('POSTGREST_SERVICE_ROLE_KEY is not set');
   }
-  if (!SUPABASE_URL) {
-    throw new Error('SUPABASE_URL is not set');
-  }
-  if (!SUPABASE_ANON_KEY) {
-    throw new Error('SUPABASE_ANON_KEY is not set');
+  if (!POSTGREST_URL) {
+    throw new Error('POSTGREST_URL is not set');
   }
 };
 
@@ -24,7 +21,7 @@ export const selectFromSupabase = async <T extends z.ZodType>(
 ): Promise<z.infer<T>> => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  const url = new URL(`${POSTGREST_URL}/${table}`);
 
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
@@ -32,18 +29,23 @@ export const selectFromSupabase = async <T extends z.ZodType>(
     }
   }
 
+  const headers: HeadersInit = {
+    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+  };
+
+  if (SUPABASE_SECRET_KEY) {
+    headers.apiKey = SUPABASE_SECRET_KEY;
+  }
+
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_ANON_KEY!,
-    },
+    headers,
   });
 
   if (!response.ok) {
     throw new Error(
       `\
-Failed to fetch from Supabase:
+Failed to fetch from PostgREST:
 ${response.status} - ${response.statusText}
 ${await response.text()}`,
     );
@@ -54,7 +56,7 @@ ${await response.text()}`,
     const parsedData = schema.parse(data);
     return parsedData;
   } catch (error) {
-    throw new Error(`Failed to parse data from Supabase: ${error}`);
+    throw new Error(`Failed to parse data from PostgREST: ${error}`);
   }
 };
 
@@ -72,7 +74,7 @@ export const insertIntoSupabase = async <
 > => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  const url = new URL(`${POSTGREST_URL}/${table}`);
 
   const preferArr = [];
 
@@ -86,21 +88,26 @@ export const insertIntoSupabase = async <
 
   const prefer = preferArr.join(', ');
 
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Prefer: prefer,
+  };
+
+  if (SUPABASE_SECRET_KEY) {
+    headers.apiKey = SUPABASE_SECRET_KEY;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_ANON_KEY!,
-      Prefer: prefer,
-    },
+    headers,
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
     throw new Error(
       `\
-Failed to insert into Supabase:
+Failed to insert into PostgREST:
 ${response.status} - ${response.statusText}
 ${await response.text()}`,
     );
@@ -116,7 +123,7 @@ ${await response.text()}`,
       ? never
       : undefined;
   } catch (error) {
-    throw new Error(`Failed to parse data from Supabase: ${error}`);
+    throw new Error(`Failed to parse data from PostgREST: ${error}`);
   }
 };
 
@@ -134,24 +141,28 @@ export const updateInSupabase = async <
 > => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  const url = new URL(`${POSTGREST_URL}/${table}`);
   url.searchParams.set('id', `eq.${id}`);
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Prefer: 'return=representation',
+  };
+  if (SUPABASE_SECRET_KEY) {
+    headers.apiKey = SUPABASE_SECRET_KEY;
+  }
 
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_ANON_KEY!,
-      Prefer: 'return=representation',
-    },
+    headers,
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
     throw new Error(
       `\
-Failed to update in Supabase:
+Failed to update in PostgREST:
 ${response.status} - ${response.statusText}
 ${await response.text()}`,
     );
@@ -166,7 +177,7 @@ ${await response.text()}`,
       ? never
       : undefined;
   } catch (error) {
-    throw new Error(`Failed to parse data from Supabase: ${error}`);
+    throw new Error(`Failed to parse data from PostgREST: ${error}`);
   }
 };
 
@@ -176,7 +187,7 @@ export const deleteFromSupabase = async (
 ): Promise<void> => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  const url = new URL(`${POSTGREST_URL}/${table}`);
 
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
@@ -184,18 +195,23 @@ export const deleteFromSupabase = async (
     }
   }
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+  };
+
+  if (SUPABASE_SECRET_KEY) {
+    headers.apiKey = SUPABASE_SECRET_KEY;
+  }
+
   const response = await fetch(url, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_ANON_KEY!,
-    },
+    headers,
   });
 
   if (!response.ok) {
     throw new Error(
       `\
-Failed to delete from Supabase:
+Failed to delete from PostgREST:
 ${response.status} - ${response.statusText}
 ${await response.text()}`,
     );
@@ -208,7 +224,7 @@ export const rpcFunction = async (
 ): Promise<void> => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`);
+  const url = new URL(`${POSTGREST_URL}/rpc/${functionName}`);
 
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
@@ -216,12 +232,17 @@ export const rpcFunction = async (
     }
   }
 
+  const headers: HeadersInit = {
+    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+  };
+
+  if (SUPABASE_SECRET_KEY) {
+    headers.apiKey = SUPABASE_SECRET_KEY;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_ANON_KEY!,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -241,22 +262,27 @@ export const rpcFunctionWithResponse = async <T extends z.ZodType>(
 ): Promise<z.Infer<T>> => {
   checkEnvironmentVariables();
 
-  const url = new URL(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`);
+  const url = new URL(`${POSTGREST_URL}/rpc/${functionName}`);
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+  };
+
+  if (SUPABASE_SECRET_KEY) {
+    headers.apiKey = SUPABASE_SECRET_KEY;
+  }
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-      apiKey: SUPABASE_ANON_KEY!,
-    },
+    headers,
     body: JSON.stringify(params),
   });
 
   if (!response.ok) {
     throw new Error(
       `\
-Failed to fetch from Supabase:
+Failed to fetch from PostgREST:
 ${response.status} - ${response.statusText}
 ${await response.text()}`,
     );
@@ -268,7 +294,7 @@ ${await response.text()}`,
     return parsedData;
   } catch (error) {
     throw new Error(
-      `Failed to parse data from Supabase function ${functionName} output: ${error}`,
+      `Failed to parse data from PostgREST function ${functionName} output: ${error}`,
     );
   }
 };

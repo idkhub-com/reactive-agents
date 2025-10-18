@@ -7,9 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock environment variables
 vi.mock('@server/constants', () => ({
-  SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
-  SUPABASE_URL: 'https://test.supabase.co',
-  SUPABASE_ANON_KEY: 'test-anon-key',
+  POSTGREST_SERVICE_ROLE_KEY: 'test-service-role-key',
+  POSTGREST_URL: 'https://test.supabase.co/rest/v1',
+  SUPABASE_SECRET_KEY: 'test-secret-key',
+  AI_PROVIDER_API_KEY_ENCRYPTION_KEY: 'test-encryption-key-32-bytes-long',
 }));
 
 // Mock fetch globally
@@ -57,7 +58,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           method: 'GET',
           headers: {
             Authorization: 'Bearer test-service-role-key',
-            apiKey: 'test-anon-key',
+            apiKey: 'test-secret-key',
           },
         },
       );
@@ -131,7 +132,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       await expect(
         supabaseUserDataStorageConnector.getTools({}),
-      ).rejects.toThrow('Failed to fetch from Supabase');
+      ).rejects.toThrow('Failed to fetch from PostgREST');
     });
 
     it('should handle schema validation errors', async () => {
@@ -151,7 +152,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       await expect(
         supabaseUserDataStorageConnector.getTools({}),
-      ).rejects.toThrow('Failed to parse data from Supabase');
+      ).rejects.toThrow('Failed to parse data from PostgREST');
     });
   });
 
@@ -191,7 +192,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           headers: {
             'Content-Type': 'application/json',
             Authorization: 'Bearer test-service-role-key',
-            apiKey: 'test-anon-key',
+            apiKey: 'test-secret-key',
             Prefer: 'return=representation',
           },
           body: JSON.stringify(createParams),
@@ -219,7 +220,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       await expect(
         supabaseUserDataStorageConnector.createTool(createParams),
-      ).rejects.toThrow('Failed to insert into Supabase');
+      ).rejects.toThrow('Failed to insert into PostgREST');
     });
 
     it('should handle duplicate tools gracefully', async () => {
@@ -241,7 +242,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       await expect(
         supabaseUserDataStorageConnector.createTool(createParams),
-      ).rejects.toThrow('Failed to insert into Supabase');
+      ).rejects.toThrow('Failed to insert into PostgREST');
     });
   });
 
@@ -265,7 +266,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
           method: 'DELETE',
           headers: {
             Authorization: 'Bearer test-service-role-key',
-            apiKey: 'test-anon-key',
+            apiKey: 'test-secret-key',
           },
         },
       );
@@ -284,20 +285,21 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
 
       await expect(
         supabaseUserDataStorageConnector.deleteTool(toolId),
-      ).rejects.toThrow('Failed to delete from Supabase');
+      ).rejects.toThrow('Failed to delete from PostgREST');
     });
   });
 
   describe('environment variable validation', () => {
-    it('should throw error when SUPABASE_SERVICE_ROLE_KEY is missing', async () => {
+    it('should throw error when POSTGREST_SERVICE_ROLE_KEY is missing', async () => {
       // Reset modules to ensure fresh import
       vi.resetModules();
 
       // Mock the constants to return undefined
       vi.doMock('@server/constants', () => ({
-        SUPABASE_SERVICE_ROLE_KEY: undefined,
-        SUPABASE_URL: 'https://test.supabase.co',
-        SUPABASE_ANON_KEY: 'test-anon-key',
+        POSTGREST_SERVICE_ROLE_KEY: undefined,
+        POSTGREST_URL: 'https://test.supabase.co/rest/v1',
+        SUPABASE_SECRET_KEY: 'test-secret-key',
+        AI_PROVIDER_API_KEY_ENCRYPTION_KEY: 'test-encryption-key-32-bytes-long',
       }));
 
       // Re-import to get the mocked version
@@ -305,49 +307,29 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         await import('@server/connectors/supabase');
 
       await expect(mockedConnector.getTools({})).rejects.toThrow(
-        'SUPABASE_SERVICE_ROLE_KEY is not set',
+        'POSTGREST_SERVICE_ROLE_KEY is not set',
       );
 
       // Reset after test
       vi.doUnmock('@server/constants');
     });
 
-    it('should throw error when SUPABASE_URL is missing', async () => {
+    it('should throw error when POSTGREST_URL is missing', async () => {
       // Reset modules to ensure fresh import
       vi.resetModules();
 
       vi.doMock('@server/constants', () => ({
-        SUPABASE_SERVICE_ROLE_KEY: 'test-key',
-        SUPABASE_URL: undefined,
-        SUPABASE_ANON_KEY: 'test-anon-key',
+        POSTGREST_SERVICE_ROLE_KEY: 'test-key',
+        POSTGREST_URL: undefined,
+        SUPABASE_SECRET_KEY: 'test-secret-key',
+        AI_PROVIDER_API_KEY_ENCRYPTION_KEY: 'test-encryption-key-32-bytes-long',
       }));
 
       const { supabaseUserDataStorageConnector: mockedConnector } =
         await import('@server/connectors/supabase');
 
       await expect(mockedConnector.getTools({})).rejects.toThrow(
-        'SUPABASE_URL is not set',
-      );
-
-      // Reset after test
-      vi.doUnmock('@server/constants');
-    });
-
-    it('should throw error when SUPABASE_ANON_KEY is missing', async () => {
-      // Reset modules to ensure fresh import
-      vi.resetModules();
-
-      vi.doMock('@server/constants', () => ({
-        SUPABASE_SERVICE_ROLE_KEY: 'test-key',
-        SUPABASE_URL: 'https://test.supabase.co',
-        SUPABASE_ANON_KEY: undefined,
-      }));
-
-      const { supabaseUserDataStorageConnector: mockedConnector } =
-        await import('@server/connectors/supabase');
-
-      await expect(mockedConnector.getTools({})).rejects.toThrow(
-        'SUPABASE_ANON_KEY is not set',
+        'POSTGREST_URL is not set',
       );
 
       // Reset after test

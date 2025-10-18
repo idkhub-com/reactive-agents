@@ -54,3 +54,8 @@ next-env.d.ts
 # Cloudflare
 .open-next/
 .wrangler/
+
+# Docker
+.env.docker
+*.sql
+!docker/postgres/init/*.sql
