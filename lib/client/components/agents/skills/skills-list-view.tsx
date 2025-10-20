@@ -18,9 +18,9 @@ import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import type { Skill } from '@shared/types/data';
 import { useQuery } from '@tanstack/react-query';
-import { PlusIcon, SearchIcon } from 'lucide-react';
+import { Edit, PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { AgentPerformanceChart } from './agent-performance-chart';
@@ -33,7 +33,6 @@ interface SkillStats {
 export function SkillsListView(): ReactElement {
   const { navigationState, navigateToSkillDashboard } = useNavigation();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Use providers
@@ -138,27 +137,15 @@ export function SkillsListView(): ReactElement {
     }
   };
 
-  // Auto-redirect to skill creation when agent has no skills (unless user dismissed it)
-  useEffect(() => {
-    const skipCreate = searchParams.get('skip_create') === 'true';
-
-    if (
-      !isLoadingSkills &&
-      navigationState.selectedAgent &&
-      skills.length === 0 &&
-      !skipCreate
-    ) {
+  const handleEditAgent = () => {
+    if (navigationState.selectedAgent) {
       router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/skills/create`,
+        `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/edit`,
       );
     }
-  }, [
-    isLoadingSkills,
-    navigationState.selectedAgent,
-    skills.length,
-    searchParams,
-    router,
-  ]);
+  };
+
+  // Removed automatic redirect to create skill - let users decide when to create
 
   if (!navigationState.selectedAgent) {
     return (
@@ -186,12 +173,19 @@ export function SkillsListView(): ReactElement {
       <PageHeader
         title="Skills"
         description={`Manage skills for ${navigationState.selectedAgent.name}`}
-        showBackButton={false}
+        showBackButton={true}
+        onBack={() => router.push('/agents')}
         actions={
-          <Button onClick={handleCreateSkill}>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create Skill
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleEditAgent}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Agent
+            </Button>
+            <Button onClick={handleCreateSkill}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Create Skill
+            </Button>
+          </div>
         }
       />
       <div className="p-6 space-y-6">

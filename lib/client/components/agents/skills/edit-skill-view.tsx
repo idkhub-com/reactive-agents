@@ -26,7 +26,7 @@ import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillUpdateParams } from '@shared/types/data/skill';
 import { sanitizeUserInput } from '@shared/utils/security';
-import { Bot, ChevronDown, ChevronUp, Settings, Wrench } from 'lucide-react';
+import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
@@ -43,9 +43,13 @@ const CONSTRAINTS = {
 
 const EditSkillFormSchema = z
   .object({
+    name: z.string(), // Read-only field for display
     description: z
       .string()
-      .min(CONSTRAINTS.description.min)
+      .min(
+        CONSTRAINTS.description.min,
+        'Description must be at least 25 characters',
+      )
       .max(
         CONSTRAINTS.description.max,
         'Description must be less than 10000 characters',
@@ -117,6 +121,7 @@ export function EditSkillView(): React.ReactElement {
   const form = useForm<EditSkillFormData>({
     resolver: zodResolver(EditSkillFormSchema),
     defaultValues: {
+      name: '',
       description: '',
       optimize: true,
       configuration_count: 3,
@@ -132,6 +137,7 @@ export function EditSkillView(): React.ReactElement {
   React.useEffect(() => {
     if (currentSkill) {
       form.reset({
+        name: currentSkill.name,
         description: currentSkill.description || '',
         optimize: currentSkill.optimize,
         configuration_count: currentSkill.configuration_count,
@@ -208,48 +214,6 @@ export function EditSkillView(): React.ReactElement {
         description={`Update settings for ${currentSkill.name}`}
       />
       <div className="container mx-auto py-6 max-w-2xl">
-        {/* Agent Context Card */}
-        <Card className="mb-6 border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                <Bot className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">
-                  Editing skill for
-                </div>
-                <div className="font-semibold text-lg">{currentAgent.name}</div>
-                {currentAgent.description && (
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {currentAgent.description}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Skill Info Card */}
-        <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 dark:bg-blue-800 p-2 rounded-lg">
-                <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Skill Name</div>
-                <div className="font-semibold text-lg text-blue-800 dark:text-blue-200">
-                  {currentSkill.name}
-                </div>
-                <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  The skill name cannot be changed after creation
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Main Form Card */}
         <Card className="shadow-lg">
           <CardHeader className="pb-6">
@@ -272,18 +236,43 @@ export function EditSkillView(): React.ReactElement {
               >
                 <FormField
                   control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">
+                        Skill Name
+                      </FormLabel>
+                      <FormDescription>
+                        The skill name cannot be changed after creation to
+                        maintain consistency across configurations and
+                        evaluations.
+                      </FormDescription>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          disabled
+                          className="h-11 bg-muted cursor-not-allowed"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description
+                        Description (required)
                       </FormLabel>
                       <FormDescription>
                         Provide additional context about the skill's
                         functionality, use cases, and any special requirements
-                        or limitations. This description is{' '}
-                        <span className="font-bold">crucial</span> so that the
-                        system can create accurate system prompts and
+                        or limitations (minimum 25 characters). This description
+                        is <span className="font-bold">crucial</span> so that
+                        the system can create accurate system prompts and
                         evaluations for the skill.
                       </FormDescription>
                       <FormControl>

@@ -1,5 +1,5 @@
-import { ClustersView } from '@client/components/agents/skills/clusters/clusters-view';
+import { AgentsView } from '@client/components/agents/agents-view';
 
 export default function ClustersPage() {
-  return <ClustersView />;
+  return <AgentsView />;
 }

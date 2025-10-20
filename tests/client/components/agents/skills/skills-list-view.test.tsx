@@ -241,4 +241,45 @@ describe('SkillsListView', () => {
       expect(screen.getByText(/create skill/i)).toBeInTheDocument();
     });
   });
+
+  it('shows edit agent button', async () => {
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /edit agent/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to edit agent page when edit agent button is clicked', async () => {
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      const editAgentButton = screen.getByRole('button', {
+        name: /edit agent/i,
+      });
+      expect(editAgentButton).toBeInTheDocument();
+
+      // Click the button
+      editAgentButton.click();
+    });
+
+    // Check that push was called with correct path
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent/edit');
+    });
+  });
+
+  it('does not show edit agent button when no agent is selected', async () => {
+    mockParams = { agentName: undefined };
+
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: /edit agent/i }),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

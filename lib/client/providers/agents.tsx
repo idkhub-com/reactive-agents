@@ -18,6 +18,7 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 import type React from 'react';
 import {
   createContext,
@@ -114,6 +115,7 @@ export const AgentsProvider = ({
 }): React.ReactElement => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const pathname = usePathname();
 
   const [queryParams, setQueryParams] = useState<AgentQueryParams>({});
   const [selectedAgent, setSelectedAgentState] = useState<Agent | null>(null);
@@ -155,9 +157,24 @@ export const AgentsProvider = ({
   // Flatten pages into single array
   const agents: Agent[] = data?.pages?.flat() ?? [];
 
+  // Clear selected agent when on /agents page
+  useEffect(() => {
+    if (pathname === '/agents') {
+      setSelectedAgentState(null);
+      storeAgentId(null);
+    }
+  }, [pathname]);
+
   // Auto-select agent logic
   useEffect(() => {
-    if (isLoading || agents.length === 0) return;
+    // Don't auto-select if we're on the agents list page
+    if (pathname === '/agents') {
+      return;
+    }
+
+    if (isLoading || agents.length === 0) {
+      return;
+    }
 
     // If we already have a selected agent and it's still in the list, keep it
     if (
@@ -169,6 +186,7 @@ export const AgentsProvider = ({
 
     // Try to restore from localStorage
     const storedAgentId = getStoredAgentId();
+
     if (storedAgentId) {
       const storedAgent = agents.find((agent) => agent.id === storedAgentId);
       if (storedAgent) {
@@ -183,7 +201,7 @@ export const AgentsProvider = ({
       const firstAgent = agents[0];
       setSelectedAgent(firstAgent);
     }
-  }, [agents, isLoading, selectedAgent, setSelectedAgent]);
+  }, [agents, isLoading, selectedAgent, setSelectedAgent, pathname]);
 
   // Create agent mutation
   const createAgentMutation = useMutation({

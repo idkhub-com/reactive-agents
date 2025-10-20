@@ -163,11 +163,6 @@ function SkillDropdownBreadcrumb(): ReactElement {
             >
               <div className="flex flex-col">
                 <span className="truncate font-medium">{skill.name}</span>
-                {skill.description && (
-                  <span className="truncate text-xs text-muted-foreground">
-                    {skill.description}
-                  </span>
-                )}
               </div>
             </DropdownMenuItem>
           ))}
@@ -289,9 +284,6 @@ function AgentDropdownBreadcrumb(): ReactElement {
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight ml-2">
               <span className="truncate font-medium">{activeAgent.name}</span>
-              <span className="truncate text-xs text-muted-foreground">
-                {activeAgent.description || 'AI Agent'}
-              </span>
             </div>
             <ChevronsUpDown className="ml-auto size-4" />
           </Button>
@@ -322,11 +314,6 @@ function AgentDropdownBreadcrumb(): ReactElement {
               </div>
               <div className="flex flex-col">
                 <span className="truncate font-medium">{agent.name}</span>
-                {agent.description && (
-                  <span className="truncate text-xs text-muted-foreground">
-                    {agent.description}
-                  </span>
-                )}
               </div>
               {index < MAX_AGENT_SHORTCUTS && (
                 <DropdownMenuShortcut>

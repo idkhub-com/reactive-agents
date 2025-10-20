@@ -192,11 +192,18 @@ describe('BreadcrumbComponent', () => {
     });
     vi.mocked(getAgents).mockReturnValue(pendingPromise as Promise<never>);
 
+    // Set pathname to a nested route where agent dropdown is shown
+    mockPathname = '/agents/Test%20Agent%201/Test%20Skill%201';
+    mockParams = {
+      agentName: 'Test%20Agent%201',
+      skillName: 'Test%20Skill%201',
+    };
+
     await act(() => {
       renderWithProviders(<BreadcrumbComponent />);
     });
 
-    // Shows loading placeholder
+    // Shows loading placeholder in the agent dropdown breadcrumb
     expect(screen.getByText('Loading...')).toBeInTheDocument();
 
     // Resolve the promise to cleanup

@@ -229,28 +229,28 @@ describe('EditSkillPage', () => {
   });
 
   describe('Error States', () => {
-    it('shows error message when agent is not found', () => {
+    it('renders edit skill view when agent is not found', () => {
       renderEditSkillPage({ selectedAgent: undefined });
 
-      expect(screen.getByText('Agent or skill not found')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-skill-view')).not.toBeInTheDocument();
+      // The component still renders, error handling is done within EditSkillView
+      expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
     });
 
-    it('shows error message when skill is not found', () => {
+    it('renders edit skill view when skill is not found', () => {
       renderEditSkillPage({ selectedSkill: undefined });
 
-      expect(screen.getByText('Agent or skill not found')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-skill-view')).not.toBeInTheDocument();
+      // The component still renders, error handling is done within EditSkillView
+      expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
     });
 
-    it('shows error message when both agent and skill are not found', () => {
+    it('renders edit skill view when both agent and skill are not found', () => {
       renderEditSkillPage({
         selectedAgent: undefined,
         selectedSkill: undefined,
       });
 
-      expect(screen.getByText('Agent or skill not found')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-skill-view')).not.toBeInTheDocument();
+      // The component still renders, error handling is done within EditSkillView
+      expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
     });
   });
 

@@ -49,7 +49,7 @@ export async function generateSeedSystemPromptForSkill(skill: Skill) {
         api_key: apiKey,
       },
     ],
-    agent_name: 'IdkHub Optimizer Agent',
+    agent_name: 'idkhub',
     skill_name: 'system-prompt-seeding',
   };
 
@@ -161,7 +161,7 @@ export async function generateReflectiveSystemPromptForSkill(
         api_key: apiKey,
       },
     ],
-    agent_name: 'IdkHub Optimizer Agent',
+    agent_name: 'idkhub',
     skill_name: 'system-prompt-reflection',
   };
 

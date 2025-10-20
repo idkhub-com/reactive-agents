@@ -35,6 +35,14 @@ vi.mock('@client/api/v1/idk/skills', () => ({
 }));
 
 // Mock all agent view components
+vi.mock('@client/components/agents/agents-list-view', () => ({
+  AgentsListView: () => <div data-testid="agents-list-view">Agents List</div>,
+}));
+
+vi.mock('@client/components/agents/edit-agent-view', () => ({
+  EditAgentView: () => <div data-testid="edit-agent-view">Edit Agent</div>,
+}));
+
 vi.mock('@client/components/agents/skills/skills-list-view', () => ({
   SkillsListView: () => <div data-testid="skills-list-view">Skills List</div>,
 }));
@@ -120,11 +128,33 @@ describe('AgentsView', () => {
     mockPathname = '/agents';
   });
 
-  it('renders skills list view by default', async () => {
+  it('renders agents list view when path is /agents', async () => {
+    mockPathname = '/agents';
+
+    await renderWithProviders(<AgentsView />);
+
+    expect(screen.getByTestId('agents-list-view')).toBeInTheDocument();
+    expect(screen.getByText('Agents List')).toBeInTheDocument();
+  });
+
+  it('renders skills list view when agent is selected', async () => {
+    mockParams.agentName = 'Test Agent';
+    mockPathname = '/agents/Test%20Agent';
+
     await renderWithProviders(<AgentsView />);
 
     expect(screen.getByTestId('skills-list-view')).toBeInTheDocument();
     expect(screen.getByText('Skills List')).toBeInTheDocument();
+  });
+
+  it('renders edit agent view when current view is edit-agent', async () => {
+    mockParams.agentName = 'Test Agent';
+    mockPathname = '/agents/Test%20Agent/edit';
+
+    await renderWithProviders(<AgentsView />);
+
+    expect(screen.getByTestId('edit-agent-view')).toBeInTheDocument();
+    expect(screen.getByText('Edit Agent')).toBeInTheDocument();
   });
 
   it('renders skill dashboard view when current view is skill-dashboard', async () => {
@@ -224,13 +254,15 @@ describe('AgentsView', () => {
   });
 
   it('has proper layout structure with flex container', async () => {
+    mockPathname = '/agents';
+
     await renderWithProviders(<AgentsView />);
 
     const container =
-      screen.getByTestId('skills-list-view').parentElement?.parentElement;
+      screen.getByTestId('agents-list-view').parentElement?.parentElement;
     expect(container).toHaveClass('flex', 'flex-col', 'h-full');
 
-    const contentWrapper = screen.getByTestId('skills-list-view').parentElement;
+    const contentWrapper = screen.getByTestId('agents-list-view').parentElement;
     expect(contentWrapper).toHaveClass('flex-1', 'overflow-auto');
   });
 });

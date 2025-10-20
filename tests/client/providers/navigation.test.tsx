@@ -25,16 +25,16 @@ type Params = Partial<{
   datasetId: string;
 }>;
 const mockParams: Params = {};
-const mockPathname = '/agents';
+let mockPathnameValue = '/agents';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: mockPush })),
   useParams: vi.fn(() => mockParams),
-  usePathname: vi.fn(() => mockPathname),
+  usePathname: vi.fn(() => mockPathnameValue),
 }));
 
 // Set default pathname
-mockUsePathname.mockReturnValue(mockPathname);
+mockUsePathname.mockReturnValue(mockPathnameValue);
 
 // Mock API functions
 vi.mock('@client/api/v1/idk/agents', () => ({
@@ -178,6 +178,7 @@ describe('NavigationProvider', () => {
     mockLocalStorage.getItem.mockReturnValue(null);
     delete mockParams.agentName;
     delete mockParams.skillName;
+    mockPathnameValue = '/agents'; // Reset pathname to default
   });
 
   afterEach(() => {
@@ -191,8 +192,8 @@ describe('NavigationProvider', () => {
 
     expect(screen.getByTestId('selected-agent')).toHaveTextContent('None');
     expect(screen.getByTestId('selected-skill')).toHaveTextContent('None');
-    expect(screen.getByTestId('current-view')).toHaveTextContent('skills-list');
-    expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Select Agent');
+    expect(screen.getByTestId('current-view')).toHaveTextContent('agents-list');
+    expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Agents');
   });
 
   it('sets selected agent and navigates', () => {
@@ -225,7 +226,8 @@ describe('NavigationProvider', () => {
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(
       'selectedAgentName',
     );
-    expect(mockPush).toHaveBeenCalledWith('/agents');
+    // setSelectedAgent only navigates to /agents if not already there
+    // Since we start at /agents, it doesn't navigate again
   });
 
   it('navigates to skill dashboard', () => {
@@ -280,8 +282,9 @@ describe('NavigationProvider', () => {
   });
 
   it('generates correct breadcrumbs for different views', async () => {
-    // Test with agent selected
+    // Test with agent selected (skills list view)
     mockParams.agentName = 'Test%20Agent%201';
+    mockPathnameValue = '/agents/Test%20Agent%201';
 
     act(() => {
       renderWithProviders(<TestComponent />);
@@ -342,9 +345,7 @@ describe('NavigationProvider', () => {
 
   it('parses edit-skill view from URL correctly', async () => {
     // Mock the URL pathname to simulate edit route
-    vi.mocked(mockUsePathname).mockReturnValue(
-      '/agents/Test%20Agent%201/Test%20Skill%201/edit',
-    );
+    mockPathnameValue = '/agents/Test%20Agent%201/Test%20Skill%201/edit';
 
     mockParams.agentName = 'Test%20Agent%201';
     mockParams.skillName = 'Test%20Skill%201';
@@ -368,9 +369,7 @@ describe('NavigationProvider', () => {
 
   it('parses skill-dashboard view from URL correctly', async () => {
     // Mock the URL pathname to simulate skill dashboard route
-    vi.mocked(mockUsePathname).mockReturnValue(
-      '/agents/Test%20Agent%201/Test%20Skill%201',
-    );
+    mockPathnameValue = '/agents/Test%20Agent%201/Test%20Skill%201';
 
     mockParams.agentName = 'Test%20Agent%201';
     mockParams.skillName = 'Test%20Skill%201';

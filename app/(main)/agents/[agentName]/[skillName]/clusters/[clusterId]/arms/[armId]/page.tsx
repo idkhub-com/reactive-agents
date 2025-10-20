@@ -1,5 +1,5 @@
-import { ArmDetailView } from '@client/components/agents/skills/arms/arm-detail-view';
+import { AgentsView } from '@client/components/agents/agents-view';
 
 export default function ArmDetailPage() {
-  return <ArmDetailView />;
+  return <AgentsView />;
 }

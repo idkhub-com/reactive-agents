@@ -57,10 +57,8 @@ export function NavigationProvider({
 
   const [navigationState, setNavigationState] = useState<NavigationState>({
     section: 'agents',
-    currentView: 'skills-list',
-    breadcrumbs: [
-      { label: 'Select Agent', path: '/agents', isAgentDropdown: true },
-    ],
+    currentView: 'agents-list',
+    breadcrumbs: [{ label: 'Agents', path: '/agents' }],
   });
 
   const [isLoadingFromStorage, setIsLoadingFromStorage] = useState(true);
@@ -86,8 +84,10 @@ export function NavigationProvider({
     const _clusterId = params.clusterId as string;
 
     // Determine view based on URL structure
-    if (pathSegments.length === 1) return 'skills-list'; // /agents
+    if (pathSegments.length === 1) return 'agents-list'; // /agents
     if (pathSegments.length === 2 && agentName) return 'skills-list'; // /agents/[agentName]
+    if (pathSegments.length === 3 && agentName && pathSegments[2] === 'edit')
+      return 'edit-agent'; // /agents/[agentName]/edit
     if (pathSegments.length === 3 && agentName && skillName)
       return 'skill-dashboard'; // /agents/[agentName]/[skillName]
 
@@ -161,10 +161,13 @@ export function NavigationProvider({
         } catch {
           // no-op
         }
-        router.push('/agents');
+        // Only navigate if not already on /agents
+        if (pathname !== '/agents') {
+          router.push('/agents');
+        }
       }
     },
-    [router],
+    [router, pathname],
   );
 
   const setSelectedSkill = useCallback((skill: Skill | undefined) => {
@@ -242,13 +245,29 @@ export function NavigationProvider({
         currentView,
       } as NavigationState;
 
-      // Update selected agent if agentName in URL
-      if (agentName && agents.length > 0) {
+      // Clear selected agent immediately if on agents-list view
+      if (currentView === 'agents-list') {
+        newState.selectedAgent = undefined;
+        newState.selectedSkill = undefined;
+        newState.agentName = undefined;
+        newState.skillName = undefined;
+        // Also clear from storage to prevent it from being reloaded
+        try {
+          removeSelectedAgentName();
+        } catch {
+          // no-op
+        }
+      } else if (agentName && agents.length > 0) {
+        // Update selected agent if agentName in URL (only if not on agents-list)
         const agent = getAgentByName(agents, agentName);
         if (agent && agent.id !== prev.selectedAgent?.id) {
           newState.selectedAgent = agent;
           newState.agentName = agentName;
         }
+      } else if (!agentName) {
+        // If no agentName in URL and not on agents-list, clear the agent
+        newState.selectedAgent = undefined;
+        newState.agentName = undefined;
       }
 
       // Update selected skill if skillName in URL
@@ -268,15 +287,24 @@ export function NavigationProvider({
       if (armId) newState.armId = armId;
 
       // Build breadcrumbs based on current path
-      const breadcrumbs: BreadcrumbSegment[] = [
-        {
+      const breadcrumbs: BreadcrumbSegment[] = [];
+
+      // For agents-list view, show just "Agents"
+      if (currentView === 'agents-list') {
+        breadcrumbs.push({
+          label: 'Agents',
+          path: '/agents',
+        });
+      } else {
+        // For other views, show agent dropdown
+        breadcrumbs.push({
           label: newState.selectedAgent
             ? `Agent: ${newState.selectedAgent.name}`
             : 'Select Agent',
           path: '/agents',
           isAgentDropdown: true,
-        },
-      ];
+        });
+      }
 
       if (newState.selectedAgent && newState.selectedSkill) {
         breadcrumbs.push({
@@ -407,9 +435,23 @@ export function NavigationProvider({
   // Load selected agent from storage
   const hasLoadedFromStorageRef = useRef(false);
   useEffect(() => {
-    if (hasLoadedFromStorageRef.current) return;
-    if (agents.length === 0) return;
+    if (hasLoadedFromStorageRef.current) {
+      return;
+    }
+    if (agents.length === 0) {
+      return;
+    }
+
+    // Don't load from storage if we're on the agents list page
+    const pathSegments = pathname.split('/').filter(Boolean);
+    if (pathSegments.length === 1 && pathSegments[0] === 'agents') {
+      setIsLoadingFromStorage(false);
+      hasLoadedFromStorageRef.current = true;
+      return;
+    }
+
     const storedAgentName = getSelectedAgentName();
+
     if (storedAgentName) {
       const agent = agents.find(
         (a) => sanitizeName(a.name) === sanitizeName(storedAgentName),
@@ -425,7 +467,7 @@ export function NavigationProvider({
     }
     setIsLoadingFromStorage(false);
     hasLoadedFromStorageRef.current = true;
-  }, [agents]);
+  }, [agents, pathname]);
 
   return (
     <NavigationContext.Provider

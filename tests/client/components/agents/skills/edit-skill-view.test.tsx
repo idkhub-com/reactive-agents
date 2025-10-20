@@ -206,27 +206,22 @@ describe('EditSkillView', () => {
       ).toBeInTheDocument();
     });
 
-    it('displays agent context information', () => {
+    it('displays skill name field as disabled', () => {
       renderEditSkillView();
-      expect(screen.getByText('Editing skill for')).toBeInTheDocument();
-      expect(screen.getByText('Test Agent 1')).toBeInTheDocument();
+      const skillNameField = screen.getByLabelText('Skill Name');
+      expect(skillNameField).toBeInTheDocument();
+      expect(skillNameField).toHaveValue('Test Skill 1');
+      expect(skillNameField).toBeDisabled();
       expect(
-        screen.getByText('First test agent description'),
-      ).toBeInTheDocument();
-    });
-
-    it('displays skill name as read-only', () => {
-      renderEditSkillView();
-      expect(screen.getByText('Skill Name')).toBeInTheDocument();
-      expect(screen.getByText('Test Skill 1')).toBeInTheDocument();
-      expect(
-        screen.getByText('The skill name cannot be changed after creation'),
+        screen.getByText(
+          /The skill name cannot be changed after creation to maintain consistency/,
+        ),
       ).toBeInTheDocument();
     });
 
     it('displays description field with current value', () => {
       renderEditSkillView();
-      const descriptionField = screen.getByLabelText('Description');
+      const descriptionField = screen.getByLabelText('Description (required)');
       expect(descriptionField).toBeInTheDocument();
       expect(descriptionField).toHaveValue('Test skill description');
     });
@@ -287,7 +282,7 @@ describe('EditSkillView', () => {
 
     it('has description field with correct constraints', () => {
       renderEditSkillView();
-      const descriptionField = screen.getByLabelText('Description');
+      const descriptionField = screen.getByLabelText('Description (required)');
 
       // Check that field can accept text input
       expect(descriptionField).toHaveValue('Test skill description');
@@ -307,7 +302,7 @@ describe('EditSkillView', () => {
   describe('Form Interaction', () => {
     it('allows editing description', () => {
       renderEditSkillView();
-      const descriptionField = screen.getByLabelText('Description');
+      const descriptionField = screen.getByLabelText('Description (required)');
 
       fireEvent.change(descriptionField, {
         target: {
@@ -364,7 +359,7 @@ describe('EditSkillView', () => {
     it('displays form with current skill data', () => {
       renderEditSkillView();
 
-      const descriptionField = screen.getByLabelText('Description');
+      const descriptionField = screen.getByLabelText('Description (required)');
       const maxConfigField = screen.getByLabelText('Number of Partitions');
 
       // Check that form is populated with current data
@@ -479,7 +474,7 @@ describe('EditSkillView', () => {
     it('renders form with enabled fields by default', () => {
       renderEditSkillView();
 
-      const descriptionField = screen.getByLabelText('Description');
+      const descriptionField = screen.getByLabelText('Description (required)');
       const maxConfigField = screen.getByLabelText('Number of Partitions');
       const updateButton = screen.getByRole('button', {
         name: /update skill/i,
@@ -498,7 +493,9 @@ describe('EditSkillView', () => {
     it('has proper form labels', () => {
       renderEditSkillView();
 
-      expect(screen.getByLabelText('Description')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Description (required)'),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
       expect(
         screen.getByLabelText('System Prompts per Partition'),

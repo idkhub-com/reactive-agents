@@ -61,7 +61,7 @@ export async function generateEvaluationCreateParams(
         api_key: apiKey,
       },
     ],
-    agent_name: 'idk',
+    agent_name: 'idkhub',
     skill_name: 'create-evaluations',
   };
 

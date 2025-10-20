@@ -35,7 +35,7 @@ import { z } from 'zod';
 
 // Form field constraints
 const CONSTRAINTS = {
-  name: { min: 1, max: 255 },
+  name: { min: 3, max: 100 },
   description: { min: 25, max: 10000 },
   configuration_count: { min: 1, max: 25 },
   system_prompt_count: { min: 1, max: 25 },
@@ -47,21 +47,18 @@ const CreateSkillFormSchema = z
   .object({
     name: z
       .string()
-      .min(CONSTRAINTS.name.min, 'Skill name is required')
-      .max(CONSTRAINTS.name.max, 'Skill name must be less than 255 characters')
-      .refine(
-        (name) => {
-          // Basic validation for potentially dangerous content
-          const sanitized = sanitizeUserInput(name);
-          return sanitized.length > 0 && sanitized === name;
-        },
-        {
-          message: 'Skill name contains invalid characters',
-        },
-      ),
+      .min(CONSTRAINTS.name.min, 'Skill name must be at least 3 characters')
+      .max(CONSTRAINTS.name.max, 'Skill name must be less than 100 characters')
+      .regex(/^[a-z0-9_-]+$/, {
+        message:
+          'Skill name must only contain lowercase letters, numbers, underscores, and hyphens',
+      }),
     description: z
       .string()
-      .min(CONSTRAINTS.description.min)
+      .min(
+        CONSTRAINTS.description.min,
+        'Description must be at least 25 characters',
+      )
       .max(
         CONSTRAINTS.description.max,
         'Description must be less than 10000 characters',
@@ -160,7 +157,7 @@ export function CreateSkillView(): React.ReactElement {
     try {
       const skillParams: SkillCreateParams = {
         agent_id: currentAgent.id,
-        name: sanitizeUserInput(data.name),
+        name: data.name,
         description: sanitizeUserInput(data.description),
         metadata: {},
         optimize: data.optimize,
@@ -269,12 +266,12 @@ export function CreateSkillView(): React.ReactElement {
                         Skill Name
                       </FormLabel>
                       <FormDescription>
-                        Choose a descriptive name that reflects the skill's
-                        specific capability or function.
+                        Choose a descriptive name using only lowercase letters,
+                        numbers, underscores, and hyphens.
                       </FormDescription>
                       <FormControl>
                         <Input
-                          placeholder="e.g., Data Analysis, Email Templates, Code Review"
+                          placeholder="e.g., data-analysis, email_templates, code-review"
                           className="h-11"
                           {...field}
                           disabled={isCreating}
@@ -291,14 +288,14 @@ export function CreateSkillView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description
+                        Description (required)
                       </FormLabel>
                       <FormDescription>
                         Provide additional context about the skill's
                         functionality, use cases, and any special requirements
-                        or limitations. This description is{' '}
-                        <span className="font-bold">crucial</span> so that the
-                        system can create accurate system prompts and
+                        or limitations (minimum 25 characters). This description
+                        is <span className="font-bold">crucial</span> so that
+                        the system can create accurate system prompts and
                         evaluations for the skill.
                       </FormDescription>
                       <FormControl>

@@ -49,7 +49,15 @@ export const SkillQueryParams = z
   .object({
     id: z.uuid().optional(),
     agent_id: z.uuid().optional(),
-    name: z.string().min(1).optional(),
+    name: z
+      .string()
+      .regex(/^[a-z0-9_-]+$/, {
+        message:
+          'Name must only contain lowercase letters, numbers, underscores, and hyphens',
+      })
+      .min(3)
+      .max(100)
+      .optional(),
     optimize: z.boolean().optional(),
     limit: z.coerce.number().int().positive().optional(),
     offset: z.coerce.number().int().min(0).optional(),
@@ -61,7 +69,14 @@ export type SkillQueryParams = z.infer<typeof SkillQueryParams>;
 export const SkillCreateParams = z
   .object({
     agent_id: z.uuid(),
-    name: z.string().min(1).max(255),
+    name: z
+      .string()
+      .min(3)
+      .max(100)
+      .regex(/^[a-z0-9_-]+$/, {
+        message:
+          'Name must only contain lowercase letters, numbers, underscores, and hyphens',
+      }),
     description: z.string().min(25).max(10000),
     metadata: SkillMetadata,
     optimize: z.boolean(),

@@ -14,6 +14,8 @@ export interface NavigationState {
   selectedAgent?: Agent;
   selectedSkill?: Skill;
   currentView:
+    | 'agents-list'
+    | 'edit-agent'
     | 'skills-list'
     | 'skill-dashboard'
     | 'edit-skill'

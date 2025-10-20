@@ -624,14 +624,14 @@ describe('CreateSkillView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Skill Name')).toBeInTheDocument();
-      expect(screen.getByText('Description')).toBeInTheDocument();
+      expect(screen.getByText('Description (required)')).toBeInTheDocument();
     });
 
     // Check descriptions
     // No agent selection in current UI
     expect(
       screen.getByText(
-        /Choose a descriptive name that reflects the skill's specific capability/,
+        /Choose a descriptive name using only lowercase letters/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -647,7 +647,7 @@ describe('CreateSkillView', () => {
     await waitFor(() => {
       expect(
         screen.getByPlaceholderText(
-          'e.g., Data Analysis, Email Templates, Code Review',
+          'e.g., data-analysis, email_templates, code-review',
         ),
       ).toBeInTheDocument();
       expect(

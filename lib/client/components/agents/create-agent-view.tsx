@@ -35,22 +35,16 @@ const CreateAgentFormSchema = z
   .object({
     name: z
       .string()
-      .min(1, 'Agent name is required')
+      .min(3, 'Agent name must be at least 3 characters')
       .max(100, 'Agent name must be less than 100 characters')
-      .refine(
-        (name) => {
-          // Basic validation for potentially dangerous content
-          const sanitized = sanitizeUserInput(name);
-          return sanitized.length > 0 && sanitized === name;
-        },
-        {
-          message: 'Agent name contains invalid characters',
-        },
-      ),
+      .regex(/^[a-z0-9_-]+$/, {
+        message:
+          'Agent name must only contain lowercase letters, numbers, underscores, and hyphens',
+      }),
     description: z
       .string()
-      .max(2000, 'Description must be less than 2000 characters')
-      .optional(),
+      .min(25, 'Description must be at least 25 characters')
+      .max(10000, 'Description must be less than 10000 characters'),
   })
   .strict();
 
@@ -72,8 +66,8 @@ export function CreateAgentView(): React.ReactElement {
   const onSubmit = async (data: CreateAgentFormData) => {
     try {
       const agentParams: AgentCreateParams = {
-        name: sanitizeUserInput(data.name),
-        description: sanitizeUserInput(data.description || ''),
+        name: data.name,
+        description: sanitizeUserInput(data.description),
         metadata: {},
       };
 
@@ -131,12 +125,12 @@ export function CreateAgentView(): React.ReactElement {
                         Agent Name
                       </FormLabel>
                       <FormDescription>
-                        Choose a descriptive name that reflects your agent's
-                        role and purpose.
+                        Choose a descriptive name using only lowercase letters,
+                        numbers, underscores, and hyphens.
                       </FormDescription>
                       <FormControl>
                         <Input
-                          placeholder="e.g., Customer Support Bot, Content Writer, Data Analyst"
+                          placeholder="e.g., customer-support-bot, content_writer, data-analyst"
                           className="h-11"
                           {...field}
                           disabled={isCreating}
@@ -153,11 +147,12 @@ export function CreateAgentView(): React.ReactElement {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base font-medium">
-                        Description
+                        Description (required)
                       </FormLabel>
                       <FormDescription>
                         Provide additional context about the agent's purpose,
-                        capabilities, and expected behavior. This description is{' '}
+                        capabilities, and expected behavior (minimum 25
+                        characters). This description is{' '}
                         <span className="font-bold">crucial</span> for
                         generating accurate system prompts and evaluations for
                         each of the agent's skills.
