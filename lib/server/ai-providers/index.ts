@@ -14,6 +14,7 @@ import { deepSeekConfig } from '@server/ai-providers/deepseek';
 import { googleConfig } from '@server/ai-providers/google';
 import { googleVertexAIConfig } from '@server/ai-providers/google-vertex-ai';
 import { groqConfig } from '@server/ai-providers/groq';
+import { ollamaConfig } from '@server/ai-providers/ollama';
 import { openAIConfig } from '@server/ai-providers/openai';
 import { openrouterConfig } from '@server/ai-providers/openrouter';
 import { palmAIConfig } from '@server/ai-providers/palm';
@@ -58,7 +59,7 @@ export const providerConfigs: {
   [AIProvider.NEBIUS]: undefined,
   [AIProvider.NOMIC]: undefined,
   [AIProvider.NOVITA_AI]: undefined,
-  [AIProvider.OLLAMA]: undefined,
+  [AIProvider.OLLAMA]: ollamaConfig,
   [AIProvider.OPENAI]: openAIConfig,
   [AIProvider.OPENROUTER]: openrouterConfig,
   [AIProvider.PALM]: palmAIConfig,

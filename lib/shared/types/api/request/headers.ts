@@ -151,6 +151,9 @@ export const IdkTargetBase = z.object({
   stability_client_user_id: z.string().optional(),
   stability_client_version: z.string().optional(),
   stability_url_to_fetch: z.string().optional(),
+
+  // Ollama specific
+  ollama_url_to_fetch: z.string().optional(),
 });
 
 export type IdkTargetBase = z.infer<typeof IdkTargetBase>;
