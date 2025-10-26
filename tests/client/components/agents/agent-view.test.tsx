@@ -1,5 +1,7 @@
 import { AgentView } from '@client/components/agents/agent-view';
 import { AgentsProvider } from '@client/providers/agents';
+import { NavigationProvider } from '@client/providers/navigation';
+import { SkillsProvider } from '@client/providers/skills';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -9,6 +11,25 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock Next.js navigation
+const mockPush = vi.fn();
+const mockReplace = vi.fn();
+const mockParams = {};
+const mockPathname = '/agents';
+
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: mockPush,
+    replace: mockReplace,
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  })),
+  useParams: vi.fn(() => mockParams),
+  usePathname: vi.fn(() => mockPathname),
+}));
 
 // Mock the agents API
 vi.mock('@client/api/v1/idk/agents', () => {
@@ -128,9 +149,13 @@ describe('AgentView', () => {
   ) =>
     render(
       <QueryClientProvider client={queryClient}>
-        <AgentsProvider>
-          <AgentView agentId={agentId} onCloseAction={onCloseAction} />
-        </AgentsProvider>
+        <NavigationProvider>
+          <AgentsProvider>
+            <SkillsProvider>
+              <AgentView agentId={agentId} onCloseAction={onCloseAction} />
+            </SkillsProvider>
+          </AgentsProvider>
+        </NavigationProvider>
       </QueryClientProvider>,
     );
 
@@ -246,12 +271,10 @@ describe('AgentView', () => {
     const setActiveButton = screen.getByTitle('Set as active agent');
     fireEvent.click(setActiveButton);
 
+    // Verify that router.push was called with the correct URL to set agent as active
     await waitFor(() => {
-      expect(screen.getByText('Active')).toBeInTheDocument();
+      expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
     });
-
-    // Set as active button should no longer be visible
-    expect(screen.queryByTitle('Set as active agent')).not.toBeInTheDocument();
   });
 
   it('enters edit mode when edit button is clicked', async () => {
@@ -479,12 +502,16 @@ describe('AgentView', () => {
     // Switch to different agent by re-rendering with different agentId
     rerender(
       <QueryClientProvider client={queryClient}>
-        <AgentsProvider>
-          <AgentView
-            agentId="550e8400-e29b-41d4-a716-446655440002"
-            onCloseAction={vi.fn()}
-          />
-        </AgentsProvider>
+        <NavigationProvider>
+          <AgentsProvider>
+            <SkillsProvider>
+              <AgentView
+                agentId="550e8400-e29b-41d4-a716-446655440002"
+                onCloseAction={vi.fn()}
+              />
+            </SkillsProvider>
+          </AgentsProvider>
+        </NavigationProvider>
       </QueryClientProvider>,
     );
 

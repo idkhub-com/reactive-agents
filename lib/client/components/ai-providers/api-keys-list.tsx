@@ -202,7 +202,7 @@ export function APIKeysListView(): ReactElement {
               Refresh
             </Button>
             <Button asChild>
-              <Link href="/ai-providers/api-keys/create">
+              <Link href="/ai-providers/create">
                 <PlusIcon className="h-4 w-4 mr-2" />
                 Add API Key
               </Link>
@@ -249,7 +249,7 @@ export function APIKeysListView(): ReactElement {
                   </p>
                   {!searchQuery && (
                     <Button asChild>
-                      <Link href="/ai-providers/api-keys/create">
+                      <Link href="/ai-providers/create">
                         <PlusIcon className="h-4 w-4 mr-2" />
                         Add Your First API Key
                       </Link>
@@ -324,9 +324,7 @@ export function APIKeysListView(): ReactElement {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link
-                                  href={`/ai-providers/api-keys/${apiKey.id}/edit`}
-                                >
+                                <Link href={`/ai-providers/${apiKey.id}/edit`}>
                                   Edit
                                 </Link>
                               </DropdownMenuItem>

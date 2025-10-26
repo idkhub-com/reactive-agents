@@ -28,7 +28,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should accept valid skill creation parameters', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
         optimize: false,
@@ -50,7 +50,7 @@ describe('Skill Data Transforms and Validation', () => {
 
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: customMetadata,
         optimize: false,
@@ -76,7 +76,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should accept minimum length description', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This has exactly 25 chars',
         metadata: {},
         optimize: false,
@@ -90,7 +90,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should prevent users from overriding id field (strict mode)', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
         optimize: false,
@@ -103,7 +103,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should prevent users from overriding created_at field (strict mode)', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
         optimize: false,
@@ -116,7 +116,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should prevent users from overriding updated_at field (strict mode)', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
         optimize: false,
@@ -129,7 +129,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should reject objects with additional properties (strict mode)', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
         optimize: false,
@@ -145,6 +145,123 @@ describe('Skill Data Transforms and Validation', () => {
       };
 
       expect(() => SkillCreateParams.parse(inputData)).toThrow();
+    });
+
+    it('should validate name with lowercase letters, numbers, underscores, and hyphens only', () => {
+      const validNames = [
+        'test-skill',
+        'test_skill',
+        'testskill123',
+        'test-skill_123',
+      ];
+
+      for (const name of validNames) {
+        const inputData = {
+          agent_id: testAgentId,
+          name,
+          description:
+            'This is a test skill description with sufficient length',
+          metadata: {},
+          optimize: false,
+        };
+        const result = SkillCreateParams.parse(inputData);
+        expect(result.name).toBe(name);
+      }
+    });
+
+    it('should reject name with uppercase letters', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'TestSkill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+        optimize: false,
+      };
+
+      expect(() => SkillCreateParams.parse(inputData)).toThrow();
+    });
+
+    it('should reject name with spaces', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'test skill',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+        optimize: false,
+      };
+
+      expect(() => SkillCreateParams.parse(inputData)).toThrow();
+    });
+
+    it('should reject name with special characters', () => {
+      const invalidNames = [
+        'test@skill',
+        'test.skill',
+        'test!skill',
+        'test#skill',
+      ];
+
+      for (const name of invalidNames) {
+        const inputData = {
+          agent_id: testAgentId,
+          name,
+          description:
+            'This is a test skill description with sufficient length',
+          metadata: {},
+          optimize: false,
+        };
+        expect(() => SkillCreateParams.parse(inputData)).toThrow();
+      }
+    });
+
+    it('should reject name shorter than 3 characters', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'ab',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+        optimize: false,
+      };
+
+      expect(() => SkillCreateParams.parse(inputData)).toThrow();
+    });
+
+    it('should accept name with exactly 3 characters', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'abc',
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+        optimize: false,
+      };
+
+      const result = SkillCreateParams.parse(inputData);
+      expect(result.name).toBe('abc');
+    });
+
+    it('should reject name longer than 100 characters', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'a'.repeat(101),
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+        optimize: false,
+      };
+
+      expect(() => SkillCreateParams.parse(inputData)).toThrow();
+    });
+
+    it('should accept name with exactly 100 characters', () => {
+      const inputData = {
+        agent_id: testAgentId,
+        name: 'a'.repeat(100),
+        description: 'This is a test skill description with sufficient length',
+        metadata: {},
+        optimize: false,
+      };
+
+      const result = SkillCreateParams.parse(inputData);
+      expect(result.name).toBe('a'.repeat(100));
     });
 
     it('should reject empty strings for name', () => {
@@ -167,7 +284,7 @@ describe('Skill Data Transforms and Validation', () => {
 
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: fullMetadata,
         optimize: false,
@@ -181,7 +298,7 @@ describe('Skill Data Transforms and Validation', () => {
     it('should accept default values for configuration_count and system_prompt_count', () => {
       const inputData = {
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
         metadata: {},
         optimize: false,
@@ -286,14 +403,46 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result.id).toBe('123e4567-e89b-12d3-a456-426614174000');
     });
 
-    it('should accept name filter', () => {
+    it('should accept name filter with valid format', () => {
       const inputData = {
-        name: 'Test Skill',
+        name: 'test-skill',
       };
 
       const result = SkillQueryParams.parse(inputData);
 
-      expect(result.name).toBe('Test Skill');
+      expect(result.name).toBe('test-skill');
+    });
+
+    it('should reject name with uppercase letters', () => {
+      const invalidParams = {
+        name: 'TestSkill',
+      };
+
+      expect(() => SkillQueryParams.parse(invalidParams)).toThrow();
+    });
+
+    it('should reject name with spaces', () => {
+      const invalidParams = {
+        name: 'test skill',
+      };
+
+      expect(() => SkillQueryParams.parse(invalidParams)).toThrow();
+    });
+
+    it('should reject name shorter than 3 characters', () => {
+      const invalidParams = {
+        name: 'ab',
+      };
+
+      expect(() => SkillQueryParams.parse(invalidParams)).toThrow();
+    });
+
+    it('should reject name longer than 100 characters', () => {
+      const invalidParams = {
+        name: 'a'.repeat(101),
+      };
+
+      expect(() => SkillQueryParams.parse(invalidParams)).toThrow();
     });
 
     it('should accept limit and offset', () => {
@@ -369,7 +518,7 @@ describe('Skill Data Transforms and Validation', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
         optimize: false,
@@ -390,7 +539,7 @@ describe('Skill Data Transforms and Validation', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'A test skill with sufficient description length',
         metadata: {
           last_clustering_at: '2023-01-01T00:00:00.000Z',
@@ -417,7 +566,7 @@ describe('Skill Data Transforms and Validation', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         metadata: {},
         optimize: false,
         configuration_count: 10,
@@ -435,7 +584,7 @@ describe('Skill Data Transforms and Validation', () => {
       const skillData = {
         id: 'invalid-uuid',
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
         optimize: false,
@@ -477,7 +626,7 @@ describe('Skill Data Transforms and Validation', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
         optimize: false,
@@ -496,7 +645,7 @@ describe('Skill Data Transforms and Validation', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
-        name: 'Test Skill',
+        name: 'test-skill',
         description: 'A test skill with sufficient description length',
         metadata: {},
         optimize: false,

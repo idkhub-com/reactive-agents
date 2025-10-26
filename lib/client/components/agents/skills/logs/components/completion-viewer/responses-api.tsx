@@ -1,6 +1,6 @@
 'use client';
 
-import { GenericViewer } from '@client/components/agents/skills/logs/components/log-view/components/generic-viewer';
+import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
 import type {
   ResponsesRequestBody,
   ResponsesResponseBody,

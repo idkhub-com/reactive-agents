@@ -160,26 +160,35 @@ describe('getAgent', () => {
   });
 
   describe('when agent does not exist', () => {
-    it('should return null', async () => {
+    it('should auto-create agent when not found for idkhub', async () => {
+      const newAgent: Agent = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'idkhub',
+        description: 'The idkHub internal agent',
+        metadata: {},
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
+      vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
 
-      const result = await getAgent(mockConnector, 'non-existent-agent');
+      const result = await getAgent(mockConnector, 'idkhub');
 
-      expect(result).toBeNull();
+      expect(result).toEqual(newAgent);
       expect(mockConnector.getAgents).toHaveBeenCalledWith({
-        name: 'non-existent-agent',
+        name: 'idkhub',
       });
-      expect(mockConnector.createAgent).not.toHaveBeenCalled();
+      expect(mockConnector.createAgent).toHaveBeenCalledWith({
+        name: 'idkhub',
+        description: 'The idkHub internal agent',
+        metadata: {},
+      });
     });
 
-    it('should return null for empty agent name', async () => {
-      vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
-
-      const result = await getAgent(mockConnector, '');
-
-      expect(result).toBeNull();
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({ name: '' });
-      expect(mockConnector.createAgent).not.toHaveBeenCalled();
+    it('should reject invalid agent names (too short)', async () => {
+      await expect(getAgent(mockConnector, '')).rejects.toThrow();
+      await expect(getAgent(mockConnector, 'ab')).rejects.toThrow();
     });
   });
 
@@ -195,12 +204,12 @@ describe('getAgent', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle special characters in agent name', async () => {
-      const specialName = 'agent-with-special-chars_123@domain.com';
+    it('should handle hyphens and underscores in agent name', async () => {
+      const specialName = 'agent-with-underscores_123';
       const agent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: specialName,
-        description: 'Agent with special characters',
+        description: 'Agent with hyphens and underscores',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -216,15 +225,41 @@ describe('getAgent', () => {
       });
     });
 
-    it('should handle very long agent names', async () => {
-      const longName = 'a'.repeat(1000);
+    it('should reject names with invalid characters', async () => {
+      await expect(
+        getAgent(mockConnector, 'agent@domain.com'),
+      ).rejects.toThrow();
+      await expect(
+        getAgent(mockConnector, 'Agent With Spaces'),
+      ).rejects.toThrow();
+      await expect(getAgent(mockConnector, 'AgentWithCaps')).rejects.toThrow();
+    });
 
-      vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
+    it('should reject agent names that are too long (>100 chars)', async () => {
+      const longName = 'a'.repeat(101);
 
-      const result = await getAgent(mockConnector, longName);
+      await expect(getAgent(mockConnector, longName)).rejects.toThrow();
+    });
 
-      expect(result).toBeNull();
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({ name: longName });
+    it('should accept maximum length agent names (100 chars)', async () => {
+      const maxLengthName = 'a'.repeat(100);
+      const agent: Agent = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        name: maxLengthName,
+        description: 'Agent with max length name',
+        metadata: {},
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+
+      vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
+
+      const result = await getAgent(mockConnector, maxLengthName);
+
+      expect(result).toEqual(agent);
+      expect(mockConnector.getAgents).toHaveBeenCalledWith({
+        name: maxLengthName,
+      });
     });
   });
 

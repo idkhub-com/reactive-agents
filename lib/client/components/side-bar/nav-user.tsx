@@ -35,7 +35,7 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const router = useRouter();
   async function signOut(): Promise<void> {
-    const response = await fetch(`${API_URL}/v1/auth/logout`, {
+    const response = await fetch(`${API_URL}/v1/idk/auth/logout`, {
       credentials: 'include',
       method: 'POST',
     });

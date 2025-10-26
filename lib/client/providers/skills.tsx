@@ -7,6 +7,8 @@ import {
   updateSkill,
 } from '@client/api/v1/idk/skills';
 import { useToast } from '@client/hooks/use-toast';
+import { useAgents } from '@client/providers/agents';
+import { useNavigation } from '@client/providers/navigation';
 import type {
   Skill,
   SkillCreateParams,
@@ -16,10 +18,17 @@ import type {
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import type React from 'react';
-import { createContext, useCallback, useContext, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 
 // Query keys for React Query caching
 export const skillQueryKeys = {
@@ -34,6 +43,7 @@ export const skillQueryKeys = {
 interface SkillsContextType {
   // Query state
   skills: Skill[];
+  selectedSkill?: Skill;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -41,10 +51,6 @@ interface SkillsContextType {
   // Query parameters
   queryParams: SkillQueryParams;
   setQueryParams: (params: SkillQueryParams) => void;
-
-  // Selected skill state
-  selectedSkill: Skill | null;
-  setSelectedSkill: (skill: Skill | null) => void;
 
   // Skill mutation functions
   createSkill: (params: SkillCreateParams) => Promise<Skill>;
@@ -78,9 +84,10 @@ export const SkillsProvider = ({
 }): React.ReactElement => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { navigationState } = useNavigation();
+  const { selectedAgent } = useAgents();
 
   const [queryParams, setQueryParams] = useState<SkillQueryParams>({});
-  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
 
   // Skills infinite query for pagination
   const {
@@ -111,6 +118,33 @@ export const SkillsProvider = ({
 
   // Flatten pages into single array
   const skills: Skill[] = data?.pages?.flat() ?? [];
+
+  // Fetch individual skill by name when URL has a selected skill
+  const { data: selectedSkillData } = useQuery({
+    queryKey: [
+      'skill',
+      'by-name',
+      navigationState.selectedSkillName,
+      selectedAgent?.id,
+    ],
+    queryFn: async () => {
+      if (!selectedAgent?.id) return undefined;
+      const results = await getSkills({
+        name: navigationState.selectedSkillName,
+        agent_id: selectedAgent.id,
+        limit: 1,
+      });
+      return results.length > 0 ? results[0] : undefined;
+    },
+    enabled: !!navigationState.selectedSkillName && !!selectedAgent?.id,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Resolve selectedSkill from navigationState.selectedSkillName
+  const selectedSkill = useMemo(() => {
+    if (!navigationState.selectedSkillName) return undefined;
+    return selectedSkillData;
+  }, [navigationState.selectedSkillName, selectedSkillData]);
 
   // Create skill mutation
   const createSkillMutation = useMutation({
@@ -147,11 +181,6 @@ export const SkillsProvider = ({
       // Invalidate queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: skillQueryKeys.lists() });
 
-      // Update selected skill if it's the one being updated
-      if (selectedSkill?.id === updatedSkill.id) {
-        setSelectedSkill(updatedSkill);
-      }
-
       toast({
         title: 'Skill updated',
         description: `${updatedSkill.name} has been updated successfully.`,
@@ -170,12 +199,6 @@ export const SkillsProvider = ({
   // Delete skill mutation
   const deleteSkillMutation = useMutation({
     mutationFn: (skillId: string) => deleteSkill(skillId),
-    onMutate: (skillId) => {
-      // Clear selected skill if it's the one being deleted
-      if (selectedSkill?.id === skillId) {
-        setSelectedSkill(null);
-      }
-    },
     onSuccess: () => {
       // Invalidate lists to ensure consistency
       queryClient.invalidateQueries({ queryKey: skillQueryKeys.lists() });
@@ -232,6 +255,7 @@ export const SkillsProvider = ({
   const contextValue: SkillsContextType = {
     // Query state
     skills,
+    selectedSkill,
     isLoading,
     error,
     refetch,
@@ -239,10 +263,6 @@ export const SkillsProvider = ({
     // Query parameters
     queryParams,
     setQueryParams,
-
-    // Selected skill state
-    selectedSkill,
-    setSelectedSkill,
 
     // Skill mutation functions
     createSkill: createSkillHandler,

@@ -1,6 +1,7 @@
 'use client';
 
 import { getSkillArms } from '@client/api/v1/idk/skills';
+import { useNavigation } from '@client/providers/navigation';
 import type { SkillOptimizationArm } from '@shared/types/data/skill-optimization-arm';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
@@ -23,6 +24,7 @@ export const armQueryKeys = {
 interface ArmsContextType {
   // Query state
   arms: SkillOptimizationArm[];
+  selectedArm?: SkillOptimizationArm;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -46,6 +48,7 @@ export const SkillOptimizationArmsProvider = ({
   children: React.ReactNode;
 }): React.ReactElement => {
   const queryClient = useQueryClient();
+  const { navigationState } = useNavigation();
 
   const [skillId, setSkillId] = useState<string | null>(null);
   const [clusterId, setClusterId] = useState<string | null>(null);
@@ -68,6 +71,12 @@ export const SkillOptimizationArmsProvider = ({
     return allArms.filter((arm) => arm.cluster_id === clusterId);
   }, [allArms, clusterId]);
 
+  // Resolve selectedArm from navigationState.selectedArmName
+  const selectedArm = useMemo(() => {
+    if (!navigationState.selectedArmName) return undefined;
+    return arms.find((arm) => arm.name === navigationState.selectedArmName);
+  }, [navigationState.selectedArmName, arms]);
+
   // Helper functions
   const getArmById = useCallback(
     (id: string): SkillOptimizationArm | undefined => {
@@ -85,6 +94,7 @@ export const SkillOptimizationArmsProvider = ({
   const contextValue: ArmsContextType = {
     // Query state
     arms,
+    selectedArm,
     isLoading,
     error,
     refetch,

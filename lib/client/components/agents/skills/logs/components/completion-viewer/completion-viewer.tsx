@@ -1,8 +1,8 @@
 'use client';
 
-import { ChatCompletionsAPIViewer } from '@client/components/agents/skills/logs/components/log-view/components/completion-viewer/chat-completions-api';
-import { CompletionsAPIViewer } from '@client/components/agents/skills/logs/components/log-view/components/completion-viewer/completions-api';
-import { ImageGenerationViewer } from '@client/components/agents/skills/logs/components/log-view/components/completion-viewer/images-api';
+import { ChatCompletionsAPIViewer } from '@client/components/agents/skills/logs/components/completion-viewer/chat-completions-api';
+import { CompletionsAPIViewer } from '@client/components/agents/skills/logs/components/completion-viewer/completions-api';
+import { ImageGenerationViewer } from '@client/components/agents/skills/logs/components/completion-viewer/images-api';
 import type { IdkRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
 import { ResponsesAPIViewer } from './responses-api';

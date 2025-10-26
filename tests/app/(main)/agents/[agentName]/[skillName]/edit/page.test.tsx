@@ -12,28 +12,8 @@ vi.mock('@client/components/agents/skills/edit-skill-view', () => ({
 const mockNavigationState = {
   section: 'agents' as const,
   currentView: 'edit-skill' as const,
-  selectedAgent: {
-    id: 'agent-1',
-    name: 'Test Agent 1',
-    description: 'Test agent description',
-    metadata: {},
-    created_at: '2023-01-01T10:30:00Z',
-    updated_at: '2023-01-01T10:30:00Z',
-  },
-  selectedSkill: {
-    id: 'skill-1',
-    agent_id: 'agent-1',
-    name: 'Test Skill 1',
-    description: 'Test skill description',
-    metadata: {},
-    optimize: false,
-    configuration_count: 3,
-    system_prompt_count: 0,
-    created_at: '2023-01-01T10:30:00Z',
-    updated_at: '2023-01-01T10:30:00Z',
-    clustering_interval: 0,
-    reflection_min_requests_per_arm: 0,
-  },
+  selectedAgentName: 'Test Agent 1',
+  selectedSkillName: 'Test Skill 1',
   breadcrumbs: [],
 };
 
@@ -96,8 +76,6 @@ describe('EditSkillPage', () => {
         prefetch: vi.fn().mockResolvedValue(undefined),
       },
       setSection: vi.fn(),
-      setSelectedAgent: vi.fn(),
-      setSelectedSkill: vi.fn(),
       navigateToSkillDashboard: vi.fn(),
       navigateToLogs: vi.fn(),
       navigateToLogDetail: vi.fn(),
@@ -116,7 +94,6 @@ describe('EditSkillPage', () => {
       navigateToArmDetail: vi.fn(),
       navigateBack: vi.fn(),
       updateBreadcrumbs: vi.fn(),
-      skills: [],
     });
   });
 
@@ -135,8 +112,6 @@ describe('EditSkillPage', () => {
         prefetch: vi.fn().mockResolvedValue(undefined),
       },
       setSection: vi.fn(),
-      setSelectedAgent: vi.fn(),
-      setSelectedSkill: vi.fn(),
       navigateToSkillDashboard: vi.fn(),
       navigateToLogs: vi.fn(),
       navigateToLogDetail: vi.fn(),
@@ -155,7 +130,6 @@ describe('EditSkillPage', () => {
       navigateToArmDetail: vi.fn(),
       navigateBack: vi.fn(),
       updateBreadcrumbs: vi.fn(),
-      skills: [],
     });
 
     return render(
@@ -197,8 +171,6 @@ describe('EditSkillPage', () => {
           prefetch: vi.fn().mockResolvedValue(undefined),
         },
         setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
         navigateToSkillDashboard: vi.fn(),
         navigateToLogs: vi.fn(),
         navigateToLogDetail: vi.fn(),
@@ -217,7 +189,6 @@ describe('EditSkillPage', () => {
         navigateToArmDetail: vi.fn(),
         navigateBack: vi.fn(),
         updateBreadcrumbs: vi.fn(),
-        skills: [],
       });
 
       renderEditSkillPage();
@@ -229,28 +200,28 @@ describe('EditSkillPage', () => {
   });
 
   describe('Error States', () => {
-    it('shows error message when agent is not found', () => {
-      renderEditSkillPage({ selectedAgent: undefined });
+    it('renders edit skill view when agent is not found', () => {
+      renderEditSkillPage({ selectedAgentName: undefined });
 
-      expect(screen.getByText('Agent or skill not found')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-skill-view')).not.toBeInTheDocument();
+      // The component still renders, error handling is done within EditSkillView
+      expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
     });
 
-    it('shows error message when skill is not found', () => {
-      renderEditSkillPage({ selectedSkill: undefined });
+    it('renders edit skill view when skill is not found', () => {
+      renderEditSkillPage({ selectedSkillName: undefined });
 
-      expect(screen.getByText('Agent or skill not found')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-skill-view')).not.toBeInTheDocument();
+      // The component still renders, error handling is done within EditSkillView
+      expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
     });
 
-    it('shows error message when both agent and skill are not found', () => {
+    it('renders edit skill view when both agent and skill are not found', () => {
       renderEditSkillPage({
-        selectedAgent: undefined,
-        selectedSkill: undefined,
+        selectedAgentName: undefined,
+        selectedSkillName: undefined,
       });
 
-      expect(screen.getByText('Agent or skill not found')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-skill-view')).not.toBeInTheDocument();
+      // The component still renders, error handling is done within EditSkillView
+      expect(screen.getByTestId('edit-skill-view')).toBeInTheDocument();
     });
   });
 
@@ -259,7 +230,7 @@ describe('EditSkillPage', () => {
       vi.mocked(useNavigation).mockReturnValue({
         navigationState: {
           ...mockNavigationState,
-          selectedAgent: undefined,
+          selectedAgentName: undefined,
         },
         isLoadingFromStorage: false,
         router: {
@@ -271,8 +242,6 @@ describe('EditSkillPage', () => {
           prefetch: vi.fn().mockResolvedValue(undefined),
         },
         setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
         navigateToSkillDashboard: vi.fn(),
         navigateToLogs: vi.fn(),
         navigateToLogDetail: vi.fn(),
@@ -291,7 +260,6 @@ describe('EditSkillPage', () => {
         navigateToArmDetail: vi.fn(),
         navigateBack: vi.fn(),
         updateBreadcrumbs: vi.fn(),
-        skills: [],
       });
 
       renderEditSkillPage();
@@ -304,7 +272,7 @@ describe('EditSkillPage', () => {
       vi.mocked(useNavigation).mockReturnValue({
         navigationState: {
           ...mockNavigationState,
-          selectedSkill: undefined,
+          selectedSkillName: undefined,
         },
         isLoadingFromStorage: false,
         router: {
@@ -316,8 +284,6 @@ describe('EditSkillPage', () => {
           prefetch: vi.fn().mockResolvedValue(undefined),
         },
         setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
         navigateToSkillDashboard: vi.fn(),
         navigateToLogs: vi.fn(),
         navigateToLogDetail: vi.fn(),
@@ -336,7 +302,6 @@ describe('EditSkillPage', () => {
         navigateToArmDetail: vi.fn(),
         navigateBack: vi.fn(),
         updateBreadcrumbs: vi.fn(),
-        skills: [],
       });
 
       renderEditSkillPage();
@@ -349,7 +314,7 @@ describe('EditSkillPage', () => {
       vi.mocked(useNavigation).mockReturnValue({
         navigationState: {
           ...mockNavigationState,
-          selectedAgent: undefined,
+          selectedAgentName: undefined,
         },
         isLoadingFromStorage: true,
         router: {
@@ -361,8 +326,6 @@ describe('EditSkillPage', () => {
           prefetch: vi.fn().mockResolvedValue(undefined),
         },
         setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
         navigateToSkillDashboard: vi.fn(),
         navigateToLogs: vi.fn(),
         navigateToLogDetail: vi.fn(),
@@ -381,7 +344,6 @@ describe('EditSkillPage', () => {
         navigateToArmDetail: vi.fn(),
         navigateBack: vi.fn(),
         updateBreadcrumbs: vi.fn(),
-        skills: [],
       });
 
       renderEditSkillPage();

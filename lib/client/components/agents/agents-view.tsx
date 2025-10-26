@@ -5,6 +5,8 @@ import { useNavigation } from '@client/providers/navigation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';
+import { AgentsListView } from './agents-list-view';
+import { EditAgentView } from './edit-agent-view';
 import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
 import { ArmDetailView } from './skills/arms/arm-detail-view';
 import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
@@ -35,6 +37,18 @@ export function AgentsView(): ReactElement {
 
   const renderContent = () => {
     switch (navigationState.currentView) {
+      case 'agents-list':
+        return (
+          <AgentErrorBoundary sectionName="Agents List">
+            <AgentsListView />
+          </AgentErrorBoundary>
+        );
+      case 'edit-agent':
+        return (
+          <AgentErrorBoundary sectionName="Edit Agent">
+            <EditAgentView />
+          </AgentErrorBoundary>
+        );
       case 'skills-list':
         return (
           <AgentErrorBoundary sectionName="Skills List">
@@ -73,13 +87,13 @@ export function AgentsView(): ReactElement {
         );
       case 'clusters':
         return (
-          <AgentErrorBoundary sectionName="Clusters">
+          <AgentErrorBoundary sectionName="Partitions">
             <ClustersView />
           </AgentErrorBoundary>
         );
       case 'cluster-arms':
         return (
-          <AgentErrorBoundary sectionName="Cluster Arms">
+          <AgentErrorBoundary sectionName="Partition Arms">
             <ClusterArmsView />
           </AgentErrorBoundary>
         );

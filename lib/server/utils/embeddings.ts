@@ -227,8 +227,8 @@ export async function generateEmbeddingForRequest(
           api_key: apiKey,
         },
       ],
-      agent_name: 'IdkHub Embeddings Agent',
-      skill_name: 'embeddings',
+      agent_name: 'idkhub',
+      skill_name: 'embedding',
     };
 
     const response = await client

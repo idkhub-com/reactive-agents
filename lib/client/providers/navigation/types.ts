@@ -1,4 +1,3 @@
-import type { Agent, Skill } from '@shared/types/data';
 import type { useRouter } from 'next/navigation';
 
 export interface BreadcrumbSegment {
@@ -7,13 +6,19 @@ export interface BreadcrumbSegment {
   onClick?: () => void;
   isAgentDropdown?: boolean;
   isSkillDropdown?: boolean;
+  isClusterDropdown?: boolean;
+  isArmDropdown?: boolean;
 }
 
 export interface NavigationState {
   section: 'agents' | 'documentation' | 'settings';
-  selectedAgent?: Agent;
-  selectedSkill?: Skill;
+  selectedAgentName?: string;
+  selectedSkillName?: string;
+  selectedClusterName?: string;
+  selectedArmName?: string;
   currentView:
+    | 'agents-list'
+    | 'edit-agent'
     | 'skills-list'
     | 'skill-dashboard'
     | 'edit-skill'
@@ -32,13 +37,9 @@ export interface NavigationState {
     | 'log-detail'
     | 'evaluation-detail'
     | 'dataset-detail';
-  agentName?: string;
-  skillName?: string;
   logId?: string;
   evalId?: string;
   datasetId?: string;
-  clusterId?: string;
-  armId?: string;
   breadcrumbs: BreadcrumbSegment[];
 }
 
@@ -46,10 +47,7 @@ export interface NavigationContextType {
   navigationState: NavigationState;
   isLoadingFromStorage: boolean;
   router: ReturnType<typeof useRouter>;
-  skills: Skill[];
   setSection: (section: NavigationState['section']) => void;
-  setSelectedAgent: (agent: Agent | undefined) => void;
-  setSelectedSkill: (skill: Skill | undefined) => void;
   navigateToSkillDashboard: (agentName: string, skillName: string) => void;
   navigateToLogs: (agentName: string, skillName: string) => void;
   navigateToLogDetail: (
@@ -79,13 +77,13 @@ export interface NavigationContextType {
   navigateToClusterArms: (
     agentName: string,
     skillName: string,
-    clusterId: string,
+    clusterName: string,
   ) => void;
   navigateToArmDetail: (
     agentName: string,
     skillName: string,
-    clusterId: string,
-    armId: string,
+    clusterName: string,
+    armName: string,
   ) => void;
   navigateBack: (targetSegmentIndex: number) => void;
   updateBreadcrumbs: (segments: BreadcrumbSegment[]) => void;

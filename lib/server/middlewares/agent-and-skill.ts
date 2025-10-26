@@ -26,6 +26,7 @@ export const agentAndSkillMiddleware = createMiddleware(
         const skill = await getSkill(
           c.get('user_data_storage_connector'),
           agent.id,
+          agent.name,
           idkConfig.skill_name,
         );
         if (!skill) {

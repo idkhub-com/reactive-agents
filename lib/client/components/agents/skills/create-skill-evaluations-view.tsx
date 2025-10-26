@@ -12,8 +12,9 @@ import {
 import { Checkbox } from '@client/components/ui/checkbox';
 import { Label } from '@client/components/ui/label';
 import { PageHeader } from '@client/components/ui/page-header';
-import { useNavigation } from '@client/providers/navigation';
+import { useAgents } from '@client/providers/agents';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
+import { useSkills } from '@client/providers/skills';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -56,7 +57,8 @@ const EVALUATION_METHODS = [
 ];
 
 export function CreateSkillEvaluationsView(): ReactElement {
-  const { navigationState } = useNavigation();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
   const { createEvaluation, isCreating } = useSkillOptimizationEvaluations();
   const router = useRouter();
   const [selectedMethods, setSelectedMethods] = useState<
@@ -73,17 +75,17 @@ export function CreateSkillEvaluationsView(): ReactElement {
   };
 
   const handleSubmit = async () => {
-    if (!navigationState.selectedSkill || selectedMethods.length === 0) {
+    if (!selectedSkill || selectedMethods.length === 0) {
       return;
     }
 
     try {
-      await createEvaluation(navigationState.selectedSkill.id, selectedMethods);
+      await createEvaluation(selectedSkill.id, selectedMethods);
 
       // Navigate to skill dashboard
-      if (navigationState.selectedAgent && navigationState.selectedSkill) {
+      if (selectedAgent && selectedSkill) {
         router.push(
-          `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/${encodeURIComponent(navigationState.selectedSkill.name)}`,
+          `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}`,
         );
       }
     } catch (error) {
@@ -93,14 +95,14 @@ export function CreateSkillEvaluationsView(): ReactElement {
 
   const handleSkip = () => {
     // Navigate to skill dashboard without creating evaluations
-    if (navigationState.selectedAgent && navigationState.selectedSkill) {
+    if (selectedAgent && selectedSkill) {
       router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/${encodeURIComponent(navigationState.selectedSkill.name)}`,
+        `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}`,
       );
     }
   };
 
-  if (!navigationState.selectedAgent || !navigationState.selectedSkill) {
+  if (!selectedAgent || !selectedSkill) {
     return (
       <>
         <PageHeader
@@ -123,7 +125,7 @@ export function CreateSkillEvaluationsView(): ReactElement {
     <>
       <PageHeader
         title="Add Evaluations"
-        description={`Select evaluation methods for ${navigationState.selectedSkill.name}`}
+        description={`Select evaluation methods for ${selectedSkill.name}`}
         onBack={handleSkip}
       />
       <div className="container mx-auto py-6 max-w-3xl">

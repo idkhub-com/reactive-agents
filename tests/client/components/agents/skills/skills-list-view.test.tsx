@@ -1,5 +1,7 @@
 import { SkillsListView } from '@client/components/agents/skills/skills-list-view';
+import { AgentsProvider } from '@client/providers/agents';
 import { NavigationProvider } from '@client/providers/navigation';
+import { SkillsProvider } from '@client/providers/skills';
 import type { Agent, Skill } from '@shared/types/data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -27,9 +29,14 @@ vi.mock('@client/api/v1/idk/skills', () => ({
   getSkills: vi.fn(),
 }));
 
-vi.mock('@client/providers/skills', () => ({
-  useSkills: vi.fn(),
-}));
+vi.mock('@client/providers/skills', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@client/providers/skills')>();
+  return {
+    ...actual,
+    useSkills: vi.fn(),
+  };
+});
 
 vi.mock('@client/providers/logs', () => ({
   useLogs: vi.fn(),
@@ -130,24 +137,19 @@ const createLogsCtx = (
 ): ReturnType<typeof useLogs> =>
   ({
     logs: [],
+    selectedLog: undefined,
     isLoading: false,
     error: null,
     refetch: vi.fn(),
-    queryParams: {},
-    setQueryParams: vi.fn(),
-    refreshLogs: vi.fn(),
-    selectedLog: null,
-    setSelectedLog: vi.fn(),
-    logsViewOpen: false,
-    setLogsViewOpen: vi.fn(),
-    modifiedValue: '',
-    setModifiedValue: vi.fn(),
-    saveModifiedValue: vi.fn(),
+    agentId: null,
+    setAgentId: vi.fn(),
+    skillId: null,
+    setSkillId: vi.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
     fetchNextPage: vi.fn(),
     getLogById: vi.fn(),
-    queryLogs: vi.fn(),
+    refreshLogs: vi.fn(),
     ...overrides,
   }) as unknown as ReturnType<typeof useLogs>;
 
@@ -161,7 +163,11 @@ const renderWithProviders = (component: React.ReactElement) => {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <NavigationProvider>{component}</NavigationProvider>
+      <NavigationProvider>
+        <AgentsProvider>
+          <SkillsProvider>{component}</SkillsProvider>
+        </AgentsProvider>
+      </NavigationProvider>
     </QueryClientProvider>,
   );
 };
@@ -239,6 +245,47 @@ describe('SkillsListView', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/create skill/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows edit agent button', async () => {
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /edit agent/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to edit agent page when edit agent button is clicked', async () => {
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      const editAgentButton = screen.getByRole('button', {
+        name: /edit agent/i,
+      });
+      expect(editAgentButton).toBeInTheDocument();
+
+      // Click the button
+      editAgentButton.click();
+    });
+
+    // Check that push was called with correct path
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent/edit');
+    });
+  });
+
+  it('does not show edit agent button when no agent is selected', async () => {
+    mockParams = { agentName: undefined };
+
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: /edit agent/i }),
+      ).not.toBeInTheDocument();
     });
   });
 });

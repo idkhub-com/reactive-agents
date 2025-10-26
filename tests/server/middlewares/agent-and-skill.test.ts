@@ -121,6 +121,7 @@ describe('agentAndSkillMiddleware', () => {
       expect(skillsUtils.getSkill).toHaveBeenCalledWith(
         mockConnector,
         '123e4567-e89b-12d3-a456-426614174000',
+        'test-agent',
         'test-skill',
       );
       expect(mockContext.set).toHaveBeenCalledWith('agent', mockAgent);
@@ -197,6 +198,7 @@ describe('agentAndSkillMiddleware', () => {
         expect(skillsUtils.getSkill).toHaveBeenCalledWith(
           mockConnector,
           '123e4567-e89b-12d3-a456-426614174000',
+          'test-agent',
           'test-skill',
         );
         expect(mockContext.set).toHaveBeenCalledWith('agent', mockAgent);
@@ -309,6 +311,7 @@ describe('agentAndSkillMiddleware', () => {
       expect(skillsUtils.getSkill).toHaveBeenCalledWith(
         mockConnector,
         'custom-agent-uuid-123',
+        'custom-agent-123',
         'custom-skill-456',
       );
     });

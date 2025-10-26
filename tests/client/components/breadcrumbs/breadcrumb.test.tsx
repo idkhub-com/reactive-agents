@@ -1,6 +1,7 @@
 import { BreadcrumbComponent } from '@client/components/breadcrumb/breadcrumb';
 import { AgentsProvider } from '@client/providers/agents';
 import { NavigationProvider } from '@client/providers/navigation';
+import { SkillsProvider } from '@client/providers/skills';
 import type { Agent } from '@shared/types/data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
@@ -135,7 +136,9 @@ const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <NavigationProvider>
-        <AgentsProvider>{component}</AgentsProvider>
+        <AgentsProvider>
+          <SkillsProvider>{component}</SkillsProvider>
+        </AgentsProvider>
       </NavigationProvider>
     </QueryClientProvider>,
   );
@@ -192,11 +195,18 @@ describe('BreadcrumbComponent', () => {
     });
     vi.mocked(getAgents).mockReturnValue(pendingPromise as Promise<never>);
 
+    // Set pathname to a nested route where agent dropdown is shown
+    mockPathname = '/agents/Test%20Agent%201/Test%20Skill%201';
+    mockParams = {
+      agentName: 'Test%20Agent%201',
+      skillName: 'Test%20Skill%201',
+    };
+
     await act(() => {
       renderWithProviders(<BreadcrumbComponent />);
     });
 
-    // Shows loading placeholder
+    // Shows loading placeholder in the agent dropdown breadcrumb
     expect(screen.getByText('Loading...')).toBeInTheDocument();
 
     // Resolve the promise to cleanup

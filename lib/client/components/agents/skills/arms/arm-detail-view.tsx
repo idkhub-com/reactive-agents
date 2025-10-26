@@ -12,19 +12,22 @@ import {
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useNavigation } from '@client/providers/navigation';
+import { useAgents } from '@client/providers/agents';
 import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
+import { useSkills } from '@client/providers/skills';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
 export function ArmDetailView(): ReactElement {
-  const { navigationState } = useNavigation();
-  const { selectedSkill, selectedAgent, armId, clusterId } = navigationState;
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
   const goBack = useSmartBack();
 
-  const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
+  const { selectedArm, isLoading, error, refetch, setSkillId, setClusterId } =
     useSkillOptimizationArms();
+
+  const clusterId = selectedArm?.cluster_id;
 
   // Set skill ID and cluster ID when they change
   useEffect(() => {
@@ -43,20 +46,18 @@ export function ArmDetailView(): ReactElement {
     setClusterId(clusterId);
   }, [clusterId, setClusterId]);
 
-  // Find the current arm
-  const arm = arms.find((a) => a.id === armId);
-
-  // Early return if no skill or agent or armId selected
-  if (!selectedSkill || !selectedAgent || !armId) {
+  // Early return if no skill or agent or arm selected
+  if (!selectedSkill || !selectedAgent || !selectedArm) {
     return (
       <>
         <PageHeader
-          title="Arm Details"
-          description="No arm selected. Please select an arm to view its details."
+          title="Configuration Details"
+          description="No configuration selected. Please select a configuration to view its details."
         />
         <div className="p-6">
           <div className="text-center text-muted-foreground">
-            No arm selected. Please select an arm to view its details.
+            No configuration selected. Please select a configuration to view its
+            details.
           </div>
         </div>
       </>
@@ -67,8 +68,8 @@ export function ArmDetailView(): ReactElement {
     return (
       <>
         <PageHeader
-          title="Arm Details"
-          description="Loading arm details..."
+          title="Configuration Details"
+          description="Loading configuration details..."
           showBackButton={true}
           onBack={goBack}
         />
@@ -92,8 +93,8 @@ export function ArmDetailView(): ReactElement {
     return (
       <>
         <PageHeader
-          title="Arm Details"
-          description="Failed to load arm details"
+          title="Configuration Details"
+          description="Failed to load configuration details"
           showBackButton={true}
           onBack={goBack}
         />
@@ -101,7 +102,7 @@ export function ArmDetailView(): ReactElement {
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-destructive mb-4">
-                Failed to load arm details: {error.message}
+                Failed to load configuration details: {error.message}
               </p>
               <Button variant="outline" onClick={() => refetch()}>
                 <RefreshCwIcon className="h-4 w-4 mr-2" />
@@ -114,12 +115,12 @@ export function ArmDetailView(): ReactElement {
     );
   }
 
-  if (!arm) {
+  if (!selectedArm) {
     return (
       <>
         <PageHeader
-          title="Arm Details"
-          description="Arm not found"
+          title="Configuration Details"
+          description="Configuration not found"
           showBackButton={true}
           onBack={goBack}
         />
@@ -127,9 +128,11 @@ export function ArmDetailView(): ReactElement {
           <Card>
             <CardContent className="pt-6 text-center">
               <BoxIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Arm not found</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Configuration not found
+              </h3>
               <p className="text-muted-foreground">
-                The requested arm could not be found.
+                The requested configuration could not be found.
               </p>
             </CardContent>
           </Card>
@@ -141,8 +144,8 @@ export function ArmDetailView(): ReactElement {
   return (
     <>
       <PageHeader
-        title="Arm Details"
-        description={`ID: ${arm.id.slice(0, 8)}...`}
+        title={selectedArm.name}
+        description={`ID: ${selectedArm.id.slice(0, 8)}...`}
         showBackButton={true}
         onBack={goBack}
         actions={
@@ -164,22 +167,30 @@ export function ArmDetailView(): ReactElement {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <div className="text-sm font-medium text-muted-foreground">
-                  Arm ID
+                  Name
                 </div>
-                <div className="font-mono text-sm">{arm.id}</div>
+                <div className="font-mono text-sm">{selectedArm.name}</div>
               </div>
               <div>
                 <div className="text-sm font-medium text-muted-foreground">
-                  Cluster ID
+                  Configuration ID
                 </div>
-                <div className="font-mono text-sm">{arm.cluster_id}</div>
+                <div className="font-mono text-sm">{selectedArm.id}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  Partition ID
+                </div>
+                <div className="font-mono text-sm">
+                  {selectedArm.cluster_id}
+                </div>
               </div>
               <div>
                 <div className="text-sm font-medium text-muted-foreground">
                   Created
                 </div>
                 <div className="text-sm">
-                  {new Date(arm.created_at).toLocaleString()}
+                  {new Date(selectedArm.created_at).toLocaleString()}
                 </div>
               </div>
               <div>
@@ -187,7 +198,7 @@ export function ArmDetailView(): ReactElement {
                   Updated
                 </div>
                 <div className="text-sm">
-                  {new Date(arm.updated_at).toLocaleString()}
+                  {new Date(selectedArm.updated_at).toLocaleString()}
                 </div>
               </div>
             </div>
@@ -199,7 +210,7 @@ export function ArmDetailView(): ReactElement {
           <CardHeader>
             <CardTitle>Performance Statistics</CardTitle>
             <CardDescription>
-              Multi-armed bandit statistics for this arm
+              Multi-armed bandit statistics for this configuration
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -209,7 +220,7 @@ export function ArmDetailView(): ReactElement {
                   Pulls (n)
                 </div>
                 <Badge variant="secondary" className="text-lg">
-                  {arm.stats.n}
+                  {selectedArm.stats.n}
                 </Badge>
               </div>
               <div>
@@ -217,7 +228,7 @@ export function ArmDetailView(): ReactElement {
                   Mean Reward
                 </div>
                 <Badge variant="outline" className="text-lg">
-                  {arm.stats.mean.toFixed(4)}
+                  {selectedArm.stats.mean.toFixed(4)}
                 </Badge>
               </div>
               <div>
@@ -225,7 +236,7 @@ export function ArmDetailView(): ReactElement {
                   N² (Variance)
                 </div>
                 <Badge variant="outline" className="text-lg">
-                  {arm.stats.n2.toFixed(4)}
+                  {selectedArm.stats.n2.toFixed(4)}
                 </Badge>
               </div>
               <div>
@@ -233,7 +244,7 @@ export function ArmDetailView(): ReactElement {
                   Total Reward
                 </div>
                 <Badge variant="outline" className="text-lg">
-                  {arm.stats.total_reward.toFixed(4)}
+                  {selectedArm.stats.total_reward.toFixed(4)}
                 </Badge>
               </div>
             </div>
@@ -245,7 +256,7 @@ export function ArmDetailView(): ReactElement {
           <CardHeader>
             <CardTitle>Model Parameters</CardTitle>
             <CardDescription>
-              Configuration ranges for this optimization arm
+              Parameter ranges for this configuration
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -255,7 +266,7 @@ export function ArmDetailView(): ReactElement {
                   Model ID
                 </div>
                 <div className="font-mono text-sm bg-muted p-2 rounded">
-                  {arm.params.model_id}
+                  {selectedArm.params.model_id}
                 </div>
               </div>
 
@@ -265,13 +276,13 @@ export function ArmDetailView(): ReactElement {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Min:</span>
                     <Badge variant="outline">
-                      {arm.params.temperature_min.toFixed(2)}
+                      {selectedArm.params.temperature_min.toFixed(2)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Max:</span>
                     <Badge variant="outline">
-                      {arm.params.temperature_max.toFixed(2)}
+                      {selectedArm.params.temperature_max.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -281,13 +292,13 @@ export function ArmDetailView(): ReactElement {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Min:</span>
                     <Badge variant="outline">
-                      {arm.params.top_p_min.toFixed(2)}
+                      {selectedArm.params.top_p_min.toFixed(2)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Max:</span>
                     <Badge variant="outline">
-                      {arm.params.top_p_max.toFixed(2)}
+                      {selectedArm.params.top_p_max.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -297,13 +308,13 @@ export function ArmDetailView(): ReactElement {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Min:</span>
                     <Badge variant="outline">
-                      {arm.params.top_k_min.toFixed(2)}
+                      {selectedArm.params.top_k_min.toFixed(2)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Max:</span>
                     <Badge variant="outline">
-                      {arm.params.top_k_max.toFixed(2)}
+                      {selectedArm.params.top_k_max.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -315,13 +326,13 @@ export function ArmDetailView(): ReactElement {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Min:</span>
                     <Badge variant="outline">
-                      {arm.params.frequency_penalty_min.toFixed(2)}
+                      {selectedArm.params.frequency_penalty_min.toFixed(2)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Max:</span>
                     <Badge variant="outline">
-                      {arm.params.frequency_penalty_max.toFixed(2)}
+                      {selectedArm.params.frequency_penalty_max.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -333,13 +344,13 @@ export function ArmDetailView(): ReactElement {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Min:</span>
                     <Badge variant="outline">
-                      {arm.params.presence_penalty_min.toFixed(2)}
+                      {selectedArm.params.presence_penalty_min.toFixed(2)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Max:</span>
                     <Badge variant="outline">
-                      {arm.params.presence_penalty_max.toFixed(2)}
+                      {selectedArm.params.presence_penalty_max.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -349,13 +360,13 @@ export function ArmDetailView(): ReactElement {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Min:</span>
                     <Badge variant="outline">
-                      {arm.params.thinking_min.toFixed(2)}
+                      {selectedArm.params.thinking_min.toFixed(2)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Max:</span>
                     <Badge variant="outline">
-                      {arm.params.thinking_max.toFixed(2)}
+                      {selectedArm.params.thinking_max.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -369,12 +380,12 @@ export function ArmDetailView(): ReactElement {
           <CardHeader>
             <CardTitle>System Prompt</CardTitle>
             <CardDescription>
-              The system prompt template for this arm
+              The system prompt template for this configuration
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="bg-muted p-4 rounded font-mono text-sm whitespace-pre-wrap break-words">
-              {arm.params.system_prompt}
+              {selectedArm.params.system_prompt}
             </div>
           </CardContent>
         </Card>

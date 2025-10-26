@@ -29,6 +29,7 @@ ChartJS.register(
 
 interface AgentPerformanceChartProps {
   evaluationRuns: SkillOptimizationEvaluationRun[];
+  title?: string;
 }
 
 const METHOD_COLORS: Record<string, string> = {
@@ -45,6 +46,7 @@ const METHOD_COLORS: Record<string, string> = {
 
 export function AgentPerformanceChart({
   evaluationRuns,
+  title = 'Agent Performance Over Time (All Skills)',
 }: AgentPerformanceChartProps) {
   const chartData = useMemo(() => {
     if (evaluationRuns.length === 0) return null;
@@ -172,7 +174,7 @@ export function AgentPerformanceChart({
       },
       title: {
         display: true,
-        text: 'Agent Performance Over Time (All Skills)',
+        text: title,
         font: {
           size: 14,
           weight: 'bold',

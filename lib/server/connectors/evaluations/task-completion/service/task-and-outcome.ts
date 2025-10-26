@@ -64,7 +64,7 @@ export async function extractTaskAndOutcome(
         api_key: apiKey,
       },
     ],
-    agent_name: 'IdkHub',
+    agent_name: 'idkhub',
     skill_name: 'extract-task-and-outcome',
   };
 

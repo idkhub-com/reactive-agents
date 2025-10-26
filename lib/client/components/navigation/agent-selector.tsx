@@ -8,12 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@client/components/ui/select';
+import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 
 export function AgentSelector(): ReactElement | null {
-  const { navigationState, setSelectedAgent } = useNavigation();
+  const { navigationState } = useNavigation();
+  const { selectedAgent } = useAgents();
+  const router = useRouter();
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ['agents'],
@@ -22,11 +26,11 @@ export function AgentSelector(): ReactElement | null {
 
   const handleValueChange = (agentId: string) => {
     if (agentId === 'clear') {
-      setSelectedAgent(undefined);
+      router.push('/agents');
     } else {
-      const selectedAgent = agents.find((agent) => agent.id === agentId);
-      if (selectedAgent) {
-        setSelectedAgent(selectedAgent);
+      const agent = agents.find((a) => a.id === agentId);
+      if (agent) {
+        router.push(`/agents/${encodeURIComponent(agent.name)}`);
       }
     }
   };
@@ -39,7 +43,7 @@ export function AgentSelector(): ReactElement | null {
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium text-muted-foreground">Agent:</span>
       <Select
-        value={navigationState.selectedAgent?.id || ''}
+        value={selectedAgent?.id || ''}
         onValueChange={handleValueChange}
         disabled={isLoading}
       >
@@ -49,7 +53,7 @@ export function AgentSelector(): ReactElement | null {
           />
         </SelectTrigger>
         <SelectContent>
-          {navigationState.selectedAgent && (
+          {selectedAgent && (
             <SelectItem value="clear">Clear selection</SelectItem>
           )}
           {agents.map((agent) => (

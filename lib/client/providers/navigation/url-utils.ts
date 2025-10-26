@@ -1,4 +1,6 @@
 import type { Agent, Skill } from '@shared/types/data';
+import type { SkillOptimizationArm } from '@shared/types/data/skill-optimization-arm';
+import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 
 // Remove potentially dangerous HTML tags but preserve spacing/case
 export function sanitizeName(name: string): string {
@@ -29,10 +31,18 @@ export function getSkillByName(
   return skills.find((skill) => sanitizeName(skill.name) === target);
 }
 
-export function encodeAgentName(name: string): string {
-  return encodeURIComponent(name);
+export function getClusterByName(
+  clusters: SkillOptimizationCluster[],
+  name: string,
+): SkillOptimizationCluster | undefined {
+  const target = sanitizeName(safeDecodeURIComponent(name));
+  return clusters.find((cluster) => sanitizeName(cluster.name) === target);
 }
 
-export function encodeSkillName(name: string): string {
-  return encodeURIComponent(name);
+export function getArmByName(
+  arms: SkillOptimizationArm[],
+  name: string,
+): SkillOptimizationArm | undefined {
+  const target = sanitizeName(safeDecodeURIComponent(name));
+  return arms.find((arm) => sanitizeName(arm.name) === target);
 }

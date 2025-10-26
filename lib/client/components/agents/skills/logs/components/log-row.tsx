@@ -1,6 +1,6 @@
 'use client';
 
-import { StatusBadge } from '@client/components/agents/skills/logs/components/log-list-view/components/status-badge';
+import { StatusBadge } from '@client/components/agents/skills/logs/components/status-badge';
 import {
   Avatar,
   AvatarFallback,
@@ -8,7 +8,9 @@ import {
 } from '@client/components/ui/avatar';
 import { TableCell, TableRow } from '@client/components/ui/table';
 import { AVATAR_SEED } from '@client/constants';
-import { useLogs } from '@client/providers/logs';
+import { useAgents } from '@client/providers/agents';
+import { useNavigation } from '@client/providers/navigation';
+import { useSkills } from '@client/providers/skills';
 import { micah } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import { PrettyFunctionName } from '@shared/types/api/request/function-name';
@@ -17,7 +19,9 @@ import { format } from 'date-fns';
 import type { KeyboardEvent, ReactElement } from 'react';
 
 export function LogRow({ log }: { log: Log }): ReactElement {
-  const { setSelectedLog, setLogsViewOpen } = useLogs();
+  const { navigateToLogDetail } = useNavigation();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
 
   // Function to format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -27,8 +31,9 @@ export function LogRow({ log }: { log: Log }): ReactElement {
 
   // Function to handle log selection
   const handleLogSelect = (): void => {
-    setSelectedLog(log);
-    setLogsViewOpen(true);
+    if (selectedAgent && selectedSkill) {
+      navigateToLogDetail(selectedAgent.name, selectedSkill.name, log.id);
+    }
   };
 
   // Handle keyboard interaction

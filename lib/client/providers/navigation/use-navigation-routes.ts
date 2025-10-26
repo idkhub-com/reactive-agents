@@ -1,12 +1,11 @@
 import type { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
-import { encodeAgentName, encodeSkillName } from './url-utils';
 
 export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToSkillDashboard = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}`,
       );
     },
     [router],
@@ -15,7 +14,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToLogs = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/logs`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/logs`,
       );
     },
     [router],
@@ -24,7 +23,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToLogDetail = useCallback(
     (agentName: string, skillName: string, logId: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/logs/${logId}`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/logs/${logId}`,
       );
     },
     [router],
@@ -33,7 +32,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToEvaluations = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/evaluations`,
       );
     },
     [router],
@@ -42,7 +41,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToEvaluationDetail = useCallback(
     (agentName: string, skillName: string, evalId: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations/${evalId}`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/evaluations/${evalId}`,
       );
     },
     [router],
@@ -51,7 +50,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToCreateEvaluation = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations/create`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/evaluations/create`,
       );
     },
     [router],
@@ -60,7 +59,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const replaceToEvaluations = useCallback(
     (agentName: string, skillName: string) => {
       router.replace(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/evaluations`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/evaluations`,
       );
     },
     [router],
@@ -69,7 +68,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToDatasets = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/datasets`,
       );
     },
     [router],
@@ -78,7 +77,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const replaceToDatasets = useCallback(
     (agentName: string, skillName: string) => {
       router.replace(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/datasets`,
       );
     },
     [router],
@@ -87,7 +86,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToDatasetDetail = useCallback(
     (agentName: string, skillName: string, datasetId: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets/${datasetId}`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/datasets/${datasetId}`,
       );
     },
     [router],
@@ -96,7 +95,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToCreateDataset = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/datasets/create`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/datasets/create`,
       );
     },
     [router],
@@ -105,7 +104,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToConfigurations = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/configurations`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/configurations`,
       );
     },
     [router],
@@ -114,7 +113,7 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToModels = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/models`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/models`,
       );
     },
     [router],
@@ -123,16 +122,16 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
   const navigateToClusters = useCallback(
     (agentName: string, skillName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/clusters`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/partitions`,
       );
     },
     [router],
   );
 
   const navigateToClusterArms = useCallback(
-    (agentName: string, skillName: string, clusterId: string) => {
+    (agentName: string, skillName: string, clusterName: string) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/clusters/${clusterId}/arms`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/partitions/${encodeURIComponent(clusterName)}/arms`,
       );
     },
     [router],
@@ -142,11 +141,11 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
     (
       agentName: string,
       skillName: string,
-      clusterId: string,
-      armId: string,
+      clusterName: string,
+      armName: string,
     ) => {
       router.push(
-        `/agents/${encodeAgentName(agentName)}/${encodeSkillName(skillName)}/clusters/${clusterId}/arms/${armId}`,
+        `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}/partitions/${encodeURIComponent(clusterName)}/arms/${encodeURIComponent(armName)}`,
       );
     },
     [router],

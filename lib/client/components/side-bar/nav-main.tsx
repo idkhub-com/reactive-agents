@@ -69,7 +69,7 @@ export function NavMain({
   sections: NavigationSection[];
 }): React.ReactElement {
   const { setSection } = useNavigation();
-  const { agents, isLoading, selectedAgent, setSelectedAgent } = useAgents();
+  const { agents, selectedAgent, isLoading } = useAgents();
   const router = useRouter();
   const pathname = usePathname();
   const modifierKey = useModifierKey();
@@ -83,11 +83,6 @@ export function NavMain({
   };
 
   const handleSectionClick = (section: NavigationSection) => {
-    // Clear selected agent when navigating away from agents
-    if (section.title !== 'Agents') {
-      setSelectedAgent(null);
-    }
-
     if (section.url && section.url !== '#') {
       router.push(section.url);
     } else if (section.title === 'Documentation') {
@@ -103,10 +98,9 @@ export function NavMain({
 
   const handleAgentClick = React.useCallback(
     (agent: (typeof agents)[0]) => {
-      setSelectedAgent(agent);
       router.push(`/agents/${encodeURIComponent(agent.name)}`);
     },
-    [setSelectedAgent, router],
+    [router],
   );
 
   // Handle keyboard shortcuts for agent switching
@@ -138,7 +132,25 @@ export function NavMain({
         <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
-              <SidebarMenuButton tooltip={'Agents'} className="cursor-pointer">
+              <SidebarMenuButton
+                tooltip={'Agents'}
+                className="cursor-pointer"
+                onClick={(e) => {
+                  // If clicking on the main button area (not the Plus icon), navigate to agents list
+                  const target = e.target as HTMLElement;
+
+                  if (
+                    !target.closest('.create-agent-icon') &&
+                    !target.classList.contains('create-agent-icon')
+                  ) {
+                    // Prevent default collapsible toggle behavior
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    router.replace('/agents');
+                  }
+                }}
+              >
                 <BotIcon size={16} className="shrink-0" />
                 <span>Agents</span>
                 {!isLoading && (
@@ -147,7 +159,7 @@ export function NavMain({
                       {agents.length}
                     </span>
                     <Plus
-                      className="ml-1 size-4 cursor-pointer hover:opacity-70"
+                      className="ml-1 size-4 cursor-pointer hover:opacity-70 create-agent-icon"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCreateAgentClick();

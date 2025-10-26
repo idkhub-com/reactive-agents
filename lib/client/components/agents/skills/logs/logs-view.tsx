@@ -28,9 +28,11 @@ import {
   TableRow,
 } from '@client/components/ui/table';
 import { useSmartBack } from '@client/hooks/use-smart-back';
+import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
 import { useNavigation } from '@client/providers/navigation';
-import type { Log, LogsQueryParams } from '@shared/types/data';
+import { useSkills } from '@client/providers/skills';
+import type { Log } from '@shared/types/data';
 import { format } from 'date-fns';
 import { CalendarIcon, RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -38,45 +40,39 @@ import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 
 export function LogsView(): ReactElement {
-  const { navigationState, navigateToLogDetail } = useNavigation();
+  const { navigateToLogDetail } = useNavigation();
   const smartBack = useSmartBack();
-  const { logs, isLoading, refetch, setQueryParams, refreshLogs } = useLogs();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
+  const {
+    logs,
+    isLoading,
+    refetch,
+    setAgentId,
+    setSkillId,
+    refreshLogs,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useLogs();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(50);
 
-  // Keep provider query params in sync with filters/pagination
+  // Set agentId and skillId when agent/skill changes
   useEffect(() => {
-    if (!navigationState.selectedAgent || !navigationState.selectedSkill)
-      return;
-    const params: Partial<LogsQueryParams> = {
-      agent_id: navigationState.selectedAgent.id,
-      skill_id: navigationState.selectedSkill.id,
-      limit,
-      offset: (currentPage - 1) * limit,
-    } as Partial<LogsQueryParams>;
-    if (statusFilter !== 'all') {
-      params.status = parseInt(statusFilter, 10);
+    if (selectedAgent && selectedSkill) {
+      setAgentId(selectedAgent.id);
+      setSkillId(selectedSkill.id);
     } else {
-      params.status = undefined;
+      setAgentId(null);
+      setSkillId(null);
     }
-    setQueryParams(params);
-  }, [
-    navigationState.selectedAgent,
-    navigationState.selectedSkill,
-    limit,
-    currentPage,
-    statusFilter,
-    setQueryParams,
-  ]);
+  }, [selectedAgent, selectedSkill, setAgentId, setSkillId]);
 
   // Early return if no skill or agent selected - AFTER all hooks
-  if (!navigationState.selectedSkill || !navigationState.selectedAgent) {
+  if (!selectedSkill || !selectedAgent) {
     return <div>No skill selected</div>;
   }
-
-  const { selectedSkill, selectedAgent } = navigationState;
 
   const filteredLogs = logs.filter((log: Log) => {
     if (searchQuery) {
@@ -243,30 +239,21 @@ export function LogsView(): ReactElement {
           </CardContent>
         </Card>
 
-        {/* Pagination */}
-        {filteredLogs.length > 0 && (
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              Page {currentPage} - Showing {filteredLogs.length} results
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={filteredLogs.length < limit}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
-            </div>
+        {/* Load More */}
+        {hasNextPage && (
+          <div className="flex justify-center items-center py-4">
+            <Button
+              variant="outline"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? 'Loading...' : 'Load More'}
+            </Button>
+          </div>
+        )}
+        {filteredLogs.length > 0 && !hasNextPage && (
+          <div className="text-center text-sm text-muted-foreground py-4">
+            Showing all {filteredLogs.length} logs
           </div>
         )}
       </div>

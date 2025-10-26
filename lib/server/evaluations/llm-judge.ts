@@ -347,7 +347,7 @@ async function callIDKHubOpenAIResponsesAPI(
     };
 
     const idkConfig = {
-      agent_name: 'llm-judge',
+      agent_name: 'idkhub',
       skill_name: 'judge',
       targets: [
         {

@@ -11,11 +11,13 @@ import {
 } from '@client/components/ui/card';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
+import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
+import { useSkills } from '@client/providers/skills';
 import {
   ArrowRightIcon,
   CheckCircle2,
@@ -34,15 +36,12 @@ import { ManageSkillEvaluationsDialog } from './manage-skill-evaluations-dialog'
 import { SkillPerformanceChart } from './skill-performance-chart';
 
 export function SkillDashboardView(): ReactElement {
-  const {
-    navigationState,
-    navigateToLogs,
-    navigateToModels,
-    navigateToClusters,
-  } = useNavigation();
+  const { navigateToLogs, navigateToModels, navigateToClusters } =
+    useNavigation();
   const router = useRouter();
 
-  const { selectedSkill, selectedAgent } = navigationState;
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
   const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
 
   // Logs via provider
@@ -50,7 +49,8 @@ export function SkillDashboardView(): ReactElement {
     logs: recentLogs = [],
     isLoading: isLoadingLogs,
     refetch: refetchLogs,
-    setQueryParams: setLogsQueryParams,
+    setAgentId: setLogsAgentId,
+    setSkillId: setLogsSkillId,
   } = useLogs();
 
   // Models via provider
@@ -70,16 +70,16 @@ export function SkillDashboardView(): ReactElement {
     setSkillId: setSkillEvaluationRunsSkillId,
   } = useSkillOptimizationEvaluationRuns();
 
-  // Update logs query params
+  // Update logs agentId and skillId
   useEffect(() => {
-    if (!selectedAgent) return;
-    setLogsQueryParams({
-      agent_id: selectedAgent.id,
-      skill_id: selectedSkill?.id,
-      limit: 25,
-      offset: 0,
-    });
-  }, [selectedAgent, selectedSkill, setLogsQueryParams]);
+    if (selectedAgent && selectedSkill) {
+      setLogsAgentId(selectedAgent.id);
+      setLogsSkillId(selectedSkill.id);
+    } else {
+      setLogsAgentId(null);
+      setLogsSkillId(null);
+    }
+  }, [selectedAgent, selectedSkill, setLogsAgentId, setLogsSkillId]);
 
   // Update models query params
   useEffect(() => {
@@ -194,18 +194,16 @@ export function SkillDashboardView(): ReactElement {
                 </div>
               ) : clusterStates.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No clusters found
+                  No partitions found
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {clusterStates.slice(0, 3).map((cluster, index) => (
+                  {clusterStates.slice(0, 3).map((cluster) => (
                     <div
                       key={cluster.id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="truncate flex-1">
-                        Cluster {index + 1}
-                      </span>
+                      <span className="truncate flex-1">{cluster.name}</span>
                       <Badge variant="outline" className="ml-2">
                         {cluster.total_steps.toString()} reqs
                       </Badge>

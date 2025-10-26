@@ -1,5 +1,5 @@
-import { ModelsView } from '@client/components/agents/skills/models/models-view';
+import { AgentsView } from '@client/components/agents/agents-view';
 
 export default function ModelsPage() {
-  return <ModelsView />;
+  return <AgentsView />;
 }

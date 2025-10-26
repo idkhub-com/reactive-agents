@@ -56,6 +56,18 @@ export const AI_PROVIDER_API_KEY_ENCRYPTION_KEY =
   process.env.AI_PROVIDER_API_KEY_ENCRYPTION_KEY ??
   'default-32-byte-key-change-in-prod';
 
+/**
+ * Special skills that idk uses internally. We auto generate these if they don't exist.
+ */
+export const IDKHUB_SKILLS = [
+  'judge',
+  'extract-task-and-outcome',
+  'create-evaluations',
+  'system-prompt-seeding',
+  'system-prompt-reflection',
+  'embedding',
+];
+
 export const EMBEDDINGS_DIMENSIONS = 1536;
 
 export const UNSUPPORTED_TEMPERATURE_MODELS = [
