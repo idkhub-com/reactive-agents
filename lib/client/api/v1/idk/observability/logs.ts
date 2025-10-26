@@ -21,7 +21,7 @@ export async function queryLogs(params: LogsQueryParams): Promise<Log[]> {
       endpoint: params.endpoint,
       status: params.status?.toString(),
       cache_status: params.cache_status,
-      embedding_not_null: params.embedding_not_null ? 'true' : 'false',
+      embedding_not_null: params.embedding_not_null?.toString(),
       limit: params.limit?.toString(),
       offset: params.offset?.toString(),
     },

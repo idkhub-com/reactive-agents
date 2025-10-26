@@ -30,7 +30,7 @@ export const skillsRouter = new Hono<AppEnv>()
         initialCentroids.map((centroid, index) => ({
           agent_id: newSkill.agent_id,
           skill_id: newSkill.id,
-          name: `Cluster ${index + 1}`,
+          name: `Partition ${index + 1}`,
           total_steps: 0,
           centroid,
         }));
@@ -93,7 +93,7 @@ export const skillsRouter = new Hono<AppEnv>()
             initialCentroids.map((centroid, index) => ({
               agent_id: updatedSkill.agent_id,
               skill_id: updatedSkill.id,
-              name: `Cluster ${index + 1}`,
+              name: `Partition ${index + 1}`,
               total_steps: 0,
               centroid,
             }));

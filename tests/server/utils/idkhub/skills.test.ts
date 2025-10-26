@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 describe('getSkill', () => {
   let mockConnector: UserDataStorageConnector;
   const testAgentId = '550e8400-e29b-41d4-a716-446655440000';
+  const testAgentName = 'test-agent';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -127,6 +128,7 @@ describe('getSkill', () => {
       const result = await getSkill(
         mockConnector,
         testAgentId,
+        testAgentName,
         'existing-skill',
       );
 
@@ -181,6 +183,7 @@ describe('getSkill', () => {
       const result = await getSkill(
         mockConnector,
         testAgentId,
+        testAgentName,
         'duplicate-skill',
       );
 
@@ -193,7 +196,12 @@ describe('getSkill', () => {
     it('should return null', async () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
 
-      const result = await getSkill(mockConnector, testAgentId, 'new-skill');
+      const result = await getSkill(
+        mockConnector,
+        testAgentId,
+        testAgentName,
+        'new-skill',
+      );
 
       expect(result).toBeNull();
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
@@ -206,7 +214,12 @@ describe('getSkill', () => {
     it('should return null for empty skill name', async () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
 
-      const result = await getSkill(mockConnector, testAgentId, '');
+      const result = await getSkill(
+        mockConnector,
+        testAgentId,
+        testAgentName,
+        '',
+      );
 
       expect(result).toBeNull();
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
@@ -223,7 +236,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockRejectedValue(error);
 
       await expect(
-        getSkill(mockConnector, testAgentId, 'test-skill'),
+        getSkill(mockConnector, testAgentId, testAgentName, 'test-skill'),
       ).rejects.toThrow('Database connection failed');
     });
   });
@@ -248,7 +261,12 @@ describe('getSkill', () => {
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([skill]);
 
-      const result = await getSkill(mockConnector, testAgentId, specialName);
+      const result = await getSkill(
+        mockConnector,
+        testAgentId,
+        testAgentName,
+        specialName,
+      );
 
       expect(result).toEqual(skill);
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
@@ -262,7 +280,12 @@ describe('getSkill', () => {
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
 
-      const result = await getSkill(mockConnector, testAgentId, longName);
+      const result = await getSkill(
+        mockConnector,
+        testAgentId,
+        testAgentName,
+        longName,
+      );
 
       expect(result).toBeNull();
       expect(mockConnector.getSkills).toHaveBeenCalledWith({
@@ -293,8 +316,8 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
 
       const [result1, result2] = await Promise.all([
-        getSkill(mockConnector, testAgentId, skillName),
-        getSkill(mockConnector, testAgentId, skillName),
+        getSkill(mockConnector, testAgentId, testAgentName, skillName),
+        getSkill(mockConnector, testAgentId, testAgentName, skillName),
       ]);
 
       expect(result1).toEqual(existingSkill);

@@ -1,6 +1,6 @@
 'use client';
 
-import { GenericViewer } from '@client/components/agents/skills/logs/components/log-view/components/generic-viewer';
+import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
 import { FunctionName } from '@shared/types/api/request';
 import type { IdkRequestData } from '@shared/types/api/request/body';
 import {

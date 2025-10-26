@@ -1,6 +1,6 @@
 'use client';
 
-import { LogRow } from '@client/components/agents/skills/logs/components/log-list-view/components/log-row';
+import { LogRow } from '@client/components/agents/skills/logs/components/log-row';
 import {
   Table,
   TableBody,

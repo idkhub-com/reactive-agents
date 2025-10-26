@@ -67,17 +67,9 @@ vi.mock('@client/providers/navigation', () => ({
 
 // Now import everything
 import { LogsProvider, useLogs } from '@client/providers/logs';
-import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
-import type { Log } from '@shared/types/data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
-import type React from 'react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 
 // Create a mock for localStorage
 const localStorageMock = (() => {
@@ -97,55 +89,18 @@ const localStorageMock = (() => {
 })();
 
 function TestComponent(): React.ReactElement {
-  const {
-    logs,
-    selectedLog,
-    setSelectedLog,
-    modifiedValue,
-    setModifiedValue,
-    saveModifiedValue,
-  } = useLogs();
+  const { logs, selectedLog, setAgentId, setSkillId } = useLogs();
+
+  // Set agentId and skillId on mount to trigger log fetching
+  React.useEffect(() => {
+    setAgentId('test-agent');
+    setSkillId('test-skill');
+  }, [setAgentId, setSkillId]);
+
   return (
     <div>
       <div data-testid="logs-length">{logs.length}</div>
       <div data-testid="selected-log">{selectedLog?.id ?? ''}</div>
-      <button
-        type="button"
-        data-testid="select-button"
-        onClick={(): void =>
-          setSelectedLog({
-            id: '1',
-            ai_provider_request_log: {
-              response_body: {
-                choices: [
-                  {
-                    message: {
-                      role: ChatCompletionMessageRole.USER,
-                      content: 'foo',
-                    },
-                    index: 0,
-                    finish_reason: 'stop',
-                  },
-                ],
-              },
-            },
-          } as unknown as Log)
-        }
-      >
-        Select
-      </button>
-      <input
-        data-testid="input"
-        value={modifiedValue}
-        onChange={(e): void => setModifiedValue(e.target.value)}
-      />
-      <button
-        type="button"
-        data-testid="save-button"
-        onClick={(): void => saveModifiedValue()}
-      >
-        Save
-      </button>
     </div>
   );
 }
@@ -175,7 +130,7 @@ describe('LogsProvider', (): void => {
 
   it('provides logs from queryLogs', async (): Promise<void> => {
     await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
+      await Promise.resolve();
       render(
         <QueryClientProvider client={queryClient}>
           <LogsProvider>
@@ -188,76 +143,6 @@ describe('LogsProvider', (): void => {
     await waitFor(() => {
       expect(screen.getByTestId('logs-length').textContent).toBe('1');
     });
-  });
-
-  it('can select a log and update modifiedValue', async (): Promise<void> => {
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      render(
-        <QueryClientProvider client={queryClient}>
-          <LogsProvider>
-            <TestComponent />
-          </LogsProvider>
-        </QueryClientProvider>,
-      );
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('logs-length').textContent).toBe('1');
-    });
-
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      screen.getByTestId('select-button').click();
-    });
-
-    expect(screen.getByTestId('selected-log').textContent).toBe('1');
-
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      const input = screen.getByTestId('input');
-      fireEvent.change(input, { target: { value: 'bar' } });
-    });
-
-    expect((screen.getByTestId('input') as HTMLInputElement).value).toBe('bar');
-  });
-
-  it('saveModifiedValue updates localStorage', async (): Promise<void> => {
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      render(
-        <QueryClientProvider client={queryClient}>
-          <LogsProvider>
-            <TestComponent />
-          </LogsProvider>
-        </QueryClientProvider>,
-      );
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('logs-length').textContent).toBe('1');
-    });
-
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      screen.getByTestId('select-button').click();
-    });
-
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      const input = screen.getByTestId('input');
-      fireEvent.change(input, { target: { value: 'baz' } });
-    });
-
-    await act(async (): Promise<void> => {
-      await Promise.resolve(); // Add an await expression
-      screen.getByTestId('save-button').click();
-    });
-
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      '1',
-      expect.stringContaining('baz'),
-    );
   });
 
   it('throws if useLogs is used outside provider', (): void => {

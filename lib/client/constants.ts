@@ -44,12 +44,12 @@ export const SideBarData: SideBarDataSchema = {
   sections: [
     {
       title: 'AI Providers',
-      url: '/ai-providers/api-keys',
+      url: '/ai-providers',
       icon: KeyIcon,
       items: [
         {
           title: 'API Keys',
-          url: '/ai-providers/api-keys',
+          url: '/ai-providers',
         },
       ],
     },

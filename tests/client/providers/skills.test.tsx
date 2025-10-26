@@ -5,6 +5,26 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock the navigation provider
+vi.mock('@client/providers/navigation', () => ({
+  useNavigation: vi.fn(() => ({
+    navigationState: {
+      section: 'agents',
+      selectedAgentName: null,
+      selectedSkillName: null,
+    },
+  })),
+  NavigationProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock the agents provider
+vi.mock('@client/providers/agents', () => ({
+  useAgents: vi.fn(() => ({
+    selectedAgent: null,
+  })),
+  AgentsProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock the API module
 vi.mock('@client/api/v1/idk/skills', () => ({
   getSkills: vi.fn(),
@@ -237,36 +257,6 @@ describe('SkillsProvider', () => {
 
     const nonExistentSkill = result.current.getSkillById('999');
     expect(nonExistentSkill).toBeUndefined();
-  });
-
-  it('should handle selected skill state', async () => {
-    vi.mocked(getSkills).mockResolvedValue(mockSkills);
-
-    const { result } = renderHook(() => useSkills(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.selectedSkill).toBeNull();
-
-    // Set selected skill
-    act(() => {
-      result.current.setSelectedSkill(mockSkills[0]);
-    });
-
-    await waitFor(() => {
-      expect(result.current.selectedSkill).toEqual(mockSkills[0]);
-    });
-
-    // Clear selected skill
-    act(() => {
-      result.current.setSelectedSkill(null);
-    });
-
-    await waitFor(() => {
-      expect(result.current.selectedSkill).toBeNull();
-    });
   });
 
   it('should throw error when used outside provider', () => {

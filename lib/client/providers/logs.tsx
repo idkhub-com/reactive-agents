@@ -1,10 +1,7 @@
 'use client';
-// TODO: We need to save changes to the database. Right now, we just save them to localStorage, for proof of concept.
 import { queryLogs } from '@client/api/v1/idk/observability/logs';
 import { useToast } from '@client/hooks/use-toast';
-import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
-import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
 import { type Log, LogsQueryParams } from '@shared/types/data/log';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
@@ -13,24 +10,24 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 interface LogsContextType {
+  // Query state
   logs: Log[];
+  selectedLog?: Log;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
-  queryParams: Partial<LogsQueryParams>;
-  setQueryParams: (params: Partial<LogsQueryParams>) => void;
-  refreshLogs: () => void;
-  selectedLog: Log | null;
-  setSelectedLog: (log: Log | null) => void;
-  logsViewOpen: boolean;
-  setLogsViewOpen: (open: boolean) => void;
-  modifiedValue: string;
-  setModifiedValue: (value: string) => void;
-  saveModifiedValue: () => void;
+
+  // Agent/Skill IDs
+  agentId: string | null;
+  setAgentId: (agentId: string | null) => void;
+  skillId: string | null;
+  setSkillId: (skillId: string | null) => void;
+
   // Pagination
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -38,8 +35,7 @@ interface LogsContextType {
 
   // Helper functions
   getLogById: (id: string) => Log | undefined;
-  // New methods for querying with custom params
-  queryLogs: (params: LogsQueryParams) => Promise<Log[]>;
+  refreshLogs: () => void;
 }
 
 const LogsContext = createContext<LogsContextType | undefined>(undefined);
@@ -48,10 +44,8 @@ const LogsContext = createContext<LogsContextType | undefined>(undefined);
 export const logsQueryKeys = {
   all: ['logs'] as const,
   lists: () => [...logsQueryKeys.all, 'list'] as const,
-  list: (params: Partial<LogsQueryParams>) =>
-    [...logsQueryKeys.lists(), params] as const,
-  details: () => [...logsQueryKeys.all, 'detail'] as const,
-  detail: (id: string) => [...logsQueryKeys.details(), id] as const,
+  list: (agentId: string | null, skillId: string | null) =>
+    [...logsQueryKeys.lists(), agentId, skillId] as const,
 };
 
 export const LogsProvider = ({
@@ -60,13 +54,11 @@ export const LogsProvider = ({
   children: React.ReactNode;
 }): React.ReactElement => {
   const { toast } = useToast();
-  const { selectedAgent } = useAgents();
   const { navigationState } = useNavigation();
   const queryClient = useQueryClient();
-  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
-  const [logsViewOpen, setLogsViewOpen] = useState(false);
-  const [modifiedValue, setModifiedValue] = useState<string>('');
-  const [queryParams, setQueryParams] = useState<Partial<LogsQueryParams>>({});
+
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [skillId, setSkillId] = useState<string | null>(null);
 
   // Logs infinite query for pagination
   const {
@@ -78,38 +70,36 @@ export const LogsProvider = ({
     isFetchingNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
-    queryKey: logsQueryKeys.list({
-      ...queryParams,
-      agent_id: queryParams.agent_id ?? navigationState.selectedAgent?.id,
-      skill_id: queryParams.skill_id ?? navigationState.selectedSkill?.id,
-    }),
+    queryKey: logsQueryKeys.list(agentId, skillId),
     queryFn: async ({ pageParam = 0 }) => {
-      const agentId = queryParams.agent_id ?? navigationState.selectedAgent?.id;
-      if (!agentId) return [] as Log[];
-      const parsed = LogsQueryParams.parse({
-        ...queryParams,
-        agent_id: agentId,
-        limit:
-          queryParams.limit !== undefined
-            ? String(queryParams.limit)
-            : String(20),
-        offset: String(pageParam),
-      });
-      return await queryLogs(parsed);
+      if (!agentId || !skillId) return [];
+      return await queryLogs(
+        LogsQueryParams.parse({
+          agent_id: agentId,
+          skill_id: skillId,
+          limit: '50',
+          offset: String(pageParam),
+        }),
+      );
     },
     select: (data) => data?.pages?.flat() ?? [],
     getNextPageParam: (lastPage, allPages) => {
       const currentLength = allPages.flat().length;
-      const limit = (queryParams.limit as number | undefined) ?? 20;
+      const limit = 50;
       if (lastPage.length < limit) {
         return undefined;
       }
       return currentLength;
     },
     initialPageParam: 0,
-    enabled: !!(queryParams.agent_id ?? navigationState.selectedAgent?.id),
-    staleTime: 0,
+    enabled: !!agentId && !!skillId, // Only fetch when we have both IDs
   });
+
+  // Resolve selectedLog from navigationState.logId
+  const selectedLog = useMemo(() => {
+    if (!navigationState.logId) return undefined;
+    return logs.find((log) => log.id === navigationState.logId);
+  }, [navigationState.logId, logs]);
 
   useEffect(() => {
     if (error) {
@@ -120,55 +110,6 @@ export const LogsProvider = ({
       });
     }
   }, [error, toast]);
-
-  // Clear selected log when agent changes
-  const currentAgentId = selectedAgent?.id;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: We want to clear selected log when agent changes
-  useEffect(() => {
-    setSelectedLog(null);
-  }, [currentAgentId]);
-
-  const saveModifiedValue = useCallback(() => {
-    if (selectedLog) {
-      if (!('choices' in selectedLog.ai_provider_request_log.response_body)) {
-        return;
-      }
-
-      const selectedLogResponseBody = selectedLog.ai_provider_request_log
-        .response_body as ChatCompletionResponseBody;
-
-      const updatedChoice = {
-        ...selectedLogResponseBody.choices[0],
-        message: {
-          ...selectedLogResponseBody.choices[0].message,
-          content: modifiedValue,
-        },
-      };
-
-      const updatedChoices = [updatedChoice];
-
-      const updatedResponseBody = {
-        ...selectedLog.ai_provider_request_log.response_body,
-        choices: updatedChoices,
-      };
-
-      // Save the modified value to the log to local storage
-      const data = {
-        id: selectedLog.id,
-        response_body: updatedResponseBody,
-      };
-
-      localStorage.setItem(selectedLog.id, JSON.stringify(data));
-    }
-  }, [selectedLog, modifiedValue]);
-
-  // Method to query logs with custom parameters
-  const queryLogsWithParams = useCallback(
-    async (params: LogsQueryParams): Promise<Log[]> => {
-      return await queryLogs(params);
-    },
-    [],
-  );
 
   const refreshLogs = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: logsQueryKeys.all });
@@ -182,21 +123,20 @@ export const LogsProvider = ({
     [logs],
   );
 
-  const contextValue = {
+  const contextValue: LogsContextType = {
+    // Query state
     logs,
+    selectedLog,
     isLoading,
     error,
     refetch,
-    queryParams,
-    setQueryParams,
-    refreshLogs,
-    selectedLog,
-    setSelectedLog,
-    logsViewOpen,
-    setLogsViewOpen,
-    modifiedValue,
-    setModifiedValue,
-    saveModifiedValue,
+
+    // Agent/Skill IDs
+    agentId,
+    setAgentId,
+    skillId,
+    setSkillId,
+
     // Pagination
     hasNextPage: hasNextPage ?? false,
     isFetchingNextPage,
@@ -204,7 +144,7 @@ export const LogsProvider = ({
 
     // Helper functions
     getLogById,
-    queryLogs: queryLogsWithParams,
+    refreshLogs,
   };
 
   return (

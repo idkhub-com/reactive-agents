@@ -23,35 +23,41 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { EditSkillView } from '@client/components/agents/skills/edit-skill-view';
+import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
+
+// Mock agent and skill objects
+const mockAgent = {
+  id: 'agent-1',
+  name: 'Test Agent 1',
+  description: 'First test agent description',
+  metadata: {},
+  created_at: '2023-01-01T10:30:00Z',
+  updated_at: '2023-01-01T10:30:00Z',
+};
+
+const mockSkill = {
+  id: 'skill-1',
+  agent_id: 'agent-1',
+  name: 'Test Skill 1',
+  description: 'Test skill description',
+  metadata: {},
+  optimize: true,
+  configuration_count: 15,
+  system_prompt_count: 5,
+  created_at: '2023-01-01T10:30:00Z',
+  updated_at: '2023-01-01T10:30:00Z',
+  clustering_interval: 15,
+  reflection_min_requests_per_arm: 3,
+};
 
 // Mock the navigation provider with proper state
 const mockNavigationState = {
   section: 'agents' as const,
   currentView: 'edit-skill' as const,
-  selectedAgent: {
-    id: 'agent-1',
-    name: 'Test Agent 1',
-    description: 'First test agent description',
-    metadata: {},
-    created_at: '2023-01-01T10:30:00Z',
-    updated_at: '2023-01-01T10:30:00Z',
-  },
-  selectedSkill: {
-    id: 'skill-1',
-    agent_id: 'agent-1',
-    name: 'Test Skill 1',
-    description: 'Test skill description',
-    metadata: {},
-    optimize: true,
-    configuration_count: 15,
-    system_prompt_count: 5,
-    created_at: '2023-01-01T10:30:00Z',
-    updated_at: '2023-01-01T10:30:00Z',
-    clustering_interval: 15,
-    reflection_min_requests_per_arm: 3,
-  },
+  selectedAgentName: 'Test Agent 1',
+  selectedSkillName: 'Test Skill 1',
   breadcrumbs: [],
 };
 
@@ -72,6 +78,16 @@ vi.mock('@shared/utils/security', () => ({
   sanitizeDescription: (desc: string) => desc,
   sanitizeUserInput: (input: string) => input,
 }));
+
+// Mock the agents provider
+vi.mock('@client/providers/agents', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@client/providers/agents')>();
+  return {
+    ...actual,
+    useAgents: vi.fn(),
+  };
+});
 
 // Mock the navigation provider
 vi.mock('@client/providers/navigation', async (importOriginal) => {
@@ -123,8 +139,6 @@ describe('EditSkillView', () => {
         prefetch: vi.fn().mockResolvedValue(undefined),
       },
       setSection: vi.fn(),
-      setSelectedAgent: vi.fn(),
-      setSelectedSkill: vi.fn(),
       navigateToSkillDashboard: vi.fn(),
       navigateToLogs: vi.fn(),
       navigateToLogDetail: vi.fn(),
@@ -143,13 +157,40 @@ describe('EditSkillView', () => {
       navigateToArmDetail: vi.fn(),
       navigateBack: vi.fn(),
       updateBreadcrumbs: vi.fn(),
-      skills: [],
+    });
+
+    // Set default mock implementation for useAgents
+    vi.mocked(useAgents).mockReturnValue({
+      agents: [mockAgent],
+      selectedAgent: mockAgent,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      queryParams: {},
+      setQueryParams: vi.fn(),
+      createAgent: vi.fn(),
+      updateAgent: vi.fn(),
+      deleteAgent: vi.fn(),
+      isCreating: false,
+      isUpdating: false,
+      isDeleting: false,
+      createError: null,
+      updateError: null,
+      deleteError: null,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      getAgentById: vi.fn(),
+      refreshAgents: vi.fn(),
+      isCreateAgentDialogOpen: false,
+      setIsCreateAgentDialogOpen: vi.fn(),
     });
 
     // Set default mock implementation for useSkills
     vi.mocked(useSkills).mockReturnValue({
       // Query state
-      skills: [],
+      skills: [mockSkill],
+      selectedSkill: mockSkill,
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -157,10 +198,6 @@ describe('EditSkillView', () => {
       // Query parameters
       queryParams: {},
       setQueryParams: vi.fn(),
-
-      // Selected skill state
-      selectedSkill: null,
-      setSelectedSkill: vi.fn(),
 
       // Skill mutation functions
       createSkill: vi.fn(),
@@ -370,43 +407,31 @@ describe('EditSkillView', () => {
 
   describe('Error States', () => {
     it('shows error state when agent is not found', () => {
-      // Mock navigation state without agent
-      vi.mocked(useNavigation).mockReturnValue({
-        navigationState: {
-          ...mockNavigationState,
-          selectedAgent: undefined,
-        },
-        isLoadingFromStorage: false,
-        router: {
-          push: mockPush,
-          back: mockBack,
-          replace: vi.fn(),
-          refresh: vi.fn(),
-          forward: vi.fn(),
-          prefetch: vi.fn().mockResolvedValue(undefined),
-        },
-        setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
-        navigateToSkillDashboard: vi.fn(),
-        navigateToLogs: vi.fn(),
-        navigateToLogDetail: vi.fn(),
-        navigateToEvaluations: vi.fn(),
-        navigateToEvaluationDetail: vi.fn(),
-        navigateToCreateEvaluation: vi.fn(),
-        replaceToEvaluations: vi.fn(),
-        navigateToDatasets: vi.fn(),
-        replaceToDatasets: vi.fn(),
-        navigateToDatasetDetail: vi.fn(),
-        navigateToCreateDataset: vi.fn(),
-        navigateToConfigurations: vi.fn(),
-        navigateToModels: vi.fn(),
-        navigateToClusters: vi.fn(),
-        navigateToClusterArms: vi.fn(),
-        navigateToArmDetail: vi.fn(),
-        navigateBack: vi.fn(),
-        updateBreadcrumbs: vi.fn(),
-        skills: [],
+      // Mock agents provider to return undefined selectedAgent
+      vi.mocked(useAgents).mockReturnValue({
+        agents: [],
+        selectedAgent: undefined,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+        queryParams: {},
+        setQueryParams: vi.fn(),
+        createAgent: vi.fn(),
+        updateAgent: vi.fn(),
+        deleteAgent: vi.fn(),
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+        createError: null,
+        updateError: null,
+        deleteError: null,
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+        getAgentById: vi.fn(),
+        refreshAgents: vi.fn(),
+        isCreateAgentDialogOpen: false,
+        setIsCreateAgentDialogOpen: vi.fn(),
       });
 
       renderEditSkillView();
@@ -420,43 +445,29 @@ describe('EditSkillView', () => {
     });
 
     it('shows error state when skill is not found', () => {
-      // Mock navigation state without skill
-      vi.mocked(useNavigation).mockReturnValue({
-        navigationState: {
-          ...mockNavigationState,
-          selectedSkill: undefined,
-        },
-        isLoadingFromStorage: false,
-        router: {
-          push: mockPush,
-          back: mockBack,
-          replace: vi.fn(),
-          refresh: vi.fn(),
-          forward: vi.fn(),
-          prefetch: vi.fn().mockResolvedValue(undefined),
-        },
-        setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
-        navigateToSkillDashboard: vi.fn(),
-        navigateToLogs: vi.fn(),
-        navigateToLogDetail: vi.fn(),
-        navigateToEvaluations: vi.fn(),
-        navigateToEvaluationDetail: vi.fn(),
-        navigateToCreateEvaluation: vi.fn(),
-        replaceToEvaluations: vi.fn(),
-        navigateToDatasets: vi.fn(),
-        replaceToDatasets: vi.fn(),
-        navigateToDatasetDetail: vi.fn(),
-        navigateToCreateDataset: vi.fn(),
-        navigateToConfigurations: vi.fn(),
-        navigateToModels: vi.fn(),
-        navigateToClusters: vi.fn(),
-        navigateToClusterArms: vi.fn(),
-        navigateToArmDetail: vi.fn(),
-        navigateBack: vi.fn(),
-        updateBreadcrumbs: vi.fn(),
+      // Mock skills provider to return undefined selectedSkill
+      vi.mocked(useSkills).mockReturnValue({
         skills: [],
+        selectedSkill: undefined,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+        queryParams: {},
+        setQueryParams: vi.fn(),
+        createSkill: vi.fn(),
+        updateSkill: vi.fn(),
+        deleteSkill: vi.fn(),
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+        createError: null,
+        updateError: null,
+        deleteError: null,
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+        getSkillById: vi.fn(),
+        refreshSkills: vi.fn(),
       });
 
       renderEditSkillView();

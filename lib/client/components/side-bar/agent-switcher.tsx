@@ -32,7 +32,7 @@ import * as React from 'react';
 
 export function AgentSwitcher(): React.ReactElement {
   const { isMobile } = useSidebar();
-  const { agents, selectedAgent, setSelectedAgent, isLoading } = useAgents();
+  const { agents, isLoading, selectedAgent } = useAgents();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const modifierKey = useModifierKey();
@@ -56,11 +56,11 @@ export function AgentSwitcher(): React.ReactElement {
       if (keyNumber >= 1 && keyNumber <= agents.length) {
         const targetAgent = agents[keyNumber - 1];
         if (targetAgent) {
-          setSelectedAgent(targetAgent);
+          router.push(`/agents/${encodeURIComponent(targetAgent.name)}`);
         }
       }
     },
-    [agents, setSelectedAgent],
+    [agents, router],
   );
 
   // Set up keyboard shortcuts for first MAX_AGENT_SHORTCUTS agents
@@ -144,7 +144,9 @@ export function AgentSwitcher(): React.ReactElement {
             {agents.map((agent: Agent, index: number) => (
               <DropdownMenuItem
                 key={agent.id}
-                onClick={(): void => setSelectedAgent(agent)}
+                onClick={(): void =>
+                  router.push(`/agents/${encodeURIComponent(agent.name)}`)
+                }
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">

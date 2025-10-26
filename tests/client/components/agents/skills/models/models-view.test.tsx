@@ -1,4 +1,5 @@
 import { ModelsView } from '@client/components/agents/skills/models/models-view';
+import { useAgents } from '@client/providers/agents';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { useSkills } from '@client/providers/skills';
@@ -20,6 +21,10 @@ vi.mock('@client/providers/models', () => ({
 
 vi.mock('@client/providers/skills', () => ({
   useSkills: vi.fn(),
+}));
+
+vi.mock('@client/providers/agents', () => ({
+  useAgents: vi.fn(),
 }));
 
 vi.mock('@client/hooks/use-toast', () => ({
@@ -45,11 +50,19 @@ vi.mock('@client/providers/navigation', () => ({
   useNavigation: vi.fn(() => ({
     navigate: vi.fn(),
     navigationState: {
+      selectedSkillName: 'Test Skill',
+      selectedAgentName: 'Test Agent',
       selectedSkill: {
         id: 'skill-123',
         name: 'Test Skill',
         description: 'Test skill description',
         agent_id: 'agent-123',
+        metadata: {},
+        optimize: false,
+        configuration_count: 0,
+        system_prompt_count: 0,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       },
@@ -57,6 +70,7 @@ vi.mock('@client/providers/navigation', () => ({
         id: 'agent-123',
         name: 'Test Agent',
         description: 'Test agent description',
+        metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       },
@@ -165,7 +179,36 @@ describe('ModelsView', () => {
     });
 
     (useSkills as Mock).mockReturnValue({
+      selectedSkill: {
+        id: 'skill-123',
+        name: 'Test Skill',
+        description: 'Test skill description',
+        agent_id: 'agent-123',
+        metadata: {},
+        optimize: false,
+        configuration_count: 0,
+        system_prompt_count: 0,
+        clustering_interval: 0,
+        reflection_min_requests_per_arm: 0,
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      },
       refetch: mockRefetchSkills,
+    });
+
+    (useAgents as Mock).mockReturnValue({
+      selectedAgent: {
+        id: 'agent-123',
+        name: 'Test Agent',
+        description: 'Test agent description',
+        metadata: {},
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      },
+      agents: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
     });
   });
 

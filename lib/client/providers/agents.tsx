@@ -7,6 +7,7 @@ import {
   updateAgent,
 } from '@client/api/v1/idk/agents';
 import { useToast } from '@client/hooks/use-toast';
+import { useNavigation } from '@client/providers/navigation';
 import type {
   Agent,
   AgentCreateParams,
@@ -16,43 +17,17 @@ import type {
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { usePathname } from 'next/navigation';
 import type React from 'react';
 import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useMemo,
   useState,
 } from 'react';
-
-// Constants
-const SELECTED_AGENT_STORAGE_KEY = 'idkhub-selected-agent-id';
-
-// Helper functions for localStorage
-const getStoredAgentId = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    return localStorage.getItem(SELECTED_AGENT_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-};
-
-const storeAgentId = (agentId: string | null): void => {
-  if (typeof window === 'undefined') return;
-  try {
-    if (agentId) {
-      localStorage.setItem(SELECTED_AGENT_STORAGE_KEY, agentId);
-    } else {
-      localStorage.removeItem(SELECTED_AGENT_STORAGE_KEY);
-    }
-  } catch {
-    // Ignore localStorage errors
-  }
-};
 
 // Query keys for React Query caching
 export const agentQueryKeys = {
@@ -67,6 +42,7 @@ export const agentQueryKeys = {
 interface AgentsContextType {
   // Query state
   agents: Agent[];
+  selectedAgent?: Agent;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -74,10 +50,6 @@ interface AgentsContextType {
   // Query parameters
   queryParams: AgentQueryParams;
   setQueryParams: (params: AgentQueryParams) => void;
-
-  // Selected agent state
-  selectedAgent: Agent | null;
-  setSelectedAgent: (agent: Agent | null) => void;
 
   // Mutation functions
   createAgent: (params: AgentCreateParams) => Promise<Agent>;
@@ -115,17 +87,10 @@ export const AgentsProvider = ({
 }): React.ReactElement => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const pathname = usePathname();
+  const { navigationState } = useNavigation();
 
   const [queryParams, setQueryParams] = useState<AgentQueryParams>({});
-  const [selectedAgent, setSelectedAgentState] = useState<Agent | null>(null);
   const [isCreateAgentDialogOpen, setIsCreateAgentDialogOpen] = useState(false);
-
-  // Custom setSelectedAgent that handles localStorage
-  const setSelectedAgent = useCallback((agent: Agent | null) => {
-    setSelectedAgentState(agent);
-    storeAgentId(agent?.id || null);
-  }, []);
 
   // Infinite query for paginated results
   const {
@@ -157,51 +122,25 @@ export const AgentsProvider = ({
   // Flatten pages into single array
   const agents: Agent[] = data?.pages?.flat() ?? [];
 
-  // Clear selected agent when on /agents page
-  useEffect(() => {
-    if (pathname === '/agents') {
-      setSelectedAgentState(null);
-      storeAgentId(null);
-    }
-  }, [pathname]);
+  // Fetch individual agent by name when URL has a selected agent
+  const { data: selectedAgentData } = useQuery({
+    queryKey: ['agent', 'by-name', navigationState.selectedAgentName],
+    queryFn: async () => {
+      const results = await getAgents({
+        name: navigationState.selectedAgentName,
+        limit: 1,
+      });
+      return results.length > 0 ? results[0] : undefined;
+    },
+    enabled: !!navigationState.selectedAgentName,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
-  // Auto-select agent logic
-  useEffect(() => {
-    // Don't auto-select if we're on the agents list page
-    if (pathname === '/agents') {
-      return;
-    }
-
-    if (isLoading || agents.length === 0) {
-      return;
-    }
-
-    // If we already have a selected agent and it's still in the list, keep it
-    if (
-      selectedAgent &&
-      agents.some((agent) => agent.id === selectedAgent.id)
-    ) {
-      return;
-    }
-
-    // Try to restore from localStorage
-    const storedAgentId = getStoredAgentId();
-
-    if (storedAgentId) {
-      const storedAgent = agents.find((agent) => agent.id === storedAgentId);
-      if (storedAgent) {
-        setSelectedAgentState(storedAgent);
-        return;
-      }
-    }
-
-    // Only auto-select first agent if we had a stored preference that's no longer valid
-    // This prevents auto-selection in tests and fresh app loads
-    if (!selectedAgent && agents.length > 0 && storedAgentId) {
-      const firstAgent = agents[0];
-      setSelectedAgent(firstAgent);
-    }
-  }, [agents, isLoading, selectedAgent, setSelectedAgent, pathname]);
+  // Resolve selectedAgent from navigationState.selectedAgentName
+  const selectedAgent = useMemo(() => {
+    if (!navigationState.selectedAgentName) return undefined;
+    return selectedAgentData;
+  }, [navigationState.selectedAgentName, selectedAgentData]);
 
   // Create agent mutation
   const createAgentMutation = useMutation({
@@ -209,9 +148,6 @@ export const AgentsProvider = ({
     onSuccess: (newAgent) => {
       // Invalidate all lists to ensure consistency
       queryClient.invalidateQueries({ queryKey: agentQueryKeys.lists() });
-
-      // Auto-select the newly created agent
-      setSelectedAgent(newAgent);
 
       toast({
         title: 'Agent created',
@@ -241,11 +177,6 @@ export const AgentsProvider = ({
       // Invalidate queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: agentQueryKeys.lists() });
 
-      // Update selected agent if it's the one being updated
-      if (selectedAgent?.id === updatedAgent.id) {
-        setSelectedAgent(updatedAgent);
-      }
-
       toast({
         title: 'Agent updated',
         description: `${updatedAgent.name} has been updated successfully.`,
@@ -264,12 +195,6 @@ export const AgentsProvider = ({
   // Delete agent mutation
   const deleteAgentMutation = useMutation({
     mutationFn: (agentId: string) => deleteAgent(agentId),
-    onMutate: (agentId) => {
-      // Clear selected agent if it's the one being deleted
-      if (selectedAgent?.id === agentId) {
-        setSelectedAgent(null);
-      }
-    },
     onSuccess: () => {
       // Invalidate lists to ensure consistency
       queryClient.invalidateQueries({ queryKey: agentQueryKeys.lists() });
@@ -344,6 +269,7 @@ export const AgentsProvider = ({
   const contextValue: AgentsContextType = {
     // Query state
     agents,
+    selectedAgent,
     isLoading,
     error,
     refetch,
@@ -351,10 +277,6 @@ export const AgentsProvider = ({
     // Query parameters
     queryParams,
     setQueryParams,
-
-    // Selected agent state
-    selectedAgent,
-    setSelectedAgent,
 
     // Simplified mutation functions
     createAgent: createAgentHandler,

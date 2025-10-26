@@ -7,27 +7,39 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from '@client/components/ui/breadcrumb';
 import { Button } from '@client/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@client/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@client/components/ui/popover';
 import { useModifierKey } from '@client/hooks/use-keyboard-shortcuts';
 import { useAgents } from '@client/providers/agents';
+import type { BreadcrumbSegment } from '@client/providers/navigation';
 import { useNavigation } from '@client/providers/navigation';
+import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
+import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkills } from '@client/providers/skills';
 import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { Bot, ChevronsUpDown, Plus } from 'lucide-react';
+import { Bot, ChevronRight, Plus, PlusCircleIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { type ReactElement, useMemo } from 'react';
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
 
 const createAgentAvatar = (agentName: string) => {
   return `data:image/svg+xml;base64,${Buffer.from(
@@ -59,74 +71,382 @@ const createAgentAvatar = (agentName: string) => {
   ).toString('base64')}`;
 };
 
-function SkillDropdownBreadcrumb(): ReactElement {
-  const { navigationState, skills, setSelectedSkill } = useNavigation();
-  const router = useRouter();
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+// ============================================================================
+// Agent Breadcrumb Components
+// ============================================================================
 
-  const selectedSkill = navigationState.selectedSkill;
-  const selectedAgent = navigationState.selectedAgent;
+function LoadingAgentsBreadcrumb(): ReactElement {
+  return (
+    <BreadcrumbItem>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
+      >
+        <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-5 items-center justify-center rounded-lg">
+          <Bot className="size-3" />
+        </div>
+        <span className="truncate font-medium">Loading...</span>
+      </Button>
+    </BreadcrumbItem>
+  );
+}
+
+function CreateFirstAgentBreadcrumb({
+  onClick,
+}: {
+  onClick: () => void;
+}): ReactElement {
+  return (
+    <BreadcrumbItem>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        onClick={onClick}
+      >
+        <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-5 items-center justify-center rounded-lg">
+          <Bot className="size-3" />
+        </div>
+        <span className="truncate font-medium">Create your first agent</span>
+        <Plus className="size-4" />
+      </Button>
+    </BreadcrumbItem>
+  );
+}
+
+function AgentCombobox<T extends { id: string; name: string }>({
+  activeAgent,
+  agents,
+  agentAvatars,
+  comboboxOpen,
+  setComboboxOpen,
+  onAgentSelect,
+  onCreateClick,
+}: {
+  activeAgent: T;
+  agents: T[];
+  agentAvatars: Map<string, string>;
+  comboboxOpen: boolean;
+  setComboboxOpen: (open: boolean) => void;
+  onAgentSelect: (agent: T) => void;
+  onCreateClick: () => void;
+}): ReactElement {
+  const modifierKey = useModifierKey();
+
+  return (
+    <BreadcrumbItem>
+      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          >
+            <Image
+              src={agentAvatars.get(activeAgent.name) || ''}
+              alt={`${activeAgent.name} avatar`}
+              width={20}
+              height={20}
+              className="size-5 rounded-sm"
+            />
+            <span className="truncate font-medium">{activeAgent.name}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[300px] p-0"
+          align="start"
+          side="bottom"
+          sideOffset={4}
+        >
+          <Command>
+            <CommandInput placeholder="Search agents..." className="h-9" />
+            <CommandList>
+              <CommandEmpty>No agents found.</CommandEmpty>
+              <CommandGroup heading="Agents">
+                {agents.map((agent, index) => (
+                  <CommandItem
+                    key={agent.id}
+                    value={agent.name}
+                    onSelect={() => {
+                      onAgentSelect(agent);
+                      setComboboxOpen(false);
+                    }}
+                    className="gap-2"
+                  >
+                    <div className="flex size-6 items-center justify-center rounded-md border">
+                      <Image
+                        src={agentAvatars.get(agent.name) || ''}
+                        alt={`${agent.name} avatar`}
+                        width={20}
+                        height={20}
+                        className="rounded-sm"
+                      />
+                    </div>
+                    <span className="flex-1 truncate">{agent.name}</span>
+                    {index < MAX_AGENT_SHORTCUTS && (
+                      <span className="text-xs text-muted-foreground">
+                        {modifierKey}
+                        {index + 1}
+                      </span>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    onCreateClick();
+                    setComboboxOpen(false);
+                  }}
+                  className="gap-2"
+                >
+                  <PlusCircleIcon size={16} className="text-muted-foreground" />
+                  <span className="text-muted-foreground">Add agent</span>
+                </CommandItem>
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </BreadcrumbItem>
+  );
+}
+
+// ============================================================================
+// Skill Breadcrumb Components
+// ============================================================================
+
+function NoAgentSelectedSkillBreadcrumb(): ReactElement {
+  return (
+    <BreadcrumbItem>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
+      >
+        <Bot className="size-5" />
+        <span className="truncate font-medium">Select Agent First</span>
+      </Button>
+    </BreadcrumbItem>
+  );
+}
+
+function CreateFirstSkillBreadcrumb({
+  onClick,
+}: {
+  onClick: () => void;
+}): ReactElement {
+  return (
+    <BreadcrumbItem>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        onClick={onClick}
+      >
+        <Bot className="size-5" />
+        <span className="truncate font-medium">Create your first skill</span>
+        <Plus className="size-4" />
+      </Button>
+    </BreadcrumbItem>
+  );
+}
+
+function LoadingSkillsBreadcrumb(): ReactElement {
+  return (
+    <BreadcrumbItem>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
+      >
+        <Bot className="size-5" />
+        <span className="truncate font-medium">Loading skills...</span>
+      </Button>
+    </BreadcrumbItem>
+  );
+}
+
+function SkillCombobox<T extends { id: string; name: string }>({
+  activeSkill,
+  skills,
+  comboboxOpen,
+  setComboboxOpen,
+  onSkillSelect,
+  onCreateClick,
+}: {
+  activeSkill: T;
+  skills: T[];
+  comboboxOpen: boolean;
+  setComboboxOpen: (open: boolean) => void;
+  onSkillSelect: (skill: T) => void;
+  onCreateClick: () => void;
+}): ReactElement {
+  return (
+    <BreadcrumbItem>
+      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          >
+            <Bot className="size-5 shrink-0" />
+            <span className="truncate font-medium">{activeSkill.name}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[300px] p-0"
+          align="start"
+          side="bottom"
+          sideOffset={4}
+        >
+          <Command>
+            <CommandInput placeholder="Search skills..." className="h-9" />
+            <CommandList>
+              <CommandEmpty>No skills found.</CommandEmpty>
+              <CommandGroup heading="Skills">
+                {skills.map((skill) => (
+                  <CommandItem
+                    key={skill.id}
+                    value={skill.name}
+                    onSelect={() => {
+                      onSkillSelect(skill);
+                      setComboboxOpen(false);
+                    }}
+                  >
+                    <span className="flex-1 truncate">{skill.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    onCreateClick();
+                    setComboboxOpen(false);
+                  }}
+                  className="gap-2"
+                >
+                  <PlusCircleIcon size={16} className="text-muted-foreground" />
+                  <span className="text-muted-foreground">Add skill</span>
+                </CommandItem>
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </BreadcrumbItem>
+  );
+}
+
+function SkillDropdownBreadcrumb(): ReactElement {
+  const { navigationState } = useNavigation();
+  const { skills, selectedSkill } = useSkills();
+  const router = useRouter();
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
   const handleCreateSkillClick = () => {
-    setDropdownOpen(false);
-    if (selectedAgent) {
+    setComboboxOpen(false);
+    if (navigationState.selectedAgentName) {
       router.push(
-        `/agents/${encodeURIComponent(selectedAgent.name)}/skills/create`,
+        `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/skills/create`,
       );
     }
   };
 
   const handleSkillSelect = (skill: (typeof skills)[0]) => {
-    setSelectedSkill(skill);
-    setDropdownOpen(false);
+    // Navigate to skill - NavigationProvider will update selection from URL
+    if (navigationState.selectedAgentName) {
+      router.push(
+        `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/${encodeURIComponent(skill.name)}`,
+      );
+    }
+    setComboboxOpen(false);
   };
 
-  if (!selectedAgent) {
-    return (
-      <BreadcrumbItem>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled
-          className="h-auto p-2 justify-start bg-transparent hover:bg-transparent"
-        >
-          <Bot className="size-4 mr-2" />
-          <span className="truncate font-medium">Select Agent First</span>
-        </Button>
-      </BreadcrumbItem>
-    );
+  if (!navigationState.selectedAgentName) {
+    return <NoAgentSelectedSkillBreadcrumb />;
   }
 
   if (!selectedSkill && skills.length === 0) {
-    return (
-      <BreadcrumbItem>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-auto p-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          onClick={handleCreateSkillClick}
-        >
-          <Bot className="size-4 mr-2" />
-          <span className="truncate font-medium">Create your first skill</span>
-          <Plus className="ml-2 size-4" />
-        </Button>
-      </BreadcrumbItem>
-    );
+    return <CreateFirstSkillBreadcrumb onClick={handleCreateSkillClick} />;
   }
 
   const activeSkill = selectedSkill || skills[0] || null;
 
   if (!activeSkill) {
+    return <LoadingSkillsBreadcrumb />;
+  }
+
+  return (
+    <SkillCombobox
+      activeSkill={activeSkill}
+      skills={skills}
+      comboboxOpen={comboboxOpen}
+      setComboboxOpen={setComboboxOpen}
+      onSkillSelect={handleSkillSelect}
+      onCreateClick={handleCreateSkillClick}
+    />
+  );
+}
+
+// ============================================================================
+// Cluster Breadcrumb Components
+// ============================================================================
+
+function ClusterDropdownBreadcrumb(): ReactElement {
+  const { navigateToClusterArms } = useNavigation();
+  const { clusters, selectedCluster } = useSkillOptimizationClusters();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
+
+  const handleClusterSelect = (cluster: (typeof clusters)[0]) => {
+    if (selectedAgent && selectedSkill) {
+      navigateToClusterArms(
+        selectedAgent.name,
+        selectedSkill.name,
+        cluster.name,
+      );
+    }
+    setComboboxOpen(false);
+  };
+
+  if (!selectedCluster && clusters.length === 0) {
     return (
       <BreadcrumbItem>
         <Button
           variant="ghost"
           size="sm"
           disabled
-          className="h-auto p-2 justify-start bg-transparent hover:bg-transparent"
+          className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
         >
-          <Bot className="size-4 mr-2" />
-          <span className="truncate font-medium">Loading skills...</span>
+          <Bot className="size-5" />
+          <span className="truncate font-medium">No partitions</span>
+        </Button>
+      </BreadcrumbItem>
+    );
+  }
+
+  const activeCluster = selectedCluster || clusters[0] || null;
+
+  if (!activeCluster) {
+    return (
+      <BreadcrumbItem>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled
+          className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
+        >
+          <Bot className="size-5" />
+          <span className="truncate font-medium">Loading...</span>
         </Button>
       </BreadcrumbItem>
     );
@@ -134,72 +454,159 @@ function SkillDropdownBreadcrumb(): ReactElement {
 
   return (
     <BreadcrumbItem>
-      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-        <DropdownMenuTrigger asChild>
+      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+        <PopoverTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-auto p-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Bot className="size-4 mr-2" />
-            <span className="truncate font-medium">{activeSkill.name}</span>
-            <ChevronsUpDown className="ml-2 size-4" />
+            <Bot className="size-5" />
+            <span className="truncate font-medium">{activeCluster.name}</span>
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[300px] p-0"
           align="start"
           side="bottom"
           sideOffset={4}
         >
-          <DropdownMenuLabel className="text-muted-foreground text-xs">
-            Skills
-          </DropdownMenuLabel>
-          {skills.map((skill) => (
-            <DropdownMenuItem
-              key={skill.id}
-              onClick={() => handleSkillSelect(skill)}
-              className="p-2"
-            >
-              <div className="flex flex-col">
-                <span className="truncate font-medium">{skill.name}</span>
-              </div>
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="p-2 cursor-pointer"
-            onClick={handleCreateSkillClick}
+          <Command>
+            <CommandInput placeholder="Search partitions..." className="h-9" />
+            <CommandList>
+              <CommandEmpty>No partitions found.</CommandEmpty>
+              <CommandGroup heading="Partitions">
+                {clusters.map((cluster) => (
+                  <CommandItem
+                    key={cluster.id}
+                    value={cluster.name}
+                    onSelect={() => handleClusterSelect(cluster)}
+                  >
+                    <span className="flex-1 truncate">{cluster.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </BreadcrumbItem>
+  );
+}
+
+// ============================================================================
+// Configuration Breadcrumb Components
+// ============================================================================
+
+function ArmDropdownBreadcrumb(): ReactElement {
+  const { navigateToArmDetail } = useNavigation();
+  const { arms, selectedArm } = useSkillOptimizationArms();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
+  const { selectedCluster } = useSkillOptimizationClusters();
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
+
+  const handleArmSelect = (arm: (typeof arms)[0]) => {
+    if (selectedAgent && selectedSkill && selectedCluster) {
+      navigateToArmDetail(
+        selectedAgent.name,
+        selectedSkill.name,
+        selectedCluster.name,
+        arm.name,
+      );
+    }
+    setComboboxOpen(false);
+  };
+
+  if (!selectedArm && arms.length === 0) {
+    return (
+      <BreadcrumbItem>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled
+          className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
+        >
+          <Bot className="size-5" />
+          <span className="truncate font-medium">No configurations</span>
+        </Button>
+      </BreadcrumbItem>
+    );
+  }
+
+  const activeArm = selectedArm || arms[0] || null;
+
+  if (!activeArm) {
+    return (
+      <BreadcrumbItem>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled
+          className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
+        >
+          <Bot className="size-5" />
+          <span className="truncate font-medium">Loading...</span>
+        </Button>
+      </BreadcrumbItem>
+    );
+  }
+
+  return (
+    <BreadcrumbItem>
+      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Plus className="size-4 mr-2" />
-            <div className="text-muted-foreground font-medium">Add skill</div>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <Bot className="size-5" />
+            <span className="truncate font-medium">{activeArm.name}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[300px] p-0"
+          align="start"
+          side="bottom"
+          sideOffset={4}
+        >
+          <Command>
+            <CommandInput
+              placeholder="Search configurations..."
+              className="h-9"
+            />
+            <CommandList>
+              <CommandEmpty>No configurations found.</CommandEmpty>
+              <CommandGroup heading="Configurations">
+                {arms.map((arm) => (
+                  <CommandItem
+                    key={arm.id}
+                    value={arm.name}
+                    onSelect={() => handleArmSelect(arm)}
+                  >
+                    <span className="flex-1 truncate">{arm.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </BreadcrumbItem>
   );
 }
 
 function AgentDropdownBreadcrumb(): ReactElement {
-  const {
-    agents,
-    isLoading,
-    selectedAgent,
-    setSelectedAgent: setAgentsSelectedAgent,
-  } = useAgents();
-  const { setSelectedAgent: setNavigationSelectedAgent } = useNavigation();
+  const { agents, selectedAgent, isLoading } = useAgents();
   const router = useRouter();
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const modifierKey = useModifierKey();
-
-  // Use first agent as default if no agent is selected
-  const activeAgent = selectedAgent || agents[0] || null;
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
   // Memoize avatar generation to prevent recalculation on every render
   const agentAvatars = useMemo(() => {
     const avatars = new Map<string, string>();
-    if (activeAgent) {
-      avatars.set(activeAgent.name, createAgentAvatar(activeAgent.name));
+    if (selectedAgent) {
+      avatars.set(selectedAgent.name, createAgentAvatar(selectedAgent.name));
     }
     agents.forEach((agent) => {
       if (!avatars.has(agent.name)) {
@@ -207,134 +614,65 @@ function AgentDropdownBreadcrumb(): ReactElement {
       }
     });
     return avatars;
-  }, [agents, activeAgent]);
+  }, [agents, selectedAgent]);
 
   const handleCreateAgentClick = () => {
-    setDropdownOpen(false);
+    setComboboxOpen(false);
     router.push('/agents/create');
   };
 
   const handleAgentSelect = (agent: (typeof agents)[0]) => {
-    // Keep AgentsProvider and NavigationProvider in sync
-    setAgentsSelectedAgent(agent);
-    setNavigationSelectedAgent(agent);
-    setDropdownOpen(false);
+    // Navigate to agent - NavigationProvider will update selection from URL
+    router.push(`/agents/${encodeURIComponent(agent.name)}`);
+    setComboboxOpen(false);
   };
 
   if (isLoading) {
-    return (
-      <BreadcrumbItem>
-        <Button
-          variant="ghost"
-          size="lg"
-          disabled
-          className="h-auto p-2 justify-start bg-transparent hover:bg-transparent"
-        >
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-            <Bot className="size-4" />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight ml-2">
-            <span className="truncate font-medium">Loading...</span>
-          </div>
-        </Button>
-      </BreadcrumbItem>
-    );
+    return <LoadingAgentsBreadcrumb />;
   }
 
-  if (!activeAgent) {
-    return (
-      <BreadcrumbItem>
-        <Button
-          variant="ghost"
-          size="lg"
-          className="h-auto p-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          onClick={handleCreateAgentClick}
-        >
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-            <Bot className="size-4" />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight ml-2">
-            <span className="truncate font-medium">
-              Create your first agent
-            </span>
-          </div>
-          <Plus className="ml-auto size-4" />
-        </Button>
-      </BreadcrumbItem>
-    );
+  if (!selectedAgent) {
+    return <CreateFirstAgentBreadcrumb onClick={handleCreateAgentClick} />;
   }
 
   return (
-    <BreadcrumbItem>
-      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="lg"
-            className="h-auto p-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-          >
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-              <Image
-                src={agentAvatars.get(activeAgent.name) || ''}
-                alt={`${activeAgent.name} avatar`}
-                width={24}
-                height={24}
-                className="size-6 rounded-sm"
-              />
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight ml-2">
-              <span className="truncate font-medium">{activeAgent.name}</span>
-            </div>
-            <ChevronsUpDown className="ml-auto size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-          align="start"
-          side="bottom"
-          sideOffset={4}
+    <AgentCombobox
+      activeAgent={selectedAgent}
+      agents={agents}
+      agentAvatars={agentAvatars}
+      comboboxOpen={comboboxOpen}
+      setComboboxOpen={setComboboxOpen}
+      onAgentSelect={handleAgentSelect}
+      onCreateClick={handleCreateAgentClick}
+    />
+  );
+}
+
+// ============================================================================
+// Main Breadcrumb Component
+// ============================================================================
+
+function RegularBreadcrumbItem({
+  segment,
+  isLastItem,
+}: {
+  segment: BreadcrumbSegment;
+  isLastItem: boolean;
+}): ReactElement {
+  return (
+    <BreadcrumbItem className="flex overflow-hidden">
+      {isLastItem ? (
+        <BreadcrumbPage className="px-2 font-medium">
+          {segment.label}
+        </BreadcrumbPage>
+      ) : (
+        <BreadcrumbLink
+          href={segment.path}
+          className="px-2 font-medium cursor-pointer hover:text-foreground"
         >
-          <DropdownMenuLabel className="text-muted-foreground text-xs">
-            Agents
-          </DropdownMenuLabel>
-          {agents.map((agent, index) => (
-            <DropdownMenuItem
-              key={agent.id}
-              onClick={() => handleAgentSelect(agent)}
-              className="gap-2 p-2"
-            >
-              <div className="flex size-6 items-center justify-center rounded-md border">
-                <Image
-                  src={agentAvatars.get(agent.name) || ''}
-                  alt={`${agent.name} avatar`}
-                  width={16}
-                  height={16}
-                  className="size-4 rounded-sm"
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="truncate font-medium">{agent.name}</span>
-              </div>
-              {index < MAX_AGENT_SHORTCUTS && (
-                <DropdownMenuShortcut>
-                  {modifierKey}
-                  {index + 1}
-                </DropdownMenuShortcut>
-              )}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="gap-2 p-2 cursor-pointer"
-            onClick={handleCreateAgentClick}
-          >
-            <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-              <Plus className="size-4" />
-            </div>
-            <div className="text-muted-foreground font-medium">Add agent</div>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          {segment.label}
+        </BreadcrumbLink>
+      )}
     </BreadcrumbItem>
   );
 }
@@ -343,32 +681,30 @@ export function BreadcrumbComponent(): ReactElement {
   const { navigationState } = useNavigation();
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList className="pl-0">
+    <Breadcrumb className="py-2">
+      <BreadcrumbList className="px-1! h-9 pr-0 gap-0! spacing-x-0! border rounded-md bg-sidebar dark:bg-sidebar overflow-hidden">
         {navigationState.breadcrumbs.map((segment, index) => (
           <React.Fragment
             key={
               segment.path ? `${segment.path}-${index}` : `breadcrumb-${index}`
             }
           >
-            {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
+            {index > 0 && (
+              <ChevronRight size={16} className="hidden md:block" />
+            )}
             {segment.isAgentDropdown ? (
               <AgentDropdownBreadcrumb />
             ) : segment.isSkillDropdown ? (
               <SkillDropdownBreadcrumb />
+            ) : segment.isClusterDropdown ? (
+              <ClusterDropdownBreadcrumb />
+            ) : segment.isArmDropdown ? (
+              <ArmDropdownBreadcrumb />
             ) : (
-              <BreadcrumbItem>
-                {index === navigationState.breadcrumbs.length - 1 ? (
-                  <BreadcrumbPage>{segment.label}</BreadcrumbPage>
-                ) : (
-                  <BreadcrumbLink
-                    href={segment.path}
-                    className="cursor-pointer hover:text-foreground"
-                  >
-                    {segment.label}
-                  </BreadcrumbLink>
-                )}
-              </BreadcrumbItem>
+              <RegularBreadcrumbItem
+                segment={segment}
+                isLastItem={index === navigationState.breadcrumbs.length - 1}
+              />
             )}
           </React.Fragment>
         ))}

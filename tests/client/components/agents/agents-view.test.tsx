@@ -1,5 +1,7 @@
 import { AgentsView } from '@client/components/agents/agents-view';
+import { AgentsProvider } from '@client/providers/agents';
 import { NavigationProvider } from '@client/providers/navigation';
+import { SkillsProvider } from '@client/providers/skills';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import type React from 'react';
@@ -11,8 +13,8 @@ type Params = Partial<{
   agentName: string;
   skillName: string;
   logId: string;
-  clusterId: string;
-  armId: string;
+  clusterName: string;
+  armName: string;
 }>;
 const mockParams: Params = {};
 let mockPathname = '/agents';
@@ -108,7 +110,11 @@ const renderWithProviders = async (component: React.ReactElement) => {
   return await act(() => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <NavigationProvider>{component}</NavigationProvider>
+        <NavigationProvider>
+          <AgentsProvider>
+            <SkillsProvider>{component}</SkillsProvider>
+          </AgentsProvider>
+        </NavigationProvider>
       </QueryClientProvider>,
     );
   });
@@ -123,8 +129,8 @@ describe('AgentsView', () => {
     delete mockParams.agentName;
     delete mockParams.skillName;
     delete mockParams.logId;
-    delete mockParams.clusterId;
-    delete mockParams.armId;
+    delete mockParams.clusterName;
+    delete mockParams.armName;
     mockPathname = '/agents';
   });
 
@@ -212,7 +218,7 @@ describe('AgentsView', () => {
   it('renders clusters view when current view is clusters', async () => {
     mockParams.agentName = 'Test Agent';
     mockParams.skillName = 'Test Skill';
-    mockPathname = '/agents/Test%20Agent/Test%20Skill/clusters';
+    mockPathname = '/agents/Test%20Agent/Test%20Skill/partitions';
 
     await renderWithProviders(<AgentsView />);
 
@@ -222,9 +228,9 @@ describe('AgentsView', () => {
   it('renders cluster arms view when current view is cluster-arms', async () => {
     mockParams.agentName = 'Test Agent';
     mockParams.skillName = 'Test Skill';
-    mockParams.clusterId = 'cluster-123';
+    mockParams.clusterName = 'cluster-123';
     mockPathname =
-      '/agents/Test%20Agent/Test%20Skill/clusters/cluster-123/arms';
+      '/agents/Test%20Agent/Test%20Skill/partitions/cluster-123/arms';
 
     await renderWithProviders(<AgentsView />);
 
@@ -234,10 +240,10 @@ describe('AgentsView', () => {
   it('renders arm detail view when current view is arm-detail', async () => {
     mockParams.agentName = 'Test Agent';
     mockParams.skillName = 'Test Skill';
-    mockParams.clusterId = 'cluster-123';
-    mockParams.armId = 'arm-123';
+    mockParams.clusterName = 'cluster-123';
+    mockParams.armName = 'arm-123';
     mockPathname =
-      '/agents/Test%20Agent/Test%20Skill/clusters/cluster-123/arms/arm-123';
+      '/agents/Test%20Agent/Test%20Skill/partitions/cluster-123/arms/arm-123';
 
     await renderWithProviders(<AgentsView />);
 

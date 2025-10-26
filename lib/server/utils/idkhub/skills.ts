@@ -5,6 +5,7 @@ import type { Skill } from '@shared/types/data/skill';
 export async function getSkill(
   userDataStorageConnector: UserDataStorageConnector,
   agentId: string,
+  agentName: string,
   skillName: string,
 ): Promise<Skill | null> {
   const skills = await userDataStorageConnector.getSkills({
@@ -15,7 +16,7 @@ export async function getSkill(
     return skills[0];
   } else {
     // Auto create internal skills
-    if (skillName in IDKHUB_SKILLS) {
+    if (agentName === 'idkhub' && IDKHUB_SKILLS.includes(skillName)) {
       const newSkill = await userDataStorageConnector.createSkill({
         agent_id: agentId,
         name: skillName,

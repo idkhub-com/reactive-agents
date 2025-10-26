@@ -12,9 +12,11 @@ import {
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
+import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
+import { useSkills } from '@client/providers/skills';
 import { ArrowRightIcon, LayersIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
@@ -22,8 +24,9 @@ import { useEffect } from 'react';
 import { ClusterPerformanceChart } from './cluster-performance-chart';
 
 export function ClustersView(): ReactElement {
-  const { navigationState, navigateToClusterArms } = useNavigation();
-  const { selectedSkill, selectedAgent } = navigationState;
+  const { navigateToClusterArms } = useNavigation();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
   const goBack = useSmartBack();
 
   const { clusters, isLoading, error, refetch, setSkillId } =
@@ -47,12 +50,12 @@ export function ClustersView(): ReactElement {
     return (
       <>
         <PageHeader
-          title="Clusters"
-          description="No skill selected. Please select a skill to view its clusters."
+          title="Partitions"
+          description="No skill selected. Please select a skill to view its partitions."
         />
         <div className="p-6">
           <div className="text-center text-muted-foreground">
-            No skill selected. Please select a skill to view its clusters.
+            No skill selected. Please select a skill to view its partitions.
           </div>
         </div>
       </>
@@ -62,8 +65,8 @@ export function ClustersView(): ReactElement {
   return (
     <>
       <PageHeader
-        title={`Clusters for ${selectedSkill.name}`}
-        description="View optimization clusters for this skill"
+        title={`Partitions for ${selectedSkill.name}`}
+        description="View optimization partitions for this skill"
         showBackButton={true}
         onBack={goBack}
         actions={
@@ -75,18 +78,20 @@ export function ClustersView(): ReactElement {
       />
 
       <div className="p-6 space-y-6">
-        {/* Cluster Stats */}
+        {/* Partition Stats */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LayersIcon className="h-5 w-5" />
-              Cluster Overview
+              Partition Overview
             </CardTitle>
-            <CardDescription>Total clusters: {clusters.length}</CardDescription>
+            <CardDescription>
+              Total partitions: {clusters.length}
+            </CardDescription>
           </CardHeader>
         </Card>
 
-        {/* Clusters Grid */}
+        {/* Partitions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {isLoading ? (
             Array.from({ length: 6 }).map(() => (
@@ -104,7 +109,7 @@ export function ClustersView(): ReactElement {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <p className="text-destructive mb-4">
-                    Failed to load clusters: {error.message}
+                    Failed to load partitions: {error.message}
                   </p>
                   <Button variant="outline" onClick={() => refetch()}>
                     <RefreshCwIcon className="h-4 w-4 mr-2" />
@@ -119,22 +124,22 @@ export function ClustersView(): ReactElement {
                 <CardContent className="pt-6 text-center">
                   <LayersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
-                    No clusters found
+                    No partitions found
                   </h3>
                   <p className="text-muted-foreground">
-                    This skill has no optimization clusters yet.
+                    This skill has no optimization partitions yet.
                   </p>
                 </CardContent>
               </Card>
             </div>
           ) : (
-            clusters.map((cluster, index) => (
+            clusters.map((cluster) => (
               <Card
                 key={cluster.id}
                 className="hover:shadow-lg transition-shadow"
               >
                 <CardHeader>
-                  <CardTitle className="text-lg">Cluster {index + 1}</CardTitle>
+                  <CardTitle className="text-lg">{cluster.name}</CardTitle>
                   <CardDescription>
                     ID: {cluster.id.slice(0, 8)}...
                   </CardDescription>
@@ -176,7 +181,7 @@ export function ClustersView(): ReactElement {
                           navigateToClusterArms(
                             selectedAgent.name,
                             selectedSkill.name,
-                            cluster.id,
+                            cluster.name,
                           )
                         }
                       >

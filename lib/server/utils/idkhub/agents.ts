@@ -11,12 +11,15 @@ export async function getAgent(
   if (agents.length > 0) {
     return agents[0];
   } else {
-    // Auto create the idkhub agent if it doesn't exist
-    const newAgent = await userDataStorageConnector.createAgent({
-      name: agentName,
-      description: 'The idkHub internal agent',
-      metadata: {},
-    });
-    return newAgent;
+    if (agentName === 'idkhub') {
+      // Auto create the idkhub agent if it doesn't exist
+      const newAgent = await userDataStorageConnector.createAgent({
+        name: agentName,
+        description: 'The idkHub internal agent',
+        metadata: {},
+      });
+      return newAgent;
+    }
+    return null;
   }
 }

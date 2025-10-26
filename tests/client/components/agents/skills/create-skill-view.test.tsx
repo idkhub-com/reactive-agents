@@ -13,6 +13,9 @@ import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Next.js router and params before importing component
+const mockParams: { agentName?: string } = {};
+const mockPathname = { current: '/agents' };
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: (_url: string) => {
@@ -36,8 +39,8 @@ vi.mock('next/navigation', () => ({
     forward: vi.fn(),
     prefetch: vi.fn().mockResolvedValue(undefined),
   }),
-  useParams: () => ({ agentName: undefined }),
-  usePathname: () => '/agents/test-agent/create-skill',
+  useParams: () => mockParams,
+  usePathname: () => mockPathname.current,
 }));
 
 import { CreateSkillView } from '@client/components/agents/skills/create-skill-view';
@@ -174,6 +177,9 @@ describe('CreateSkillView', () => {
     vi.clearAllMocks();
     localStorageMock.clear();
     window.location.hash = '';
+    // Reset mock navigation state
+    delete mockParams.agentName;
+    mockPathname.current = '/agents';
   });
 
   const renderCreateSkillView = () =>
@@ -217,8 +223,9 @@ describe('CreateSkillView', () => {
   });
 
   it('shows agent-specific header when selectedAgent exists', async () => {
-    // Pre-select an agent
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    // Pre-select an agent via URL params
+    mockParams.agentName = 'Test Agent 1';
+    mockPathname.current = '/agents/Test%20Agent%201/create-skill';
 
     renderCreateSkillView();
 
@@ -230,8 +237,9 @@ describe('CreateSkillView', () => {
   });
 
   it('pre-selects agent when selectedAgent exists', async () => {
-    // Pre-select an agent
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    // Pre-select an agent via URL params
+    mockParams.agentName = 'Test Agent 1';
+    mockPathname.current = '/agents/Test%20Agent%201/create-skill';
 
     renderCreateSkillView();
 
@@ -242,8 +250,9 @@ describe('CreateSkillView', () => {
   });
 
   it('renders agent context when an agent is available', async () => {
-    // Pre-select an agent
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    // Pre-select an agent via URL params
+    mockParams.agentName = 'Test Agent 1';
+    mockPathname.current = '/agents/Test%20Agent%201/create-skill';
     renderCreateSkillView();
     await waitFor(() => {
       expect(screen.getByText('Creating skill for')).toBeInTheDocument();

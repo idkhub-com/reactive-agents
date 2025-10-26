@@ -12,27 +12,31 @@ import {
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
+import { useAgents } from '@client/providers/agents';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
+import { useSkills } from '@client/providers/skills';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect } from 'react';
 
 export function ClusterArmsView(): ReactElement {
-  const { navigationState, navigateToArmDetail } = useNavigation();
-  const { selectedSkill, selectedAgent, clusterId } = navigationState;
+  const { navigateToArmDetail } = useNavigation();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
   const goBack = useSmartBack();
 
   const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
     useSkillOptimizationArms();
-  const { clusters } = useSkillOptimizationClusters();
+  const { selectedCluster } = useSkillOptimizationClusters();
   const { skillModels, setSkillId: setModelsSkillId } = useModels();
   const { getAPIKeyById } = useAIProviderAPIKeys();
+
+  const clusterId = selectedCluster?.id;
 
   // Helper function to get model and provider info for an arm
   const getArmMetadata = useCallback(
@@ -48,14 +52,6 @@ export function ClusterArmsView(): ReactElement {
     },
     [skillModels, getAPIKeyById],
   );
-
-  // Find the current cluster
-  const currentCluster = clusters.find(
-    (c: SkillOptimizationCluster) => c.id === clusterId,
-  );
-  const clusterIndex =
-    clusters.findIndex((c: SkillOptimizationCluster) => c.id === clusterId) +
-      1 || 0;
 
   // Set skill ID and cluster ID when they change
   useEffect(() => {
@@ -77,16 +73,17 @@ export function ClusterArmsView(): ReactElement {
   }, [clusterId, setClusterId]);
 
   // Early return if no skill or agent or cluster selected
-  if (!selectedSkill || !selectedAgent || !clusterId) {
+  if (!selectedSkill || !selectedAgent || !selectedCluster) {
     return (
       <>
         <PageHeader
-          title="Cluster Arms"
-          description="No cluster selected. Please select a cluster to view its arms."
+          title="Partition Configurations"
+          description="No partition selected. Please select a partition to view its configurations."
         />
         <div className="p-6">
           <div className="text-center text-muted-foreground">
-            No cluster selected. Please select a cluster to view its arms.
+            No partition selected. Please select a partition to view its
+            configurations.
           </div>
         </div>
       </>
@@ -96,8 +93,8 @@ export function ClusterArmsView(): ReactElement {
   return (
     <>
       <PageHeader
-        title={`Arms for Cluster ${clusterIndex}`}
-        description={`Optimization arms for cluster ${clusterId.slice(0, 8)}...`}
+        title={`Configurations for ${selectedCluster?.name || 'Partition'}`}
+        description={`View the performance of each configuration in this partition.`}
         showBackButton={true}
         onBack={goBack}
         actions={
@@ -109,23 +106,23 @@ export function ClusterArmsView(): ReactElement {
       />
 
       <div className="p-6 space-y-6">
-        {/* Cluster Info */}
-        {currentCluster && (
+        {/* Partition Info */}
+        {selectedCluster && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BoxIcon className="h-5 w-5" />
-                Cluster Information
+                Partition Information
               </CardTitle>
               <CardDescription>
-                Total requests in this cluster:{' '}
-                {currentCluster.total_steps.toString()}
+                Total requests in this partition:{' '}
+                {selectedCluster.total_steps.toString()}
               </CardDescription>
             </CardHeader>
           </Card>
         )}
 
-        {/* Arms Grid */}
+        {/* Configurations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {isLoading ? (
             Array.from({ length: 6 }).map(() => (
@@ -144,7 +141,7 @@ export function ClusterArmsView(): ReactElement {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <p className="text-destructive mb-4">
-                    Failed to load arms: {error.message}
+                    Failed to load configurations: {error.message}
                   </p>
                   <Button variant="outline" onClick={() => refetch()}>
                     <RefreshCwIcon className="h-4 w-4 mr-2" />
@@ -158,9 +155,11 @@ export function ClusterArmsView(): ReactElement {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <BoxIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No arms found</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    No configurations found
+                  </h3>
                   <p className="text-muted-foreground">
-                    This cluster has no optimization arms yet.
+                    This partition has no optimization configurations yet.
                   </p>
                 </CardContent>
               </Card>
@@ -178,11 +177,14 @@ export function ClusterArmsView(): ReactElement {
                     key={arm.id}
                     className="hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() =>
+                      selectedAgent &&
+                      selectedSkill &&
+                      selectedCluster &&
                       navigateToArmDetail(
                         selectedAgent.name,
                         selectedSkill.name,
-                        clusterId,
-                        arm.id,
+                        selectedCluster.name,
+                        arm.name,
                       )
                     }
                   >

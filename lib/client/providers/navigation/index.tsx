@@ -1,8 +1,5 @@
 'use client';
 
-import { getAgents } from '@client/api/v1/idk/agents';
-import { getSkills } from '@client/api/v1/idk/skills';
-import type { Agent, Skill } from '@shared/types/data';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import type { ReactElement, ReactNode } from 'react';
 import {
@@ -14,7 +11,6 @@ import {
   useState,
 } from 'react';
 import {
-  getSelectedAgentName,
   removeSelectedAgentName,
   saveSelectedAgentName,
 } from './storage-utils';
@@ -23,13 +19,6 @@ import type {
   NavigationContextType,
   NavigationState,
 } from './types';
-import {
-  encodeAgentName,
-  encodeSkillName,
-  getAgentByName,
-  getSkillByName,
-  sanitizeName,
-} from './url-utils';
 import { useNavigationRoutes } from './use-navigation-routes';
 
 const NavigationContext = createContext<NavigationContextType | undefined>(
@@ -62,8 +51,6 @@ export function NavigationProvider({
   });
 
   const [isLoadingFromStorage, setIsLoadingFromStorage] = useState(true);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [skills, setSkills] = useState<Skill[]>([]);
 
   // Use extracted navigation routes hook
   const navigationRoutes = useNavigationRoutes(router);
@@ -81,7 +68,8 @@ export function NavigationProvider({
     const logId = params.logId as string;
     const evalId = params.evalId as string;
     const datasetId = params.datasetId as string;
-    const _clusterId = params.clusterId as string;
+    const clusterName = params.clusterName as string;
+    const armName = params.armName as string;
 
     // Determine view based on URL structure
     if (pathSegments.length === 1) return 'agents-list'; // /agents
@@ -115,13 +103,13 @@ export function NavigationProvider({
     if (subPath === 'models') {
       return 'models';
     }
-    if (subPath === 'clusters') {
-      // Check if it's /clusters/[clusterId]/arms/[armId]
-      if (pathSegments[4] && pathSegments[5] === 'arms' && pathSegments[6]) {
+    if (subPath === 'partitions') {
+      // Check if it's /partitions/[clusterName]/arms/[armName]
+      if (clusterName && pathSegments[5] === 'arms' && armName) {
         return 'arm-detail';
       }
-      // Check if it's /clusters/[clusterId]/arms
-      if (pathSegments[4] && pathSegments[5] === 'arms') {
+      // Check if it's /partitions/[clusterName]/arms
+      if (clusterName && pathSegments[5] === 'arms') {
         return 'cluster-arms';
       }
       return 'clusters';
@@ -140,43 +128,6 @@ export function NavigationProvider({
     [router],
   );
 
-  const setSelectedAgent = useCallback(
-    (agent: Agent | undefined) => {
-      setNavigationState((prev) => ({
-        ...prev,
-        selectedAgent: agent,
-        selectedSkill: undefined, // Clear skill when agent changes
-      }));
-      if (agent) {
-        // Persist selection but do not block navigation on storage issues
-        try {
-          saveSelectedAgentName(agent.name);
-        } catch {
-          // no-op, fallback handled internally in storage-utils
-        }
-        router.push(`/agents/${encodeAgentName(agent.name)}`);
-      } else {
-        try {
-          removeSelectedAgentName();
-        } catch {
-          // no-op
-        }
-        // Only navigate if not already on /agents
-        if (pathname !== '/agents') {
-          router.push('/agents');
-        }
-      }
-    },
-    [router, pathname],
-  );
-
-  const setSelectedSkill = useCallback((skill: Skill | undefined) => {
-    setNavigationState((prev) => ({
-      ...prev,
-      selectedSkill: skill,
-    }));
-  }, []);
-
   const navigateBack = useCallback(
     (targetSegmentIndex: number) => {
       const targetSegment = navigationState.breadcrumbs[targetSegmentIndex];
@@ -194,50 +145,16 @@ export function NavigationProvider({
     }));
   }, []);
 
-  // Load agents
-  useEffect(() => {
-    async function loadAgents() {
-      try {
-        const fetchedAgents = await getAgents({});
-        setAgents(fetchedAgents);
-      } catch (error) {
-        console.error('Failed to load agents:', error);
-      }
-    }
-    loadAgents();
-  }, []);
-
-  // Load skills for selected agent
-  useEffect(() => {
-    async function loadSkills() {
-      if (!navigationState.selectedAgent) {
-        setSkills([]);
-        return;
-      }
-
-      try {
-        const fetchedSkills = await getSkills({
-          agent_id: navigationState.selectedAgent.id,
-        });
-        setSkills(fetchedSkills);
-      } catch (error) {
-        console.error('Failed to load skills:', error);
-        setSkills([]);
-      }
-    }
-    loadSkills();
-  }, [navigationState.selectedAgent]);
-
   // Sync navigation state with URL
   useEffect(() => {
     const currentView = parseCurrentView();
     const agentName = params.agentName as string;
     const skillName = params.skillName as string;
+    const clusterName = params.clusterName as string;
+    const armName = params.armName as string;
     const logId = params.logId as string;
     const evalId = params.evalId as string;
     const datasetId = params.datasetId as string;
-    const clusterId = params.clusterId as string;
-    const armId = params.armId as string;
 
     setNavigationState((prev) => {
       const newState: NavigationState = {
@@ -245,78 +162,89 @@ export function NavigationProvider({
         currentView,
       } as NavigationState;
 
-      // Clear selected agent immediately if on agents-list view
-      if (currentView === 'agents-list') {
-        newState.selectedAgent = undefined;
-        newState.selectedSkill = undefined;
-        newState.agentName = undefined;
-        newState.skillName = undefined;
-        // Also clear from storage to prevent it from being reloaded
+      // Store selected names from URL
+      if (agentName) {
+        // Decode and store agent name
+        const decodedAgentName = decodeURIComponent(agentName);
+        newState.selectedAgentName = decodedAgentName;
+        // Save to localStorage for /agents page
+        try {
+          saveSelectedAgentName(decodedAgentName);
+        } catch {
+          // no-op
+        }
+      } else if (!agentName && currentView !== 'agents-list') {
+        // No agent in URL and NOT on /agents page - clear everything
+        newState.selectedAgentName = undefined;
+        newState.selectedSkillName = undefined;
+        // Clear from storage when navigating away from agents
         try {
           removeSelectedAgentName();
         } catch {
           // no-op
         }
-      } else if (agentName && agents.length > 0) {
-        // Update selected agent if agentName in URL (only if not on agents-list)
-        const agent = getAgentByName(agents, agentName);
-        if (agent && agent.id !== prev.selectedAgent?.id) {
-          newState.selectedAgent = agent;
-          newState.agentName = agentName;
-        }
-      } else if (!agentName) {
-        // If no agentName in URL and not on agents-list, clear the agent
-        newState.selectedAgent = undefined;
-        newState.agentName = undefined;
       }
 
-      // Update selected skill if skillName in URL
-      if (skillName && skills.length > 0) {
-        const skill = getSkillByName(skills, skillName);
-        if (skill && skill.id !== prev.selectedSkill?.id) {
-          newState.selectedSkill = skill;
-          newState.skillName = skillName;
-        }
+      // Store selected skill name from URL
+      if (skillName) {
+        newState.selectedSkillName = decodeURIComponent(skillName);
+      } else {
+        newState.selectedSkillName = undefined;
+      }
+
+      // Store selected cluster name from URL
+      if (clusterName) {
+        newState.selectedClusterName = decodeURIComponent(clusterName);
+      } else {
+        newState.selectedClusterName = undefined;
+      }
+
+      // Store selected arm name from URL
+      if (armName) {
+        newState.selectedArmName = decodeURIComponent(armName);
+      } else {
+        newState.selectedArmName = undefined;
       }
 
       // Store IDs for detail views
       if (logId) newState.logId = logId;
       if (evalId) newState.evalId = evalId;
       if (datasetId) newState.datasetId = datasetId;
-      if (clusterId) newState.clusterId = clusterId;
-      if (armId) newState.armId = armId;
 
       // Build breadcrumbs based on current path
       const breadcrumbs: BreadcrumbSegment[] = [];
 
-      // For agents-list view, show just "Agents"
-      if (currentView === 'agents-list') {
+      // Check if we're on an agent-related route
+      const isOnAgentRoute = pathname.startsWith('/agents');
+
+      // Show "Agents" as root breadcrumb for all agent routes
+      if (isOnAgentRoute) {
         breadcrumbs.push({
           label: 'Agents',
           path: '/agents',
         });
-      } else {
-        // For other views, show agent dropdown
-        breadcrumbs.push({
-          label: newState.selectedAgent
-            ? `Agent: ${newState.selectedAgent.name}`
-            : 'Select Agent',
-          path: '/agents',
-          isAgentDropdown: true,
-        });
+
+        // If agent is selected, show it as a dropdown
+        if (currentView !== 'agents-list' && newState.selectedAgentName) {
+          breadcrumbs.push({
+            label: newState.selectedAgentName,
+            path: '/agents',
+            isAgentDropdown: true,
+          });
+        }
       }
 
-      if (newState.selectedAgent && newState.selectedSkill) {
+      if (newState.selectedAgentName && newState.selectedSkillName) {
         breadcrumbs.push({
-          label: newState.selectedSkill.name,
-          path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}`,
+          label: newState.selectedSkillName,
+          path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}`,
           isSkillDropdown: true,
         });
 
         if (currentView === 'logs' || currentView === 'log-detail') {
           breadcrumbs.push({
             label: 'Logs',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/logs`,
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/logs`,
           });
         } else if (
           currentView === 'evaluations' ||
@@ -325,7 +253,7 @@ export function NavigationProvider({
         ) {
           breadcrumbs.push({
             label: 'Evaluations',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/evaluations`,
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/evaluations`,
           });
         } else if (
           currentView === 'datasets' ||
@@ -334,7 +262,7 @@ export function NavigationProvider({
         ) {
           breadcrumbs.push({
             label: 'Datasets',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/datasets`,
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/datasets`,
           });
         } else if (
           currentView === 'configurations' ||
@@ -343,68 +271,77 @@ export function NavigationProvider({
         ) {
           breadcrumbs.push({
             label: 'Configurations',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/configurations`,
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/configurations`,
           });
         } else if (currentView === 'models') {
           breadcrumbs.push({
             label: 'Models',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/models`,
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/models`,
           });
         } else if (currentView === 'clusters') {
           breadcrumbs.push({
-            label: 'Clusters',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
+            label: 'Partitions',
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/partitions`,
           });
         } else if (currentView === 'cluster-arms') {
           breadcrumbs.push({
-            label: 'Clusters',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
+            label: 'Partitions',
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/partitions`,
           });
-          if (clusterId) {
+          if (newState.selectedClusterName) {
             breadcrumbs.push({
-              label: 'Arms',
-              path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters/${clusterId}/arms`,
+              label: newState.selectedClusterName,
+              path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/partitions/${encodeURIComponent(newState.selectedClusterName)}/arms`,
+              isClusterDropdown: true,
             });
           }
         } else if (currentView === 'arm-detail') {
           breadcrumbs.push({
-            label: 'Clusters',
-            path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters`,
+            label: 'Partitions',
+            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/partitions`,
           });
-          if (clusterId) {
+          if (newState.selectedClusterName) {
             breadcrumbs.push({
-              label: 'Arms',
-              path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters/${clusterId}/arms`,
+              label: newState.selectedClusterName,
+              path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/partitions/${encodeURIComponent(newState.selectedClusterName)}/arms`,
+              isClusterDropdown: true,
             });
           }
-          if (armId) {
+          if (newState.selectedArmName) {
             breadcrumbs.push({
-              label: 'Arm Detail',
-              path: `/agents/${encodeAgentName(newState.selectedAgent.name)}/${encodeSkillName(newState.selectedSkill.name)}/clusters/${clusterId}/arms/${armId}`,
+              label: newState.selectedArmName,
+              path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/${encodeURIComponent(newState.selectedSkillName)}/partitions/${encodeURIComponent(newState.selectedClusterName!)}/arms/${encodeURIComponent(newState.selectedArmName)}`,
+              isArmDropdown: true,
             });
           }
         }
-      } else if (newState.selectedAgent && currentView === 'skills-list') {
+      }
+
+      // Handle non-agent routes
+      if (pathname.startsWith('/ai-providers')) {
         breadcrumbs.push({
-          label: 'Skills',
-          path: `/agents/${encodeAgentName(newState.selectedAgent.name)}`,
+          label: 'AI Providers',
+          path: '/ai-providers',
+        });
+      } else if (pathname.startsWith('/models')) {
+        breadcrumbs.push({
+          label: 'Models',
+          path: '/models',
         });
       }
 
       newState.breadcrumbs = breadcrumbs;
 
       // Avoid unnecessary renders by shallow-comparing relevant fields
-      const sameSelectedAgent =
-        prev.selectedAgent?.id === newState.selectedAgent?.id;
-      const sameSelectedSkill =
-        prev.selectedSkill?.id === newState.selectedSkill?.id;
+      const sameSelectedNames =
+        prev.selectedAgentName === newState.selectedAgentName &&
+        prev.selectedSkillName === newState.selectedSkillName &&
+        prev.selectedClusterName === newState.selectedClusterName &&
+        prev.selectedArmName === newState.selectedArmName;
       const sameIds =
         prev.logId === newState.logId &&
         prev.evalId === newState.evalId &&
         prev.datasetId === newState.datasetId;
-      const sameNames =
-        prev.agentName === newState.agentName &&
-        prev.skillName === newState.skillName;
       const sameView = prev.currentView === newState.currentView;
       const sameBreadcrumbs =
         prev.breadcrumbs.length === newState.breadcrumbs.length &&
@@ -418,56 +355,21 @@ export function NavigationProvider({
           );
         });
 
-      if (
-        sameSelectedAgent &&
-        sameSelectedSkill &&
-        sameIds &&
-        sameNames &&
-        sameView &&
-        sameBreadcrumbs
-      ) {
+      if (sameSelectedNames && sameIds && sameView && sameBreadcrumbs) {
         return prev;
       }
       return newState;
     });
-  }, [params, agents, skills, parseCurrentView]);
+  }, [params, parseCurrentView, pathname]);
 
-  // Load selected agent from storage
+  // Mark storage as loaded after initial render
   const hasLoadedFromStorageRef = useRef(false);
   useEffect(() => {
-    if (hasLoadedFromStorageRef.current) {
-      return;
-    }
-    if (agents.length === 0) {
-      return;
-    }
-
-    // Don't load from storage if we're on the agents list page
-    const pathSegments = pathname.split('/').filter(Boolean);
-    if (pathSegments.length === 1 && pathSegments[0] === 'agents') {
+    if (!hasLoadedFromStorageRef.current) {
       setIsLoadingFromStorage(false);
       hasLoadedFromStorageRef.current = true;
-      return;
     }
-
-    const storedAgentName = getSelectedAgentName();
-
-    if (storedAgentName) {
-      const agent = agents.find(
-        (a) => sanitizeName(a.name) === sanitizeName(storedAgentName),
-      );
-      if (agent) {
-        // Set from storage without triggering navigation
-        setNavigationState((prev) => ({
-          ...prev,
-          selectedAgent: agent,
-          selectedSkill: undefined,
-        }));
-      }
-    }
-    setIsLoadingFromStorage(false);
-    hasLoadedFromStorageRef.current = true;
-  }, [agents, pathname]);
+  }, []);
 
   return (
     <NavigationContext.Provider
@@ -475,10 +377,7 @@ export function NavigationProvider({
         navigationState,
         isLoadingFromStorage,
         router,
-        skills,
         setSection,
-        setSelectedAgent,
-        setSelectedSkill,
         ...navigationRoutes,
         navigateBack,
         updateBreadcrumbs,

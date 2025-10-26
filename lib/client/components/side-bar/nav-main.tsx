@@ -69,7 +69,7 @@ export function NavMain({
   sections: NavigationSection[];
 }): React.ReactElement {
   const { setSection } = useNavigation();
-  const { agents, isLoading, selectedAgent, setSelectedAgent } = useAgents();
+  const { agents, selectedAgent, isLoading } = useAgents();
   const router = useRouter();
   const pathname = usePathname();
   const modifierKey = useModifierKey();
@@ -83,11 +83,6 @@ export function NavMain({
   };
 
   const handleSectionClick = (section: NavigationSection) => {
-    // Clear selected agent when navigating away from agents
-    if (section.title !== 'Agents') {
-      setSelectedAgent(null);
-    }
-
     if (section.url && section.url !== '#') {
       router.push(section.url);
     } else if (section.title === 'Documentation') {
@@ -103,10 +98,9 @@ export function NavMain({
 
   const handleAgentClick = React.useCallback(
     (agent: (typeof agents)[0]) => {
-      setSelectedAgent(agent);
       router.push(`/agents/${encodeURIComponent(agent.name)}`);
     },
-    [setSelectedAgent, router],
+    [router],
   );
 
   // Handle keyboard shortcuts for agent switching
@@ -153,7 +147,6 @@ export function NavMain({
                     e.preventDefault();
                     e.stopPropagation();
 
-                    setSelectedAgent(null);
                     router.replace('/agents');
                   }
                 }}

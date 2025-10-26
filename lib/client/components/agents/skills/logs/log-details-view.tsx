@@ -1,8 +1,8 @@
 'use client';
 
-import { CompletionViewer } from '@client/components/agents/skills/logs/components/log-view/components/completion-viewer';
-import { LogMap } from '@client/components/agents/skills/logs/components/log-view/components/log-map';
-import { MessagesView } from '@client/components/agents/skills/logs/components/log-view/components/messages-view';
+import { CompletionViewer } from '@client/components/agents/skills/logs/components/completion-viewer';
+import { LogMap } from '@client/components/agents/skills/logs/components/log-map';
+import { MessagesView } from '@client/components/agents/skills/logs/components/messages-view';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -14,10 +14,10 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Separator } from '@client/components/ui/separator';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
+import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
-import { useNavigation } from '@client/providers/navigation';
+import { useSkills } from '@client/providers/skills';
 import type { IdkRequestData } from '@shared/types/api/request/body';
-import type { Log } from '@shared/types/data';
 import { produceIdkRequestData } from '@shared/utils/idk-request-data';
 import { format } from 'date-fns';
 import { AlertTriangle, ArrowLeftIcon } from 'lucide-react';
@@ -25,43 +25,24 @@ import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 
 export function LogDetailsView(): ReactElement {
-  const { navigationState } = useNavigation();
-  const { queryLogs: queryLogsFromProvider } = useLogs();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
+  const { selectedLog, isLoading, setAgentId, setSkillId } = useLogs();
   const smartBack = useSmartBack();
   const [idkRequestData, setIdkRequestData] = useState<IdkRequestData | null>(
     null,
   );
-  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
-  const logId = navigationState.logId;
-
-  // Fetch log using provider
+  // Set agentId and skillId when agent/skill changes
   useEffect(() => {
-    const fetchLog = async () => {
-      if (!logId) return;
-
-      setIsLoading(true);
-      try {
-        const logs = await queryLogsFromProvider({
-          id: logId,
-          limit: 1,
-          offset: 0,
-        });
-        const log = logs.length > 0 ? logs[0] : null;
-        setSelectedLog(log);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching log:', err);
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLog();
-  }, [logId, queryLogsFromProvider]);
+    if (selectedAgent && selectedSkill) {
+      setAgentId(selectedAgent.id);
+      setSkillId(selectedSkill.id);
+    } else {
+      setAgentId(null);
+      setSkillId(null);
+    }
+  }, [selectedAgent, selectedSkill, setAgentId, setSkillId]);
 
   // Function to format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -84,8 +65,8 @@ export function LogDetailsView(): ReactElement {
   }, [selectedLog]);
 
   const handleBack = () => {
-    if (navigationState.selectedAgent && navigationState.selectedSkill) {
-      const fallbackUrl = `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/${encodeURIComponent(navigationState.selectedSkill.name)}/logs`;
+    if (selectedAgent && selectedSkill) {
+      const fallbackUrl = `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/logs`;
       smartBack(fallbackUrl);
     } else {
       smartBack('/agents');
@@ -104,7 +85,7 @@ export function LogDetailsView(): ReactElement {
     );
   }
 
-  if (error || !selectedLog) {
+  if (!selectedLog) {
     return (
       <div className="p-6">
         <div className="flex items-center gap-4 mb-6">

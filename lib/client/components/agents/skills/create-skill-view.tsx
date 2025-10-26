@@ -22,7 +22,6 @@ import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillCreateParams } from '@shared/types/data/skill';
@@ -116,7 +115,6 @@ type CreateSkillFormData = z.infer<typeof CreateSkillFormSchema>;
 export function CreateSkillView(): React.ReactElement {
   const { agents, selectedAgent } = useAgents();
   const { createSkill, isCreating } = useSkills();
-  const { setSelectedSkill } = useNavigation();
   const router = useRouter();
   const params = useParams();
   const agentName = params.agentName as string;
@@ -172,10 +170,7 @@ export function CreateSkillView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Set the newly created skill as selected
-      setSelectedSkill(newSkill);
-
-      // Navigate to evaluations setup page
+      // Navigate to evaluations setup page (URL will trigger skill selection)
       if (agentName) {
         router.push(
           `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/evaluations-2/create`,

@@ -21,7 +21,6 @@ import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { AgentCreateParams } from '@shared/types/data';
 import { sanitizeUserInput } from '@shared/utils/security';
@@ -52,7 +51,6 @@ type CreateAgentFormData = z.infer<typeof CreateAgentFormSchema>;
 
 export function CreateAgentView(): React.ReactElement {
   const { createAgent, isCreating } = useAgents();
-  const { setSelectedAgent } = useNavigation();
   const router = useRouter();
 
   const form = useForm<CreateAgentFormData>({
@@ -76,8 +74,8 @@ export function CreateAgentView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Set the selected agent and navigate to the agent's skills page
-      setSelectedAgent(newAgent);
+      // Navigate to the agent's skills page
+      router.push(`/agents/${encodeURIComponent(newAgent.name)}`);
     } catch (error) {
       console.error('Error creating agent:', error);
       // Error is already handled by the agents provider

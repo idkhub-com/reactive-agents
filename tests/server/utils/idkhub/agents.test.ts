@@ -160,10 +160,10 @@ describe('getAgent', () => {
   });
 
   describe('when agent does not exist', () => {
-    it('should auto-create agent when not found', async () => {
+    it('should auto-create agent when not found for idkhub', async () => {
       const newAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
-        name: 'non-existent-agent',
+        name: 'idkhub',
         description: 'The idkHub internal agent',
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
@@ -173,14 +173,14 @@ describe('getAgent', () => {
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
       vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
 
-      const result = await getAgent(mockConnector, 'non-existent-agent');
+      const result = await getAgent(mockConnector, 'idkhub');
 
       expect(result).toEqual(newAgent);
       expect(mockConnector.getAgents).toHaveBeenCalledWith({
-        name: 'non-existent-agent',
+        name: 'idkhub',
       });
       expect(mockConnector.createAgent).toHaveBeenCalledWith({
-        name: 'non-existent-agent',
+        name: 'idkhub',
         description: 'The idkHub internal agent',
         metadata: {},
       });

@@ -27,6 +27,18 @@ vi.mock('@client/hooks/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
+// Mock the navigation provider
+vi.mock('@client/providers/navigation', () => ({
+  useNavigation: vi.fn(() => ({
+    navigationState: {
+      section: 'agents',
+      selectedAgentName: null,
+      selectedSkillName: null,
+    },
+  })),
+  NavigationProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Import mocked functions
 import {
   createAgent,
@@ -61,8 +73,6 @@ function TestComponent(): React.ReactElement {
     error,
     queryParams,
     setQueryParams,
-    selectedAgent,
-    setSelectedAgent,
     createAgent: createAgentFn,
     updateAgent: updateAgentFn,
     deleteAgent: deleteAgentFn,
@@ -81,7 +91,6 @@ function TestComponent(): React.ReactElement {
       <div data-testid="loading">{isLoading ? 'loading' : 'loaded'}</div>
       <div data-testid="error">{error?.message ?? 'no error'}</div>
       <div data-testid="agents-count">{agents?.length ?? 0}</div>
-      <div data-testid="selected-agent-id">{selectedAgent?.id ?? 'none'}</div>
       <div data-testid="query-params">{JSON.stringify(queryParams)}</div>
 
       <div data-testid="create-loading">
@@ -109,14 +118,6 @@ function TestComponent(): React.ReactElement {
         onClick={() => setQueryParams({ name: 'test' })}
       >
         Set Query Params
-      </button>
-
-      <button
-        type="button"
-        data-testid="select-agent"
-        onClick={() => setSelectedAgent(mockAgents[0])}
-      >
-        Select Agent
       </button>
 
       <button
@@ -170,9 +171,7 @@ function TestComponent(): React.ReactElement {
         data-testid="get-agent-by-id"
         onClick={() => {
           const agent = getAgentById('1');
-          if (agent) {
-            setSelectedAgent(agent);
-          }
+          console.log('Found agent:', agent);
         }}
       >
         Get Agent By ID
@@ -316,28 +315,6 @@ describe('AgentsProvider', () => {
     });
   });
 
-  it('manages selected agent state', async () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AgentsProvider>
-          <TestComponent />
-        </AgentsProvider>
-      </QueryClientProvider>,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('loaded');
-    });
-
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('none');
-
-    await act(() => {
-      fireEvent.click(screen.getByTestId('select-agent'));
-    });
-
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('1');
-  });
-
   it('handles agent updates successfully', async () => {
     render(
       <QueryClientProvider client={queryClient}>
@@ -379,12 +356,6 @@ describe('AgentsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    // Select an agent first
-    await act(() => {
-      fireEvent.click(screen.getByTestId('select-agent'));
-    });
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('1');
-
     expect(screen.getByTestId('delete-loading').textContent).toBe(
       'not deleting',
     );
@@ -395,11 +366,6 @@ describe('AgentsProvider', () => {
 
     await waitFor(() => {
       expect(deleteAgent).toHaveBeenCalledWith('1');
-    });
-
-    // Selected agent should be cleared after deletion
-    await waitFor(() => {
-      expect(screen.getByTestId('selected-agent-id').textContent).toBe('none');
     });
   });
 
@@ -416,13 +382,16 @@ describe('AgentsProvider', () => {
       expect(screen.getByTestId('loading').textContent).toBe('loaded');
     });
 
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('none');
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+      // Mock implementation
+    });
 
     await act(() => {
       fireEvent.click(screen.getByTestId('get-agent-by-id'));
     });
 
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('1');
+    expect(consoleSpy).toHaveBeenCalledWith('Found agent:', mockAgents[0]);
+    consoleSpy.mockRestore();
   });
 
   it('handles API errors gracefully', async () => {
@@ -493,7 +462,7 @@ describe('AgentsProvider', () => {
     consoleError.mockRestore();
   });
 
-  it('handles delete errors and clears selected agent', async () => {
+  it('handles delete errors', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {
       // Suppress console errors in tests
     });
@@ -516,19 +485,10 @@ describe('AgentsProvider', () => {
     // Should show 2 agents initially
     expect(screen.getByTestId('agents-count').textContent).toBe('2');
 
-    // Select an agent first
-    await act(() => {
-      fireEvent.click(screen.getByTestId('select-agent'));
-    });
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('1');
-
     // Attempt delete (should fail)
     await act(() => {
       fireEvent.click(screen.getByTestId('delete-agent'));
     });
-
-    // Selected agent should be cleared on delete attempt
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('none');
 
     // Should show delete error
     await waitFor(() => {
@@ -669,41 +629,6 @@ describe('AgentsProvider', () => {
     });
 
     consoleError.mockRestore();
-  });
-
-  it('updates selected agent when updated agent is selected', async () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AgentsProvider>
-          <TestComponent />
-        </AgentsProvider>
-      </QueryClientProvider>,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('loaded');
-    });
-
-    // Select an agent
-    await act(() => {
-      fireEvent.click(screen.getByTestId('select-agent'));
-    });
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('1');
-
-    // Update the selected agent
-    await act(() => {
-      fireEvent.click(screen.getByTestId('update-agent'));
-    });
-
-    // The selected agent should be updated with new data
-    await waitFor(() => {
-      expect(updateAgent).toHaveBeenCalledWith('1', {
-        description: 'Updated Description',
-      });
-    });
-
-    // Selected agent should still be selected (with updated data)
-    expect(screen.getByTestId('selected-agent-id').textContent).toBe('1');
   });
 
   it('validates query keys structure', () => {

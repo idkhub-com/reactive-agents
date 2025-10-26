@@ -1,6 +1,7 @@
 import { BreadcrumbComponent } from '@client/components/breadcrumb/breadcrumb';
 import { AgentsProvider } from '@client/providers/agents';
 import { NavigationProvider } from '@client/providers/navigation';
+import { SkillsProvider } from '@client/providers/skills';
 import type { Agent } from '@shared/types/data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
@@ -135,7 +136,9 @@ const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <NavigationProvider>
-        <AgentsProvider>{component}</AgentsProvider>
+        <AgentsProvider>
+          <SkillsProvider>{component}</SkillsProvider>
+        </AgentsProvider>
       </NavigationProvider>
     </QueryClientProvider>,
   );

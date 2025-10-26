@@ -1,6 +1,8 @@
 import { AgentSwitcher } from '@client/components/side-bar/agent-switcher';
 import { AgentsProvider } from '@client/providers/agents';
+import { NavigationProvider } from '@client/providers/navigation';
 import { SidebarProvider } from '@client/providers/side-bar';
+import { SkillsProvider } from '@client/providers/skills';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -177,11 +179,15 @@ describe('AgentSwitcher', () => {
   const renderAgentSwitcher = () =>
     render(
       <QueryClientProvider client={queryClient}>
-        <SidebarProvider>
-          <AgentsProvider>
-            <AgentSwitcher />
-          </AgentsProvider>
-        </SidebarProvider>
+        <NavigationProvider>
+          <SidebarProvider>
+            <AgentsProvider>
+              <SkillsProvider>
+                <AgentSwitcher />
+              </SkillsProvider>
+            </AgentsProvider>
+          </SidebarProvider>
+        </NavigationProvider>
       </QueryClientProvider>,
     );
 

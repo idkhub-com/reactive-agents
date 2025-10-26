@@ -87,13 +87,13 @@ export function AgentsView(): ReactElement {
         );
       case 'clusters':
         return (
-          <AgentErrorBoundary sectionName="Clusters">
+          <AgentErrorBoundary sectionName="Partitions">
             <ClustersView />
           </AgentErrorBoundary>
         );
       case 'cluster-arms':
         return (
-          <AgentErrorBoundary sectionName="Cluster Arms">
+          <AgentErrorBoundary sectionName="Partition Arms">
             <ClusterArmsView />
           </AgentErrorBoundary>
         );

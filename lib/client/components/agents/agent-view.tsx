@@ -27,6 +27,7 @@ import {
   X,
   XIcon,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useId } from 'react';
 
@@ -42,14 +43,8 @@ export function AgentView({
   const agentViewCardId = useId();
   const agentViewCloseButtonId = useId();
 
-  const {
-    agents,
-    selectedAgent,
-    setSelectedAgent,
-    deleteAgent,
-    updateAgent,
-    isUpdating,
-  } = useAgents();
+  const { agents, selectedAgent, deleteAgent, updateAgent, isUpdating } =
+    useAgents();
   const [currentAgent, setCurrentAgent] = React.useState<Agent | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editDescription, setEditDescription] = React.useState('');
@@ -125,9 +120,10 @@ export function AgentView({
     }
   };
 
+  const router = useRouter();
   const handleSetActive = () => {
     if (currentAgent) {
-      setSelectedAgent(currentAgent);
+      router.push(`/agents/${encodeURIComponent(currentAgent.name)}`);
     }
   };
 

@@ -21,7 +21,6 @@ import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { AgentUpdateParams } from '@shared/types/data';
 import { sanitizeUserInput } from '@shared/utils/security';
@@ -43,15 +42,11 @@ const EditAgentFormSchema = z
 type EditAgentFormData = z.infer<typeof EditAgentFormSchema>;
 
 export function EditAgentView(): React.ReactElement {
-  const { navigationState } = useNavigation();
-  const { updateAgent, isUpdating } = useAgents();
+  const { selectedAgent, updateAgent, isUpdating } = useAgents();
   const router = useRouter();
   const params = useParams();
   const agentName = params.agentName as string;
   const agentNameInputId = React.useId();
-
-  // Get current agent from navigation state
-  const currentAgent = navigationState.selectedAgent;
 
   const form = useForm<EditAgentFormData>({
     resolver: zodResolver(EditAgentFormSchema),
@@ -62,15 +57,15 @@ export function EditAgentView(): React.ReactElement {
 
   // Update form defaults when agent data is available
   React.useEffect(() => {
-    if (currentAgent) {
+    if (selectedAgent) {
       form.reset({
-        description: currentAgent.description || '',
+        description: selectedAgent.description || '',
       });
     }
-  }, [currentAgent, form]);
+  }, [selectedAgent, form]);
 
   const onSubmit = async (data: EditAgentFormData) => {
-    if (!currentAgent) {
+    if (!selectedAgent) {
       console.error('No agent selected');
       return;
     }
@@ -80,7 +75,7 @@ export function EditAgentView(): React.ReactElement {
         description: sanitizeUserInput(data.description),
       };
 
-      await updateAgent(currentAgent.id, updateParams);
+      await updateAgent(selectedAgent.id, updateParams);
 
       // Navigate back to agent skills list
       if (agentName) {
@@ -102,7 +97,7 @@ export function EditAgentView(): React.ReactElement {
     }
   };
 
-  if (!currentAgent) {
+  if (!selectedAgent) {
     return (
       <>
         <PageHeader title="Edit Agent" description="Agent not found" />
@@ -132,7 +127,7 @@ export function EditAgentView(): React.ReactElement {
     <>
       <PageHeader
         title="Edit Agent"
-        description={`Update ${currentAgent.name} configuration`}
+        description={`Update ${selectedAgent.name} configuration`}
         onBack={handleBack}
       />
       <div className="container mx-auto py-6 max-w-2xl">
@@ -166,7 +161,7 @@ export function EditAgentView(): React.ReactElement {
                   </label>
                   <Input
                     id={agentNameInputId}
-                    value={currentAgent.name}
+                    value={selectedAgent.name}
                     disabled
                     className="h-11 bg-muted"
                   />

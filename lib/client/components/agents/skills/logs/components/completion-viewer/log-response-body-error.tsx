@@ -1,21 +1,21 @@
 'use client';
 
-import { GenericViewer } from '@client/components/agents/skills/logs/components/log-view/components/generic-viewer';
-import type { ErrorResponseBody } from '@shared/types/api/response';
+import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
+import type { LogResponseBodyError } from '@shared/types/data';
 
-export function ErrorResponseViewer({
+export function LogResponseBodyErrorViewer({
   logId,
   response,
 }: {
   logId: string;
-  response: ErrorResponseBody;
+  response: LogResponseBodyError;
 }): React.ReactElement {
   return (
     <div className="">
       <GenericViewer
         path={`${logId}-completion`}
         language={'text'}
-        defaultValue={response.error.message}
+        defaultValue={`${response.message}\n${response.response}`}
         readOnly={true}
         onSave={async (): Promise<void> => {
           //pass

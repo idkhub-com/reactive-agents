@@ -21,7 +21,7 @@ import {
 import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Textarea } from '@client/components/ui/textarea';
-import { useNavigation } from '@client/providers/navigation';
+import { useAgents } from '@client/providers/agents';
 import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillUpdateParams } from '@shared/types/data/skill';
@@ -105,16 +105,12 @@ const EditSkillFormSchema = z
 type EditSkillFormData = z.infer<typeof EditSkillFormSchema>;
 
 export function EditSkillView(): React.ReactElement {
-  const { navigationState } = useNavigation();
-  const { updateSkill, isUpdating } = useSkills();
+  const { selectedAgent } = useAgents();
+  const { selectedSkill, updateSkill, isUpdating } = useSkills();
   const router = useRouter();
   const params = useParams();
   const agentName = params.agentName as string;
   const skillName = params.skillName as string;
-
-  // Get current agent and skill from navigation state
-  const currentAgent = navigationState.selectedAgent;
-  const currentSkill = navigationState.selectedSkill;
 
   const [showAdvanced, setShowAdvanced] = React.useState(false);
 
@@ -135,22 +131,22 @@ export function EditSkillView(): React.ReactElement {
 
   // Update form defaults when skill data is available
   React.useEffect(() => {
-    if (currentSkill) {
+    if (selectedSkill) {
       form.reset({
-        name: currentSkill.name,
-        description: currentSkill.description || '',
-        optimize: currentSkill.optimize,
-        configuration_count: currentSkill.configuration_count,
-        system_prompt_count: currentSkill.system_prompt_count,
-        clustering_interval: currentSkill.clustering_interval,
+        name: selectedSkill.name,
+        description: selectedSkill.description || '',
+        optimize: selectedSkill.optimize,
+        configuration_count: selectedSkill.configuration_count,
+        system_prompt_count: selectedSkill.system_prompt_count,
+        clustering_interval: selectedSkill.clustering_interval,
         reflection_min_requests_per_arm:
-          currentSkill.reflection_min_requests_per_arm,
+          selectedSkill.reflection_min_requests_per_arm,
       });
     }
-  }, [currentSkill, form]);
+  }, [selectedSkill, form]);
 
   const onSubmit = async (data: EditSkillFormData) => {
-    if (!currentSkill) {
+    if (!selectedSkill) {
       console.error('No skill selected');
       return;
     }
@@ -165,7 +161,7 @@ export function EditSkillView(): React.ReactElement {
         reflection_min_requests_per_arm: data.reflection_min_requests_per_arm,
       };
 
-      await updateSkill(currentSkill.id, updateParams);
+      await updateSkill(selectedSkill.id, updateParams);
 
       // Navigate back to skill dashboard
       if (agentName && skillName) {
@@ -181,7 +177,7 @@ export function EditSkillView(): React.ReactElement {
     }
   };
 
-  if (!currentAgent || !currentSkill) {
+  if (!selectedAgent || !selectedSkill) {
     return (
       <>
         <PageHeader title="Edit Skill" description="Skill not found" />
@@ -211,7 +207,7 @@ export function EditSkillView(): React.ReactElement {
     <>
       <PageHeader
         title="Edit Skill"
-        description={`Update settings for ${currentSkill.name}`}
+        description={`Update settings for ${selectedSkill.name}`}
       />
       <div className="container mx-auto py-6 max-w-2xl">
         {/* Main Form Card */}

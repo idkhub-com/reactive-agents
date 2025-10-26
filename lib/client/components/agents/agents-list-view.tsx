@@ -1,5 +1,6 @@
 'use client';
 
+import { getAgentEvaluationRuns } from '@client/api/v1/idk/agents';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -16,12 +17,14 @@ import { useAgents } from '@client/providers/agents';
 import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import type { Agent } from '@shared/types/data';
+import { useQuery } from '@tanstack/react-query';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
+import { AgentPerformanceChart } from './skills/agent-performance-chart';
 
 const createAgentAvatar = (agentName: string) => {
   return `data:image/svg+xml;base64,${Buffer.from(
@@ -58,6 +61,26 @@ export function AgentsListView(): ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const { agents, isLoading } = useAgents();
 
+  // Fetch evaluation runs for all agents
+  const { data: allEvaluationRuns = [], isLoading: isLoadingEvaluationRuns } =
+    useQuery({
+      queryKey: ['allAgentEvaluationRuns', agents.map((a) => a.id).join(',')],
+      queryFn: async () => {
+        if (agents.length === 0) return [];
+
+        // Fetch evaluation runs for all agents in parallel
+        const evaluationRunsPromises = agents.map((agent) =>
+          getAgentEvaluationRuns(agent.id).catch(() => []),
+        );
+
+        const evaluationRunsArrays = await Promise.all(evaluationRunsPromises);
+
+        // Flatten all evaluation runs into a single array
+        return evaluationRunsArrays.flat();
+      },
+      enabled: agents.length > 0,
+    });
+
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return agents;
     return agents.filter(
@@ -89,6 +112,22 @@ export function AgentsListView(): ReactElement {
         }
       />
       <div className="p-6 space-y-6">
+        {/* Performance Chart - Full Width */}
+        <Card>
+          <CardContent className="pt-6">
+            {isLoadingEvaluationRuns ? (
+              <div className="h-64 flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ) : (
+              <AgentPerformanceChart
+                evaluationRuns={allEvaluationRuns}
+                title="All Agents Performance Over Time"
+              />
+            )}
+          </CardContent>
+        </Card>
+
         <div className="relative">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input

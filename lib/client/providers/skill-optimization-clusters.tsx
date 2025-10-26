@@ -1,10 +1,17 @@
 'use client';
 
 import { getSkillClusterStates as getSkillClusters } from '@client/api/v1/idk/skills';
+import { useNavigation } from '@client/providers/navigation';
 import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
-import { createContext, useCallback, useContext, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 
 // Query keys for React Query caching
 export const clusterQueryKeys = {
@@ -17,6 +24,7 @@ export const clusterQueryKeys = {
 interface ClustersContextType {
   // Query state
   clusters: SkillOptimizationCluster[];
+  selectedCluster?: SkillOptimizationCluster;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -40,6 +48,7 @@ export const SkillOptimizationClustersProvider = ({
   children: React.ReactNode;
 }): React.ReactElement => {
   const queryClient = useQueryClient();
+  const { navigationState } = useNavigation();
 
   const [skillId, setSkillId] = useState<string | null>(null);
 
@@ -54,6 +63,14 @@ export const SkillOptimizationClustersProvider = ({
     queryFn: () => getSkillClusters(skillId!),
     enabled: !!skillId, // Only fetch when we have skillId
   });
+
+  // Resolve selectedCluster from navigationState.selectedClusterName
+  const selectedCluster = useMemo(() => {
+    if (!navigationState.selectedClusterName) return undefined;
+    return clusters.find(
+      (cluster) => cluster.name === navigationState.selectedClusterName,
+    );
+  }, [navigationState.selectedClusterName, clusters]);
 
   // Helper functions
   const getClusterById = useCallback(
@@ -74,6 +91,7 @@ export const SkillOptimizationClustersProvider = ({
   const contextValue: ClustersContextType = {
     // Query state
     clusters,
+    selectedCluster,
     isLoading,
     error,
     refetch,

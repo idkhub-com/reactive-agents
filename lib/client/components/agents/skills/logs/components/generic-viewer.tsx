@@ -1,6 +1,6 @@
 'use client';
 
-import { TextViewer } from '@client/components/agents/skills/logs/components/log-view/components/text-viewer';
+import { TextViewer } from '@client/components/agents/skills/logs/components/text-viewer';
 import { MonacoEditor } from '@client/components/monaco-editor';
 import { Button } from '@client/components/ui/button';
 import { Separator } from '@client/components/ui/separator';

@@ -1,7 +1,6 @@
 'use client';
 
 import { getAgentEvaluationRuns } from '@client/api/v1/idk/agents';
-import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -13,7 +12,7 @@ import {
 import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
-import { useLogs } from '@client/providers/logs';
+import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
 import type { Skill } from '@shared/types/data';
@@ -25,13 +24,9 @@ import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { AgentPerformanceChart } from './agent-performance-chart';
 
-interface SkillStats {
-  skillId: string;
-  logsCount: number;
-}
-
 export function SkillsListView(): ReactElement {
-  const { navigationState, navigateToSkillDashboard } = useNavigation();
+  const { navigateToSkillDashboard } = useNavigation();
+  const { selectedAgent } = useAgents();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -42,68 +37,27 @@ export function SkillsListView(): ReactElement {
     setQueryParams: setSkillQueryParams,
   } = useSkills();
 
-  const [skillStats, setSkillStats] = useState<SkillStats[]>([]);
-  const [logsBySkill, setLogsBySkill] = useState<Record<string, number>>({});
-
   // Fetch agent-level evaluation runs
   const {
     data: agentEvaluationRuns = [],
     isLoading: isLoadingAgentEvaluationRuns,
   } = useQuery({
-    queryKey: ['agentEvaluationRuns', navigationState.selectedAgent?.id],
+    queryKey: ['agentEvaluationRuns', selectedAgent?.id],
     queryFn: () =>
-      navigationState.selectedAgent
-        ? getAgentEvaluationRuns(navigationState.selectedAgent.id)
+      selectedAgent
+        ? getAgentEvaluationRuns(selectedAgent.id)
         : Promise.resolve([]),
-    enabled: !!navigationState.selectedAgent,
+    enabled: !!selectedAgent,
   });
 
   // Update skills query params when agent changes
   useEffect(() => {
-    if (!navigationState.selectedAgent) return;
+    if (!selectedAgent) return;
     setSkillQueryParams({
-      agent_id: navigationState.selectedAgent.id,
+      agent_id: selectedAgent.id,
       limit: 100,
     });
-  }, [navigationState.selectedAgent, setSkillQueryParams]);
-
-  // Fetch a recent slice of agent logs via Logs provider and group by skill_id
-  const { logs: recentAgentLogs = [], setQueryParams: setLogsQueryParams } =
-    useLogs();
-
-  useEffect(() => {
-    if (!navigationState.selectedAgent) return;
-    setLogsQueryParams({
-      agent_id: navigationState.selectedAgent.id,
-      limit: 200,
-      offset: 0,
-    });
-  }, [navigationState.selectedAgent, setLogsQueryParams]);
-
-  useEffect(() => {
-    const grouped: Record<string, number> = {};
-    for (const log of recentAgentLogs) {
-      grouped[log.skill_id] = (grouped[log.skill_id] || 0) + 1;
-    }
-    setLogsBySkill(grouped);
-  }, [recentAgentLogs]);
-
-  // Calculate stats for skills using provider data and grouped recent logs
-  useEffect(() => {
-    if (!navigationState.selectedAgent || skills.length === 0) {
-      setSkillStats([]);
-      return;
-    }
-
-    // Calculate stats synchronously using available provider data
-    const stats = skills.map((skill) => ({
-      skillId: skill.id,
-      // Use recent agent logs grouped by skill_id (approximate, not total)
-      logsCount: logsBySkill[skill.id] || 0,
-    }));
-
-    setSkillStats(stats);
-  }, [skills, navigationState.selectedAgent, logsBySkill]);
+  }, [selectedAgent, setSkillQueryParams]);
 
   const filteredSkills = useMemo(() => {
     if (!searchQuery) return skills;
@@ -114,40 +68,29 @@ export function SkillsListView(): ReactElement {
     );
   }, [skills, searchQuery]);
 
-  const getSkillStats = (skillId: string): SkillStats => {
-    return (
-      skillStats.find((stats) => stats.skillId === skillId) || {
-        skillId,
-        logsCount: 0,
-      }
-    );
-  };
-
   const handleSkillSelect = (skill: Skill) => {
-    if (navigationState.selectedAgent) {
-      navigateToSkillDashboard(navigationState.selectedAgent.name, skill.name);
+    if (selectedAgent) {
+      navigateToSkillDashboard(selectedAgent.name, skill.name);
     }
   };
 
   const handleCreateSkill = () => {
-    if (navigationState.selectedAgent) {
+    if (selectedAgent) {
       router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/skills/create`,
+        `/agents/${encodeURIComponent(selectedAgent.name)}/skills/create`,
       );
     }
   };
 
   const handleEditAgent = () => {
-    if (navigationState.selectedAgent) {
-      router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgent.name)}/edit`,
-      );
+    if (selectedAgent) {
+      router.push(`/agents/${encodeURIComponent(selectedAgent.name)}/edit`);
     }
   };
 
   // Removed automatic redirect to create skill - let users decide when to create
 
-  if (!navigationState.selectedAgent) {
+  if (!selectedAgent) {
     return (
       <>
         <PageHeader
@@ -172,7 +115,7 @@ export function SkillsListView(): ReactElement {
     <>
       <PageHeader
         title="Skills"
-        description={`Manage skills for ${navigationState.selectedAgent.name}`}
+        description={`Manage skills for ${selectedAgent.name}`}
         showBackButton={true}
         onBack={() => router.push('/agents')}
         actions={
@@ -248,7 +191,6 @@ export function SkillsListView(): ReactElement {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredSkills.map((skill) => {
-              const stats = getSkillStats(skill.id);
               return (
                 <Card
                   key={skill.id}
@@ -263,11 +205,6 @@ export function SkillsListView(): ReactElement {
                       {skill.description || 'No description available'}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2 flex-wrap">
-                      <Badge variant="secondary">{stats.logsCount} logs</Badge>
-                    </div>
-                  </CardContent>
                 </Card>
               );
             })}

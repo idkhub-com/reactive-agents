@@ -1,3 +1,6 @@
+import { AgentsProvider } from '@client/providers/agents';
+import { NavigationProvider } from '@client/providers/navigation';
+import { SkillsProvider } from '@client/providers/skills';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,15 +32,18 @@ import { useNavigation } from '@client/providers/navigation';
 const mockNavigationState = {
   section: 'agents' as const,
   currentView: 'edit-agent' as const,
-  selectedAgent: {
-    id: 'agent-1',
-    name: 'Test Agent 1',
-    description: 'First test agent description with enough characters',
-    metadata: {},
-    created_at: '2023-01-01T10:30:00Z',
-    updated_at: '2023-01-01T10:30:00Z',
-  },
+  selectedAgentName: 'Test Agent 1',
   breadcrumbs: [],
+};
+
+// Mock agent object
+const mockAgent = {
+  id: 'agent-1',
+  name: 'Test Agent 1',
+  description: 'First test agent description with enough characters',
+  metadata: {},
+  created_at: '2023-01-01T10:30:00Z',
+  updated_at: '2023-01-01T10:30:00Z',
 };
 
 // Mock the agents API
@@ -108,8 +114,6 @@ describe('EditAgentView', () => {
         prefetch: vi.fn().mockResolvedValue(undefined),
       },
       setSection: vi.fn(),
-      setSelectedAgent: vi.fn(),
-      setSelectedSkill: vi.fn(),
       navigateToSkillDashboard: vi.fn(),
       navigateToLogs: vi.fn(),
       navigateToLogDetail: vi.fn(),
@@ -128,19 +132,17 @@ describe('EditAgentView', () => {
       navigateToArmDetail: vi.fn(),
       navigateBack: vi.fn(),
       updateBreadcrumbs: vi.fn(),
-      skills: [],
     });
 
     // Set default mock implementation for useAgents
     vi.mocked(useAgents).mockReturnValue({
       agents: [],
+      selectedAgent: mockAgent,
       isLoading: false,
       error: null,
       refetch: vi.fn(),
       queryParams: {},
       setQueryParams: vi.fn(),
-      selectedAgent: null,
-      setSelectedAgent: vi.fn(),
       createAgent: vi.fn(),
       updateAgent: mockUpdateAgent,
       deleteAgent: vi.fn(),
@@ -166,7 +168,13 @@ describe('EditAgentView', () => {
   const renderEditAgentView = () => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <EditAgentView />
+        <NavigationProvider>
+          <AgentsProvider>
+            <SkillsProvider>
+              <EditAgentView />
+            </SkillsProvider>
+          </AgentsProvider>
+        </NavigationProvider>
       </QueryClientProvider>,
     );
   };
@@ -302,7 +310,7 @@ describe('EditAgentView', () => {
       vi.mocked(useNavigation).mockReturnValue({
         navigationState: {
           ...mockNavigationState,
-          selectedAgent: undefined,
+          selectedAgentName: undefined,
         },
         isLoadingFromStorage: false,
         router: {
@@ -314,8 +322,6 @@ describe('EditAgentView', () => {
           prefetch: vi.fn().mockResolvedValue(undefined),
         },
         setSection: vi.fn(),
-        setSelectedAgent: vi.fn(),
-        setSelectedSkill: vi.fn(),
         navigateToSkillDashboard: vi.fn(),
         navigateToLogs: vi.fn(),
         navigateToLogDetail: vi.fn(),
@@ -334,7 +340,33 @@ describe('EditAgentView', () => {
         navigateToArmDetail: vi.fn(),
         navigateBack: vi.fn(),
         updateBreadcrumbs: vi.fn(),
-        skills: [],
+      });
+
+      // Mock useAgents to return undefined selectedAgent
+      vi.mocked(useAgents).mockReturnValue({
+        agents: [],
+        selectedAgent: undefined,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+        queryParams: {},
+        setQueryParams: vi.fn(),
+        createAgent: vi.fn(),
+        updateAgent: mockUpdateAgent,
+        deleteAgent: vi.fn(),
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+        createError: null,
+        updateError: null,
+        deleteError: null,
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+        getAgentById: vi.fn(),
+        refreshAgents: vi.fn(),
+        isCreateAgentDialogOpen: false,
+        setIsCreateAgentDialogOpen: vi.fn(),
       });
 
       renderEditAgentView();
@@ -368,13 +400,12 @@ describe('EditAgentView', () => {
     it('disables form when updating', () => {
       vi.mocked(useAgents).mockReturnValue({
         agents: [],
+        selectedAgent: mockAgent,
         isLoading: false,
         error: null,
         refetch: vi.fn(),
         queryParams: {},
         setQueryParams: vi.fn(),
-        selectedAgent: null,
-        setSelectedAgent: vi.fn(),
         createAgent: vi.fn(),
         updateAgent: mockUpdateAgent,
         deleteAgent: vi.fn(),

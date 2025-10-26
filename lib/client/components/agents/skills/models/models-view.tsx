@@ -33,9 +33,10 @@ import {
   TooltipTrigger,
 } from '@client/components/ui/tooltip';
 import { useSmartBack } from '@client/hooks/use-smart-back';
+import { useAgents } from '@client/providers/agents';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
-import { useNavigation } from '@client/providers/navigation';
+import { useSkills } from '@client/providers/skills';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import { format } from 'date-fns';
 import {
@@ -51,8 +52,8 @@ import { useEffect, useState } from 'react';
 import { AddModelsDialog } from './add-models-dialog';
 
 export function ModelsView(): ReactElement {
-  const { navigationState } = useNavigation();
-  const { selectedSkill, selectedAgent } = navigationState;
+  const { selectedAgent } = useAgents();
+  const { selectedSkill } = useSkills();
   const goBack = useSmartBack();
   const {
     apiKeys,

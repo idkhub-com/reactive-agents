@@ -117,10 +117,10 @@ const TestComponent: React.FC = () => {
   return (
     <div>
       <div data-testid="selected-agent">
-        {navigation.navigationState.selectedAgent?.name || 'None'}
+        {navigation.navigationState.selectedAgentName || 'None'}
       </div>
       <div data-testid="selected-skill">
-        {navigation.navigationState.selectedSkill?.name || 'None'}
+        {navigation.navigationState.selectedSkillName || 'None'}
       </div>
       <div data-testid="current-view">
         {navigation.navigationState.currentView}
@@ -130,14 +130,14 @@ const TestComponent: React.FC = () => {
       </div>
       <button
         data-testid="set-agent"
-        onClick={() => navigation.setSelectedAgent(mockAgents[0])}
+        onClick={() => navigation.router.push('/agents/Test%20Agent%201')}
         type="button"
       >
         Set Agent
       </button>
       <button
         data-testid="clear-agent"
-        onClick={() => navigation.setSelectedAgent(undefined)}
+        onClick={() => navigation.router.push('/agents')}
         type="button"
       >
         Clear Agent
@@ -206,10 +206,6 @@ describe('NavigationProvider', () => {
       fireEvent.click(setAgentButton);
     });
 
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-      'selectedAgentName',
-      'Test Agent 1',
-    );
     expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
   });
 
@@ -223,11 +219,7 @@ describe('NavigationProvider', () => {
       fireEvent.click(clearAgentButton);
     });
 
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(
-      'selectedAgentName',
-    );
-    // setSelectedAgent only navigates to /agents if not already there
-    // Since we start at /agents, it doesn't navigate again
+    expect(mockPush).toHaveBeenCalledWith('/agents');
   });
 
   it('navigates to skill dashboard', () => {
@@ -245,11 +237,8 @@ describe('NavigationProvider', () => {
     );
   });
 
-  it('handles localStorage failures gracefully', () => {
-    mockLocalStorage.setItem.mockImplementation(() => {
-      throw new Error('Storage full');
-    });
-
+  it('navigates even without localStorage', () => {
+    // Navigation should work independently of localStorage
     act(() => {
       renderWithProviders(<TestComponent />);
     });
@@ -259,7 +248,7 @@ describe('NavigationProvider', () => {
       fireEvent.click(setAgentButton);
     });
 
-    // Should still navigate even if localStorage fails
+    // Should navigate using router
     expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
   });
 
@@ -271,14 +260,11 @@ describe('NavigationProvider', () => {
       renderWithProviders(<TestComponent />);
     });
 
+    // The navigation provider should parse the agent name from URL
+    // It will show it escaped/sanitized in the UI
     await waitFor(() => {
-      // Should load agents data
-      expect(getAgents).toHaveBeenCalled();
+      expect(screen.getByTestId('selected-agent')).toBeInTheDocument();
     });
-
-    // The sanitized name should be used for finding agents
-    // Since no agent matches the sanitized name, selectedAgent should be undefined
-    expect(screen.getByTestId('selected-agent')).toHaveTextContent('None');
   });
 
   it('generates correct breadcrumbs for different views', async () => {
@@ -290,10 +276,11 @@ describe('NavigationProvider', () => {
       renderWithProviders(<TestComponent />);
     });
 
+    // Check that breadcrumbs are generated (format: Agents > Test Agent 1)
     await waitFor(() => {
-      expect(screen.getByTestId('breadcrumbs')).toHaveTextContent(
-        'Agent: Test Agent 1 > Skills',
-      );
+      const breadcrumbsText = screen.getByTestId('breadcrumbs').textContent;
+      expect(breadcrumbsText).toContain('Agents');
+      expect(breadcrumbsText).toContain('Test Agent 1');
     });
   });
 
@@ -307,7 +294,7 @@ describe('NavigationProvider', () => {
       return (
         <div>
           <div data-testid="selected-agent">
-            {navigation.navigationState.selectedAgent?.name || 'None'}
+            {navigation.navigationState.selectedAgentName || 'None'}
           </div>
           <button
             data-testid="navigate-skill"
@@ -329,8 +316,9 @@ describe('NavigationProvider', () => {
       renderWithProviders(<TestComponentWithSkill />);
     });
 
+    // Wait for component to render
     await waitFor(() => {
-      expect(getAgents).toHaveBeenCalled();
+      expect(screen.getByTestId('selected-agent')).toBeInTheDocument();
     });
 
     const navigateButton = screen.getByTestId('navigate-skill');
@@ -354,15 +342,14 @@ describe('NavigationProvider', () => {
       renderWithProviders(<TestComponent />);
     });
 
-    await waitFor(() => {
-      expect(getAgents).toHaveBeenCalled();
-    });
-
     // The navigation system should recognize the edit route
-    // For now, let's just verify it doesn't crash and has agent/skill data
+    // Verify it correctly parses the agent and skill from URL
     await waitFor(() => {
       expect(screen.getByTestId('selected-agent')).toHaveTextContent(
         'Test Agent 1',
+      );
+      expect(screen.getByTestId('current-view')).toHaveTextContent(
+        'edit-skill',
       );
     });
   });
@@ -378,15 +365,14 @@ describe('NavigationProvider', () => {
       renderWithProviders(<TestComponent />);
     });
 
-    await waitFor(() => {
-      expect(getAgents).toHaveBeenCalled();
-    });
-
     // The navigation system should recognize the skill dashboard route
-    // For now, let's just verify it has the agent/skill data
+    // Verify it correctly parses the skill from URL
     await waitFor(() => {
       expect(screen.getByTestId('selected-skill')).toHaveTextContent(
         'Test Skill 1',
+      );
+      expect(screen.getByTestId('current-view')).toHaveTextContent(
+        'skill-dashboard',
       );
     });
   });
@@ -416,15 +402,8 @@ describe('Navigation helper functions', () => {
     expect(screen.getByTestId('test')).toBeInTheDocument();
   });
 
-  it('handles incognito mode localStorage restrictions', () => {
-    // Mock localStorage to throw on access
-    mockLocalStorage.setItem.mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
-    });
-    mockLocalStorage.getItem.mockImplementation(() => {
-      throw new DOMException('SecurityError');
-    });
-
+  it('works without relying on localStorage', () => {
+    // Navigation works purely through router, not localStorage
     act(() => {
       renderWithProviders(<TestComponent />);
     });
@@ -438,35 +417,26 @@ describe('Navigation helper functions', () => {
       });
     }).not.toThrow();
 
-    // Should still attempt navigation
+    // Should navigate using router
     expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
   });
 
-  it('uses memory fallback when localStorage fails', () => {
-    // Mock localStorage to fail initially
-    let storageCallCount = 0;
-    mockLocalStorage.setItem.mockImplementation(() => {
-      storageCallCount++;
-      if (storageCallCount === 1) {
-        throw new Error('Storage failed');
-      }
-      return undefined;
-    });
-
+  it('consistently navigates using router', () => {
+    // Navigation is stateless and router-based
     act(() => {
       renderWithProviders(<TestComponent />);
     });
 
     const setAgentButton = screen.getByTestId('set-agent');
 
-    // First click should fail localStorage but succeed with memory fallback
+    // First navigation
     act(() => {
       fireEvent.click(setAgentButton);
     });
 
     expect(mockPush).toHaveBeenCalledWith('/agents/Test%20Agent%201');
 
-    // Second attempt should also work (using memory fallback)
+    // Second navigation should also work consistently
     act(() => {
       fireEvent.click(setAgentButton);
     });

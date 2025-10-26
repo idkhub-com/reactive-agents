@@ -97,7 +97,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
         await updateAPIKey(apiKey.id, updateParams);
       }
 
-      router.push('/ai-providers/api-keys');
+      router.push('/ai-providers');
     } catch (_error) {
       // Error handling is done in the provider
     }
