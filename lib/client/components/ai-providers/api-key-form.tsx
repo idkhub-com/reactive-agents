@@ -28,7 +28,12 @@ import {
 } from '@client/components/ui/select';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import {
+  AIProvider,
+  DEFAULT_SELF_HOSTED_URLS,
+  OPTIONAL_API_KEY_PROVIDERS,
+  PrettyAIProvider,
+} from '@shared/types/constants';
 import type {
   AIProviderAPIKey,
   AIProviderAPIKeyCreateParams,
@@ -37,9 +42,11 @@ import type {
 import { EyeIcon, EyeOffIcon, KeyIcon, SaveIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useRef, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
+
+const MAX_NAME_LENGTH = 100;
 
 const AI_PROVIDERS = Object.values(AIProvider)
   .map((provider) => ({
@@ -48,14 +55,60 @@ const AI_PROVIDERS = Object.values(AIProvider)
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
 
-const formSchema = z.object({
-  ai_provider: z.string().min(1, 'Provider is required'),
-  name: z
-    .string()
-    .min(1, 'Name is required')
-    .max(100, 'Name must be 100 characters or less'),
-  api_key: z.string().min(1, 'API key is required'),
-});
+function getAPIKeyDescription(
+  provider: string,
+  mode: 'create' | 'edit',
+): string {
+  if (OPTIONAL_API_KEY_PROVIDERS.includes(provider as AIProvider)) {
+    return 'Optional for providers like Ollama that support self-hosting. Required for cloud-hosted instances.';
+  }
+  return mode === 'create'
+    ? 'Your API key will be encrypted before storage.'
+    : 'Leave unchanged to keep the existing API key.';
+}
+
+function getCustomHostDescription(provider: string): string {
+  const defaultUrl = DEFAULT_SELF_HOSTED_URLS[provider as AIProvider];
+  if (defaultUrl) {
+    return `Leave empty to use default local instance (${defaultUrl}). Provide a custom URL for remote instances.`;
+  }
+  return 'Custom host URL for your self-hosted instance.';
+}
+
+const formSchema = z
+  .object({
+    ai_provider: z.string().min(1, 'Provider is required'),
+    name: z
+      .string()
+      .min(1, 'Name is required')
+      .max(
+        MAX_NAME_LENGTH,
+        `Name must be ${MAX_NAME_LENGTH} characters or less`,
+      ),
+    api_key: z.string().nullable().optional(),
+    custom_host: z
+      .string()
+      .url('Please enter a valid URL (e.g., http://localhost:8080)')
+      .refine(
+        (url) => url.startsWith('http://') || url.startsWith('https://'),
+        {
+          message: 'Custom host must use HTTP or HTTPS protocol for security',
+        },
+      )
+      .optional()
+      .or(z.literal('')),
+  })
+  .refine(
+    (data) =>
+      OPTIONAL_API_KEY_PROVIDERS.includes(data.ai_provider as AIProvider) ||
+      (data.api_key !== null &&
+        data.api_key !== undefined &&
+        data.api_key.trim() !== ''),
+    {
+      message: 'API key is required for this provider',
+      path: ['api_key'],
+    },
+  );
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -76,16 +129,53 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
       ai_provider: apiKey?.ai_provider || '',
       name: apiKey?.name || '',
       api_key: apiKey?.api_key || '',
+      custom_host: apiKey?.custom_host || '',
     },
   });
+
+  const selectedProvider = useWatch({
+    control: form.control,
+    name: 'ai_provider',
+  });
+
+  const prevProviderRef = useRef<string>(selectedProvider);
+
+  // Auto-clear custom_host when switching to a provider that doesn't support it
+  useEffect(() => {
+    if (
+      prevProviderRef.current &&
+      prevProviderRef.current !== selectedProvider
+    ) {
+      if (
+        !OPTIONAL_API_KEY_PROVIDERS.includes(selectedProvider as AIProvider)
+      ) {
+        form.setValue('custom_host', '');
+      }
+    }
+    prevProviderRef.current = selectedProvider;
+  }, [selectedProvider, form]);
 
   const onSubmit = async (data: FormData) => {
     try {
       if (mode === 'create') {
+        // For self-hosted providers without API key, use default URL if no custom host provided
+        let customHost = data.custom_host || undefined;
+        if (
+          !data.api_key &&
+          OPTIONAL_API_KEY_PROVIDERS.includes(data.ai_provider as AIProvider)
+        ) {
+          const defaultUrl =
+            DEFAULT_SELF_HOSTED_URLS[data.ai_provider as AIProvider];
+          if (defaultUrl && !data.custom_host) {
+            customHost = defaultUrl;
+          }
+        }
+
         const createParams: AIProviderAPIKeyCreateParams = {
           ai_provider: data.ai_provider,
           name: data.name,
           api_key: data.api_key,
+          custom_host: customHost,
         };
         await createAPIKey(createParams);
       } else if (apiKey) {
@@ -94,6 +184,14 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
           name: data.name,
           ...(data.api_key !== apiKey.api_key && { api_key: data.api_key }),
         };
+
+        // Only include custom_host if it has actually changed
+        const normalizedCurrentHost = data.custom_host || undefined;
+        const normalizedApiKeyHost = apiKey.custom_host || undefined;
+        if (normalizedCurrentHost !== normalizedApiKeyHost) {
+          updateParams.custom_host = normalizedCurrentHost;
+        }
+
         await updateAPIKey(apiKey.id, updateParams);
       }
 
@@ -205,6 +303,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                             type={showAPIKey ? 'text' : 'password'}
                             placeholder="Enter your API key"
                             {...field}
+                            value={field.value ?? ''}
                             className="pr-10"
                           />
                           <Button
@@ -223,14 +322,41 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                         </div>
                       </FormControl>
                       <FormDescription>
-                        {mode === 'create'
-                          ? 'Your API key will be encrypted before storage.'
-                          : 'Leave unchanged to keep the existing API key.'}
+                        {getAPIKeyDescription(selectedProvider, mode)}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {OPTIONAL_API_KEY_PROVIDERS.includes(
+                  selectedProvider as AIProvider,
+                ) && (
+                  <FormField
+                    control={form.control}
+                    name="custom_host"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Host (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            placeholder={
+                              DEFAULT_SELF_HOSTED_URLS[
+                                selectedProvider as AIProvider
+                              ] || 'http://localhost:8080'
+                            }
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {getCustomHostDescription(selectedProvider)}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <div className="flex justify-end gap-3">
                   <Button
