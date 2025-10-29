@@ -28,35 +28,35 @@ describe('Model Data Transforms and Validation', () => {
   describe('ModelCreateParams Transform', () => {
     it('should validate required fields', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
       };
 
       const result = ModelCreateParams.parse(inputData);
 
-      expect(result.ai_provider_api_key_id).toBe(testApiKeyId);
+      expect(result.ai_provider_id).toBe(testApiKeyId);
       expect(result.model_name).toBe('gpt-4');
     });
 
     it('should reject empty model name', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: '',
       };
 
       expect(() => ModelCreateParams.parse(inputData)).toThrow();
     });
 
-    it('should reject invalid UUID for ai_provider_api_key_id', () => {
+    it('should reject invalid UUID for ai_provider_id', () => {
       const inputData = {
-        ai_provider_api_key_id: 'invalid-uuid',
+        ai_provider_id: 'invalid-uuid',
         model_name: 'gpt-4',
       };
 
       expect(() => ModelCreateParams.parse(inputData)).toThrow();
     });
 
-    it('should reject missing ai_provider_api_key_id', () => {
+    it('should reject missing ai_provider_id', () => {
       const inputData = {
         model_name: 'gpt-4',
       };
@@ -66,7 +66,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should reject missing model_name', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
       };
 
       expect(() => ModelCreateParams.parse(inputData)).toThrow();
@@ -74,7 +74,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should prevent users from overriding id field (strict mode)', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         id: testModelId,
       };
@@ -84,7 +84,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should prevent users from overriding created_at field (strict mode)', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         created_at: '2023-01-01T00:00:00.000Z',
       };
@@ -94,7 +94,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should prevent users from overriding updated_at field (strict mode)', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -104,7 +104,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should reject objects with additional properties (strict mode)', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         extraField: 'should be rejected',
       };
@@ -123,7 +123,7 @@ describe('Model Data Transforms and Validation', () => {
 
       for (const modelName of modelNames) {
         const inputData = {
-          ai_provider_api_key_id: testApiKeyId,
+          ai_provider_id: testApiKeyId,
           model_name: modelName,
         };
 
@@ -181,10 +181,10 @@ describe('Model Data Transforms and Validation', () => {
       );
     });
 
-    it('should not allow ai_provider_api_key_id updates', () => {
+    it('should not allow ai_provider_id updates', () => {
       const inputData = {
         model_name: 'gpt-4',
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
       };
 
       expect(() => ModelUpdateParams.parse(inputData)).toThrow();
@@ -228,14 +228,14 @@ describe('Model Data Transforms and Validation', () => {
       expect(result.id).toBe(testModelId);
     });
 
-    it('should accept ai_provider_api_key_id filter', () => {
+    it('should accept ai_provider_id filter', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
       };
 
       const result = ModelQueryParams.parse(inputData);
 
-      expect(result.ai_provider_api_key_id).toBe(testApiKeyId);
+      expect(result.ai_provider_id).toBe(testApiKeyId);
     });
 
     it('should accept model_name filter', () => {
@@ -298,9 +298,9 @@ describe('Model Data Transforms and Validation', () => {
       expect(() => ModelQueryParams.parse(inputData)).toThrow();
     });
 
-    it('should reject invalid UUID for ai_provider_api_key_id', () => {
+    it('should reject invalid UUID for ai_provider_id', () => {
       const inputData = {
-        ai_provider_api_key_id: 'invalid-uuid',
+        ai_provider_id: 'invalid-uuid',
       };
 
       expect(() => ModelQueryParams.parse(inputData)).toThrow();
@@ -337,7 +337,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should handle multiple filters together', () => {
       const inputData = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         limit: 5,
         offset: 10,
@@ -345,7 +345,7 @@ describe('Model Data Transforms and Validation', () => {
 
       const result = ModelQueryParams.parse(inputData);
 
-      expect(result.ai_provider_api_key_id).toBe(testApiKeyId);
+      expect(result.ai_provider_id).toBe(testApiKeyId);
       expect(result.model_name).toBe('gpt-4');
       expect(result.limit).toBe(5);
       expect(result.offset).toBe(10);
@@ -356,7 +356,7 @@ describe('Model Data Transforms and Validation', () => {
     it('should validate a complete model object', () => {
       const modelData = {
         id: testModelId,
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -370,7 +370,7 @@ describe('Model Data Transforms and Validation', () => {
     it('should reject invalid UUIDs for id', () => {
       const modelData = {
         id: 'invalid-uuid',
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -379,10 +379,10 @@ describe('Model Data Transforms and Validation', () => {
       expect(() => Model.parse(modelData)).toThrow();
     });
 
-    it('should reject invalid UUIDs for ai_provider_api_key_id', () => {
+    it('should reject invalid UUIDs for ai_provider_id', () => {
       const modelData = {
         id: testModelId,
-        ai_provider_api_key_id: 'invalid-uuid',
+        ai_provider_id: 'invalid-uuid',
         model_name: 'gpt-4',
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -394,7 +394,7 @@ describe('Model Data Transforms and Validation', () => {
     it('should reject empty model_name', () => {
       const modelData = {
         id: testModelId,
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: '',
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -406,7 +406,7 @@ describe('Model Data Transforms and Validation', () => {
     it('should reject invalid datetime strings', () => {
       const modelData = {
         id: testModelId,
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -418,7 +418,7 @@ describe('Model Data Transforms and Validation', () => {
     it('should require timezone offset in datetime strings', () => {
       const modelData = {
         id: testModelId,
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -429,7 +429,7 @@ describe('Model Data Transforms and Validation', () => {
 
     it('should reject missing required fields', () => {
       const modelDataMissingId = {
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -444,7 +444,7 @@ describe('Model Data Transforms and Validation', () => {
 
       const modelDataMissingModelName = {
         id: testModelId,
-        ai_provider_api_key_id: testApiKeyId,
+        ai_provider_id: testApiKeyId,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -473,7 +473,7 @@ describe('Model Data Transforms and Validation', () => {
       for (const modelName of modelNames) {
         const modelData = {
           id: testModelId,
-          ai_provider_api_key_id: testApiKeyId,
+          ai_provider_id: testApiKeyId,
           model_name: modelName,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',

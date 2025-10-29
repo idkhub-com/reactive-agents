@@ -48,6 +48,9 @@ export interface InternalProviderAPIConfig {
     reqPath: string;
     reqQuery: string;
   }) => string;
+  customFieldsSchema?: z.ZodType;
+  /** Whether an API key is required for this provider. Defaults to true if not specified. */
+  isAPIKeyRequired?: boolean;
 }
 
 /**

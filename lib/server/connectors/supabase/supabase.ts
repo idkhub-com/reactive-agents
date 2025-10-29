@@ -12,11 +12,11 @@ import {
   type AgentUpdateParams,
 } from '@shared/types/data/agent';
 import {
-  AIProviderAPIKey,
-  type AIProviderAPIKeyCreateParams,
-  type AIProviderAPIKeyQueryParams,
-  type AIProviderAPIKeyUpdateParams,
-} from '@shared/types/data/ai-provider-api-key';
+  AIProviderConfig,
+  type AIProviderConfigCreateParams,
+  type AIProviderConfigQueryParams,
+  type AIProviderConfigUpdateParams,
+} from '@shared/types/data/ai-provider';
 import {
   Feedback,
   type FeedbackQueryParams,
@@ -373,8 +373,8 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   // AI Provider API Keys
   getAIProviderAPIKeys: async (
-    queryParams: AIProviderAPIKeyQueryParams,
-  ): Promise<AIProviderAPIKey[]> => {
+    queryParams: AIProviderConfigQueryParams,
+  ): Promise<AIProviderConfig[]> => {
     const postgrestParams: Record<string, string> = {};
 
     if (queryParams.id) {
@@ -394,9 +394,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const encryptedAPIKeys = await selectFromSupabase(
-      'ai_provider_api_keys',
+      'ai_providers',
       postgrestParams,
-      z.array(AIProviderAPIKey),
+      z.array(AIProviderConfig),
     );
 
     // Decrypt the API keys before returning
@@ -408,11 +408,11 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   getAIProviderAPIKeyById: async (
     id: string,
-  ): Promise<AIProviderAPIKey | null> => {
+  ): Promise<AIProviderConfig | null> => {
     const encryptedAPIKeys = await selectFromSupabase(
-      'ai_provider_api_keys',
+      'ai_providers',
       { id: `eq.${id}` },
-      z.array(AIProviderAPIKey),
+      z.array(AIProviderConfig),
     );
 
     if (encryptedAPIKeys.length === 0) {
@@ -429,18 +429,18 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     };
   },
 
-  createAIProviderAPIKey: async (
-    apiKey: AIProviderAPIKeyCreateParams,
-  ): Promise<AIProviderAPIKey> => {
+  createAIProvider: async (
+    apiKey: AIProviderConfigCreateParams,
+  ): Promise<AIProviderConfig> => {
     const encryptedAPIKey = {
       ...apiKey,
       api_key: apiKey.api_key ? encryptAPIKey(apiKey.api_key) : null,
     };
 
     const insertedAPIKey = await insertIntoSupabase(
-      'ai_provider_api_keys',
+      'ai_providers',
       encryptedAPIKey,
-      z.array(AIProviderAPIKey),
+      z.array(AIProviderConfig),
     );
 
     // Decrypt before returning
@@ -452,10 +452,10 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     };
   },
 
-  updateAIProviderAPIKey: async (
+  updateAIProvider: async (
     id: string,
-    update: AIProviderAPIKeyUpdateParams,
-  ): Promise<AIProviderAPIKey> => {
+    update: AIProviderConfigUpdateParams,
+  ): Promise<AIProviderConfig> => {
     const updateData = { ...update };
 
     // Encrypt the API key if it's being updated
@@ -466,10 +466,10 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const updatedAPIKey = await updateInSupabase(
-      'ai_provider_api_keys',
+      'ai_providers',
       id,
       updateData,
-      z.array(AIProviderAPIKey),
+      z.array(AIProviderConfig),
     );
 
     // Decrypt before returning
@@ -481,8 +481,8 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     };
   },
 
-  deleteAIProviderAPIKey: async (id: string): Promise<void> => {
-    await deleteFromSupabase('ai_provider_api_keys', { id: `eq.${id}` });
+  deleteAIProvider: async (id: string): Promise<void> => {
+    await deleteFromSupabase('ai_providers', { id: `eq.${id}` });
   },
 
   // Models
@@ -491,8 +491,8 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     if (queryParams.id) {
       postgrestParams.id = `eq.${queryParams.id}`;
     }
-    if (queryParams.ai_provider_api_key_id) {
-      postgrestParams.ai_provider_api_key_id = `eq.${queryParams.ai_provider_api_key_id}`;
+    if (queryParams.ai_provider_id) {
+      postgrestParams.ai_provider_id = `eq.${queryParams.ai_provider_id}`;
     }
     if (queryParams.model_name) {
       postgrestParams.model_name = `eq.${queryParams.model_name}`;

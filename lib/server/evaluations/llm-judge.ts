@@ -1,4 +1,4 @@
-import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import { BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
 import {
   evaluationCriteria,
   scoringGuidelinesText,
@@ -9,12 +9,10 @@ import {
   type LLMJudgeConfig,
   LLMJudgeResult,
 } from '@server/types/evaluations/llm-judge';
-// Import IDKHub OpenAI provider types for better schema handling
-import type { ResponseCreateParamsNonStreaming } from '@server/types/model-response';
-import { error } from '@shared/console-logging';
-import type { ResponsesResponseBody } from '@shared/types/api/routes/responses-api/response';
 import { AIProvider } from '@shared/types/constants';
 import { CacheMode } from '@shared/types/middleware/cache';
+import OpenAI from 'openai';
+import { z } from 'zod';
 
 // Constants for retry logic
 const LLM_JUDGE_MAX_RETRIES = 3;
@@ -99,43 +97,32 @@ function expectsStructuredOutput(systemPrompt: string): boolean {
 }
 
 /**
- * Generate JSON schema for structured output based on prompt content
+ * Zod schema for evaluation results
  */
-function generateStructuredOutputSchema(
-  _systemPrompt: string,
-): Record<string, unknown> {
-  // Default schema for evaluation results
-  return {
-    type: 'object',
-    properties: {
-      score: {
-        type: 'number',
-        minimum: 0,
-        maximum: 1,
-        description: 'Evaluation score between 0 and 1',
-      },
-      reasoning: {
-        type: 'string',
-        description: 'Detailed reasoning for the evaluation',
-      },
-      metadata: {
-        type: 'object',
-        description: 'Additional metadata about the evaluation',
-        additionalProperties: false,
-      },
-    },
-    required: ['score', 'reasoning'],
-    additionalProperties: false,
-  };
-}
+const EvaluationResultSchema = z.object({
+  score: z.number().min(0).max(1).describe('Evaluation score between 0 and 1'),
+  reasoning: z.string().describe('Detailed reasoning for the evaluation'),
+});
 
-export function createLLMJudge(config: Partial<LLMJudgeConfig> = {}): LLMJudge {
+export function createLLMJudge(
+  config: Partial<LLMJudgeConfig> = {},
+  openaiClient?: OpenAI,
+): LLMJudge {
   const judgeConfig = {
     model: config.model || 'gpt-4o-mini',
     temperature: config.temperature || 0.1,
     max_tokens: config.max_tokens || 1000,
     timeout: config.timeout || 30000,
   };
+
+  // Create OpenAI client once (or use injected client for testing)
+  const client =
+    openaiClient ||
+    new OpenAI({
+      apiKey: BEARER_TOKEN ?? 'idk',
+      baseURL: 'http://localhost:3000/v1',
+      dangerouslyAllowBrowser: true, // Safe in server-side Node.js context
+    });
 
   /**
    * Generate evaluation prompt for text evaluation
@@ -188,7 +175,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
   }
 
   /**
-   * Core evaluation method using IDKHub OpenAI provider infrastructure
+   * Core evaluation method using OpenAI library
    */
   async function evaluate(input: EvaluationInput): Promise<LLMJudgeResult> {
     const api_key = OPENAI_API_KEY;
@@ -201,17 +188,64 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
       });
     }
 
+    const idkhubConfig = {
+      targets: [
+        {
+          provider: AIProvider.OPENAI,
+          model: judgeConfig.model,
+          cache: {
+            mode: CacheMode.SIMPLE,
+          },
+          api_key,
+        },
+      ],
+      agent_name: 'idkhub',
+      skill_name: 'judge',
+    };
+
     let lastError: unknown;
     let retryCount = 0;
     for (let i = 0; i < LLM_JUDGE_MAX_RETRIES; i++) {
       try {
         const prompt = generateEvaluationPrompt(input);
-        const response_data = await callIDKHubOpenAIResponsesAPI(
-          prompt,
-          judgeConfig,
-          api_key,
-        );
-        return parseResponseData(response_data, prompt.useStructuredOutput);
+        const response = await client
+          .withOptions({
+            defaultHeaders: {
+              'x-idk-config': JSON.stringify(idkhubConfig),
+            },
+          })
+          .chat.completions.parse({
+            model: judgeConfig.model,
+            messages: [
+              { role: 'system', content: prompt.systemPrompt },
+              { role: 'user', content: prompt.userPrompt },
+            ],
+            response_format: {
+              type: 'json_schema',
+              json_schema: {
+                name: 'evaluation_result',
+                strict: true,
+                schema: z.toJSONSchema(EvaluationResultSchema),
+              },
+            },
+          });
+
+        const parsed = response.choices[0].message.parsed;
+        if (!parsed) {
+          throw new Error('No parsed response from OpenAI');
+        }
+
+        // For structured output (like task/outcome extraction), return as metadata
+        if (prompt.useStructuredOutput) {
+          return {
+            score: 1.0, // Default score for successful extraction
+            reasoning: 'Structured data extracted successfully',
+            metadata: parsed,
+          };
+        }
+
+        // For regular evaluation, validate and return
+        return LLMJudgeResult.parse(parsed);
       } catch (error) {
         lastError = error;
         if (i < LLM_JUDGE_MAX_RETRIES - 1 && isRetryableLLMJudgeError(error)) {
@@ -275,157 +309,6 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
     evaluate,
     config: judgeConfig,
   };
-}
-
-/**
- * Call OpenAI Responses API using IDKHub OpenAI provider infrastructure
- * This leverages the existing provider system for better schema handling, parsing, and logging
- */
-async function callIDKHubOpenAIResponsesAPI(
-  prompt: {
-    systemPrompt: string;
-    userPrompt: string;
-    useStructuredOutput: boolean;
-  },
-  config: LLMJudgeConfig,
-  api_key: string,
-): Promise<ResponsesResponseBody> {
-  const controller = new AbortController();
-
-  const timeoutId = setTimeout(() => controller.abort(), config.timeout);
-
-  try {
-    // Generate appropriate schema based on prompt content
-    const schema = prompt.useStructuredOutput
-      ? generateStructuredOutputSchema(prompt.systemPrompt)
-      : {
-          type: 'object',
-          properties: {
-            score: {
-              type: 'number',
-              minimum: 0,
-              maximum: 1,
-              description: 'Evaluation score between 0 and 1',
-            },
-            reasoning: {
-              type: 'string',
-              description: 'Detailed reasoning for the evaluation',
-            },
-            metadata: {
-              type: 'object',
-              description: 'Additional metadata about the evaluation',
-              additionalProperties: false,
-            },
-          },
-          required: ['score', 'reasoning'],
-          additionalProperties: false,
-        };
-
-    // Use IDKHub OpenAI provider's request structure for better type safety and logging
-    const requestParams: ResponseCreateParamsNonStreaming = {
-      model: config.model,
-      input: [
-        { role: 'system', content: prompt.systemPrompt },
-        { role: 'user', content: prompt.userPrompt },
-      ],
-      temperature: config.temperature,
-      max_output_tokens: config.max_tokens,
-      text: {
-        format: {
-          name: 'evaluation_result',
-          type: 'json_schema',
-          schema,
-          strict: true,
-        },
-      },
-      // Enable logging through IDKHub responses system
-      store: true,
-      metadata: {
-        source: 'llm_judge',
-        evaluation_type: prompt.useStructuredOutput ? 'structured' : 'standard',
-      },
-    };
-
-    const idkConfig = {
-      agent_name: 'idkhub',
-      skill_name: 'judge',
-      targets: [
-        {
-          provider: AIProvider.OPENAI,
-          model: config.model,
-          cache: {
-            mode: CacheMode.SIMPLE,
-          },
-          api_key,
-        },
-      ],
-    };
-
-    // Use the configured API_URL directly
-    const response = await fetch(`${API_URL}/v1/responses`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${BEARER_TOKEN}`,
-        'x-idk-config': JSON.stringify(idkConfig),
-      },
-      body: JSON.stringify(requestParams),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response) {
-      throw new Error('OpenAI Responses API error: No response received');
-    }
-
-    if (!response.ok) {
-      const error_text = await response.text();
-      throw new Error(
-        `OpenAI Responses API error: ${response.status} ${response.statusText} - ${error_text}`,
-      );
-    }
-
-    const body = await response.text();
-
-    return JSON.parse(body) as ResponsesResponseBody;
-  } catch (e) {
-    error('Error in OpenAI Responses API:', e);
-    clearTimeout(timeoutId);
-    throw e;
-  }
-}
-
-/**
- * Parse OpenAI Response data to LLMJudgeResult using proper Responses API types
- */
-function parseResponseData(
-  response_data: ResponsesResponseBody,
-  useStructuredOutput = false,
-): LLMJudgeResult {
-  const output = response_data.output?.[0];
-  if (!output || output.type !== 'message' || !('content' in output)) {
-    throw new Error('No valid message output in LLM evaluation response');
-  }
-
-  const textContent = output.content?.[0];
-  if (!textContent || textContent.type !== 'output_text') {
-    throw new Error('No valid text content in LLM evaluation response');
-  }
-
-  const parsed = JSON.parse(textContent.text);
-
-  // For structured output (like task/outcome extraction), return as metadata
-  if (useStructuredOutput) {
-    return {
-      score: 1.0, // Default score for successful extraction
-      reasoning: 'Structured data extracted successfully',
-      metadata: parsed,
-    };
-  }
-
-  // For regular evaluation, use the standard schema
-  return LLMJudgeResult.parse(parsed);
 }
 
 /**

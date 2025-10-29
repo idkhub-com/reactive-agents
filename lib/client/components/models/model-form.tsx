@@ -50,9 +50,7 @@ import { z } from 'zod';
 
 const modelFormSchema = z.object({
   model_name: z.string().min(1, 'Model name is required'),
-  ai_provider_api_key_id: z
-    .string()
-    .uuid('Please select a valid AI provider API key'),
+  ai_provider_id: z.string().uuid('Please select a valid AI provider API key'),
 });
 
 type ModelFormData = z.infer<typeof modelFormSchema>;
@@ -77,7 +75,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
     resolver: zodResolver(modelFormSchema),
     defaultValues: {
       model_name: '',
-      ai_provider_api_key_id: '',
+      ai_provider_id: '',
     },
   });
 
@@ -92,7 +90,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
 
         form.reset({
           model_name: model.model_name,
-          ai_provider_api_key_id: model.ai_provider_api_key_id,
+          ai_provider_id: model.ai_provider_id,
         });
       } catch (error) {
         toast({
@@ -129,7 +127,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
       } else {
         const createData: ModelCreateParams = {
           model_name: data.model_name,
-          ai_provider_api_key_id: data.ai_provider_api_key_id,
+          ai_provider_id: data.ai_provider_id,
         };
         await createModel(createData);
 
@@ -243,7 +241,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
 
                 <FormField
                   control={form.control}
-                  name="ai_provider_api_key_id"
+                  name="ai_provider_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>AI Provider API Key</FormLabel>

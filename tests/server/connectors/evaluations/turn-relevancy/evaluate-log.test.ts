@@ -15,6 +15,29 @@ vi.mock('@server/constants', () => ({
   BEARER_TOKEN: 'idk',
 }));
 
+// Mock OpenAI client
+const mockParse = vi.fn();
+const mockWithOptions = vi.fn().mockReturnValue({
+  chat: {
+    completions: {
+      parse: mockParse,
+    },
+  },
+});
+
+vi.mock('openai', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          parse: mockParse,
+        },
+      },
+      withOptions: mockWithOptions,
+    })),
+  };
+});
+
 describe('Turn Relevancy - evaluateLog', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
 
@@ -22,6 +45,20 @@ describe('Turn Relevancy - evaluateLog', () => {
     mockFetch = vi.fn();
     global.fetch = mockFetch;
     vi.clearAllMocks();
+
+    // Setup default successful mock for OpenAI parse
+    mockParse.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 1.0,
+              reasoning: 'Evaluation successful',
+            },
+          },
+        },
+      ],
+    });
   });
 
   it('should evaluate turn relevancy successfully', async () => {

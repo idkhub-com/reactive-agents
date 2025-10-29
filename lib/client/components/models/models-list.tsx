@@ -68,9 +68,7 @@ export function ModelsListView(): ReactElement {
   const filteredModels = models.filter((model) => {
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
-      const apiKey = apiKeys.find(
-        (key) => key.id === model.ai_provider_api_key_id,
-      );
+      const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
       return (
         model.model_name.toLowerCase().includes(searchLower) ||
         apiKey?.ai_provider?.toLowerCase().includes(searchLower) ||
@@ -239,7 +237,7 @@ export function ModelsListView(): ReactElement {
                   <TableBody>
                     {filteredModels.map((model) => {
                       const providerInfo = getProviderInfo(
-                        model.ai_provider_api_key_id,
+                        model.ai_provider_id,
                       );
                       return (
                         <TableRow key={model.id}>

@@ -96,9 +96,7 @@ export function AddModelsDialog({
     new Set(
       availableModels
         .map((model) => {
-          const apiKey = apiKeys.find(
-            (key) => key.id === model.ai_provider_api_key_id,
-          );
+          const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
           return apiKey?.ai_provider as AIProvider;
         })
         .filter(Boolean),
@@ -115,9 +113,7 @@ export function AddModelsDialog({
       return matchesSearch;
     }
 
-    const apiKey = apiKeys.find(
-      (key) => key.id === model.ai_provider_api_key_id,
-    );
+    const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
     const modelProvider = apiKey?.ai_provider;
     const matchesProvider = modelProvider === filterProvider;
 
@@ -288,9 +284,7 @@ export function AddModelsDialog({
             ) : (
               <div className="p-4 space-y-3">
                 {filteredModels.map((model) => {
-                  const providerInfo = getProviderInfo(
-                    model.ai_provider_api_key_id,
-                  );
+                  const providerInfo = getProviderInfo(model.ai_provider_id);
                   return (
                     <div
                       key={model.id}

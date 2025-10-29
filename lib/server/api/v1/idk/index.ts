@@ -2,7 +2,7 @@ import { referencesRouter } from '@server/api/v1/idk/references';
 import type { AppEnv } from '@server/types/hono';
 import { Hono } from 'hono';
 import { agentsRouter } from './agents';
-import { aiProviderAPIKeysRouter } from './ai-provider-api-keys';
+import { aiProvidersRouter } from './ai-providers';
 import { authRouter } from './auth';
 import { feedbacksRouter } from './feedbacks';
 import { improvedResponsesRouter } from './improved-responses';
@@ -19,4 +19,6 @@ export const idkRouter = new Hono<AppEnv>()
   .route('/models', modelsRouter)
   .route('/feedbacks', feedbacksRouter)
   .route('/improved-responses', improvedResponsesRouter)
-  .route('/ai-provider-api-keys', aiProviderAPIKeysRouter);
+  .route('/ai-providers', aiProvidersRouter)
+  // Keep old endpoint for backward compatibility
+  .route('/ai-provider-api-keys', aiProvidersRouter);

@@ -15,6 +15,29 @@ vi.mock('@server/constants', () => ({
   BEARER_TOKEN: 'idk',
 }));
 
+// Mock OpenAI client
+const mockParse = vi.fn();
+const mockWithOptions = vi.fn().mockReturnValue({
+  chat: {
+    completions: {
+      parse: mockParse,
+    },
+  },
+});
+
+vi.mock('openai', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          parse: mockParse,
+        },
+      },
+      withOptions: mockWithOptions,
+    })),
+  };
+});
+
 describe('Role Adherence - evaluateLog', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
 
@@ -22,6 +45,20 @@ describe('Role Adherence - evaluateLog', () => {
     mockFetch = vi.fn();
     global.fetch = mockFetch;
     vi.clearAllMocks();
+
+    // Setup default successful mock for OpenAI parse
+    mockParse.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 1.0,
+              reasoning: 'Evaluation successful',
+            },
+          },
+        },
+      ],
+    });
   });
 
   it('should evaluate role adherence successfully', async () => {
@@ -140,6 +177,20 @@ describe('Role Adherence - evaluateLog', () => {
   });
 
   it('should handle poor role adherence', async () => {
+    // Override default mock with score of 0 for poor adherence
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 0.0,
+              reasoning: 'Poor role adherence',
+            },
+          },
+        },
+      ],
+    });
+
     const mockEvaluation: SkillOptimizationEvaluation = {
       id: 'eval-123',
       agent_id: 'agent-123',

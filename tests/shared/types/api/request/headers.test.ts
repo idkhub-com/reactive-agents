@@ -767,27 +767,6 @@ describe('Request Headers Types', () => {
       expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENROUTER);
       expect(parsed.inner_provider).toBe(AIProvider.OPENAI);
     });
-
-    it('should require api_key', () => {
-      const target = {
-        configuration: {
-          ai_provider: AIProvider.OPENAI,
-          model: 'gpt-4',
-          system_prompt: 'You are a helpful assistant.',
-          temperature: null,
-          max_tokens: null,
-          top_p: null,
-          frequency_penalty: null,
-          presence_penalty: null,
-          stop: null,
-          seed: null,
-          reasoning_effort: null,
-          additional_params: null,
-        },
-      };
-
-      expect(() => IdkTarget.parse(target)).toThrow();
-    });
   });
 
   describe('BaseIdkConfig', () => {

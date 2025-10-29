@@ -123,8 +123,8 @@ export function ModelsView(): ReactElement {
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
         case 'provider': {
-          const providerA = getProviderInfo(a.ai_provider_api_key_id).provider;
-          const providerB = getProviderInfo(b.ai_provider_api_key_id).provider;
+          const providerA = getProviderInfo(a.ai_provider_id).provider;
+          const providerB = getProviderInfo(b.ai_provider_id).provider;
           comparison = providerA.localeCompare(providerB);
           break;
         }
@@ -290,7 +290,7 @@ export function ModelsView(): ReactElement {
                   <TableBody>
                     {filteredAndSortedModels.map((model) => {
                       const providerInfo = getProviderInfo(
-                        model.ai_provider_api_key_id,
+                        model.ai_provider_id,
                       );
                       return (
                         <TableRow key={model.id}>

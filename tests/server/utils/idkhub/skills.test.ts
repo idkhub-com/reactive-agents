@@ -67,9 +67,9 @@ describe('getSkill', () => {
       // AI Provider API Key methods
       getAIProviderAPIKeys: vi.fn(),
       getAIProviderAPIKeyById: vi.fn(),
-      createAIProviderAPIKey: vi.fn(),
-      updateAIProviderAPIKey: vi.fn(),
-      deleteAIProviderAPIKey: vi.fn(),
+      createAIProvider: vi.fn(),
+      updateAIProvider: vi.fn(),
+      deleteAIProvider: vi.fn(),
       // Model methods
       getModels: vi.fn(),
       createModel: vi.fn(),

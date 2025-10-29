@@ -1,5 +1,6 @@
 import { providerConfigs } from '@server/ai-providers';
 import {
+  LEGACY_MAX_TOKENS_MODELS,
   UNSUPPORTED_REASONING_MODELS,
   UNSUPPORTED_TEMPERATURE_MODELS,
   UNSUPPORTED_TOP_P_MODELS,
@@ -91,7 +92,11 @@ function getHyperParamDefaults(
     configDefaults.temperature = idkTarget.configuration.temperature;
   }
   if (idkTarget.configuration.max_tokens !== null) {
-    configDefaults.max_tokens = idkTarget.configuration.max_tokens;
+    if (LEGACY_MAX_TOKENS_MODELS.includes(idkTarget.configuration.model)) {
+      configDefaults.max_completion_tokens = idkTarget.configuration.max_tokens;
+    } else {
+      configDefaults.max_tokens = idkTarget.configuration.max_tokens;
+    }
   }
   if (
     idkTarget.configuration.top_p !== null &&

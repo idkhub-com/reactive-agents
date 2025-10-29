@@ -15,6 +15,29 @@ vi.mock('@server/constants', () => ({
   BEARER_TOKEN: 'idk',
 }));
 
+// Mock OpenAI client
+const mockParse = vi.fn();
+const mockWithOptions = vi.fn().mockReturnValue({
+  chat: {
+    completions: {
+      parse: mockParse,
+    },
+  },
+});
+
+vi.mock('openai', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          parse: mockParse,
+        },
+      },
+      withOptions: mockWithOptions,
+    })),
+  };
+});
+
 // Mock the extractTaskAndOutcome function to avoid OpenAI client initialization
 vi.mock(
   '@server/connectors/evaluations/task-completion/service/task-and-outcome',
@@ -33,6 +56,20 @@ describe('Task Completion - evaluateLog', () => {
     mockFetch = vi.fn();
     global.fetch = mockFetch;
     vi.clearAllMocks();
+
+    // Setup default successful mock for OpenAI parse
+    mockParse.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 1.0,
+              reasoning: 'Evaluation successful',
+            },
+          },
+        },
+      ],
+    });
   });
 
   it('should evaluate task completion successfully', async () => {
@@ -146,6 +183,20 @@ describe('Task Completion - evaluateLog', () => {
   });
 
   it('should handle incomplete tasks', async () => {
+    // Override default mock with score of 0 for incomplete task
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 0.0,
+              reasoning: 'Task incomplete',
+            },
+          },
+        },
+      ],
+    });
+
     const mockEvaluation: SkillOptimizationEvaluation = {
       id: 'eval-123',
       agent_id: 'agent-123',

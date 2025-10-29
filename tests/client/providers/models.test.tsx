@@ -30,14 +30,14 @@ describe('ModelsProvider', () => {
   const mockModels: Model[] = [
     {
       id: 'a3b4c5d6-e7f8-4012-8345-67890abcdef01',
-      ai_provider_api_key_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef03',
+      ai_provider_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef03',
       model_name: 'gpt-4',
       created_at: '2023-01-01T00:00:00.000Z',
       updated_at: '2023-01-01T00:00:00.000Z',
     },
     {
       id: 'a3b4c5d6-e7f8-4012-8345-67890abcdef02',
-      ai_provider_api_key_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef04',
+      ai_provider_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef04',
       model_name: 'claude-3-opus',
       created_at: '2023-01-01T00:00:00.000Z',
       updated_at: '2023-01-01T00:00:00.000Z',
@@ -47,7 +47,7 @@ describe('ModelsProvider', () => {
   const mockSkillModels: Model[] = [
     {
       id: 'a3b4c5d6-e7f8-4012-8345-67890abcdef01',
-      ai_provider_api_key_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef03',
+      ai_provider_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef03',
       model_name: 'gpt-4',
       created_at: '2023-01-01T00:00:00.000Z',
       updated_at: '2023-01-01T00:00:00.000Z',
@@ -236,7 +236,7 @@ describe('ModelsProvider', () => {
       });
 
       const newParams = {
-        ai_provider_api_key_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef03',
+        ai_provider_id: 'b4c5d6e7-f8f9-5012-9345-67890abcdef03',
         limit: 10,
       };
 

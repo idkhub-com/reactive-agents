@@ -44,7 +44,7 @@ export function ClusterArmsView(): ReactElement {
       const model = skillModels.find((m) => m.id === modelId);
       if (!model) return { modelName: 'Unknown', providerName: 'Unknown' };
 
-      const apiKey = getAPIKeyById(model.ai_provider_api_key_id);
+      const apiKey = getAPIKeyById(model.ai_provider_id);
       return {
         modelName: model.model_name,
         providerName: apiKey?.ai_provider || 'Unknown',

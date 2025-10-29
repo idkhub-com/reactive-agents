@@ -1,18 +1,18 @@
 'use client';
 
 import {
-  createAIProviderAPIKey,
-  deleteAIProviderAPIKey,
+  createAIProvider,
+  deleteAIProvider,
   getAIProviderAPIKeys,
-  updateAIProviderAPIKey,
-} from '@client/api/v1/idk/ai-provider-api-keys';
+  updateAIProvider,
+} from '@client/api/v1/idk/ai-providers';
 import { useToast } from '@client/hooks/use-toast';
 import type {
-  AIProviderAPIKey,
-  AIProviderAPIKeyCreateParams,
-  AIProviderAPIKeyQueryParams,
-  AIProviderAPIKeyUpdateParams,
-} from '@shared/types/data/ai-provider-api-key';
+  AIProviderConfig,
+  AIProviderConfigCreateParams,
+  AIProviderConfigQueryParams,
+  AIProviderConfigUpdateParams,
+} from '@shared/types/data/ai-provider';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
@@ -21,7 +21,7 @@ import { createContext, useCallback, useContext, useState } from 'react';
 export const aiProviderAPIKeyQueryKeys = {
   all: ['ai-provider-api-keys'] as const,
   lists: () => [...aiProviderAPIKeyQueryKeys.all, 'list'] as const,
-  list: (params: AIProviderAPIKeyQueryParams) =>
+  list: (params: AIProviderConfigQueryParams) =>
     [...aiProviderAPIKeyQueryKeys.lists(), params] as const,
   details: () => [...aiProviderAPIKeyQueryKeys.all, 'detail'] as const,
   detail: (id: string) => [...aiProviderAPIKeyQueryKeys.details(), id] as const,
@@ -29,22 +29,22 @@ export const aiProviderAPIKeyQueryKeys = {
 
 interface AIProviderAPIKeysContextType {
   // Query state
-  apiKeys: AIProviderAPIKey[];
+  apiKeys: AIProviderConfig[];
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
 
   // Query parameters
-  queryParams: AIProviderAPIKeyQueryParams;
-  setQueryParams: (params: AIProviderAPIKeyQueryParams) => void;
+  queryParams: AIProviderConfigQueryParams;
+  setQueryParams: (params: AIProviderConfigQueryParams) => void;
 
   // Mutation functions
   createAPIKey: (
-    params: AIProviderAPIKeyCreateParams,
-  ) => Promise<AIProviderAPIKey>;
+    params: AIProviderConfigCreateParams,
+  ) => Promise<AIProviderConfig>;
   updateAPIKey: (
     id: string,
-    params: AIProviderAPIKeyUpdateParams,
+    params: AIProviderConfigUpdateParams,
   ) => Promise<void>;
   deleteAPIKey: (id: string) => Promise<void>;
 
@@ -57,8 +57,8 @@ interface AIProviderAPIKeysContextType {
   deleteError: Error | null;
 
   // Helper functions
-  getAPIKeyById: (id: string) => AIProviderAPIKey | undefined;
-  getAPIKeysByProvider: (provider: string) => AIProviderAPIKey[];
+  getAPIKeyById: (id: string) => AIProviderConfig | undefined;
+  getAPIKeysByProvider: (provider: string) => AIProviderConfig[];
   refreshAPIKeys: () => void;
 }
 
@@ -76,7 +76,7 @@ export function AIProviderAPIKeysProvider({
   const queryClient = useQueryClient();
 
   // Query parameters state
-  const [queryParams, setQueryParams] = useState<AIProviderAPIKeyQueryParams>({
+  const [queryParams, setQueryParams] = useState<AIProviderConfigQueryParams>({
     limit: 50,
   });
 
@@ -95,7 +95,7 @@ export function AIProviderAPIKeysProvider({
 
   // Create API key mutation
   const createMutation = useMutation({
-    mutationFn: createAIProviderAPIKey,
+    mutationFn: createAIProvider,
     onSuccess: (newAPIKey) => {
       queryClient.invalidateQueries({
         queryKey: aiProviderAPIKeyQueryKeys.lists(),
@@ -121,8 +121,8 @@ export function AIProviderAPIKeysProvider({
       params,
     }: {
       id: string;
-      params: AIProviderAPIKeyUpdateParams;
-    }) => updateAIProviderAPIKey(id, params),
+      params: AIProviderConfigUpdateParams;
+    }) => updateAIProvider(id, params),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: aiProviderAPIKeyQueryKeys.lists(),
@@ -143,7 +143,7 @@ export function AIProviderAPIKeysProvider({
 
   // Delete API key mutation
   const deleteMutation = useMutation({
-    mutationFn: deleteAIProviderAPIKey,
+    mutationFn: deleteAIProvider,
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: aiProviderAPIKeyQueryKeys.lists(),
@@ -164,14 +164,14 @@ export function AIProviderAPIKeysProvider({
 
   // Helper functions
   const getAPIKeyById = useCallback(
-    (id: string): AIProviderAPIKey | undefined => {
+    (id: string): AIProviderConfig | undefined => {
       return apiKeys.find((apiKey) => apiKey.id === id);
     },
     [apiKeys],
   );
 
   const getAPIKeysByProvider = useCallback(
-    (provider: string): AIProviderAPIKey[] => {
+    (provider: string): AIProviderConfig[] => {
       return apiKeys.filter((apiKey) => apiKey.ai_provider === provider);
     },
     [apiKeys],
@@ -185,14 +185,14 @@ export function AIProviderAPIKeysProvider({
 
   // Mutation wrapper functions
   const createAPIKey = useCallback(
-    async (params: AIProviderAPIKeyCreateParams): Promise<AIProviderAPIKey> => {
+    async (params: AIProviderConfigCreateParams): Promise<AIProviderConfig> => {
       return await createMutation.mutateAsync(params);
     },
     [createMutation],
   );
 
   const updateAPIKey = useCallback(
-    async (id: string, params: AIProviderAPIKeyUpdateParams): Promise<void> => {
+    async (id: string, params: AIProviderConfigUpdateParams): Promise<void> => {
       await updateMutation.mutateAsync({ id, params });
     },
     [updateMutation],

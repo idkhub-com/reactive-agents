@@ -1,5 +1,7 @@
 'use client';
 
+import type { AIProviderSchemaResponse } from '@client/api/v1/idk/ai-providers';
+import { getAIProviderSchemas } from '@client/api/v1/idk/ai-providers';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -8,6 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@client/components/ui/command';
 import {
   Form,
   FormControl,
@@ -20,29 +30,34 @@ import {
 import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@client/components/ui/select';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@client/components/ui/popover';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AIProvider,
   DEFAULT_SELF_HOSTED_URLS,
-  OPTIONAL_API_KEY_PROVIDERS,
   PrettyAIProvider,
 } from '@shared/types/constants';
 import type {
-  AIProviderAPIKey,
-  AIProviderAPIKeyCreateParams,
-  AIProviderAPIKeyUpdateParams,
-} from '@shared/types/data/ai-provider-api-key';
-import { EyeIcon, EyeOffIcon, KeyIcon, SaveIcon } from 'lucide-react';
+  AIProviderConfig,
+  AIProviderConfigCreateParams,
+  AIProviderConfigUpdateParams,
+} from '@shared/types/data/ai-provider';
+import {
+  Check,
+  ChevronsUpDown,
+  EyeIcon,
+  EyeOffIcon,
+  KeyIcon,
+  SaveIcon,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import type { FieldErrors } from 'react-hook-form';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -55,65 +70,20 @@ const AI_PROVIDERS = Object.values(AIProvider)
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
 
-function getAPIKeyDescription(
-  provider: string,
-  mode: 'create' | 'edit',
-): string {
-  if (OPTIONAL_API_KEY_PROVIDERS.includes(provider as AIProvider)) {
-    return 'Optional for providers like Ollama that support self-hosting. Required for cloud-hosted instances.';
-  }
-  return mode === 'create'
-    ? 'Your API key will be encrypted before storage.'
-    : 'Leave unchanged to keep the existing API key.';
-}
-
-function getCustomHostDescription(provider: string): string {
-  const defaultUrl = DEFAULT_SELF_HOSTED_URLS[provider as AIProvider];
-  if (defaultUrl) {
-    return `Leave empty to use default local instance (${defaultUrl}). Provide a custom URL for remote instances.`;
-  }
-  return 'Custom host URL for your self-hosted instance.';
-}
-
-const formSchema = z
-  .object({
-    ai_provider: z.string().min(1, 'Provider is required'),
-    name: z
-      .string()
-      .min(1, 'Name is required')
-      .max(
-        MAX_NAME_LENGTH,
-        `Name must be ${MAX_NAME_LENGTH} characters or less`,
-      ),
-    api_key: z.string().nullable().optional(),
-    custom_host: z
-      .string()
-      .url('Please enter a valid URL (e.g., http://localhost:8080)')
-      .refine(
-        (url) => url.startsWith('http://') || url.startsWith('https://'),
-        {
-          message: 'Custom host must use HTTP or HTTPS protocol for security',
-        },
-      )
-      .optional()
-      .or(z.literal('')),
-  })
-  .refine(
-    (data) =>
-      OPTIONAL_API_KEY_PROVIDERS.includes(data.ai_provider as AIProvider) ||
-      (data.api_key !== null &&
-        data.api_key !== undefined &&
-        data.api_key.trim() !== ''),
-    {
-      message: 'API key is required for this provider',
-      path: ['api_key'],
-    },
-  );
+const formSchema = z.object({
+  ai_provider: z.string().min(1, 'Provider is required'),
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`),
+  api_key: z.string().nullable().optional(),
+  custom_fields: z.record(z.string(), z.unknown()).default({}),
+});
 
 type FormData = z.infer<typeof formSchema>;
 
 interface APIKeyFormProps {
-  apiKey?: AIProviderAPIKey;
+  apiKey?: AIProviderConfig;
   mode: 'create' | 'edit';
 }
 
@@ -122,14 +92,66 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
   const { createAPIKey, updateAPIKey, isCreating, isUpdating } =
     useAIProviderAPIKeys();
   const [showAPIKey, setShowAPIKey] = useState(false);
+  const [providerSchemas, setProviderSchemas] = useState<
+    Record<string, AIProviderSchemaResponse>
+  >({});
+  const [schemasLoading, setSchemasLoading] = useState(true);
+  const [providerComboboxOpen, setProviderComboboxOpen] = useState(false);
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  // Custom resolver that validates API key based on provider requirements
+  const customResolver = async (
+    data: FormData,
+    context: unknown,
+    // biome-ignore lint/suspicious/noExplicitAny: resolver options type compatibility
+    options: any,
+  ) => {
+    // First run base schema validation
+    const baseResult = await zodResolver(formSchema)(data, context, options);
+
+    // Additional API key validation based on provider
+    const selectedSchema = providerSchemas[data.ai_provider];
+    if (selectedSchema?.isAPIKeyRequired) {
+      const isAPIKeyEmpty = !data.api_key || data.api_key.trim() === '';
+
+      // In create mode, API key is required
+      if (mode === 'create' && isAPIKeyEmpty) {
+        return {
+          values: baseResult.values,
+          errors: {
+            ...baseResult.errors,
+            api_key: {
+              type: 'manual',
+              message: 'API key is required for this provider',
+            },
+          } as FieldErrors<FormData>,
+        };
+      }
+
+      // In edit mode, only required if no existing key
+      if (mode === 'edit' && isAPIKeyEmpty && !apiKey?.api_key) {
+        return {
+          values: baseResult.values,
+          errors: {
+            ...baseResult.errors,
+            api_key: {
+              type: 'manual',
+              message: 'API key is required for this provider',
+            },
+          } as FieldErrors<FormData>,
+        };
+      }
+    }
+
+    return baseResult;
+  };
+
+  const form = useForm({
+    resolver: customResolver,
     defaultValues: {
       ai_provider: apiKey?.ai_provider || '',
       name: apiKey?.name || '',
       api_key: apiKey?.api_key || '',
-      custom_host: apiKey?.custom_host || '',
+      custom_fields: apiKey?.custom_fields || {},
     },
   });
 
@@ -140,56 +162,60 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
 
   const prevProviderRef = useRef<string>(selectedProvider);
 
-  // Auto-clear custom_host when switching to a provider that doesn't support it
+  // Fetch provider schemas on mount
+  useEffect(() => {
+    const fetchSchemas = async () => {
+      try {
+        const schemas = await getAIProviderSchemas();
+        setProviderSchemas(schemas);
+      } catch (error) {
+        console.error('Failed to fetch provider schemas:', error);
+      } finally {
+        setSchemasLoading(false);
+      }
+    };
+    fetchSchemas();
+  }, []);
+
+  // Auto-clear custom_fields when switching providers and update validation
   useEffect(() => {
     if (
       prevProviderRef.current &&
       prevProviderRef.current !== selectedProvider
     ) {
-      if (
-        !OPTIONAL_API_KEY_PROVIDERS.includes(selectedProvider as AIProvider)
-      ) {
-        form.setValue('custom_host', '');
-      }
+      form.setValue('custom_fields', {});
     }
     prevProviderRef.current = selectedProvider;
-  }, [selectedProvider, form]);
+
+    // Clear existing errors when provider changes
+    if (selectedProvider && providerSchemas[selectedProvider]) {
+      form.clearErrors();
+    }
+  }, [selectedProvider, form, providerSchemas]);
 
   const onSubmit = async (data: FormData) => {
     try {
       if (mode === 'create') {
-        // For self-hosted providers without API key, use default URL if no custom host provided
-        let customHost = data.custom_host || undefined;
-        if (
-          !data.api_key &&
-          OPTIONAL_API_KEY_PROVIDERS.includes(data.ai_provider as AIProvider)
-        ) {
-          const defaultUrl =
-            DEFAULT_SELF_HOSTED_URLS[data.ai_provider as AIProvider];
-          if (defaultUrl && !data.custom_host) {
-            customHost = defaultUrl;
-          }
-        }
-
-        const createParams: AIProviderAPIKeyCreateParams = {
+        const createParams: AIProviderConfigCreateParams = {
           ai_provider: data.ai_provider,
           name: data.name,
           api_key: data.api_key,
-          custom_host: customHost,
+          custom_fields: data.custom_fields || {},
         };
         await createAPIKey(createParams);
       } else if (apiKey) {
-        const updateParams: AIProviderAPIKeyUpdateParams = {
+        const updateParams: AIProviderConfigUpdateParams = {
           ai_provider: data.ai_provider,
           name: data.name,
           ...(data.api_key !== apiKey.api_key && { api_key: data.api_key }),
         };
 
-        // Only include custom_host if it has actually changed
-        const normalizedCurrentHost = data.custom_host || undefined;
-        const normalizedApiKeyHost = apiKey.custom_host || undefined;
-        if (normalizedCurrentHost !== normalizedApiKeyHost) {
-          updateParams.custom_host = normalizedCurrentHost;
+        // Only include custom_fields if they have changed
+        if (
+          JSON.stringify(data.custom_fields) !==
+          JSON.stringify(apiKey.custom_fields)
+        ) {
+          updateParams.custom_fields = data.custom_fields || {};
         }
 
         await updateAPIKey(apiKey.id, updateParams);
@@ -206,6 +232,13 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
   };
 
   const isSubmitting = isCreating || isUpdating;
+
+  // Check if the selected provider has custom fields
+  const selectedProviderSchema = providerSchemas[selectedProvider];
+  const hasCustomFields = Boolean(
+    selectedProviderSchema?.hasCustomFields &&
+      selectedProviderSchema.schema?.properties,
+  );
 
   return (
     <>
@@ -241,31 +274,59 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                   control={form.control}
                   name="ai_provider"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>AI Provider</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
+                      <Popover
+                        open={providerComboboxOpen}
+                        onOpenChange={setProviderComboboxOpen}
                       >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an AI provider" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {AI_PROVIDERS.map((provider) => (
-                            <SelectItem
-                              key={provider.value}
-                              value={provider.value}
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="justify-between w-[240px]"
                             >
-                              {provider.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Choose the AI provider for this API key.
-                      </FormDescription>
+                              {field.value
+                                ? AI_PROVIDERS.find(
+                                    (provider) =>
+                                      provider.value === field.value,
+                                  )?.label
+                                : 'Select an AI provider'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[240px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search AI providers..." />
+                            <CommandList>
+                              <CommandEmpty>No provider found.</CommandEmpty>
+                              <CommandGroup>
+                                {AI_PROVIDERS.map((provider) => (
+                                  <CommandItem
+                                    key={provider.value}
+                                    value={provider.label}
+                                    onSelect={() => {
+                                      field.onChange(provider.value);
+                                      setProviderComboboxOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={
+                                        provider.value === field.value
+                                          ? 'mr-2 h-4 w-4 opacity-100'
+                                          : 'mr-2 h-4 w-4 opacity-0'
+                                      }
+                                    />
+                                    {provider.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -283,9 +344,6 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        A descriptive name to identify this API key.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -296,12 +354,16 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                   name="api_key"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>API Key</FormLabel>
+                      <FormLabel>
+                        API Key
+                        {!(selectedProviderSchema?.isAPIKeyRequired ?? true) &&
+                          ' (Optional)'}
+                      </FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             type={showAPIKey ? 'text' : 'password'}
-                            placeholder="Enter your API key"
+                            placeholder="API key to access the provider"
                             {...field}
                             value={field.value ?? ''}
                             className="pr-10"
@@ -321,42 +383,84 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                           </Button>
                         </div>
                       </FormControl>
-                      <FormDescription>
-                        {getAPIKeyDescription(selectedProvider, mode)}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {OPTIONAL_API_KEY_PROVIDERS.includes(
-                  selectedProvider as AIProvider,
-                ) && (
-                  <FormField
-                    control={form.control}
-                    name="custom_host"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custom Host (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder={
-                              DEFAULT_SELF_HOSTED_URLS[
-                                selectedProvider as AIProvider
-                              ] || 'http://localhost:8080'
-                            }
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          {getCustomHostDescription(selectedProvider)}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                {!schemasLoading &&
+                hasCustomFields &&
+                selectedProviderSchema?.schema?.properties
+                  ? Object.entries(
+                      selectedProviderSchema.schema.properties as Record<
+                        string,
+                        {
+                          type?: string;
+                          description?: string;
+                          maxLength?: number;
+                          format?: string;
+                        }
+                      >,
+                    ).map(([fieldName, fieldSchema]) => {
+                      const fieldType = fieldSchema.type;
+                      const description = fieldSchema.description;
+                      const isRequired =
+                        (
+                          selectedProviderSchema.schema?.required as
+                            | string[]
+                            | undefined
+                        )?.includes(fieldName) || false;
+
+                      return (
+                        <FormItem key={fieldName}>
+                          <FormLabel>
+                            {fieldName
+                              .split('_')
+                              .map(
+                                (word) =>
+                                  word.charAt(0).toUpperCase() + word.slice(1),
+                              )
+                              .join(' ')}
+                            {!isRequired && ' (Optional)'}
+                          </FormLabel>
+                          {description && (
+                            <FormDescription className="p-0 m-0">
+                              {description}
+                            </FormDescription>
+                          )}
+                          <FormControl>
+                            <Input
+                              type={
+                                fieldSchema.format === 'uri' ? 'url' : 'text'
+                              }
+                              placeholder={
+                                DEFAULT_SELF_HOSTED_URLS[
+                                  selectedProvider as AIProvider
+                                ] ||
+                                (fieldType === 'string'
+                                  ? 'Enter value'
+                                  : undefined)
+                              }
+                              value={
+                                (form.watch('custom_fields')?.[
+                                  fieldName
+                                ] as string) || ''
+                              }
+                              onChange={(e) => {
+                                const currentFields =
+                                  form.getValues('custom_fields') || {};
+                                form.setValue('custom_fields', {
+                                  ...currentFields,
+                                  [fieldName]: e.target.value || undefined,
+                                });
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    })
+                  : null}
 
                 <div className="flex justify-end gap-3">
                   <Button

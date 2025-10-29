@@ -1,3 +1,4 @@
+import { OllamaCustomFieldsSchema } from '@server/ai-providers/ollama/types';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 
@@ -81,6 +82,8 @@ export const ollamaAPIConfig: InternalProviderAPIConfig = {
         return '';
     }
   },
+  customFieldsSchema: OllamaCustomFieldsSchema,
+  isAPIKeyRequired: false,
 };
 
 export default ollamaAPIConfig;

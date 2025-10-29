@@ -1,6 +1,29 @@
 import { createLLMJudge } from '@server/evaluations/llm-judge';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock OpenAI client
+const mockParse = vi.fn();
+const mockWithOptions = vi.fn().mockReturnValue({
+  chat: {
+    completions: {
+      parse: mockParse,
+    },
+  },
+});
+
+vi.mock('openai', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          parse: mockParse,
+        },
+      },
+      withOptions: mockWithOptions,
+    })),
+  };
+});
+
 // Mock the constants
 vi.mock('@server/constants', () => ({
   OPENAI_API_KEY: 'test-api-key',
@@ -10,13 +33,11 @@ vi.mock('@server/constants', () => ({
 
 describe('LLM Judge', () => {
   let llmJudge: ReturnType<typeof createLLMJudge>;
-  let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.clearAllMocks();
     llmJudge = createLLMJudge();
-    mockFetch = vi.fn();
-    global.fetch = mockFetch;
   });
 
   afterEach(() => {
@@ -45,28 +66,19 @@ describe('LLM Judge', () => {
   });
 
   it('should evaluate text successfully', async () => {
-    const mockResponse = {
-      output: [
-        {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: JSON.stringify({
-                score: 0.8,
-                reasoning: 'This is a good evaluation',
-                metadata: { test: true },
-              }),
-            },
-          ],
-        },
-      ],
+    const mockParsedResponse = {
+      score: 0.8,
+      reasoning: 'This is a good evaluation',
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockResponse)),
-      json: () => Promise.resolve(mockResponse),
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: mockParsedResponse,
+          },
+        },
+      ],
     });
 
     const result = await llmJudge.evaluate({
@@ -75,28 +87,33 @@ describe('LLM Judge', () => {
 
     expect(result.score).toBe(0.8);
     expect(result.reasoning).toBe('This is a good evaluation');
-    expect(result.metadata).toEqual({ test: true });
 
-    // Verify the API call
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3000/v1/responses',
+    // Verify the OpenAI client was called correctly
+    expect(mockWithOptions).toHaveBeenCalledWith({
+      defaultHeaders: {
+        'x-idk-config': expect.stringContaining('"provider":"openai"'),
+      },
+    });
+    expect(mockParse).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer idk',
-          'x-idk-config': expect.stringContaining('"provider":"openai"'),
-        }),
-        body: expect.stringContaining('"model":"gpt-4o-mini"'),
+        model: 'gpt-4o-mini',
+        messages: expect.arrayContaining([
+          expect.objectContaining({ role: 'system' }),
+          expect.objectContaining({ role: 'user' }),
+        ]),
       }),
     );
   });
 
   it('should return fallback result when API key is not configured', async () => {
     // Mock the constants to return empty API key
-    vi.doMock('@server/constants', () => ({
-      OPENAI_API_KEY: '',
-    }));
+    vi.doMock('@server/constants', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@server/constants')>();
+      return {
+        ...actual,
+        OPENAI_API_KEY: '',
+      };
+    });
 
     // Clear module cache and re-import with empty API key
     vi.resetModules();
@@ -120,12 +137,9 @@ describe('LLM Judge', () => {
   });
 
   it('should handle API errors gracefully', async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: () => Promise.resolve('API Error'),
-    });
+    mockParse.mockRejectedValue(
+      new Error('OpenAI API error: 500 Internal Server Error - API Error'),
+    );
 
     const evaluatePromise = llmJudge.evaluate({
       text: 'This is a test evaluation.',
@@ -143,8 +157,7 @@ describe('LLM Judge', () => {
     expect(result.metadata).toEqual({
       fallback: true,
       errorType: 'api_error',
-      errorDetails:
-        'OpenAI Responses API error: 500 Internal Server Error - API Error',
+      errorDetails: 'OpenAI API error: 500 Internal Server Error - API Error',
       retryInfo: {
         retryCount: 2,
         maxRetries: 3,
@@ -153,24 +166,14 @@ describe('LLM Judge', () => {
   });
 
   it('should handle invalid response structure', async () => {
-    const mockResponse = {
-      output: [
+    mockParse.mockResolvedValueOnce({
+      choices: [
         {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: 'invalid json',
-            },
-          ],
+          message: {
+            parsed: null, // Invalid: null parsed response
+          },
         },
       ],
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockResponse)),
-      json: () => Promise.resolve(mockResponse),
     });
 
     const result = await llmJudge.evaluate({
@@ -182,17 +185,13 @@ describe('LLM Judge', () => {
     expect(result.metadata).toEqual({
       fallback: true,
       errorType: 'parse_error',
-      errorDetails: expect.stringContaining('Unexpected token'),
+      errorDetails: 'No parsed response from OpenAI',
     });
   });
 
   it('should handle missing output in response', async () => {
-    const mockResponse = {};
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockResponse)),
-      json: () => Promise.resolve(mockResponse),
+    mockParse.mockResolvedValueOnce({
+      choices: [],
     });
 
     const result = await llmJudge.evaluate({
@@ -200,37 +199,25 @@ describe('LLM Judge', () => {
     });
 
     expect(result.score).toBe(0.5);
-    expect(result.reasoning).toBe('Evaluation failed - response parsing error');
-    expect(result.metadata).toEqual({
-      fallback: true,
-      errorType: 'parse_error',
-      errorDetails: expect.stringContaining('No valid message output'),
-    });
+    expect(result.reasoning).toBe('Evaluation failed - OpenAI API error');
+    expect(result.metadata?.fallback).toBe(true);
+    expect(result.metadata?.errorType).toBe('api_error');
   });
 
   it('should evaluate code text successfully', async () => {
-    const mockResponse = {
-      output: [
-        {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: JSON.stringify({
-                score: 0.9,
-                reasoning: 'Excellent code quality with proper syntax',
-                metadata: { contentType: 'code' },
-              }),
-            },
-          ],
-        },
-      ],
+    const mockParsedResponse = {
+      score: 0.9,
+      reasoning: 'Excellent code quality with proper syntax',
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockResponse)),
-      json: () => Promise.resolve(mockResponse),
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: mockParsedResponse,
+          },
+        },
+      ],
     });
 
     const result = await llmJudge.evaluate({
@@ -243,32 +230,22 @@ describe('LLM Judge', () => {
 
     expect(result.score).toBe(0.9);
     expect(result.reasoning).toBe('Excellent code quality with proper syntax');
-    expect(result.metadata).toEqual({ contentType: 'code' });
   });
 
   it('should use custom evaluation criteria when provided', async () => {
-    const mockResponse = {
-      output: [
-        {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: JSON.stringify({
-                score: 0.9,
-                reasoning: 'Excellent with custom criteria',
-                metadata: { customCriteria: true },
-              }),
-            },
-          ],
-        },
-      ],
+    const mockParsedResponse = {
+      score: 0.9,
+      reasoning: 'Excellent with custom criteria',
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockResponse)),
-      json: () => Promise.resolve(mockResponse),
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: mockParsedResponse,
+          },
+        },
+      ],
     });
 
     const customCriteria = {
@@ -287,40 +264,29 @@ describe('LLM Judge', () => {
 
     expect(result.score).toBe(0.9);
     expect(result.reasoning).toBe('Excellent with custom criteria');
-    expect(result.metadata).toEqual({ customCriteria: true });
 
-    // Verify custom criteria was used in the API call
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3000/v1/responses',
-      expect.objectContaining({
-        body: expect.stringContaining('Custom criterion 1'),
-      }),
+    // Verify custom criteria was used in the system prompt
+    const callArgs = mockParse.mock.calls[0][0];
+    const systemMessage = callArgs.messages.find(
+      (m: { role: string }) => m.role === 'system',
     );
+    expect(systemMessage.content).toContain('Custom criterion 1');
   });
 
   it('should fall back to default criteria when no custom criteria provided', async () => {
-    const mockResponse = {
-      output: [
-        {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: JSON.stringify({
-                score: 0.7,
-                reasoning: 'Good with default criteria',
-                metadata: { defaultCriteria: true },
-              }),
-            },
-          ],
-        },
-      ],
+    const mockParsedResponse = {
+      score: 0.7,
+      reasoning: 'Good with default criteria',
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockResponse)),
-      json: () => Promise.resolve(mockResponse),
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: mockParsedResponse,
+          },
+        },
+      ],
     });
 
     const result = await llmJudge.evaluate({
@@ -329,49 +295,29 @@ describe('LLM Judge', () => {
 
     expect(result.score).toBe(0.7);
     expect(result.reasoning).toBe('Good with default criteria');
-    expect(result.metadata).toEqual({ defaultCriteria: true });
 
-    // Verify text evaluation was called
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3000/v1/responses',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer idk',
-          'x-idk-config': expect.stringContaining('"provider":"openai"'),
-        }),
-      }),
-    );
+    // Verify OpenAI client was called
+    expect(mockParse).toHaveBeenCalledTimes(1);
   });
 
   it('should retry failed requests up to three times with exponential backoff', async () => {
-    const mockResponse = {
-      output: [
-        {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: JSON.stringify({
-                score: 0.8,
-                reasoning: 'Success after retries',
-                metadata: { retried: true },
-              }),
-            },
-          ],
-        },
-      ],
+    const mockParsedResponse = {
+      score: 0.8,
+      reasoning: 'Success after retries',
     };
 
-    // Mock fetch to fail twice with network errors, then succeed
-    mockFetch
+    // Mock to fail twice with network errors, then succeed
+    mockParse
       .mockRejectedValueOnce(new Error('Network error'))
       .mockRejectedValueOnce(new Error('Connection timeout'))
       .mockResolvedValueOnce({
-        ok: true,
-        text: () => Promise.resolve(JSON.stringify(mockResponse)),
-        json: () => Promise.resolve(mockResponse),
+        choices: [
+          {
+            message: {
+              parsed: mockParsedResponse,
+            },
+          },
+        ],
       });
 
     const evaluatePromise = llmJudge.evaluate({
@@ -385,15 +331,14 @@ describe('LLM Judge', () => {
 
     expect(result.score).toBe(0.8);
     expect(result.reasoning).toBe('Success after retries');
-    expect(result.metadata).toEqual({ retried: true });
 
-    // Verify fetch was called 3 times (2 failures + 1 success)
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    // Verify was called 3 times (2 failures + 1 success)
+    expect(mockParse).toHaveBeenCalledTimes(3);
   });
 
   it('should return fallback result after all retries are exhausted', async () => {
-    // Mock fetch to fail with retryable errors all 3 times
-    mockFetch
+    // Mock to fail with retryable errors all 3 times
+    mockParse
       .mockRejectedValueOnce(new Error('Network error'))
       .mockRejectedValueOnce(new Error('Rate limit exceeded'))
       .mockRejectedValueOnce(new Error('Service temporarily unavailable'));
@@ -421,44 +366,20 @@ describe('LLM Judge', () => {
       },
     });
 
-    // Verify fetch was called 3 times
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    // Verify was called 3 times
+    expect(mockParse).toHaveBeenCalledTimes(3);
   });
 
   it('should not retry non-retryable errors', async () => {
-    // Mock fetch to fail with a non-retryable error (parse error)
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () =>
-        Promise.resolve(
-          JSON.stringify({
-            output: [
-              {
-                type: 'message',
-                content: [
-                  {
-                    type: 'output_text',
-                    text: 'invalid json',
-                  },
-                ],
-              },
-            ],
-          }),
-        ),
-      json: () =>
-        Promise.resolve({
-          output: [
-            {
-              type: 'message',
-              content: [
-                {
-                  type: 'output_text',
-                  text: 'invalid json',
-                },
-              ],
-            },
-          ],
-        }),
+    // Mock to fail with a non-retryable error (parse error)
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: null,
+          },
+        },
+      ],
     });
 
     const result = await llmJudge.evaluate({
@@ -470,11 +391,11 @@ describe('LLM Judge', () => {
     expect(result.metadata).toEqual({
       fallback: true,
       errorType: 'parse_error',
-      errorDetails: expect.stringContaining('Unexpected token'),
+      errorDetails: 'No parsed response from OpenAI',
     });
 
-    // Verify fetch was called only once (no retries for parse errors)
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // Verify was called only once (no retries for parse errors)
+    expect(mockParse).toHaveBeenCalledTimes(1);
   });
 
   // Additional comprehensive retry logic tests
@@ -482,40 +403,16 @@ describe('LLM Judge', () => {
     it('should handle mixed retryable and non-retryable errors correctly', async () => {
       // First call: retryable error (network)
       // Second call: non-retryable error (parse error)
-      mockFetch
+      mockParse
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
-          ok: true,
-          text: () =>
-            Promise.resolve(
-              JSON.stringify({
-                output: [
-                  {
-                    type: 'message',
-                    content: [
-                      {
-                        type: 'output_text',
-                        text: 'invalid json',
-                      },
-                    ],
-                  },
-                ],
-              }),
-            ),
-          json: () =>
-            Promise.resolve({
-              output: [
-                {
-                  type: 'message',
-                  content: [
-                    {
-                      type: 'output_text',
-                      text: 'invalid json',
-                    },
-                  ],
-                },
-              ],
-            }),
+          choices: [
+            {
+              message: {
+                parsed: null,
+              },
+            },
+          ],
         });
 
       const evaluatePromise = llmJudge.evaluate({
@@ -534,7 +431,7 @@ describe('LLM Judge', () => {
       expect(result.metadata).toEqual({
         fallback: true,
         errorType: 'parse_error',
-        errorDetails: expect.stringContaining('Unexpected token'),
+        errorDetails: 'No parsed response from OpenAI',
         retryInfo: {
           retryCount: 1,
           maxRetries: 3,
@@ -542,35 +439,26 @@ describe('LLM Judge', () => {
       });
 
       // Should retry once for network error, then fail on parse error
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockParse).toHaveBeenCalledTimes(2);
     });
 
     it('should handle timeout errors as retryable', async () => {
-      const mockResponse = {
-        output: [
-          {
-            type: 'message',
-            content: [
-              {
-                type: 'output_text',
-                text: JSON.stringify({
-                  score: 0.8,
-                  reasoning: 'Success after retries',
-                  metadata: { retried: true },
-                }),
-              },
-            ],
-          },
-        ],
+      const mockParsedResponse = {
+        score: 0.8,
+        reasoning: 'Success after retries',
       };
 
-      mockFetch
+      mockParse
         .mockRejectedValueOnce(new Error('Request timeout'))
         .mockRejectedValueOnce(new Error('Connection timeout'))
         .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve(JSON.stringify(mockResponse)),
-          json: () => Promise.resolve(mockResponse),
+          choices: [
+            {
+              message: {
+                parsed: mockParsedResponse,
+              },
+            },
+          ],
         });
 
       const evaluatePromise = llmJudge.evaluate({
@@ -584,38 +472,28 @@ describe('LLM Judge', () => {
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
-      expect(result.metadata).toEqual({ retried: true });
 
       // Should retry twice, then succeed
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockParse).toHaveBeenCalledTimes(3);
     });
 
     it('should handle rate limit errors as retryable', async () => {
-      const mockResponse = {
-        output: [
-          {
-            type: 'message',
-            content: [
-              {
-                type: 'output_text',
-                text: JSON.stringify({
-                  score: 0.8,
-                  reasoning: 'Success after retries',
-                  metadata: { retried: true },
-                }),
-              },
-            ],
-          },
-        ],
+      const mockParsedResponse = {
+        score: 0.8,
+        reasoning: 'Success after retries',
       };
 
-      mockFetch
+      mockParse
         .mockRejectedValueOnce(new Error('Rate limit exceeded'))
         .mockRejectedValueOnce(new Error('Too many requests'))
         .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve(JSON.stringify(mockResponse)),
-          json: () => Promise.resolve(mockResponse),
+          choices: [
+            {
+              message: {
+                parsed: mockParsedResponse,
+              },
+            },
+          ],
         });
 
       const evaluatePromise = llmJudge.evaluate({
@@ -629,38 +507,28 @@ describe('LLM Judge', () => {
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
-      expect(result.metadata).toEqual({ retried: true });
 
       // Should retry twice, then succeed
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockParse).toHaveBeenCalledTimes(3);
     });
 
     it('should handle server errors (5xx) as retryable', async () => {
-      const mockResponse = {
-        output: [
-          {
-            type: 'message',
-            content: [
-              {
-                type: 'output_text',
-                text: JSON.stringify({
-                  score: 0.8,
-                  reasoning: 'Success after retries',
-                  metadata: { retried: true },
-                }),
-              },
-            ],
-          },
-        ],
+      const mockParsedResponse = {
+        score: 0.8,
+        reasoning: 'Success after retries',
       };
 
-      mockFetch
+      mockParse
         .mockRejectedValueOnce(new Error('Internal server error'))
         .mockRejectedValueOnce(new Error('Service unavailable'))
         .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve(JSON.stringify(mockResponse)),
-          json: () => Promise.resolve(mockResponse),
+          choices: [
+            {
+              message: {
+                parsed: mockParsedResponse,
+              },
+            },
+          ],
         });
 
       const evaluatePromise = llmJudge.evaluate({
@@ -674,14 +542,13 @@ describe('LLM Judge', () => {
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
-      expect(result.metadata).toEqual({ retried: true });
 
       // Should retry twice, then succeed
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockParse).toHaveBeenCalledTimes(3);
     });
 
     it('should not retry client errors (4xx)', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Bad request'));
+      mockParse.mockRejectedValueOnce(new Error('Bad request'));
 
       const result = await llmJudge.evaluate({
         text: 'This is a test evaluation.',
@@ -696,12 +563,12 @@ describe('LLM Judge', () => {
       });
 
       // Should not retry client errors
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockParse).toHaveBeenCalledTimes(1);
     });
 
     it('should handle exponential backoff timing correctly', async () => {
-      // Mock fetch to fail all 3 times
-      mockFetch
+      // Mock to fail all 3 times
+      mockParse
         .mockRejectedValueOnce(new Error('Network error'))
         .mockRejectedValueOnce(new Error('Network error'))
         .mockRejectedValueOnce(new Error('Network error'));
@@ -716,32 +583,23 @@ describe('LLM Judge', () => {
       await evaluatePromise;
 
       // Should make 3 calls (initial + 2 retries)
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockParse).toHaveBeenCalledTimes(3);
     });
 
     it('should handle successful first attempt (no retries needed)', async () => {
-      const mockResponse = {
-        output: [
-          {
-            type: 'message',
-            content: [
-              {
-                type: 'output_text',
-                text: JSON.stringify({
-                  score: 0.8,
-                  reasoning: 'Success after retries',
-                  metadata: { retried: true },
-                }),
-              },
-            ],
-          },
-        ],
+      const mockParsedResponse = {
+        score: 0.8,
+        reasoning: 'Success after retries',
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: () => Promise.resolve(JSON.stringify(mockResponse)),
-        json: () => Promise.resolve(mockResponse),
+      mockParse.mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              parsed: mockParsedResponse,
+            },
+          },
+        ],
       });
 
       const result = await llmJudge.evaluate({
@@ -750,14 +608,13 @@ describe('LLM Judge', () => {
 
       expect(result.score).toBe(0.8);
       expect(result.reasoning).toBe('Success after retries');
-      expect(result.metadata).toEqual({ retried: true });
 
       // Should succeed on first attempt, no retries
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockParse).toHaveBeenCalledTimes(1);
     });
 
     it('should handle unknown errors as non-retryable', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Unknown error type'));
+      mockParse.mockRejectedValueOnce(new Error('Unknown error type'));
 
       const result = await llmJudge.evaluate({
         text: 'This is a test evaluation.',
@@ -774,11 +631,11 @@ describe('LLM Judge', () => {
       });
 
       // Should not retry unknown errors
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockParse).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle fetch throwing non-Error objects', async () => {
-      mockFetch.mockRejectedValueOnce('String error');
+    it('should handle throwing non-Error objects', async () => {
+      mockParse.mockRejectedValueOnce('String error');
 
       const result = await llmJudge.evaluate({
         text: 'This is a test evaluation.',
@@ -795,11 +652,11 @@ describe('LLM Judge', () => {
       });
 
       // Should not retry non-Error objects
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockParse).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle fetch throwing null/undefined', async () => {
-      mockFetch.mockRejectedValueOnce(null);
+    it('should handle throwing null/undefined', async () => {
+      mockParse.mockRejectedValueOnce(null);
 
       const result = await llmJudge.evaluate({
         text: 'This is a test evaluation.',
@@ -816,7 +673,7 @@ describe('LLM Judge', () => {
       });
 
       // Should not retry null/undefined
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockParse).toHaveBeenCalledTimes(1);
     });
   });
 });
