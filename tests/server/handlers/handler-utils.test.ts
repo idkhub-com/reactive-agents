@@ -26,7 +26,7 @@ vi.mock('@server/services/transform-to-provider-request', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('@server/utils/idkhub/request', () => ({
+vi.mock('@server/utils/idkhub/requests', () => ({
   constructRequest: vi.fn(),
 }));
 
@@ -42,7 +42,7 @@ import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
 import { getCachedResponse } from '@server/utils/cache';
 import { inputHookHandler } from '@server/utils/hooks';
-import { constructRequest } from '@server/utils/idkhub/request';
+import { constructRequest } from '@server/utils/idkhub/requests';
 import type { AIProviderConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 import type { IdkRequestData } from '@shared/types/api/request/body';
@@ -80,7 +80,6 @@ describe('tryPost Error Handling', () => {
       },
       targets: [
         {
-          provider: AIProvider.OPENAI,
           weight: 1,
           custom_host: '',
           cache: {
@@ -88,6 +87,20 @@ describe('tryPost Error Handling', () => {
           },
           retry: {
             attempts: 0,
+          },
+          configuration: {
+            ai_provider: AIProvider.OPENAI,
+            model: 'gpt-3.5-turbo',
+            temperature: 1,
+            max_tokens: 1000,
+            top_p: 1,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+            stop: null,
+            seed: null,
+            reasoning_effort: null,
+            system_prompt: null,
+            additional_params: null,
           },
         },
       ],
@@ -99,7 +112,6 @@ describe('tryPost Error Handling', () => {
 
     // Setup mock target
     mockIdkTarget = {
-      provider: AIProvider.OPENAI,
       weight: 1,
       custom_host: '',
       cache: {
@@ -108,6 +120,20 @@ describe('tryPost Error Handling', () => {
       },
       retry: {
         attempts: 0,
+      },
+      configuration: {
+        ai_provider: AIProvider.OPENAI,
+        model: 'gpt-3.5-turbo',
+        temperature: 1,
+        max_tokens: 1000,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+        stop: null,
+        seed: null,
+        reasoning_effort: null,
+        system_prompt: null,
+        additional_params: null,
       },
     };
 
@@ -317,11 +343,11 @@ describe('tryPost Error Handling', () => {
         transformedIdkBody: undefined,
       });
 
-      vi.mocked(constructRequest).mockReturnValue({
+      vi.mocked(constructRequest).mockImplementation(() => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(mockIdkRequestData.requestBody),
-      });
+      }));
 
       vi.mocked(getCachedResponse).mockRejectedValue(
         new Error('Cache lookup failed'),
