@@ -15,6 +15,29 @@ vi.mock('@server/constants', () => ({
   BEARER_TOKEN: 'idk',
 }));
 
+// Mock OpenAI client
+const mockParse = vi.fn();
+const mockWithOptions = vi.fn().mockReturnValue({
+  chat: {
+    completions: {
+      parse: mockParse,
+    },
+  },
+});
+
+vi.mock('openai', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          parse: mockParse,
+        },
+      },
+      withOptions: mockWithOptions,
+    })),
+  };
+});
+
 describe('Conversation Completeness - evaluateLog', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
 
@@ -22,6 +45,20 @@ describe('Conversation Completeness - evaluateLog', () => {
     mockFetch = vi.fn();
     global.fetch = mockFetch;
     vi.clearAllMocks();
+
+    // Setup default successful mock for OpenAI parse
+    mockParse.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 1.0,
+              reasoning: 'Evaluation successful',
+            },
+          },
+        },
+      ],
+    });
   });
 
   it('should evaluate conversation completeness successfully', async () => {
@@ -135,6 +172,20 @@ describe('Conversation Completeness - evaluateLog', () => {
   });
 
   it('should handle incomplete conversations', async () => {
+    // Override default mock with score of 0.5 for partially complete conversation
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            parsed: {
+              score: 0.5,
+              reasoning: 'Only addressed Paris, not London',
+            },
+          },
+        },
+      ],
+    });
+
     const mockEvaluation: SkillOptimizationEvaluation = {
       id: 'eval-123',
       agent_id: 'agent-123',

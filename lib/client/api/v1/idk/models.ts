@@ -14,7 +14,7 @@ export async function getModels(params?: ModelQueryParams): Promise<Model[]> {
   const response = await client.v1.idk.models.$get({
     query: {
       id: params?.id,
-      ai_provider_api_key_id: params?.ai_provider_api_key_id,
+      ai_provider_id: params?.ai_provider_id,
       model_name: params?.model_name,
       limit: params?.limit?.toString(),
       offset: params?.offset?.toString(),

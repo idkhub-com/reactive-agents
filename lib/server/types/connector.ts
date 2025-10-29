@@ -5,11 +5,11 @@ import type {
   AgentUpdateParams,
 } from '@shared/types/data/agent';
 import type {
-  AIProviderAPIKey,
-  AIProviderAPIKeyCreateParams,
-  AIProviderAPIKeyQueryParams,
-  AIProviderAPIKeyUpdateParams,
-} from '@shared/types/data/ai-provider-api-key';
+  AIProviderConfig,
+  AIProviderConfigCreateParams,
+  AIProviderConfigQueryParams,
+  AIProviderConfigUpdateParams,
+} from '@shared/types/data/ai-provider';
 import type {
   Feedback,
   FeedbackCreateParams,
@@ -109,19 +109,19 @@ export interface UserDataStorageConnector {
 
   // AI Provider API Keys
   getAIProviderAPIKeys(
-    queryParams: AIProviderAPIKeyQueryParams,
-  ): Promise<AIProviderAPIKey[]> | AIProviderAPIKey[];
+    queryParams: AIProviderConfigQueryParams,
+  ): Promise<AIProviderConfig[]> | AIProviderConfig[];
   getAIProviderAPIKeyById(
     id: string,
-  ): Promise<AIProviderAPIKey | null> | AIProviderAPIKey | null;
-  createAIProviderAPIKey(
-    apiKey: AIProviderAPIKeyCreateParams,
-  ): Promise<AIProviderAPIKey> | AIProviderAPIKey;
-  updateAIProviderAPIKey(
+  ): Promise<AIProviderConfig | null> | AIProviderConfig | null;
+  createAIProvider(
+    apiKey: AIProviderConfigCreateParams,
+  ): Promise<AIProviderConfig> | AIProviderConfig;
+  updateAIProvider(
     id: string,
-    update: AIProviderAPIKeyUpdateParams,
-  ): Promise<AIProviderAPIKey> | AIProviderAPIKey;
-  deleteAIProviderAPIKey(id: string): Promise<void> | void;
+    update: AIProviderConfigUpdateParams,
+  ): Promise<AIProviderConfig> | AIProviderConfig;
+  deleteAIProvider(id: string): Promise<void> | void;
 
   // Models
   getModels(queryParams: ModelQueryParams): Promise<Model[]> | Model[];

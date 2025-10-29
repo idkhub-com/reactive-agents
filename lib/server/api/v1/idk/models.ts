@@ -15,7 +15,7 @@ export const modelsRouter = new Hono<AppEnv>()
 
     const queryParams = ModelQueryParams.parse({
       id: c.req.query('id'),
-      ai_provider_api_key_id: c.req.query('ai_provider_api_key_id'),
+      ai_provider_id: c.req.query('ai_provider_id'),
       model_name: c.req.query('model_name'),
       limit: c.req.query('limit'),
       offset: c.req.query('offset'),

@@ -63,7 +63,7 @@ const mockAPIKeys = [
 
 const mockModel = {
   id: '123e4567-e89b-12d3-a456-426614174000',
-  ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+  ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
   model_name: 'gpt-4',
   created_at: '2023-01-01T00:00:00.000Z',
   updated_at: '2023-01-01T00:00:00.000Z',

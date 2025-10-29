@@ -183,20 +183,21 @@ async function validateTargetConfiguration(
       // Get the provider from the associated API key
       const apiKeyRecord =
         await userDataStorageConnector.getAIProviderAPIKeyById(
-          model.ai_provider_api_key_id,
+          model.ai_provider_id,
         );
 
       if (!apiKeyRecord) {
         return c.json(
           {
-            error: `API key with ID '${model.ai_provider_api_key_id}' not found for model`,
+            error: `API key with ID '${model.ai_provider_id}' not found for model`,
           },
           422,
         );
       }
 
       resolvedApiKey = apiKeyRecord.api_key || undefined;
-      resolvedCustomHost = apiKeyRecord.custom_host || undefined;
+      resolvedCustomHost =
+        (apiKeyRecord.custom_fields?.custom_host as string) || undefined;
 
       const reasoningEffort = getRandomReasoningEffortFromRange(
         optimalArm.params.thinking_min,
@@ -276,15 +277,6 @@ async function validateTargetConfiguration(
 
   if (idkTargetPreProcessed.api_key) {
     resolvedApiKey = idkTargetPreProcessed.api_key;
-  }
-
-  if (resolvedApiKey === undefined) {
-    return c.json(
-      {
-        error: `No API key available. Either provide an api_key directly or use a skill configuration.`,
-      },
-      422,
-    );
   }
 
   const rawData = {

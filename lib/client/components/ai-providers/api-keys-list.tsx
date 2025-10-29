@@ -28,7 +28,7 @@ import {
 } from '@client/components/ui/table';
 import { useToast } from '@client/hooks/use-toast';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
-import type { AIProviderAPIKey } from '@shared/types/data/ai-provider-api-key';
+import type { AIProviderConfig } from '@shared/types/data/ai-provider';
 import { format } from 'date-fns';
 import {
   CheckIcon,
@@ -82,7 +82,7 @@ export function APIKeysListView(): ReactElement {
     setVisibleKeys(newVisibleKeys);
   };
 
-  const copyToClipboard = async (apiKey: AIProviderAPIKey) => {
+  const copyToClipboard = async (apiKey: AIProviderConfig) => {
     try {
       if (!apiKey.api_key) {
         toast({
@@ -119,7 +119,7 @@ export function APIKeysListView(): ReactElement {
     }
   };
 
-  const handleDeleteAPIKey = async (apiKey: AIProviderAPIKey) => {
+  const handleDeleteAPIKey = async (apiKey: AIProviderConfig) => {
     try {
       await deleteAPIKey(apiKey.id);
     } catch (_error) {

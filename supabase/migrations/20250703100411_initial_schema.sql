@@ -241,27 +241,27 @@ CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING 
 
 
 -- ================================================
--- AI Provider API Keys
+-- AI Providers
 -- ================================================
-CREATE TABLE IF NOT EXISTS ai_provider_api_keys (
+CREATE TABLE IF NOT EXISTS ai_providers (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   ai_provider TEXT NOT NULL,
   name TEXT NOT NULL,
   api_key TEXT,
-  custom_host TEXT,
+  custom_fields JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(ai_provider, name)
 );
 
-CREATE TRIGGER ai_provider_api_keys_updated_at BEFORE UPDATE ON ai_provider_api_keys
+CREATE TRIGGER ai_providers_updated_at BEFORE UPDATE ON ai_providers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE INDEX idx_ai_provider_api_keys_ai_provider ON ai_provider_api_keys(ai_provider);
-CREATE INDEX idx_ai_provider_api_keys_name ON ai_provider_api_keys(name);
+CREATE INDEX idx_ai_providers_ai_provider ON ai_providers(ai_provider);
+CREATE INDEX idx_ai_providers_name ON ai_providers(name);
 
-ALTER TABLE ai_provider_api_keys ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
+ALTER TABLE ai_providers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_full_access" ON ai_providers FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 
 -- ================================================
@@ -269,18 +269,18 @@ CREATE POLICY "service_role_full_access" ON ai_provider_api_keys FOR ALL TO serv
 -- ================================================
 CREATE TABLE IF NOT EXISTS models (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-  ai_provider_api_key_id UUID NOT NULL,
+  ai_provider_id UUID NOT NULL,
   model_name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ai_provider_api_key_id) REFERENCES ai_provider_api_keys(id) ON DELETE CASCADE,
-  UNIQUE(ai_provider_api_key_id, model_name)
+  FOREIGN KEY (ai_provider_id) REFERENCES ai_providers(id) ON DELETE CASCADE,
+  UNIQUE(ai_provider_id, model_name)
 );
 
 CREATE TRIGGER update_models_updated_at BEFORE UPDATE ON models
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE INDEX idx_models_ai_provider_api_key_id ON models(ai_provider_api_key_id);
+CREATE INDEX idx_models_ai_provider_id ON models(ai_provider_id);
 CREATE INDEX idx_models_model_name ON models(model_name);
 
 ALTER TABLE models ENABLE ROW LEVEL SECURITY;
@@ -305,8 +305,8 @@ CREATE INDEX idx_skill_models_model_id ON skill_models(model_id);
 ALTER TABLE skill_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_models FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-COMMENT ON TABLE models IS 'AI models tied to specific API keys';
-COMMENT ON COLUMN models.ai_provider_api_key_id IS 'The API key that enables access to this model';
+COMMENT ON TABLE models IS 'AI models tied to specific AI providers';
+COMMENT ON COLUMN models.ai_provider_id IS 'The AI provider that enables access to this model';
 COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-4, claude-3-opus)';
 COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they can use';
 

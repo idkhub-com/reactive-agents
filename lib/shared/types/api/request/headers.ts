@@ -252,7 +252,7 @@ export type TargetConfigurationParams = z.infer<
  * For example, the `provider` and `model` fields have already been set to the value of the configuration. */
 export const IdkTarget = IdkTargetBase.extend({
   configuration: TargetConfigurationParams,
-  api_key: z.string().describe('The API key for the provider'),
+  api_key: z.string().describe('The API key for the provider').optional(),
 });
 
 export type IdkTarget = z.infer<typeof IdkTarget>;

@@ -80,9 +80,9 @@ const mockUserDataStorageConnector = {
   // AI Provider API Key methods
   getAIProviderAPIKeys: vi.fn(),
   getAIProviderAPIKeyById: vi.fn(),
-  createAIProviderAPIKey: vi.fn(),
-  updateAIProviderAPIKey: vi.fn(),
-  deleteAIProviderAPIKey: vi.fn(),
+  createAIProvider: vi.fn(),
+  updateAIProvider: vi.fn(),
+  deleteAIProvider: vi.fn(),
   // Model methods
   getModels: vi.fn(),
   getModelById: vi.fn(),
@@ -115,7 +115,7 @@ describe('Models API Status Codes', () => {
       const mockModels: Model[] = [
         {
           id: '123e4567-e89b-12d3-a456-426614174000',
-          ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+          ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
           model_name: 'gpt-4',
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
@@ -187,7 +187,7 @@ describe('Models API Status Codes', () => {
     it('should return 400 for invalid request body', async () => {
       const res = await client.index.$post({
         json: {
-          ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+          ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
           model_name: '', // Invalid: empty string
         },
       });
@@ -199,17 +199,17 @@ describe('Models API Status Codes', () => {
       const res = await client.index.$post({
         json: {
           model_name: 'gpt-4',
-          // Missing ai_provider_api_key_id - this will be handled by Zod validation
-        } as { ai_provider_api_key_id: string; model_name: string },
+          // Missing ai_provider_id - this will be handled by Zod validation
+        } as { ai_provider_id: string; model_name: string },
       });
 
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 for invalid UUID in ai_provider_api_key_id', async () => {
+    it('should return 400 for invalid UUID in ai_provider_id', async () => {
       const res = await client.index.$post({
         json: {
-          ai_provider_api_key_id: 'invalid-uuid',
+          ai_provider_id: 'invalid-uuid',
           model_name: 'gpt-4',
         },
       });
@@ -271,7 +271,7 @@ describe('Models API Status Codes', () => {
     it('should handle malformed JSON in POST requests', async () => {
       const res = await client.index.$post({
         json: null as unknown as {
-          ai_provider_api_key_id: string;
+          ai_provider_id: string;
           model_name: string;
         },
       });

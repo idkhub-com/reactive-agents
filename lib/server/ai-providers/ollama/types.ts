@@ -1,5 +1,6 @@
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
+import z from 'zod';
 
 /**
  * Ollama chat completion response interface
@@ -50,3 +51,22 @@ export interface OllamaEmbedResponse {
   prompt_eval_count?: number;
   eval_count?: number;
 }
+
+/**
+ * Custom fields schema for Ollama AI provider configuration
+ * These fields are stored in the ai_providers.custom_fields JSONB column
+ */
+export const OllamaCustomFieldsSchema = z.object({
+  custom_host: z
+    .string()
+    .url('Please enter a valid URL')
+    .max(2048, 'URL is too long (maximum 2048 characters)')
+    .refine(
+      (url) => url.startsWith('http://') || url.startsWith('https://'),
+      'Custom host must use HTTP or HTTPS protocol',
+    )
+    .optional()
+    .describe('Custom Ollama server URL (e.g., http://localhost:11434)'),
+});
+
+export type OllamaCustomFields = z.infer<typeof OllamaCustomFieldsSchema>;

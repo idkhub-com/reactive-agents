@@ -31,7 +31,7 @@ describe('Models Client API', () => {
 
   const mockModel: Model = {
     id: '123e4567-e89b-12d3-a456-426614174000',
-    ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+    ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
     model_name: 'gpt-4',
     created_at: '2023-01-01T00:00:00.000Z',
     updated_at: '2023-01-01T00:00:00.000Z',
@@ -53,7 +53,7 @@ describe('Models Client API', () => {
       mockedGetModels.mockResolvedValue(mockModels);
 
       const queryParams = {
-        ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+        ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
         model_name: 'gpt-4',
         limit: 10,
         offset: 0,
@@ -104,7 +104,7 @@ describe('Models Client API', () => {
   describe('createModel', () => {
     it('should create model successfully', async () => {
       const createParams: ModelCreateParams = {
-        ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+        ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
         model_name: 'gpt-4',
       };
 
@@ -118,7 +118,7 @@ describe('Models Client API', () => {
 
     it('should throw error when creation fails', async () => {
       const createParams: ModelCreateParams = {
-        ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+        ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
         model_name: 'gpt-4',
       };
 
@@ -206,7 +206,7 @@ describe('Models Client API', () => {
 
     it('should handle network errors in createModel', async () => {
       const createParams: ModelCreateParams = {
-        ai_provider_api_key_id: '550e8400-e29b-41d4-a716-446655440000',
+        ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
         model_name: 'gpt-4',
       };
 
