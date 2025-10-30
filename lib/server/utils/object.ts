@@ -49,7 +49,7 @@ export const getStreamModeSplitPattern = (
 export type SplitPatternType = '\n\n' | '\r\n\r\n' | '\n' | '\r\n';
 
 export const getStreamingMode = (
-  idkRequestBody: ChatCompletionRequestBody | CompletionRequestBody,
+  raRequestBody: ChatCompletionRequestBody | CompletionRequestBody,
   provider: AIProvider,
   aiProviderRequestURL: string,
 ): boolean | undefined => {
@@ -67,7 +67,7 @@ export const getStreamingMode = (
   ) {
     return true;
   }
-  return idkRequestBody.stream;
+  return raRequestBody.stream;
 };
 
 export function convertKeysToCamelCase(

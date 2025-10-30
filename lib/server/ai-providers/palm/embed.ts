@@ -24,7 +24,7 @@ export const palmEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  idkRequestData,
+  raRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = googleErrorResponseTransform(
@@ -35,7 +35,7 @@ export const palmEmbedResponseTransform: ResponseTransformFunction = (
   }
 
   const createEmbeddingsRequestBody =
-    idkRequestData.requestBody as CreateEmbeddingsRequestBody;
+    raRequestData.requestBody as CreateEmbeddingsRequestBody;
   const model = (createEmbeddingsRequestBody.model as string) || '';
   if ('embedding' in aiProviderResponseBody) {
     const embedding = aiProviderResponseBody.embedding as {

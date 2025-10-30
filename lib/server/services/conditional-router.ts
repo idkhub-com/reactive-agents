@@ -1,6 +1,6 @@
 import {
-  type IdkConfig,
-  type IdkTarget,
+  type ReactiveAgentsConfig,
+  type ReactiveAgentsTarget,
   StrategyModes,
 } from '@shared/types/api/request/headers';
 
@@ -31,23 +31,23 @@ enum Operator {
 }
 
 export class ConditionalRouter {
-  private idkConfig: IdkConfig;
+  private raConfig: ReactiveAgentsConfig;
   private context: RouterContext;
 
-  constructor(config: IdkConfig, context: RouterContext) {
-    this.idkConfig = config;
+  constructor(config: ReactiveAgentsConfig, context: RouterContext) {
+    this.raConfig = config;
     this.context = context;
-    if (this.idkConfig.strategy.mode !== StrategyModes.CONDITIONAL) {
+    if (this.raConfig.strategy.mode !== StrategyModes.CONDITIONAL) {
       throw new Error('Unsupported strategy mode');
     }
   }
 
-  resolveTarget(): IdkTarget {
-    if (!this.idkConfig.strategy.conditions) {
+  resolveTarget(): ReactiveAgentsTarget {
+    if (!this.raConfig.strategy.conditions) {
       throw new Error('No conditions passed in the query router');
     }
 
-    for (const condition of this.idkConfig.strategy.conditions) {
+    for (const condition of this.raConfig.strategy.conditions) {
       if (this.evaluateQuery(condition.query)) {
         const cond = condition as unknown as Record<string, unknown>;
         const targetName = (cond.target as string) ?? (cond.then as string);
@@ -56,8 +56,8 @@ export class ConditionalRouter {
     }
 
     // If no conditions matched and a default is specified, return the default target
-    if (this.idkConfig.strategy.default) {
-      return this.findTarget(this.idkConfig.strategy.default);
+    if (this.raConfig.strategy.default) {
+      return this.findTarget(this.raConfig.strategy.default);
     }
 
     throw new Error('Query router did not resolve to any valid target');
@@ -148,20 +148,20 @@ export class ConditionalRouter {
     return true;
   }
 
-  private findTarget(id: string): IdkTarget {
+  private findTarget(id: string): ReactiveAgentsTarget {
     const index =
-      this.idkConfig.targets?.findIndex((target) => target.id === id) ?? -1;
+      this.raConfig.targets?.findIndex((target) => target.id === id) ?? -1;
     if (index === -1) {
       throw new Error(`Invalid target id found in the query router: ${id}`);
     }
 
-    const target = this.idkConfig.targets?.[index];
+    const target = this.raConfig.targets?.[index];
 
     if (!target) {
       throw new Error(`Invalid target id found in the query router: ${id}`);
     }
 
-    const targets: IdkTarget = {
+    const targets: ReactiveAgentsTarget = {
       ...target,
       index,
     };

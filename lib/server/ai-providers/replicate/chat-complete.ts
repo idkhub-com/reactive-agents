@@ -26,12 +26,12 @@ export const replicateChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'input.prompt',
     default: '',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      if (!idkRequestBody.messages) return '';
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      if (!raRequestBody.messages) return '';
 
       // Convert messages to prompt format for Replicate
       let prompt = '';
-      for (const message of idkRequestBody.messages) {
+      for (const message of raRequestBody.messages) {
         if (message.role === ChatCompletionMessageRole.SYSTEM) {
           prompt += `System: ${message.content}\n\n`;
         } else if (message.role === ChatCompletionMessageRole.USER) {
@@ -83,20 +83,20 @@ export const replicateChatCompleteConfig: AIProviderFunctionConfig = {
     default: 1.0,
     min: 0.1,
     max: 2.0,
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       // Convert presence penalty (-2 to 2) to repetition penalty (0.1 to 2.0)
-      const value = idkRequestBody.presence_penalty || 0;
+      const value = raRequestBody.presence_penalty || 0;
       return Math.max(0.1, Math.min(2.0, 1.0 + value * 0.1));
     },
   },
   stop: {
     param: 'input.stop_sequences',
     default: null,
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      if (idkRequestBody.stop && !Array.isArray(idkRequestBody.stop)) {
-        return [idkRequestBody.stop];
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      if (raRequestBody.stop && !Array.isArray(raRequestBody.stop)) {
+        return [raRequestBody.stop];
       }
-      return idkRequestBody.stop;
+      return raRequestBody.stop;
     },
   },
 };

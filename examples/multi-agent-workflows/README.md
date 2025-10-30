@@ -1,4 +1,4 @@
-# IDKHub Example: Multi-Agent Business Workflows
+# Reactive Agents Example: Multi-Agent Business Workflows
 
 ## Business Problem
 Enterprises need to automate complex workflows that require multiple specialized AI agents working together - like research analysis, strategic planning, and content creation. Current solutions force you to manually orchestrate different AI services, leading to inconsistent outputs and integration headaches.
@@ -9,7 +9,7 @@ Enterprises need to automate complex workflows that require multiple specialized
 - **Manual Orchestration**: Hand-coding agent coordination introduces errors and complexity
 - **No Validation**: No built-in quality gates between workflow stages
 
-## How IDKHub Helps
+## How Reactive Agents Helps
 - **Single API**: One unified interface for both simple chat and complex multi-agent workflows
 - **Context Preservation**: Automatic context passing between specialized agents
 - **Provider Flexibility**: Easy switching between 40+ AI providers for optimal results
@@ -17,7 +17,7 @@ Enterprises need to automate complex workflows that require multiple specialized
 
 ## Run the Example
 
-First, start the IDKHub server in one terminal:
+First, start the Reactive Agents server in one terminal:
 ```bash
 pnpm install && pnpm dev
 ```
@@ -45,7 +45,7 @@ When running successfully, you should see:
 - Check the console for API key format detection messages
 
 **Connection Issues:**
-- Ensure IDKHub server is running on `http://localhost:3000`
+- Ensure Reactive Agents server is running on `http://localhost:3000`
 - Start server with `pnpm install && pnpm dev`
 - Check for port conflicts or firewall issues
 
@@ -56,4 +56,4 @@ When running successfully, you should see:
 
 **Testing:**
 - Run tests with: `pnpm exec vitest examples/multi-agent-workflows/multi-agent-workflow.test.ts`
-- Tests verify input validation, API key handling, and type guards 
+- Tests verify input validation, API key handling, and type guards

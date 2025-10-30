@@ -521,9 +521,9 @@ export const transformVertexLogprobs = (
 };
 
 const populateHyperparameters = (
-  idkRequestBody: CreateFineTuningJobRequestBody,
+  raRequestBody: CreateFineTuningJobRequestBody,
 ): Record<string, unknown> => {
-  const hyperParameters = idkRequestBody.hyperparameters;
+  const hyperParameters = raRequestBody.hyperparameters;
 
   return {
     epochCount: hyperParameters?.n_epochs,
@@ -533,10 +533,10 @@ const populateHyperparameters = (
 };
 
 export const transformVertexFinetune: ParameterTransformFunction = (
-  idkRequestBody,
+  raRequestBody,
 ) => {
   const createFineTuningJobRequestBody =
-    idkRequestBody as unknown as CreateFineTuningJobRequestBody;
+    raRequestBody as unknown as CreateFineTuningJobRequestBody;
   const parameterSpec = {
     training_dataset_uri: decodeURIComponent(
       (createFineTuningJobRequestBody.training_file as string) ?? '',

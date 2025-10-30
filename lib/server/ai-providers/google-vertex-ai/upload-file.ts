@@ -25,27 +25,27 @@ const encoder = new TextEncoder();
 
 export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
   c,
-  idkTarget,
-  idkRequestData,
+  raTarget,
+  raRequestData,
 }) => {
-  if (!(idkRequestData.requestBody instanceof ReadableStream)) {
+  if (!(raRequestData.requestBody instanceof ReadableStream)) {
     return GoogleResponseHandler(
       'Invalid request, please provide a readable stream',
       400,
     );
   }
 
-  const { vertex_storage_bucket_name, filename, vertex_model_name } = idkTarget;
+  const { vertex_storage_bucket_name, filename, vertex_model_name } = raTarget;
 
   if (!vertex_model_name || !vertex_storage_bucket_name) {
     return GoogleResponseHandler(
-      'Invalid request, please provide `x-portkey-provider-model` and `x-portkey-vertex-storage-bucket-name` in the request headers',
+      'Invalid request, please make sure you have set the provider model and vertex storage bucket name in the configuration',
       400,
     );
   }
 
   const objectKey = filename ?? `${crypto.randomUUID()}.jsonl`;
-  const bytes = idkRequestData.requestHeaders['content-length'];
+  const bytes = raRequestData.requestHeaders['content-length'];
   const { provider } = getModelAndProvider(vertex_model_name ?? '');
   let providerConfig =
     PROVIDER_CONFIG[provider as keyof typeof PROVIDER_CONFIG];
@@ -95,7 +95,7 @@ export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
         const transformedBody = transformUsingProviderConfig(
           providerConfig,
           toTranspose,
-          idkTarget,
+          raTarget,
         );
 
         delete transformedBody.model;
@@ -123,14 +123,14 @@ export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
   });
 
   // Pipe the node stream through our line splitter and into the transform stream.
-  idkRequestData.requestBody
+  raRequestData.requestBody
     .pipeThrough(lineSplitter)
     .pipeTo(transformStream.writable);
 
   const providerHeaders = await vertexAPIConfig.headers({
     c,
-    idkTarget: idkTarget,
-    idkRequestData,
+    raTarget: raTarget,
+    raRequestData,
   });
 
   const encodedFile = encodeURIComponent(objectKey ?? '');

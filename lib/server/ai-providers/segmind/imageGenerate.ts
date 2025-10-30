@@ -45,13 +45,13 @@ export const segmindImageGenerateConfig: AIProviderFunctionConfig = {
   size: [
     {
       param: 'img_height',
-      transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseDimension(idkRequestBody.size, 1, 512), // Default height: 512
+      transform: (raRequestBody: GenerateImageRequestBody): number =>
+        parseDimension(raRequestBody.size, 1, 512), // Default height: 512
     },
     {
       param: 'img_width',
-      transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseDimension(idkRequestBody.size, 0, 512), // Default width: 512
+      transform: (raRequestBody: GenerateImageRequestBody): number =>
+        parseDimension(raRequestBody.size, 0, 512), // Default width: 512
     },
   ],
   style: {
@@ -102,7 +102,7 @@ export const segmindImageGenerateConfig: AIProviderFunctionConfig = {
   },
   base64: {
     param: 'base64',
-    transform: (_idkRequestBody: GenerateImageRequestBody): boolean => true, // Always true to handle uniform responses
+    transform: (_raRequestBody: GenerateImageRequestBody): boolean => true, // Always true to handle uniform responses
     default: true,
     required: true,
   },
@@ -120,7 +120,7 @@ export const segmindImageGenerateConfig: AIProviderFunctionConfig = {
   },
   qr_text: {
     param: 'qr_text',
-    default: 'https://portkey.ai',
+    default: 'https://reactiveagents.ai',
   },
   invert: {
     param: 'invert',

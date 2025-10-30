@@ -48,40 +48,40 @@ import {
   transformVertexLogprobs,
 } from '../google-vertex-ai/utils';
 import {
-  FinishReasonsGeminiToIdk,
-  RoleIdkToGemini,
-  transformToolChoiceIdkToGemini,
+  FinishReasonsGeminiToReactiveAgents,
+  RoleReactiveAgentsToGemini,
+  transformToolChoiceReactiveAgentsToGemini,
 } from './utils';
 
 const googleTransformGenerationConfig = (
-  idkRequestBody: ChatCompletionRequestBody,
+  raRequestBody: ChatCompletionRequestBody,
 ): Record<string, unknown> => {
   const generationConfig: Record<string, unknown> = {};
-  if (idkRequestBody.temperature) {
-    generationConfig.temperature = idkRequestBody.temperature;
+  if (raRequestBody.temperature) {
+    generationConfig.temperature = raRequestBody.temperature;
   }
-  if (idkRequestBody.top_p) {
-    generationConfig.topP = idkRequestBody.top_p;
+  if (raRequestBody.top_p) {
+    generationConfig.topP = raRequestBody.top_p;
   }
-  if (idkRequestBody.max_tokens) {
-    generationConfig.maxOutputTokens = idkRequestBody.max_tokens;
+  if (raRequestBody.max_tokens) {
+    generationConfig.maxOutputTokens = raRequestBody.max_tokens;
   }
-  if (idkRequestBody.max_completion_tokens) {
-    generationConfig.maxOutputTokens = idkRequestBody.max_completion_tokens;
+  if (raRequestBody.max_completion_tokens) {
+    generationConfig.maxOutputTokens = raRequestBody.max_completion_tokens;
   }
-  if (idkRequestBody.stop) {
-    generationConfig.stopSequences = idkRequestBody.stop;
+  if (raRequestBody.stop) {
+    generationConfig.stopSequences = raRequestBody.stop;
   }
-  if (idkRequestBody.logprobs) {
-    generationConfig.responseLogprobs = idkRequestBody.logprobs;
+  if (raRequestBody.logprobs) {
+    generationConfig.responseLogprobs = raRequestBody.logprobs;
   }
-  if (idkRequestBody.top_logprobs) {
-    generationConfig.logprobs = idkRequestBody.top_logprobs; // range 1-5, openai supports 1-20
+  if (raRequestBody.top_logprobs) {
+    generationConfig.logprobs = raRequestBody.top_logprobs; // range 1-5, openai supports 1-20
   }
 
   // Handle structured output (response_format)
-  if (idkRequestBody?.response_format) {
-    const responseFormat = idkRequestBody.response_format;
+  if (raRequestBody?.response_format) {
+    const responseFormat = raRequestBody.response_format;
 
     if (responseFormat.type === 'json_object') {
       // Simple JSON object format - just set MIME type
@@ -110,10 +110,10 @@ const googleTransformGenerationConfig = (
     }
   }
 
-  if (idkRequestBody?.thinking) {
+  if (raRequestBody?.thinking) {
     const thinkingConfig: Record<string, unknown> = {};
     thinkingConfig.include_thoughts = true;
-    thinkingConfig.thinking_budget = idkRequestBody.thinking.budget_tokens;
+    thinkingConfig.thinking_budget = raRequestBody.thinking.budget_tokens;
     generationConfig.thinking_config = thinkingConfig;
   }
   return generationConfig;
@@ -142,23 +142,23 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'contents',
       default: '',
       transform: (
-        idkRequestBody: ChatCompletionRequestBody,
+        raRequestBody: ChatCompletionRequestBody,
       ): GoogleMessage[] => {
         let lastRole: GoogleMessageRole | undefined;
         const messages: GoogleMessage[] = [];
 
-        idkRequestBody.messages?.forEach((message: ChatCompletionMessage) => {
+        raRequestBody.messages?.forEach((message: ChatCompletionMessage) => {
           // From gemini-1.5 onward, systemInstruction is supported
           // Skipping system message and sending it in systemInstruction for gemini 1.5 models
           if (
             ChatCompletionSystemMessageRoles.includes(message.role) &&
             !SYSTEM_INSTRUCTION_DISABLED_MODELS.includes(
-              idkRequestBody.model as string,
+              raRequestBody.model as string,
             )
           )
             return;
 
-          const role = RoleIdkToGemini[message.role];
+          const role = RoleReactiveAgentsToGemini[message.role];
           const parts: (
             | GoogleFunctionCallMessagePart
             | GoogleFunctionResponseMessagePart
@@ -245,7 +245,7 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
           // @NOTE: This takes care of the "Please ensure that multiturn requests alternate between user and model."
           // error that occurs when we have multiple user messages in a row.
           const shouldCombineMessages =
-            lastRole === role && !idkRequestBody.model?.includes('vision');
+            lastRole === role && !raRequestBody.model?.includes('vision');
 
           if (shouldCombineMessages) {
             messages[messages.length - 1].parts.push(...parts);
@@ -262,17 +262,17 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'systemInstruction',
       default: '',
       transform: (
-        idkRequestBody: ChatCompletionRequestBody,
+        raRequestBody: ChatCompletionRequestBody,
       ): GoogleMessage | undefined => {
         // systemInstruction is only supported from gemini 1.5 models
         if (
           SYSTEM_INSTRUCTION_DISABLED_MODELS.includes(
-            idkRequestBody.model as string,
+            raRequestBody.model as string,
           )
         )
           return;
 
-        const firstMessage = idkRequestBody.messages?.[0] || null;
+        const firstMessage = raRequestBody.messages?.[0] || null;
 
         if (!firstMessage) return;
 
@@ -311,58 +311,58 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
   ],
   temperature: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   top_p: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   top_k: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   max_tokens: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   max_completion_tokens: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   stop: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   response_format: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   logprobs: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   top_logprobs: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
   tools: {
     param: 'tools',
     default: '',
     transform: (
-      idkRequestBody: ChatCompletionRequestBody,
+      raRequestBody: ChatCompletionRequestBody,
     ): GoogleTool[] | undefined => {
       const functionDeclarations: ChatCompletionToolFunction[] = [];
       const tools: GoogleTool[] = [];
-      idkRequestBody.tools?.forEach((tool) => {
+      raRequestBody.tools?.forEach((tool) => {
         if (tool.type === 'function') {
           // these are not supported by google
           recursivelyDeleteUnsupportedParameters(
@@ -392,18 +392,20 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
   tool_choice: {
     param: 'tool_config',
     default: '',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      if (idkRequestBody.tool_choice) {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      if (raRequestBody.tool_choice) {
         const allowedFunctionNames: string[] = [];
         if (
-          typeof idkRequestBody.tool_choice === 'object' &&
-          idkRequestBody.tool_choice.type === 'function'
+          typeof raRequestBody.tool_choice === 'object' &&
+          raRequestBody.tool_choice.type === 'function'
         ) {
-          allowedFunctionNames.push(idkRequestBody.tool_choice.function.name);
+          allowedFunctionNames.push(raRequestBody.tool_choice.function.name);
         }
         const toolConfig: GoogleToolConfig = {
           function_calling_config: {
-            mode: transformToolChoiceIdkToGemini(idkRequestBody.tool_choice),
+            mode: transformToolChoiceReactiveAgentsToGemini(
+              raRequestBody.tool_choice,
+            ),
           },
         };
         if (allowedFunctionNames.length > 0) {
@@ -416,8 +418,8 @@ export const googleChatCompleteConfig: AIProviderFunctionConfig = {
   },
   thinking: {
     param: 'generationConfig',
-    transform: (idkRequestBody: ChatCompletionRequestBody) =>
-      googleTransformGenerationConfig(idkRequestBody),
+    transform: (raRequestBody: ChatCompletionRequestBody) =>
+      googleTransformGenerationConfig(raRequestBody),
   },
 };
 
@@ -524,8 +526,8 @@ export const googleChatCompleteResponseTransform: ResponseTransformFunction = (
             logprobs,
             index: generation.index ?? idx,
             finish_reason:
-              FinishReasonsGeminiToIdk[generation.finishReason] ??
-              FinishReasonsGeminiToIdk.STOP,
+              FinishReasonsGeminiToReactiveAgents[generation.finishReason] ??
+              FinishReasonsGeminiToReactiveAgents.STOP,
             ...(!strictOpenAiCompliance && generation.groundingMetadata
               ? { groundingMetadata: generation.groundingMetadata }
               : {}),

@@ -5,7 +5,10 @@ import {
   xaiChatCompleteResponseTransform,
 } from '@server/ai-providers/xai/chat-complete';
 import type { XaiErrorResponse } from '@server/ai-providers/xai/types';
-import { FunctionName, type IdkRequestData } from '@shared/types/api/request';
+import {
+  FunctionName,
+  type ReactiveAgentsRequestData,
+} from '@shared/types/api/request';
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
 import { ChatCompletionFinishReason } from '@shared/types/api/routes/chat-completions-api';
@@ -45,7 +48,7 @@ describe('xAI Provider Tests', () => {
 
     it('should return correct headers with API key', () => {
       const headers = xaiAPIConfig.headers({
-        idkTarget: { provider: AIProvider.XAI, api_key: 'xai-test-key' },
+        raTarget: { provider: AIProvider.XAI, api_key: 'xai-test-key' },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -56,7 +59,7 @@ describe('xAI Provider Tests', () => {
 
     it('should handle missing API key', () => {
       const headers = xaiAPIConfig.headers({
-        idkTarget: { provider: AIProvider.XAI },
+        raTarget: { provider: AIProvider.XAI },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -67,7 +70,7 @@ describe('xAI Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = xaiAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'grok-4', messages: [] },
         },
@@ -78,7 +81,7 @@ describe('xAI Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = xaiAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.EMBED,
           requestBody: { model: 'test', input: 'test' },
         },
@@ -183,7 +186,7 @@ describe('xAI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('chatcmpl-test123');
@@ -245,7 +248,7 @@ describe('xAI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -274,7 +277,7 @@ describe('xAI Provider Tests', () => {
         401,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -300,7 +303,7 @@ describe('xAI Provider Tests', () => {
         429,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error.message).toContain('Rate limit exceeded');
@@ -321,7 +324,7 @@ describe('xAI Provider Tests', () => {
         500,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error.message).toContain('Something went wrong');
@@ -363,7 +366,7 @@ describe('xAI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       );
 
       // Should add provider property even to malformed responses
@@ -391,7 +394,7 @@ describe('xAI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices).toHaveLength(0);
@@ -436,7 +439,7 @@ describe('xAI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices).toHaveLength(2);
@@ -449,7 +452,7 @@ describe('xAI Provider Tests', () => {
     it('should construct complete request URLs', () => {
       const baseURL = xaiAPIConfig.getBaseURL({} as unknown as TestContext);
       const endpoint = xaiAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'grok-4', messages: [] },
         },

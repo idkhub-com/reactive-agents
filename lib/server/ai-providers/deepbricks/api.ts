@@ -3,7 +3,7 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const deepbricksAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.deepbricks.ai/v1',
-  headers: ({ idkTarget: providerOptions }) => {
+  headers: ({ raTarget: providerOptions }) => {
     const headersObj: Record<string, string> = {
       Authorization: `Bearer ${providerOptions.api_key}`,
     };
@@ -18,8 +18,8 @@ export const deepbricksAPIConfig: InternalProviderAPIConfig = {
 
     return headersObj;
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.GENERATE_IMAGE:

@@ -28,7 +28,7 @@ vi.mock('openai', () => {
 vi.mock('@server/constants', () => ({
   OPENAI_API_KEY: 'test-api-key',
   API_URL: 'http://localhost:3000',
-  BEARER_TOKEN: 'idk',
+  BEARER_TOKEN: 'reactive-agents',
 }));
 
 describe('LLM Judge', () => {
@@ -91,7 +91,7 @@ describe('LLM Judge', () => {
     // Verify the OpenAI client was called correctly
     expect(mockWithOptions).toHaveBeenCalledWith({
       defaultHeaders: {
-        'x-idk-config': expect.stringContaining('"provider":"openai"'),
+        'ra-config': expect.stringContaining('"provider":"openai"'),
       },
     });
     expect(mockParse).toHaveBeenCalledWith(

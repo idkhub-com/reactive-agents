@@ -14,11 +14,11 @@ export const workersAIEmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'text',
     required: true,
-    transform: (idkRequestBody: CreateEmbeddingsRequestBody): string[] => {
-      if (Array.isArray(idkRequestBody.input)) {
-        return idkRequestBody.input as string[];
+    transform: (raRequestBody: CreateEmbeddingsRequestBody): string[] => {
+      if (Array.isArray(raRequestBody.input)) {
+        return raRequestBody.input as string[];
       } else {
-        return [idkRequestBody.input];
+        return [raRequestBody.input];
       }
     },
   },
@@ -44,7 +44,7 @@ export const workersAIEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  _idkRequestData,
+  _raRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     return workersAIErrorResponseTransform(aiProviderResponseBody);

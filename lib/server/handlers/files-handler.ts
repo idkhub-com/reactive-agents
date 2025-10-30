@@ -3,20 +3,20 @@ import type { AppContext } from '@server/types/hono';
 
 function filesHandler(): (c: AppContext) => Promise<Response> {
   async function handler(c: AppContext): Promise<Response> {
-    const idkRequestData = c.get('idk_request_data');
-    const idkConfig = c.get('idk_config');
+    const raRequestData = c.get('ra_request_data');
+    const raConfig = c.get('ra_config');
     try {
-      const tryTargetsResponse = await tryTargets(c, idkConfig, idkRequestData);
+      const tryTargetsResponse = await tryTargets(c, raConfig, raRequestData);
 
       return tryTargetsResponse;
     } catch (err: unknown) {
       if (err instanceof Error) {
         console.error({
-          message: `${idkRequestData.functionName} error ${err.message}`,
+          message: `${raRequestData.functionName} error ${err.message}`,
         });
       } else {
         console.error({
-          message: `${idkRequestData.functionName} error ${err}`,
+          message: `${raRequestData.functionName} error ${err}`,
         });
       }
       return new Response(

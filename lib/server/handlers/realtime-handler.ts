@@ -46,10 +46,10 @@ const getOutgoingWebSocket = async (
 export async function realTimeHandler(c: AppContext): Promise<Response> {
   try {
     const headers = c.req.header();
-    const idkRequestData = c.get('idk_request_data');
+    const raRequestData = c.get('ra_request_data');
 
-    const idkConfig = c.get('idk_config');
-    const provider = idkConfig.targets[0].configuration.ai_provider;
+    const raConfig = c.get('ra_config');
+    const provider = raConfig.targets[0].configuration.ai_provider;
 
     if (!provider) {
       throw new Error('Provider not found');
@@ -67,19 +67,19 @@ export async function realTimeHandler(c: AppContext): Promise<Response> {
     const url = getURLForOutgoingConnection(
       c,
       apiConfig,
-      idkConfig.targets[0],
-      idkRequestData,
+      raConfig.targets[0],
+      raRequestData,
     );
     const options = await getOptionsForOutgoingConnection(
       c,
       apiConfig,
-      idkConfig.targets[0],
+      raConfig.targets[0],
     );
 
     const sessionOptions: RealtimeSessionOptions = {
       id: crypto.randomUUID(),
       providerOptions: {
-        ...idkConfig.targets[0],
+        ...raConfig.targets[0],
         requestURL: url,
         rubeusURL: 'realtime',
       },

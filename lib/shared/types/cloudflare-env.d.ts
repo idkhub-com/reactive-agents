@@ -3,7 +3,7 @@
 // Runtime types generated with workerd@1.20250424.0 2025-03-25 nodejs_compat
 declare namespace Cloudflare {
   interface Env {
-    IDK_CACHE: KVNamespace;
+    RA_CACHE: KVNamespace;
     ASSETS: Fetcher;
   }
 }

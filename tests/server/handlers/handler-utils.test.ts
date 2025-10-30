@@ -18,7 +18,7 @@ vi.mock('@server/handlers/response-handler', () => ({
   responseHandler: vi.fn(),
 }));
 
-vi.mock('@server/utils/idkhub/response', () => ({
+vi.mock('@server/utils/reactive-agents/response', () => ({
   createResponse: vi.fn(),
 }));
 
@@ -26,7 +26,7 @@ vi.mock('@server/services/transform-to-provider-request', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('@server/utils/idkhub/requests', () => ({
+vi.mock('@server/utils/reactive-agents/requests', () => ({
   constructRequest: vi.fn(),
 }));
 
@@ -42,11 +42,14 @@ import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
 import { getCachedResponse } from '@server/utils/cache';
 import { inputHookHandler } from '@server/utils/hooks';
-import { constructRequest } from '@server/utils/idkhub/requests';
+import { constructRequest } from '@server/utils/reactive-agents/requests';
 import type { AIProviderConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
-import type { IdkRequestData } from '@shared/types/api/request/body';
-import type { IdkConfig, IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import type {
+  ReactiveAgentsConfig,
+  ReactiveAgentsTarget,
+} from '@shared/types/api/request/headers';
 import { HeaderKey, StrategyModes } from '@shared/types/api/request/headers';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import { AIProvider, ContentTypeName } from '@shared/types/constants';
@@ -55,9 +58,9 @@ import { z } from 'zod';
 
 describe('tryPost Error Handling', () => {
   let mockContext: AppContext;
-  let mockIdkConfig: IdkConfig;
-  let mockIdkTarget: IdkTarget;
-  let mockIdkRequestData: IdkRequestData;
+  let mockReactiveAgentsConfig: ReactiveAgentsConfig;
+  let mockReactiveAgentsTarget: ReactiveAgentsTarget;
+  let mockReactiveAgentsRequestData: ReactiveAgentsRequestData;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,7 +73,7 @@ describe('tryPost Error Handling', () => {
     } as unknown as AppContext;
 
     // Setup mock configuration
-    mockIdkConfig = {
+    mockReactiveAgentsConfig = {
       agent_name: 'test-agent',
       skill_name: 'test-skill',
       strategy: {
@@ -111,7 +114,7 @@ describe('tryPost Error Handling', () => {
     };
 
     // Setup mock target
-    mockIdkTarget = {
+    mockReactiveAgentsTarget = {
       weight: 1,
       custom_host: '',
       cache: {
@@ -138,7 +141,7 @@ describe('tryPost Error Handling', () => {
     };
 
     // Setup mock request data
-    mockIdkRequestData = {
+    mockReactiveAgentsRequestData = {
       route_pattern: /^\/v1\/chat\/completions$/,
       functionName: FunctionName.CHAT_COMPLETE,
       method: HttpMethod.POST,
@@ -155,7 +158,7 @@ describe('tryPost Error Handling', () => {
       requestSchema: z.object({}), // Mock schema for tests
       responseSchema: z.object({}), // Mock response schema for tests
       stream: false,
-    } as unknown as IdkRequestData;
+    } as unknown as ReactiveAgentsRequestData;
   });
 
   describe('Error scenarios', () => {
@@ -169,9 +172,9 @@ describe('tryPost Error Handling', () => {
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 
@@ -202,9 +205,9 @@ describe('tryPost Error Handling', () => {
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 
@@ -235,9 +238,9 @@ describe('tryPost Error Handling', () => {
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 
@@ -269,14 +272,14 @@ describe('tryPost Error Handling', () => {
       // Mock successful responses for earlier stages
       vi.mocked(inputHookHandler).mockResolvedValue({
         errorResponse: undefined,
-        transformedIdkBody: undefined,
+        transformedReactiveAgentsBody: undefined,
       });
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 
@@ -309,9 +312,9 @@ describe('tryPost Error Handling', () => {
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 
@@ -340,13 +343,13 @@ describe('tryPost Error Handling', () => {
 
       vi.mocked(inputHookHandler).mockResolvedValue({
         errorResponse: undefined,
-        transformedIdkBody: undefined,
+        transformedReactiveAgentsBody: undefined,
       });
 
       vi.mocked(constructRequest).mockImplementation(() => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mockIdkRequestData.requestBody),
+        body: JSON.stringify(mockReactiveAgentsRequestData.requestBody),
       }));
 
       vi.mocked(getCachedResponse).mockRejectedValue(
@@ -355,9 +358,9 @@ describe('tryPost Error Handling', () => {
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 
@@ -386,7 +389,7 @@ describe('tryPost Error Handling', () => {
 
       vi.mocked(inputHookHandler).mockResolvedValue({
         errorResponse: undefined,
-        transformedIdkBody: undefined,
+        transformedReactiveAgentsBody: undefined,
       });
 
       vi.mocked(transformToProviderRequest).mockImplementation(() => {
@@ -395,9 +398,9 @@ describe('tryPost Error Handling', () => {
 
       const result = await tryPost(
         mockContext,
-        mockIdkConfig,
-        mockIdkTarget,
-        mockIdkRequestData,
+        mockReactiveAgentsConfig,
+        mockReactiveAgentsTarget,
+        mockReactiveAgentsRequestData,
         0,
       );
 

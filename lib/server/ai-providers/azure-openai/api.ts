@@ -13,8 +13,8 @@ const EndpointMap: Partial<Record<FunctionName, string>> = {
 };
 
 export const azureOpenAIAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ idkTarget }) => {
-    const { azure_openai_config } = idkTarget;
+  getBaseURL: ({ raTarget }) => {
+    const { azure_openai_config } = raTarget;
 
     if (!azure_openai_config) {
       throw new Error('`azure_openai_config` is required in target');
@@ -22,15 +22,15 @@ export const azureOpenAIAPIConfig: InternalProviderAPIConfig = {
 
     return azure_openai_config.url;
   },
-  headers: async ({ idkTarget, idkRequestData }) => {
-    const { api_key, azure_auth_mode } = idkTarget;
+  headers: async ({ raTarget, raRequestData }) => {
+    const { api_key, azure_auth_mode } = raTarget;
 
     if (azure_auth_mode === 'entra') {
       const {
         azure_entra_tenant_id,
         azure_entra_client_id,
         azure_entra_client_secret,
-      } = idkTarget;
+      } = raTarget;
       if (
         azure_entra_tenant_id &&
         azure_entra_client_id &&
@@ -49,7 +49,7 @@ export const azureOpenAIAPIConfig: InternalProviderAPIConfig = {
       }
     }
     if (azure_auth_mode === 'managed') {
-      const { azure_managed_client_id } = idkTarget;
+      const { azure_managed_client_id } = raTarget;
       const resource = 'https://cognitiveservices.azure.com/';
       const accessToken = await getAzureManagedIdentityToken(
         resource,
@@ -63,19 +63,19 @@ export const azureOpenAIAPIConfig: InternalProviderAPIConfig = {
       'api-key': `${api_key}`,
     };
     if (
-      idkRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
-      idkRequestData.functionName === FunctionName.CREATE_TRANSLATION ||
-      idkRequestData.functionName === FunctionName.UPLOAD_FILE
+      raRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
+      raRequestData.functionName === FunctionName.CREATE_TRANSLATION ||
+      raRequestData.functionName === FunctionName.UPLOAD_FILE
     ) {
       headersObj['Content-Type'] = 'multipart/form-data';
     }
-    if (idkTarget.openai_beta) {
-      headersObj['OpenAI-Beta'] = idkTarget.openai_beta;
+    if (raTarget.openai_beta) {
+      headersObj['OpenAI-Beta'] = raTarget.openai_beta;
     }
     return headersObj;
   },
-  getEndpoint: ({ idkRequestData }) => {
-    const fn = idkRequestData.functionName;
+  getEndpoint: ({ raRequestData }) => {
+    const fn = raRequestData.functionName;
     const endpoint = EndpointMap[fn];
     if (!endpoint) {
       throw new Error(`Endpoint not found for function ${fn}`);

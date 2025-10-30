@@ -10,8 +10,8 @@ import type {
   ResponseTransformFunctionType,
 } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
-import type { IdkRequestData } from '@shared/types/api/request/body';
-import type { IdkResponseBody } from '@shared/types/api/response/body';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
 import { type AIProvider, ContentTypeName } from '@shared/types/constants';
 import { CacheStatus } from '@shared/types/middleware/cache';
 import {
@@ -35,12 +35,12 @@ export async function responseHandler(
   responseTransformerFunctionName: FunctionName | undefined,
   aiProviderRequestURL: string,
   cacheStatus: CacheStatus,
-  idkRequestData: IdkRequestData,
+  raRequestData: ReactiveAgentsRequestData,
   strictOpenAiCompliance: boolean,
   areSyncHooksAvailable: boolean,
 ): Promise<{
   response: Response;
-  idkResponseBody: IdkResponseBody | null;
+  raResponseBody: ReactiveAgentsResponseBody | null;
   originalResponseJson?: Record<string, unknown> | null;
 }> {
   let responseTransformFunction: ResponseTransformFunctionType | undefined;
@@ -59,7 +59,7 @@ export async function responseHandler(
 
   if (providerConfig?.getConfig) {
     responseTransformFunctions = providerConfig.getConfig(
-      idkRequestData.requestBody,
+      raRequestData.requestBody,
     ).responseTransforms;
   }
 
@@ -107,7 +107,7 @@ export async function responseHandler(
       provider,
       responseTransformFunction as JSONToStreamGeneratorTransformFunction,
     );
-    return { response: streamingResponse, idkResponseBody: null };
+    return { response: streamingResponse, raResponseBody: null };
   }
   if (streamingMode && isSuccessStatusCode) {
     return {
@@ -116,15 +116,15 @@ export async function responseHandler(
         provider,
         responseTransformFunction as ResponseChunkStreamTransformFunction,
         aiProviderRequestURL,
-        idkRequestData,
+        raRequestData,
         strictOpenAiCompliance,
       ),
-      idkResponseBody: null,
+      raResponseBody: null,
     };
   }
 
   if (responseContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)) {
-    return { response: handleAudioResponse(response), idkResponseBody: null };
+    return { response: handleAudioResponse(response), raResponseBody: null };
   }
 
   if (
@@ -133,12 +133,12 @@ export async function responseHandler(
   ) {
     return {
       response: handleOctetStreamResponse(response),
-      idkResponseBody: null,
+      raResponseBody: null,
     };
   }
 
   if (responseContentType?.startsWith(ContentTypeName.GENERIC_IMAGE_PATTERN)) {
-    return { response: handleImageResponse(response), idkResponseBody: null };
+    return { response: handleImageResponse(response), raResponseBody: null };
   }
 
   if (
@@ -148,15 +148,15 @@ export async function responseHandler(
     const textResponse = await handleTextResponse(
       response,
       responseTransformFunction as ResponseTransformFunction | undefined,
-      idkRequestData,
+      raRequestData,
     );
-    return { response: textResponse, idkResponseBody: null };
+    return { response: textResponse, raResponseBody: null };
   }
 
   if (!responseContentType && response.status === 204) {
     return {
       response: new Response(response.body, response),
-      idkResponseBody: null,
+      raResponseBody: null,
     };
   }
 
@@ -164,13 +164,13 @@ export async function responseHandler(
     response,
     responseTransformFunction as ResponseTransformFunction | undefined,
     strictOpenAiCompliance,
-    idkRequestData,
+    raRequestData,
     areSyncHooksAvailable,
   );
 
   return {
     response: nonStreamingResponse.response,
-    idkResponseBody: nonStreamingResponse.idkResponseBody,
+    raResponseBody: nonStreamingResponse.raResponseBody,
     originalResponseJson: nonStreamingResponse.originalBodyJson,
   };
 }

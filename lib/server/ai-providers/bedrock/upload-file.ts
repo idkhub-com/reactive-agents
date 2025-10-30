@@ -6,11 +6,11 @@ import type {
   RequestHandlerFunction,
   ResponseTransformFunction,
 } from '@shared/types/ai-providers/config';
-import type { IdkRequestData } from '@shared/types/api/request/body';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
-import type { IdkTarget } from '@shared/types/api/request/headers';
-import type { IdkResponseBody } from '@shared/types/api/response/body';
-import { AIProvider, POWERED_BY } from '@shared/types/constants';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
+import { AIProvider } from '@shared/types/constants';
 import bedrockAPIConfig from './api';
 import {
   BedrockUploadFileTransformerConfig,
@@ -26,8 +26,8 @@ class AwsMultipartUploadHandler {
   private uploadId?: string;
   private url: URL;
   private parts: { PartNumber: number; ETag: string }[] = [];
-  private idkTarget: IdkTarget;
-  private idkRequestData: IdkRequestData;
+  private raTarget: ReactiveAgentsTarget;
+  private raRequestData: ReactiveAgentsRequestData;
   private c: AppContext;
   public contentLength = 0;
 
@@ -35,8 +35,8 @@ class AwsMultipartUploadHandler {
     region: string,
     bucket: string,
     objectKey: string,
-    idkTarget: IdkTarget,
-    idkRequestData: IdkRequestData,
+    raTarget: ReactiveAgentsTarget,
+    raRequestData: ReactiveAgentsRequestData,
     c: AppContext,
   ) {
     this.region = region;
@@ -45,8 +45,8 @@ class AwsMultipartUploadHandler {
     this.url = new URL(
       `https://${bucket}.s3.${region}.amazonaws.com/${objectKey}?uploads`,
     );
-    this.idkTarget = idkTarget;
-    this.idkRequestData = idkRequestData;
+    this.raTarget = raTarget;
+    this.raRequestData = raRequestData;
     this.c = c;
   }
 
@@ -54,8 +54,8 @@ class AwsMultipartUploadHandler {
     const method = 'POST';
     const headers = await bedrockAPIConfig.headers({
       c: this.c,
-      idkTarget: this.idkTarget,
-      idkRequestData: this.idkRequestData,
+      raTarget: this.raTarget,
+      raRequestData: this.raRequestData,
     });
 
     // Step 5: Send Request
@@ -84,7 +84,7 @@ class AwsMultipartUploadHandler {
   }
 
   async chunkAndUploadStream(
-    idkTarget: IdkTarget,
+    raTarget: ReactiveAgentsTarget,
     awsBedrockModel: string,
     requestBody: ReadableStream,
     requestHeaders: Record<string, string>,
@@ -147,7 +147,7 @@ class AwsMultipartUploadHandler {
           let uploadLength = 0;
           [currentChunk, uploadLength] =
             await transformAndUploadFileContentParts(
-              idkTarget,
+              raTarget,
               content,
               currentChunk,
               providerConfig,
@@ -185,8 +185,8 @@ class AwsMultipartUploadHandler {
     );
     const headers = await bedrockAPIConfig.headers({
       c: this.c,
-      idkTarget: this.idkTarget,
-      idkRequestData: this.idkRequestData,
+      raTarget: this.raTarget,
+      raRequestData: this.raRequestData,
     });
 
     const response = await fetch(partUrl.toString(), {
@@ -229,8 +229,8 @@ class AwsMultipartUploadHandler {
 
     const headers = await bedrockAPIConfig.headers({
       c: this.c,
-      idkTarget: this.idkTarget,
-      idkRequestData: this.idkRequestData,
+      raTarget: this.raTarget,
+      raRequestData: this.raRequestData,
     });
 
     const response = await fetch(completeUrl.toString(), {
@@ -256,7 +256,7 @@ class AwsMultipartUploadHandler {
 }
 
 const transformAndUploadFileContentParts = async (
-  idkTarget: IdkTarget,
+  raTarget: ReactiveAgentsTarget,
   chunk: string,
   buffer: string,
   providerConfig: AIProviderFunctionConfig,
@@ -294,7 +294,7 @@ const transformAndUploadFileContentParts = async (
         modelInput: transformUsingProviderConfig(
           providerConfig,
           json.body,
-          idkTarget,
+          raTarget,
         ),
       };
       transformedChunkToUpload += `${JSON.stringify(transformedLine)}\r\n`;
@@ -330,34 +330,34 @@ const getProviderConfig = (modelSlug: string): AIProviderFunctionConfig => {
 };
 
 export const bedrockUploadFileRequestHandler: RequestHandlerFunction = async ({
-  idkTarget,
-  idkRequestData,
+  raTarget,
+  raRequestData,
   c,
 }: {
-  idkTarget: IdkTarget;
-  idkRequestData: IdkRequestData;
+  raTarget: ReactiveAgentsTarget;
+  raRequestData: ReactiveAgentsRequestData;
   c: AppContext;
 }) => {
-  if (FunctionName.UPLOAD_FILE !== idkRequestData.functionName) {
+  if (FunctionName.UPLOAD_FILE !== raRequestData.functionName) {
     throw new Error('Invalid function name');
   }
 
   try {
     // get aws credentials and parse provider options
-    if (idkTarget.aws_auth_type === 'assumedRole') {
-      await providerAssumedRoleCredentials(idkTarget);
+    if (raTarget.aws_auth_type === 'assumedRole') {
+      await providerAssumedRoleCredentials(raTarget);
     }
-    const { aws_region, aws_s3_bucket, aws_bedrock_model } = idkTarget;
+    const { aws_region, aws_s3_bucket, aws_bedrock_model } = raTarget;
 
     const aws_s3_object_key =
-      idkTarget.aws_s3_object_key || `${crypto.randomUUID()}.jsonl`;
+      raTarget.aws_s3_object_key || `${crypto.randomUUID()}.jsonl`;
 
     if (!aws_s3_bucket || !aws_bedrock_model) {
       return new Response(
         JSON.stringify({
           status: 'failure',
           message:
-            'Please make sure you have x-portkey-aws-s3-bucket and x-portkey-aws-bedrock-model headers provided.',
+            'Please make sure you have set the aws s3 bucket and aws bedrock models in config',
         }),
         {
           status: 400,
@@ -371,14 +371,13 @@ export const bedrockUploadFileRequestHandler: RequestHandlerFunction = async ({
       aws_region || 'us-east-1',
       aws_s3_bucket,
       aws_s3_object_key,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
       c,
     );
 
-    const purpose = c.req.header(`x-${POWERED_BY}-file-purpose`) ?? 'batch';
-    const modelType =
-      idkRequestData.requestHeaders[`x-${POWERED_BY}-model-type`];
+    const purpose = c.req.header(`ra-file-purpose`) ?? 'batch';
+    const modelType = raRequestData.requestHeaders[`ra-model-type`];
 
     if (!aws_bedrock_model || !aws_s3_bucket)
       throw new Error(
@@ -388,10 +387,10 @@ export const bedrockUploadFileRequestHandler: RequestHandlerFunction = async ({
     // upload file to s3
     await handler.initiateMultipartUpload();
     await handler.chunkAndUploadStream(
-      idkTarget,
+      raTarget,
       aws_bedrock_model,
-      idkRequestData.requestBody.file as ReadableStream,
-      idkRequestData.requestHeaders,
+      raRequestData.requestBody.file as ReadableStream,
+      raRequestData.requestHeaders,
       purpose,
       modelType ?? 'chat',
     );
@@ -445,5 +444,5 @@ export const bedrockUploadFileRequestHandler: RequestHandlerFunction = async ({
 export const bedrockUploadFileResponseTransform: ResponseTransformFunction = (
   response,
 ) => {
-  return response as unknown as IdkResponseBody;
+  return response as unknown as ReactiveAgentsResponseBody;
 };

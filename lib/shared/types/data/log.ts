@@ -56,7 +56,7 @@ export const Log = z.object({
   start_time: z.number(),
   end_time: z.number(),
   duration: z.number(),
-  base_idk_config: z.record(z.string(), z.unknown()),
+  base_ra_config: z.record(z.string(), z.unknown()),
 
   // Maybe redundant. Used for indexing.
   ai_provider: z.enum(AIProvider),
@@ -137,7 +137,7 @@ export const LogCreateParams = z.object({
   start_time: z.number(),
   end_time: z.number(),
   duration: z.number(),
-  base_idk_config: z.record(z.string(), z.unknown()),
+  base_ra_config: z.record(z.string(), z.unknown()),
 
   // Maybe redundant. Used for indexing.
   ai_provider: z.enum(AIProvider),

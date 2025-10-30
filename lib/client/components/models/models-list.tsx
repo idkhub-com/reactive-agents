@@ -1,6 +1,6 @@
 'use client';
 
-import { deleteModel } from '@client/api/v1/idk/models';
+import { deleteModel } from '@client/api/v1/reactive-agents/models';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {

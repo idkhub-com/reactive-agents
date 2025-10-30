@@ -11,25 +11,25 @@ import { isArray } from 'lodash';
 
 export function ChatCompletionsAPIViewer({
   logId,
-  idkRequestBody,
-  idkResponseBody,
+  raRequestBody,
+  raResponseBody,
 }: {
   logId: string;
-  idkRequestBody: ChatCompletionRequestBody;
-  idkResponseBody: ChatCompletionResponseBody;
+  raRequestBody: ChatCompletionRequestBody;
+  raResponseBody: ChatCompletionResponseBody;
 }): React.ReactElement {
   const language =
-    'response_format' in idkRequestBody
-      ? idkRequestBody.response_format?.type === 'json_object' ||
-        idkRequestBody.response_format?.type === 'json_schema'
+    'response_format' in raRequestBody
+      ? raRequestBody.response_format?.type === 'json_object' ||
+        raRequestBody.response_format?.type === 'json_schema'
         ? 'json'
         : 'text'
       : 'text';
 
   const rawSchema =
-    'response_format' in idkRequestBody
-      ? idkRequestBody.response_format?.type === 'json_schema'
-        ? idkRequestBody.response_format.json_schema.schema
+    'response_format' in raRequestBody
+      ? raRequestBody.response_format?.type === 'json_schema'
+        ? raRequestBody.response_format.json_schema.schema
         : undefined
       : undefined;
 
@@ -39,12 +39,12 @@ export function ChatCompletionsAPIViewer({
         path={`${logId}-completion`}
         language={language}
         defaultValue={
-          idkResponseBody.choices[0].message.content
-            ? isArray(idkResponseBody.choices[0].message.content)
-              ? idkResponseBody.choices[0].message.content
+          raResponseBody.choices[0].message.content
+            ? isArray(raResponseBody.choices[0].message.content)
+              ? raResponseBody.choices[0].message.content
                   .map((c) => c.text)
                   .join('')
-              : idkResponseBody.choices[0].message.content
+              : raResponseBody.choices[0].message.content
             : ''
         }
         readOnly={false}
@@ -60,7 +60,7 @@ export function ChatCompletionsAPIViewer({
         <div className="text-sm font-normal text-right">
           {
             PrettyChatCompletionMessageRole[
-              idkResponseBody.choices[0].message.role
+              raResponseBody.choices[0].message.role
             ]
           }
         </div>

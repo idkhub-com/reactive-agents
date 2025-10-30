@@ -1,6 +1,6 @@
-# Contributing to IDK
+# Contributing to Reactive Agents
 
-Thank you for your interest in improving **IDK**!
+Thank you for your interest in improving **Reactive Agents**!
 
 ## Setup
 1. Install the [Supabase CLI](https://supabase.com/docs/guides/cli).

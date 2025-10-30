@@ -2,12 +2,12 @@ import {
   AzureAIFoundryConfig,
   AzureOpenAIConfig,
   HeaderKey,
-  IdkConfig,
-  IdkConfigPreProcessed,
-  IdkTarget,
-  IdkTargetPreProcessed,
-  NonPrivateIdkConfig,
+  NonPrivateReactiveAgentsConfig,
   OptimizationType,
+  ReactiveAgentsConfig,
+  ReactiveAgentsConfigPreProcessed,
+  ReactiveAgentsTarget,
+  ReactiveAgentsTargetPreProcessed,
   RetrySettings,
   Strategy,
   StrategyModes,
@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 describe('Request Headers Types', () => {
   describe('HeaderKey Enum', () => {
     it('should have correct enum values', () => {
-      expect(HeaderKey.CONFIG).toBe('x-idk-config');
+      expect(HeaderKey.CONFIG).toBe('ra-config');
       expect(HeaderKey.CONTENT_TYPE).toBe('content-type');
     });
   });
@@ -254,15 +254,17 @@ describe('Request Headers Types', () => {
     });
   });
 
-  describe('IdkTargetPreProcessed', () => {
+  describe('ReactiveAgentsTargetPreProcessed', () => {
     it('should validate minimal target configuration with provider', () => {
       const target = {
         provider: AIProvider.OPENAI,
         model: 'gpt-4',
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
-      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(() =>
+        ReactiveAgentsTargetPreProcessed.parse(target),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsTargetPreProcessed.parse(target);
       expect(parsed.provider).toBe(AIProvider.OPENAI);
       expect(parsed.model).toBe('gpt-4');
       expect(parsed.weight).toBe(1); // default value
@@ -273,8 +275,10 @@ describe('Request Headers Types', () => {
         optimization: OptimizationType.AUTO,
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
-      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(() =>
+        ReactiveAgentsTargetPreProcessed.parse(target),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsTargetPreProcessed.parse(target);
       expect(parsed.optimization).toBe(OptimizationType.AUTO);
       expect(parsed.weight).toBe(1); // default value
     });
@@ -285,8 +289,10 @@ describe('Request Headers Types', () => {
         optimization_version: 1,
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
-      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(() =>
+        ReactiveAgentsTargetPreProcessed.parse(target),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsTargetPreProcessed.parse(target);
       expect(parsed.optimization).toBe(OptimizationType.AUTO);
       expect(parsed.optimization_version).toBe(1);
     });
@@ -298,7 +304,7 @@ describe('Request Headers Types', () => {
         optimization_version: 1,
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
+      expect(() => ReactiveAgentsTargetPreProcessed.parse(target)).toThrow(
         '`optimization_version` is defined, but `optimization` is set to none. Set `optimization` to auto to use an optimization version.',
       );
     });
@@ -308,7 +314,7 @@ describe('Request Headers Types', () => {
         api_key: 'test-key',
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
+      expect(() => ReactiveAgentsTargetPreProcessed.parse(target)).toThrow(
         '`provider` is required when optimization is not set to auto',
       );
     });
@@ -318,7 +324,7 @@ describe('Request Headers Types', () => {
         provider: AIProvider.OPENAI,
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).toThrow(
+      expect(() => ReactiveAgentsTargetPreProcessed.parse(target)).toThrow(
         'A model is required when using a provider.',
       );
     });
@@ -352,8 +358,10 @@ describe('Request Headers Types', () => {
         openai_beta: 'assistants=v2',
       };
 
-      expect(() => IdkTargetPreProcessed.parse(target)).not.toThrow();
-      const parsed = IdkTargetPreProcessed.parse(target);
+      expect(() =>
+        ReactiveAgentsTargetPreProcessed.parse(target),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsTargetPreProcessed.parse(target);
       expect(parsed.id).toBe('openai-target-1');
       expect(parsed.weight).toBe(2);
       expect(parsed.provider).toBe(AIProvider.OPENAI);
@@ -362,7 +370,7 @@ describe('Request Headers Types', () => {
     });
   });
 
-  describe('IdkTarget', () => {
+  describe('ReactiveAgentsTarget', () => {
     it('should validate minimal target configuration', () => {
       const target = {
         configuration: {
@@ -382,8 +390,8 @@ describe('Request Headers Types', () => {
         api_key: 'sk-test-key',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENAI);
       expect(parsed.configuration.model).toBe('gpt-4');
       expect(parsed.api_key).toBe('sk-test-key');
@@ -427,8 +435,8 @@ describe('Request Headers Types', () => {
         openai_beta: 'assistants=v2',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.id).toBe('openai-target-1');
       expect(parsed.weight).toBe(2);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENAI);
@@ -460,8 +468,8 @@ describe('Request Headers Types', () => {
         azure_auth_mode: 'api_key',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.AZURE_OPENAI);
       expect(parsed.configuration.model).toBe('gpt-4');
       expect(parsed.azure_openai_config?.url).toBe(
@@ -491,8 +499,8 @@ describe('Request Headers Types', () => {
         },
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(
         AIProvider.AZURE_AI_FOUNDRY,
       );
@@ -523,8 +531,8 @@ describe('Request Headers Types', () => {
         anthropic_version: '2023-06-01',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.ANTHROPIC);
       expect(parsed.configuration.model).toBe('claude-3-opus-20240229');
       expect(parsed.anthropic_beta).toBe('max-tokens-3-5-sonnet-2024-07-15');
@@ -554,8 +562,8 @@ describe('Request Headers Types', () => {
         aws_bedrock_model: 'anthropic.claude-3-sonnet-20240229-v1:0',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.BEDROCK);
       expect(parsed.configuration.model).toBe(
         'anthropic.claude-3-sonnet-20240229-v1:0',
@@ -588,8 +596,8 @@ describe('Request Headers Types', () => {
         vertex_service_account_json: '{"type": "service_account"}',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(
         AIProvider.GOOGLE_VERTEX_AI,
       );
@@ -618,8 +626,8 @@ describe('Request Headers Types', () => {
         huggingface_base_url: 'https://api-inference.huggingface.co',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.HUGGINGFACE);
       expect(parsed.configuration.model).toBe('microsoft/DialoGPT-medium');
       expect(parsed.huggingface_base_url).toBe(
@@ -649,8 +657,8 @@ describe('Request Headers Types', () => {
         stability_client_version: '1.0.0',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.STABILITY_AI);
       expect(parsed.configuration.model).toBe('stable-diffusion-xl-1024-v1-0');
       expect(parsed.stability_client_id).toBe('client123');
@@ -680,8 +688,8 @@ describe('Request Headers Types', () => {
         amzn_sagemaker_target_variant: 'AllTraffic',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.SAGEMAKER);
       expect(parsed.configuration.model).toBe('my-custom-model');
       expect(parsed.amzn_sagemaker_model_name).toBe('my-model');
@@ -706,7 +714,7 @@ describe('Request Headers Types', () => {
         api_key: 'sk-test-key',
       };
 
-      const parsed = IdkTarget.parse(target);
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.weight).toBe(1);
       expect(parsed.cache.mode).toBe(CacheMode.DISABLED);
       expect(parsed.retry.attempts).toBe(0);
@@ -717,7 +725,7 @@ describe('Request Headers Types', () => {
         api_key: 'test-key',
       };
 
-      expect(() => IdkTarget.parse(target)).toThrow();
+      expect(() => ReactiveAgentsTarget.parse(target)).toThrow();
     });
 
     it('should reject invalid configuration provider', () => {
@@ -739,7 +747,7 @@ describe('Request Headers Types', () => {
         api_key: 'test-key',
       };
 
-      expect(() => IdkTarget.parse(target)).toThrow();
+      expect(() => ReactiveAgentsTarget.parse(target)).toThrow();
     });
 
     it('should handle inner_provider for proxied requests', () => {
@@ -762,22 +770,22 @@ describe('Request Headers Types', () => {
         api_key: 'test-key',
       };
 
-      expect(() => IdkTarget.parse(target)).not.toThrow();
-      const parsed = IdkTarget.parse(target);
+      expect(() => ReactiveAgentsTarget.parse(target)).not.toThrow();
+      const parsed = ReactiveAgentsTarget.parse(target);
       expect(parsed.configuration.ai_provider).toBe(AIProvider.OPENROUTER);
       expect(parsed.inner_provider).toBe(AIProvider.OPENAI);
     });
   });
 
-  describe('BaseIdkConfig', () => {
+  describe('BaseReactiveAgentsConfig', () => {
     it('should validate minimal base config', () => {
       const config = {
         agent_name: 'test-agent',
         skill_name: 'test-skill',
       };
 
-      expect(() => NonPrivateIdkConfig.parse(config)).not.toThrow();
-      const parsed = NonPrivateIdkConfig.parse(config);
+      expect(() => NonPrivateReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = NonPrivateReactiveAgentsConfig.parse(config);
       expect(parsed.agent_name).toBe('test-agent');
       expect(parsed.skill_name).toBe('test-skill');
     });
@@ -802,8 +810,8 @@ describe('Request Headers Types', () => {
         },
       };
 
-      expect(() => NonPrivateIdkConfig.parse(config)).not.toThrow();
-      const parsed = NonPrivateIdkConfig.parse(config);
+      expect(() => NonPrivateReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = NonPrivateReactiveAgentsConfig.parse(config);
       expect(parsed.agent_name).toBe('my-agent');
       expect(parsed.override_params).toBeDefined();
       expect(parsed.force_refresh).toBe(true);
@@ -815,7 +823,7 @@ describe('Request Headers Types', () => {
         skill_name: 'test-skill',
       };
 
-      expect(() => NonPrivateIdkConfig.parse(config)).toThrow(
+      expect(() => NonPrivateReactiveAgentsConfig.parse(config)).toThrow(
         'Agent name is required',
       );
     });
@@ -825,7 +833,7 @@ describe('Request Headers Types', () => {
         agent_name: 'test-agent',
       };
 
-      expect(() => NonPrivateIdkConfig.parse(config)).toThrow(
+      expect(() => NonPrivateReactiveAgentsConfig.parse(config)).toThrow(
         'Skill name is required',
       );
     });
@@ -837,14 +845,14 @@ describe('Request Headers Types', () => {
         strict_open_ai_compliance: false,
       };
 
-      expect(() => NonPrivateIdkConfig.parse(config)).not.toThrow();
-      const parsed = NonPrivateIdkConfig.parse(config);
+      expect(() => NonPrivateReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = NonPrivateReactiveAgentsConfig.parse(config);
       expect(parsed.strict_open_ai_compliance).toBe(false);
     });
   });
 
-  describe('IdkConfigPreProcessed', () => {
-    it('should validate minimal IDK config pre-processed', () => {
+  describe('ReactiveAgentsConfigPreProcessed', () => {
+    it('should validate minimal Reactive Agents config pre-processed', () => {
       const config = {
         agent_name: 'test-agent',
         skill_name: 'test-skill',
@@ -857,8 +865,10 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfigPreProcessed.parse(config)).not.toThrow();
-      const parsed = IdkConfigPreProcessed.parse(config);
+      expect(() =>
+        ReactiveAgentsConfigPreProcessed.parse(config),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsConfigPreProcessed.parse(config);
       expect(parsed.agent_name).toBe('test-agent');
       expect(parsed.targets).toHaveLength(1);
       expect(parsed.targets[0].provider).toBe(AIProvider.OPENAI);
@@ -880,14 +890,16 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfigPreProcessed.parse(config)).not.toThrow();
-      const parsed = IdkConfigPreProcessed.parse(config);
+      expect(() =>
+        ReactiveAgentsConfigPreProcessed.parse(config),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsConfigPreProcessed.parse(config);
       expect(parsed.targets[0].optimization).toBe(OptimizationType.AUTO);
     });
   });
 
-  describe('IdkConfig', () => {
-    it('should validate minimal IDK config', () => {
+  describe('ReactiveAgentsConfig', () => {
+    it('should validate minimal Reactive Agents config', () => {
       const config = {
         agent_name: 'test-agent',
         skill_name: 'test-skill',
@@ -912,8 +924,8 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.agent_name).toBe('test-agent');
       expect(parsed.targets).toHaveLength(1);
       expect(parsed.targets[0].configuration.ai_provider).toBe(
@@ -925,7 +937,7 @@ describe('Request Headers Types', () => {
       expect(parsed.trace_id).toBeDefined(); // auto-generated
     });
 
-    it('should validate complete IDK config', () => {
+    it('should validate complete Reactive Agents config', () => {
       const config = {
         agent_name: 'production-agent',
         skill_name: 'multi-model-chat',
@@ -994,8 +1006,8 @@ describe('Request Headers Types', () => {
         user_human_name: 'John Doe',
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.strategy.mode).toBe('loadbalance');
       expect(parsed.targets).toHaveLength(2);
       expect(parsed.targets[0].id).toBe('openai-primary');
@@ -1036,7 +1048,7 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(validConfig)).not.toThrow();
+      expect(() => ReactiveAgentsConfig.parse(validConfig)).not.toThrow();
     });
 
     it('should reject Google Vertex AI config missing required fields', () => {
@@ -1065,7 +1077,7 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(invalidConfig)).toThrow(
+      expect(() => ReactiveAgentsConfig.parse(invalidConfig)).toThrow(
         /Invalid configuration.*vertex_project_id.*vertex_region/,
       );
     });
@@ -1098,7 +1110,7 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
     });
 
     it('should validate fallback strategy config', () => {
@@ -1147,8 +1159,8 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.strategy.mode).toBe('fallback');
       expect(parsed.strategy.on_status_codes).toEqual([429, 500, 502, 503]);
     });
@@ -1211,8 +1223,8 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.strategy.conditions).toHaveLength(2);
       expect(parsed.strategy.default).toBe('openai-target');
     });
@@ -1224,7 +1236,7 @@ describe('Request Headers Types', () => {
         targets: [],
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
     });
 
     it('should generate trace_id if not provided', () => {
@@ -1252,7 +1264,7 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      const parsed = IdkConfig.parse(config);
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.trace_id).toBeDefined();
       expect(typeof parsed.trace_id).toBe('string');
       expect(parsed.trace_id.length).toBeGreaterThan(0);
@@ -1363,8 +1375,8 @@ describe('Request Headers Types', () => {
         },
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.targets).toHaveLength(4);
       expect(parsed.targets.map((t) => t.configuration.ai_provider)).toEqual([
         AIProvider.OPENAI,
@@ -1483,8 +1495,8 @@ describe('Request Headers Types', () => {
         },
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.targets[0].cache?.mode).toBe(CacheMode.SEMANTIC);
       expect(parsed.targets[0].retry.attempts).toBe(3);
       expect(parsed.hooks).toHaveLength(2);
@@ -1517,7 +1529,7 @@ describe('Request Headers Types', () => {
         ],
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
       // Note: Zod string validation allows empty strings unless explicitly constrained
     });
 
@@ -1551,8 +1563,8 @@ describe('Request Headers Types', () => {
         ),
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.targets).toHaveLength(10);
     });
 
@@ -1585,8 +1597,8 @@ describe('Request Headers Types', () => {
         },
       };
 
-      expect(() => IdkConfig.parse(config)).not.toThrow();
-      const parsed = IdkConfig.parse(config);
+      expect(() => ReactiveAgentsConfig.parse(config)).not.toThrow();
+      const parsed = ReactiveAgentsConfig.parse(config);
       expect(parsed.agent_name).toBe('test-agent-ñ-🚀');
       expect(parsed.metadata!['unicode_🌟']).toBe('star');
     });

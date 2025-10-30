@@ -7,7 +7,7 @@ import type React from 'react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // Mock all dependencies with minimal implementations
-vi.mock('@client/api/v1/idk/models', () => ({
+vi.mock('@client/api/v1/reactive-agents/models', () => ({
   deleteModel: vi.fn(),
 }));
 

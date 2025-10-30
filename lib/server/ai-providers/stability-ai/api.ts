@@ -9,27 +9,27 @@ import { isStabilityV1Model } from './utils';
 
 const StabilityAIAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.stability.ai',
-  headers: ({ idkTarget, idkRequestData }) => {
+  headers: ({ raTarget, raRequestData }) => {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${idkTarget.api_key}`,
+      Authorization: `Bearer ${raTarget.api_key}`,
     };
-    if (idkRequestData.functionName === FunctionName.GENERATE_IMAGE) {
-      if (isStabilityV1Model(idkRequestData.requestBody.model)) return headers;
+    if (raRequestData.functionName === FunctionName.GENERATE_IMAGE) {
+      if (isStabilityV1Model(raRequestData.requestBody.model)) return headers;
     }
     headers.Content_Type = ContentTypeName.MULTIPART_FORM_DATA;
     headers.Accept = ContentTypeName.APPLICATION_JSON;
     return headers;
   },
-  getEndpoint: ({ idkRequestData, idkTarget }) => {
-    const { stability_url_to_fetch } = idkTarget;
-    let updatedRequestData = idkRequestData;
+  getEndpoint: ({ raRequestData, raTarget }) => {
+    const { stability_url_to_fetch } = raTarget;
+    let updatedRequestData = raRequestData;
     if (
-      idkRequestData.functionName === FunctionName.PROXY &&
+      raRequestData.functionName === FunctionName.PROXY &&
       stability_url_to_fetch &&
       stability_url_to_fetch?.indexOf('text-to-image') > -1
     ) {
       updatedRequestData = {
-        ...idkRequestData,
+        ...raRequestData,
         functionName: FunctionName.GENERATE_IMAGE,
       } as GenerateImageRequestData;
     }
@@ -44,9 +44,9 @@ const StabilityAIAPIConfig: InternalProviderAPIConfig = {
         return '';
     }
   },
-  transformToFormData: ({ idkRequestData }) => {
+  transformToFormData: ({ raRequestData }) => {
     const generateImageRequestBody =
-      idkRequestData.requestBody as GenerateImageRequestBody;
+      raRequestData.requestBody as GenerateImageRequestBody;
     if (isStabilityV1Model(generateImageRequestBody.model)) return false;
     return true;
   },

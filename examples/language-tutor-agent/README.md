@@ -1,10 +1,10 @@
-# IDKHub Language Tutor Agent
+# Reactive Agents Language Tutor Agent
 
-A simple language tutoring example that demonstrates IDKHub's unified AI provider architecture to provide intelligent language learning feedback.
+A simple language tutoring example that demonstrates Reactive Agents's unified AI provider architecture to provide intelligent language learning feedback.
 
 ## 🚀 Features
 
-- **English Analysis**: Grammar and style feedback using IDKHub
+- **English Analysis**: Grammar and style feedback using Reactive Agents
 - **Correctness Evaluation**: Boolean assessment with detailed explanations  
 - **Input Sanitization**: Security validation and error handling
 - **Parallel Processing**: Optional concurrent analysis for better performance
@@ -28,8 +28,8 @@ cp .env.example .env.local
 OPENAI_API_KEY="sk-your-openai-key"
 
 # Optional (defaults shown)
-IDKHUB_URL="http://localhost:3000"
-IDKHUB_AUTH_TOKEN="idk"
+RA_URL="http://localhost:3000"
+RA_AUTH_TOKEN="reactive-agents"
 ```
 
 ### Run Examples
@@ -79,7 +79,7 @@ The system performs English analysis on any learner text:
 - Analyzes using English-based AI feedback
 - Provides grammar and style corrections
 
-#### 3. IDKHub Integration
+#### 3. Reactive Agents Integration
 - **Provider Abstraction**: Easy switching between AI providers
 - **Retry Logic**: Automatic error recovery
 - **Observability**: Full request tracing
@@ -112,11 +112,11 @@ console.log(result);
 
 ## 🔧 Configuration
 
-### IDKHub Configuration
-Each request uses IDKHub's configuration system:
+### Reactive Agents Configuration
+Each request uses Reactive Agents's configuration system:
 
 ```typescript
-const config: IdkConfig = {
+const config: ReactiveAgentsConfig = {
   agent_name: 'language-tutor',
   skill_name: 'english-analysis',
   strategy: { mode: 'single' },
@@ -140,7 +140,7 @@ The example includes test cases in `example-user-data.json` with different langu
 - Set your OpenAI API key in `.env.local`
 
 **Network Failures:**
-- Check IDKHub server is running and accessible
+- Check Reactive Agents server is running and accessible
 
 **Language Not Supported:**
 - Use a supported language code (see `skills.ts`)
@@ -149,9 +149,9 @@ The example includes test cases in `example-user-data.json` with different langu
 
 For questions and support:
 1. Review the test files for usage examples
-2. Consult the main IDKHub documentation
-3. Open an issue in the IDKHub repository
+2. Consult the main Reactive Agents documentation
+3. Open an issue in the Reactive Agents repository
 
 ---
 
-*Built with ❤️ using IDKHub's unified AI provider system*
+*Built with ❤️ using Reactive Agents's unified AI provider system*

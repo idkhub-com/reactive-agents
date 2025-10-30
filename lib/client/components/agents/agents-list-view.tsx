@@ -1,6 +1,6 @@
 'use client';
 
-import { getAgentEvaluationRuns } from '@client/api/v1/idk/agents';
+import { getAgentEvaluationRuns } from '@client/api/v1/reactive-agents/agents';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {

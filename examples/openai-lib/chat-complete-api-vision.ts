@@ -3,13 +3,13 @@ import 'dotenv/config';
 import logger from '@shared/console-logging';
 
 const client = new OpenAI({
-  // This is the API key to IDKHub
+  // This is the API key to Reactive Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
-  apiKey: process.env.BEARER_TOKEN ?? 'idk',
+  apiKey: process.env.BEARER_TOKEN ?? 'reactive-agents',
   baseURL: 'http://localhost:3000/v1',
 });
 
-const idkhubConfig = {
+const raConfig = {
   targets: [{ optimization: 'auto' }],
   agent_name: 'vision_assistant',
   skill_name: 'image_analysis',
@@ -32,7 +32,7 @@ async function fetchImageAsBase64(
       const response = await fetch(imageUrl, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'IDKHub-Agent/1.0',
+          'User-Agent': 'Reactive Agents-Agent/1.0',
         },
       });
 
@@ -113,7 +113,7 @@ async function runVisionExample(): Promise<void> {
     const response = await client
       .withOptions({
         defaultHeaders: {
-          'x-idk-config': JSON.stringify(idkhubConfig),
+          'ra-config': JSON.stringify(raConfig),
         },
       })
       .chat.completions.create({
@@ -146,7 +146,7 @@ async function runVisionExample(): Promise<void> {
     const response = await client
       .withOptions({
         defaultHeaders: {
-          'x-idk-config': JSON.stringify(idkhubConfig),
+          'ra-config': JSON.stringify(raConfig),
         },
       })
       .chat.completions.create({

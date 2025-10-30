@@ -1,7 +1,7 @@
 'use client';
 
-import type { AIProviderSchemaResponse } from '@client/api/v1/idk/ai-providers';
-import { getAIProviderSchemas } from '@client/api/v1/idk/ai-providers';
+import type { AIProviderSchemaResponse } from '@client/api/v1/reactive-agents/ai-providers';
+import { getAIProviderSchemas } from '@client/api/v1/reactive-agents/ai-providers';
 import { Button } from '@client/components/ui/button';
 import {
   Card,

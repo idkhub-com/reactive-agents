@@ -19,7 +19,7 @@ export const authenticatedMiddleware = (
   factory: Factory<AppEnv>,
 ): MiddlewareHandler =>
   factory.createMiddleware(async (c, next) => {
-    if (c.req.path.startsWith('/v1/idk/auth')) {
+    if (c.req.path.startsWith('/v1/reactive-agents/auth')) {
       return next();
     }
 
@@ -65,8 +65,8 @@ export async function clientAuthenticatedMiddleware(
 
   if (
     request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/v1/idk/auth/login') ||
-    request.nextUrl.pathname.startsWith('/v1/idk/auth/logout')
+    request.nextUrl.pathname.startsWith('/v1/reactive-agents/auth/login') ||
+    request.nextUrl.pathname.startsWith('/v1/reactive-agents/auth/logout')
   ) {
     // Always allow these so the user can login and logout
     return nextResponse;

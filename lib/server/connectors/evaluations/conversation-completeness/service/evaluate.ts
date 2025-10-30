@@ -3,22 +3,22 @@ import type {
   ConversationCompletenessResult,
 } from '@server/connectors/evaluations/conversation-completeness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
-import { extractMessagesFromRequestData } from '@server/utils/idkhub/requests';
-import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
 import { formatMessagesForExtraction } from '@server/utils/messages';
+import { extractMessagesFromRequestData } from '@server/utils/reactive-agents/requests';
+import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
 import type {
   ChatCompletionRequestData,
   ResponsesRequestData,
   StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
-import { IdkResponseBody } from '@shared/types/api/response';
+import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
-import { produceIdkRequestData } from '@shared/utils/idk-request-data';
+import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 
 /**
  * Evaluate conversation completeness for a single log
@@ -35,18 +35,18 @@ export async function evaluateConversationCompleteness(
   });
 
   // Extract messages and outputs using standard utilities
-  const idkRequestData = produceIdkRequestData(
+  const raRequestData = produceReactiveAgentsRequestData(
     log.ai_provider_request_log.method,
     log.ai_provider_request_log.request_url,
     {},
     log.ai_provider_request_log.request_body,
   );
-  const responseBody = IdkResponseBody.parse(
+  const responseBody = ReactiveAgentsResponseBody.parse(
     log.ai_provider_request_log.response_body,
   );
 
   const messages = extractMessagesFromRequestData(
-    idkRequestData as
+    raRequestData as
       | ChatCompletionRequestData
       | StreamChatCompletionRequestData
       | ResponsesRequestData,

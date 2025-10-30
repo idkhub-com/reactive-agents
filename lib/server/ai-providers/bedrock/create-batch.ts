@@ -20,10 +20,10 @@ export const BedrockCreateBatchConfig: AIProviderFunctionConfig = {
   input_file_id: {
     param: 'inputDataConfig',
     required: true,
-    transform: (idkRequestBody: CreateBatchRequestBody) => {
+    transform: (raRequestBody: CreateBatchRequestBody) => {
       return {
         s3InputDataConfig: {
-          s3Uri: decodeURIComponent(idkRequestBody.input_file_id),
+          s3Uri: decodeURIComponent(raRequestBody.input_file_id),
         },
       };
     },
@@ -32,27 +32,27 @@ export const BedrockCreateBatchConfig: AIProviderFunctionConfig = {
     param: 'jobName',
     required: true,
     default: () => {
-      return `portkey-batch-job-${crypto.randomUUID()}`;
+      return `ra-batch-job-${crypto.randomUUID()}`;
     },
   },
   output_data_config: {
     param: 'outputDataConfig',
     required: true,
-    default: (({ idkRequestBody, idkTarget }): Record<string, unknown> => {
-      if (!('input_file_id' in idkRequestBody)) {
+    default: (({ raRequestBody, raTarget }): Record<string, unknown> => {
+      if (!('input_file_id' in raRequestBody)) {
         throw new Error('input_file_id is required');
       }
 
       // TODO: Fix this
       const inputFileId = decodeURIComponent(
-        idkRequestBody.input_file_id as string,
+        raRequestBody.input_file_id as string,
       );
       const s3URLToContainingFolder = `${inputFileId.split('/').slice(0, -1).join('/')}/`;
       return {
         s3OutputDataConfig: {
           s3Uri: s3URLToContainingFolder,
-          ...(idkTarget.aws_server_side_encryption_kms_key_id && {
-            s3EncryptionKeyId: idkTarget.aws_server_side_encryption_kms_key_id,
+          ...(raTarget.aws_server_side_encryption_kms_key_id && {
+            s3EncryptionKeyId: raTarget.aws_server_side_encryption_kms_key_id,
           }),
         } as Record<string, unknown>,
       };

@@ -23,7 +23,7 @@ describe('API v1 Index', () => {
       expect(typeof indexModule.PATCH).toBe('function');
     }, 10000);
 
-    it('should export IdkRoute type', async () => {
+    it('should export ReactiveAgentsRoute type', async () => {
       // Type-only exports aren't available at runtime, so we just test that the module imports
       // without errors, which would fail if the type export was malformed
       const indexModule = await import('@server/api/v1/index');

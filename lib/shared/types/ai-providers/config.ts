@@ -1,13 +1,13 @@
 import type { AppContext } from '@server/types/hono';
 import type {
   FunctionName,
-  IdkRequestBody,
-  IdkRequestData,
+  ReactiveAgentsRequestBody,
+  ReactiveAgentsRequestData,
 } from '@shared/types/api/request';
-import type { IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 import type {
-  IdkResponseBody,
   ParameterConfig,
+  ReactiveAgentsResponseBody,
 } from '@shared/types/api/response/body';
 import type { AIProvider } from '@shared/types/constants';
 import { z } from 'zod';
@@ -26,25 +26,27 @@ export interface InternalProviderAPIConfig {
   /** A function to generate the headers for the API request. */
   headers: (args: {
     c: AppContext;
-    idkTarget: IdkTarget;
-    idkRequestData: IdkRequestData;
+    raTarget: ReactiveAgentsTarget;
+    raRequestData: ReactiveAgentsRequestData;
   }) => Promise<Record<string, string>> | Record<string, string>;
   /** A function to generate the baseURL based on parameters */
   getBaseURL: (args: {
     c: AppContext;
-    idkTarget: IdkTarget;
-    idkRequestData: IdkRequestData;
+    raTarget: ReactiveAgentsTarget;
+    raRequestData: ReactiveAgentsRequestData;
   }) => Promise<string> | string;
   /** A function to generate the endpoint based on parameters */
   getEndpoint: (args: {
     c: AppContext;
-    idkTarget: IdkTarget;
-    idkRequestData: IdkRequestData;
+    raTarget: ReactiveAgentsTarget;
+    raRequestData: ReactiveAgentsRequestData;
   }) => string;
   /** A function to determine if the request body should be transformed to form data */
-  transformToFormData?: (args: { idkRequestData: IdkRequestData }) => boolean;
+  transformToFormData?: (args: {
+    raRequestData: ReactiveAgentsRequestData;
+  }) => boolean;
   getProxyEndpoint?: (args: {
-    idkTarget: IdkTarget;
+    raTarget: ReactiveAgentsTarget;
     reqPath: string;
     reqQuery: string;
   }) => string;
@@ -63,8 +65,8 @@ export interface InternalProviderAPIConfigs {
 
 export type RequestHandlerFunction = (params: {
   c: AppContext;
-  idkTarget: IdkTarget;
-  idkRequestData: IdkRequestData;
+  raTarget: ReactiveAgentsTarget;
+  raRequestData: ReactiveAgentsRequestData;
 }) => Promise<Response>;
 
 export type CustomTransformer<T, U> = (response: T, isError?: boolean) => U;
@@ -78,8 +80,8 @@ export type ResponseTransformFunction = (
   aiProviderResponseStatus: number,
   aiProviderResponseHeaders: Headers,
   strictOpenAiCompliance: boolean,
-  idkRequestData: IdkRequestData,
-) => IdkResponseBody;
+  raRequestData: ReactiveAgentsRequestData,
+) => ReactiveAgentsResponseBody;
 
 export type StreamResponseTransformFunction = (
   aiProviderResponseBody: Record<string, unknown>,
@@ -93,7 +95,7 @@ export type ResponseChunkStreamTransformFunction = (
   fallbackId: string,
   streamState: Record<string, unknown>,
   strictOpenAiCompliance: boolean,
-  idkRequestData: IdkRequestData,
+  raRequestData: ReactiveAgentsRequestData,
 ) => string | string[];
 
 export type JSONToStreamGeneratorTransformFunction = (
@@ -115,7 +117,11 @@ export type ResponseTransformFunctionType =
 export interface AIProviderConfig extends FunctionNameToFunctionConfig {
   api: InternalProviderAPIConfig;
   getConfig?: (
-    idkRequestBody?: IdkRequestBody | ReadableStream | FormData | ArrayBuffer,
+    raRequestBody?:
+      | ReactiveAgentsRequestBody
+      | ReadableStream
+      | FormData
+      | ArrayBuffer,
   ) => AIProviderConfig;
   requestTransforms?: {
     [K in FunctionName]?: (body: ReadableStream) => ReadableStream;

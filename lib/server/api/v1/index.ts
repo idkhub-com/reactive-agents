@@ -1,7 +1,7 @@
 import { chatRouter } from '@server/api/v1/chat';
 import { completionsRouter } from '@server/api/v1/completions';
 import { embeddingsRouter } from '@server/api/v1/embeddings';
-import { idkRouter } from '@server/api/v1/idk';
+import { reactiveAgentsRouter } from '@server/api/v1/reactive-agents';
 import { responsesRouter } from '@server/api/v1/responses';
 // import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
@@ -21,8 +21,8 @@ import { authenticatedMiddleware } from '@server/middlewares/auth';
 import { cacheMiddleware } from '@server/middlewares/cache';
 import { evaluationMethodConnectors } from '@server/middlewares/evaluations';
 import { hooksMiddleware } from '@server/middlewares/hooks';
-import { idkHubConfigurationInjectorMiddleware } from '@server/middlewares/idkhub-configuration';
 import { logsMiddleware } from '@server/middlewares/logs';
+import { raConfigurationInjectorMiddleware } from '@server/middlewares/reactive-agents-configuration';
 import { toolMiddleware } from '@server/middlewares/tool';
 import { userDataMiddleware } from '@server/middlewares/user-data';
 import { commonVariablesMiddleware } from '@server/middlewares/variables';
@@ -36,7 +36,7 @@ const factory = createFactory<AppEnv>();
 
 const app: AppHono = new Hono<AppEnv>().basePath('/v1');
 
-app.get('/', (c) => c.text('idk'));
+app.get('/', (c) => c.text('Reactive Agents'));
 
 // Use prettyJSON middleware for all routes
 app.use('*', prettyJSON());
@@ -79,8 +79,8 @@ app.use('*', authenticatedMiddleware(factory));
 // Use agent and skill middleware for all routes
 app.use('*', agentAndSkillMiddleware);
 
-// Use IdkHub configuration injector middleware for all routes
-app.use('*', idkHubConfigurationInjectorMiddleware);
+// Use Reactive Agents configuration injector middleware for all routes
+app.use('*', raConfigurationInjectorMiddleware);
 
 // Use tool middleware for all routes
 app.use(toolMiddleware);
@@ -89,9 +89,9 @@ app.route('/chat', chatRouter);
 app.route('/completions', completionsRouter);
 app.route('/responses', responsesRouter);
 app.route('/embeddings', embeddingsRouter);
-const idkRoute = app.route('/idk', idkRouter);
+const reactiveAgentsRoute = app.route('/reactive-agents', reactiveAgentsRouter);
 
-export type IdkRoute = typeof idkRoute;
+export type ReactiveAgentsRoute = typeof reactiveAgentsRoute;
 
 export const GET = handle(app);
 export const POST = handle(app);

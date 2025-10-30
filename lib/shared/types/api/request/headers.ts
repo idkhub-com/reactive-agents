@@ -1,4 +1,4 @@
-import { IdkRequestBody } from '@shared/types/api/request/body';
+import { ReactiveAgentsRequestBody } from '@shared/types/api/request/body';
 import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 
 export enum HeaderKey {
-  CONFIG = 'x-idk-config',
+  CONFIG = 'ra-config',
   CONTENT_TYPE = 'content-type',
 }
 
@@ -48,7 +48,7 @@ export const AnthropicConfig = z.object({
     .transform(removeEndingPath),
 });
 
-export const IdkTargetBase = z.object({
+export const ReactiveAgentsTargetBase = z.object({
   // Target Details
   id: z.string().optional(),
   index: z.number().optional(),
@@ -158,52 +158,54 @@ export const IdkTargetBase = z.object({
   // Mistral AI specific
 });
 
-export type IdkTargetBase = z.infer<typeof IdkTargetBase>;
+export type ReactiveAgentsTargetBase = z.infer<typeof ReactiveAgentsTargetBase>;
 
 export enum OptimizationType {
   AUTO = 'auto',
   NONE = 'none',
 }
 
-export const IdkTargetPreProcessed = IdkTargetBase.extend({
-  /** IdkHub optimization type */
-  optimization: z
-    .enum(OptimizationType)
-    .optional()
-    .default(OptimizationType.NONE)
-    .describe('The name of the IdkHub configuration to use'),
+export const ReactiveAgentsTargetPreProcessed = ReactiveAgentsTargetBase.extend(
+  {
+    /** Reactive Agents optimization type */
+    optimization: z
+      .enum(OptimizationType)
+      .optional()
+      .default(OptimizationType.NONE)
+      .describe('The name of the Reactive Agents configuration to use'),
 
-  /** IdkHub optimization version */
-  optimization_version: z
-    .number()
-    .min(0)
-    .optional()
-    .describe('The version of the IdkHub configuration to use'),
+    /** Reactive Agents optimization version */
+    optimization_version: z
+      .number()
+      .min(0)
+      .optional()
+      .describe('The version of the Reactive Agents configuration to use'),
 
-  /** Variables for the system prompt template in the IdkHub configuration */
-  system_prompt_variables: z
-    .record(z.string(), z.unknown())
-    .optional()
-    .describe(
-      'The variables for the system prompt template in the IdkHub configuration',
-    ),
+    /** Variables for the system prompt template in the Reactive Agents configuration */
+    system_prompt_variables: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        'The variables for the system prompt template in the Reactive Agents configuration',
+      ),
 
-  /** The AI provider to use if no configuration is provided */
-  provider: z
-    .enum(AIProvider, {
-      error: (err) => {
-        return `Invalid provider: ${err.input}`;
-      },
-    })
-    .optional()
-    .describe('The AI provider to use if no configuration is provided'),
+    /** The AI provider to use if no configuration is provided */
+    provider: z
+      .enum(AIProvider, {
+        error: (err) => {
+          return `Invalid provider: ${err.input}`;
+        },
+      })
+      .optional()
+      .describe('The AI provider to use if no configuration is provided'),
 
-  /** The AI model to use if no configuration is provided */
-  model: z
-    .string()
-    .optional()
-    .describe('The AI model to use if no configuration is provided'),
-})
+    /** The AI model to use if no configuration is provided */
+    model: z
+      .string()
+      .optional()
+      .describe('The AI model to use if no configuration is provided'),
+  },
+)
   .refine((data) => {
     if (!data.provider && data.optimization === OptimizationType.NONE) {
       return false;
@@ -226,7 +228,9 @@ export const IdkTargetPreProcessed = IdkTargetBase.extend({
     return true;
   }, 'A model is required when using a provider.');
 
-export type IdkTargetPreProcessed = z.infer<typeof IdkTargetPreProcessed>;
+export type ReactiveAgentsTargetPreProcessed = z.infer<
+  typeof ReactiveAgentsTargetPreProcessed
+>;
 
 // Configuration parameters - the AI parameters for a specific version
 export const TargetConfigurationParams = z.object({
@@ -248,16 +252,16 @@ export type TargetConfigurationParams = z.infer<
   typeof TargetConfigurationParams
 >;
 
-/** IdkHub Target with configuration name and version validated and processed.
+/** Reactive Agents Target with configuration name and version validated and processed.
  * The configuration options have already been applied to the target.
  *
  * For example, the `provider` and `model` fields have already been set to the value of the configuration. */
-export const IdkTarget = IdkTargetBase.extend({
+export const ReactiveAgentsTarget = ReactiveAgentsTargetBase.extend({
   configuration: TargetConfigurationParams,
   api_key: z.string().describe('The API key for the provider').optional(),
 });
 
-export type IdkTarget = z.infer<typeof IdkTarget>;
+export type ReactiveAgentsTarget = z.infer<typeof ReactiveAgentsTarget>;
 
 export enum StrategyModes {
   LOADBALANCE = 'loadbalance',
@@ -282,10 +286,10 @@ export const Strategy = z.object({
 
 export type Strategy = z.infer<typeof Strategy>;
 
-export const NonPrivateIdkConfig = z.object({
+export const NonPrivateReactiveAgentsConfig = z.object({
   agent_name: z.string({ error: 'Agent name is required' }),
   skill_name: z.string({ error: 'Skill name is required' }),
-  override_params: IdkRequestBody.optional(),
+  override_params: ReactiveAgentsRequestBody.optional(),
   request_timeout: z.number().optional(),
   forward_headers: z.array(z.string()).optional(),
   force_refresh: z.boolean().optional(),
@@ -294,9 +298,11 @@ export const NonPrivateIdkConfig = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type NonPrivateIdkConfig = z.infer<typeof NonPrivateIdkConfig>;
+export type NonPrivateReactiveAgentsConfig = z.infer<
+  typeof NonPrivateReactiveAgentsConfig
+>;
 
-export const BaseIdkConfig = NonPrivateIdkConfig.extend({
+export const BaseReactiveAgentsConfig = NonPrivateReactiveAgentsConfig.extend({
   strategy: Strategy.default({
     mode: StrategyModes.SINGLE,
   }),
@@ -311,10 +317,10 @@ export const BaseIdkConfig = NonPrivateIdkConfig.extend({
   user_human_name: z.string().optional(),
 });
 
-export type BaseIdkConfig = z.infer<typeof BaseIdkConfig>;
+export type BaseReactiveAgentsConfig = z.infer<typeof BaseReactiveAgentsConfig>;
 
-export const IdkConfig = BaseIdkConfig.extend({
-  targets: z.array(IdkTarget),
+export const ReactiveAgentsConfig = BaseReactiveAgentsConfig.extend({
+  targets: z.array(ReactiveAgentsTarget),
 })
   // Validate Google Vertex AI specific fields
   .refine(
@@ -336,10 +342,14 @@ export const IdkConfig = BaseIdkConfig.extend({
     },
   );
 
-export type IdkConfig = z.infer<typeof IdkConfig>;
+export type ReactiveAgentsConfig = z.infer<typeof ReactiveAgentsConfig>;
 
-export const IdkConfigPreProcessed = BaseIdkConfig.extend({
-  targets: z.array(IdkTargetPreProcessed),
-});
+export const ReactiveAgentsConfigPreProcessed = BaseReactiveAgentsConfig.extend(
+  {
+    targets: z.array(ReactiveAgentsTargetPreProcessed),
+  },
+);
 
-export type IdkConfigPreProcessed = z.infer<typeof IdkConfigPreProcessed>;
+export type ReactiveAgentsConfigPreProcessed = z.infer<
+  typeof ReactiveAgentsConfigPreProcessed
+>;

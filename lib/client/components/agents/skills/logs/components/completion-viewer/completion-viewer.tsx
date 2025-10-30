@@ -3,56 +3,56 @@
 import { ChatCompletionsAPIViewer } from '@client/components/agents/skills/logs/components/completion-viewer/chat-completions-api';
 import { CompletionsAPIViewer } from '@client/components/agents/skills/logs/components/completion-viewer/completions-api';
 import { ImageGenerationViewer } from '@client/components/agents/skills/logs/components/completion-viewer/images-api';
-import type { IdkRequestData } from '@shared/types/api/request/body';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
 import { ResponsesAPIViewer } from './responses-api';
 
 export function CompletionViewer({
   logId,
-  idkRequestData,
+  raRequestData,
 }: {
   logId: string;
-  idkRequestData: IdkRequestData;
+  raRequestData: ReactiveAgentsRequestData;
 }): React.ReactElement {
-  if (!idkRequestData.responseBody) {
+  if (!raRequestData.responseBody) {
     return <div>No response body found.</div>;
   }
 
-  if (idkRequestData.functionName === FunctionName.CHAT_COMPLETE) {
+  if (raRequestData.functionName === FunctionName.CHAT_COMPLETE) {
     return (
       <ChatCompletionsAPIViewer
         logId={logId}
-        idkRequestBody={idkRequestData.requestBody}
-        idkResponseBody={idkRequestData.responseBody}
+        raRequestBody={raRequestData.requestBody}
+        raResponseBody={raRequestData.responseBody}
       />
     );
   } else if (
-    idkRequestData.functionName === FunctionName.COMPLETE ||
-    idkRequestData.functionName === FunctionName.STREAM_COMPLETE
+    raRequestData.functionName === FunctionName.COMPLETE ||
+    raRequestData.functionName === FunctionName.STREAM_COMPLETE
   ) {
     return (
       <CompletionsAPIViewer
         logId={logId}
-        idkResponseBody={idkRequestData.responseBody}
+        raResponseBody={raRequestData.responseBody}
       />
     );
   } else if (
-    idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
+    raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
   ) {
     return (
       <ResponsesAPIViewer
         logId={logId}
-        idkRequestBody={idkRequestData.requestBody}
-        idkResponseBody={idkRequestData.responseBody}
+        raRequestBody={raRequestData.requestBody}
+        raResponseBody={raRequestData.responseBody}
       />
     );
-  } else if (idkRequestData.functionName === FunctionName.GENERATE_IMAGE) {
-    return <ImageGenerationViewer response={idkRequestData.responseBody} />;
-  } else if (idkRequestData.functionName === FunctionName.MODERATE) {
+  } else if (raRequestData.functionName === FunctionName.GENERATE_IMAGE) {
+    return <ImageGenerationViewer response={raRequestData.responseBody} />;
+  } else if (raRequestData.functionName === FunctionName.MODERATE) {
     return <div>Moderation</div>;
-  } else if (idkRequestData.functionName === FunctionName.CREATE_SPEECH) {
+  } else if (raRequestData.functionName === FunctionName.CREATE_SPEECH) {
     return <div>Speech</div>;
-  } else if (idkRequestData.functionName === FunctionName.PROXY) {
+  } else if (raRequestData.functionName === FunctionName.PROXY) {
     return <div>Proxy</div>;
   } else {
     return <div>Unstructured output</div>;

@@ -3,19 +3,19 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const groqAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.groq.com/openai/v1',
-  headers: ({ idkTarget, idkRequestData }) => {
+  headers: ({ raTarget, raRequestData }) => {
     const headersObj: Record<string, string> = {
-      Authorization: `Bearer ${idkTarget.api_key}`,
+      Authorization: `Bearer ${raTarget.api_key}`,
     };
     if (
-      idkRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
-      idkRequestData.functionName === FunctionName.CREATE_TRANSLATION
+      raRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
+      raRequestData.functionName === FunctionName.CREATE_TRANSLATION
     )
       headersObj['Content-Type'] = 'multipart/form-data';
     return headersObj;
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.CREATE_TRANSCRIPTION:

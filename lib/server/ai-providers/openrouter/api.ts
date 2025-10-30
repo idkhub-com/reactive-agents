@@ -3,15 +3,15 @@ import { FunctionName } from '@shared/types/api/request';
 
 const openrouterAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://openrouter.ai/api',
-  headers: ({ idkTarget }) => {
+  headers: ({ raTarget }) => {
     return {
-      Authorization: `Bearer ${idkTarget.api_key}`, // https://openrouter.ai/keys
-      'HTTP-Referer': 'https://portkey.ai/',
-      'X-Title': 'IDK',
+      Authorization: `Bearer ${raTarget.api_key}`, // https://openrouter.ai/keys
+      'HTTP-Referer': 'https://reactiveagents.ai/',
+      'X-Title': 'Reactive Agents',
     };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/v1/chat/completions';
       default:

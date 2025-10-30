@@ -1,5 +1,5 @@
 import { HttpMethod } from '@server/types/http';
-import type { IdkRequestData } from '@shared/types/api/request/body';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import {
   CreateSpeechRequestBody,
   CreateSpeechResponseBody,
@@ -172,7 +172,7 @@ export const PrettyFunctionName: Record<FunctionName, string> = {
  *
  * The other fields are not used.
  */
-export const functionConfigs: IdkRequestData[] = [
+export const functionConfigs: ReactiveAgentsRequestData[] = [
   // Audio API
   {
     route_pattern: /^\/v1\/audio/,

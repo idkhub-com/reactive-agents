@@ -186,12 +186,12 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'messages',
       required: true,
       transform: (
-        idkRequestBody: ChatCompletionRequestBody,
+        raRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown> => {
         const messages: AnthropicMessage[] = [];
         // Transform the chat messages into a simple prompt
-        if (idkRequestBody.messages) {
-          idkRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
+        if (raRequestBody.messages) {
+          raRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
             if (ChatCompletionSystemMessageRoles.includes(msg.role)) return;
 
             if (msg.role === 'assistant') {
@@ -240,12 +240,12 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'system',
       required: false,
       transform: (
-        idkRequestBody: ChatCompletionRequestBody,
+        raRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown>[] => {
         const systemMessages: AnthropicMessageContentItem[] = [];
         // Transform the chat messages into a simple prompt
-        if (idkRequestBody.messages) {
-          idkRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
+        if (raRequestBody.messages) {
+          raRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
             if (
               ChatCompletionSystemMessageRoles.includes(msg.role) &&
               msg.content &&
@@ -280,11 +280,11 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'tools',
     required: false,
     transform: (
-      idkRequestBody: ChatCompletionRequestBody,
+      raRequestBody: ChatCompletionRequestBody,
     ): Record<string, unknown>[] => {
       const tools: AnthropicTool[] = [];
-      if (idkRequestBody.tools) {
-        idkRequestBody.tools.forEach((tool: ChatCompletionTool) => {
+      if (raRequestBody.tools) {
+        raRequestBody.tools.forEach((tool: ChatCompletionTool) => {
           if (tool.function) {
             const anthropicTool: AnthropicTool = {
               name: tool.function.name,
@@ -315,17 +315,17 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'tool_choice',
     required: false,
     transform: (
-      idkRequestBody: ChatCompletionRequestBody,
+      raRequestBody: ChatCompletionRequestBody,
     ): { type: 'tool' | 'any' | 'auto'; name?: string } | null => {
-      if (idkRequestBody.tool_choice) {
-        if (typeof idkRequestBody.tool_choice === 'string') {
-          if (idkRequestBody.tool_choice === 'required') return { type: 'any' };
-          else if (idkRequestBody.tool_choice === 'auto')
+      if (raRequestBody.tool_choice) {
+        if (typeof raRequestBody.tool_choice === 'string') {
+          if (raRequestBody.tool_choice === 'required') return { type: 'any' };
+          else if (raRequestBody.tool_choice === 'auto')
             return { type: 'auto' };
-        } else if (typeof idkRequestBody.tool_choice === 'object') {
+        } else if (typeof raRequestBody.tool_choice === 'object') {
           return {
             type: 'tool',
-            name: idkRequestBody.tool_choice.function.name,
+            name: raRequestBody.tool_choice.function.name,
           };
         }
       }

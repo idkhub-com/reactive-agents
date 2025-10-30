@@ -1,6 +1,6 @@
 import { HttpMethod } from '@server/types/http';
 import { FunctionName } from '@shared/types/api/request/function-name';
-import { IdkResponseBody } from '@shared/types/api/response';
+import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
 import {
   CreateSpeechRequestBody,
   CreateSpeechResponseBody,
@@ -67,7 +67,7 @@ import {
 } from '@shared/types/api/routes/responses-api';
 import { z } from 'zod';
 
-export const IdkRequestBody = z.union([
+export const ReactiveAgentsRequestBody = z.union([
   // Audio API
   CreateSpeechRequestBody,
   CreateTranscriptionRequestBody,
@@ -113,7 +113,9 @@ export const IdkRequestBody = z.union([
   ResponsesRequestBody,
 ]);
 
-export type IdkRequestBody = z.infer<typeof IdkRequestBody>;
+export type ReactiveAgentsRequestBody = z.infer<
+  typeof ReactiveAgentsRequestBody
+>;
 
 export type AIProviderRequestBody =
   | Record<string, unknown>
@@ -133,7 +135,7 @@ const BaseRequestData = z.object({
   /** The headers of the request. */
   requestHeaders: z.record(z.string(), z.string()),
   /** The request body of the request. */
-  requestBody: IdkRequestBody,
+  requestBody: ReactiveAgentsRequestBody,
   /** The schema of the request body. */
   requestSchema: z.custom<z.ZodSchema<unknown>>(
     (val) =>
@@ -142,7 +144,7 @@ const BaseRequestData = z.object({
   /** Whether the request is a stream. */
   stream: z.boolean().optional(),
   /** The response body of the request. Only used in the UI once the request is complete. */
-  responseBody: IdkResponseBody.optional(),
+  responseBody: ReactiveAgentsResponseBody.optional(),
   /** The schema of the response body. Only used in the UI once the request is complete.
    *
    * If response schema validation fails, we automatically retry with the error response schema.
@@ -373,7 +375,7 @@ export const ProxyRequestData = BaseRequestData.extend({
 });
 export type ProxyRequestData = z.infer<typeof ProxyRequestData>;
 
-export const IdkRequestData = z.union([
+export const ReactiveAgentsRequestData = z.union([
   // Audio API
   CreateSpeechRequestData,
   CreateTranscriptionRequestData,
@@ -420,4 +422,6 @@ export const IdkRequestData = z.union([
   ProxyRequestData,
 ]);
 
-export type IdkRequestData = z.infer<typeof IdkRequestData>;
+export type ReactiveAgentsRequestData = z.infer<
+  typeof ReactiveAgentsRequestData
+>;

@@ -1,6 +1,6 @@
 'use client';
 
-import { addModelsToSkill } from '@client/api/v1/idk/skills';
+import { addModelsToSkill } from '@client/api/v1/reactive-agents/skills';
 import { Button } from '@client/components/ui/button';
 import { Checkbox } from '@client/components/ui/checkbox';
 import {

@@ -15,8 +15,8 @@ export const workersAIChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     required: true,
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      return idkRequestBody.messages?.map((message) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      return raRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;
@@ -73,7 +73,7 @@ export const workersAIChatCompleteResponseTransform: ResponseTransformFunction =
     aiProviderResponseStatus,
     _responseHeaders,
     _strictOpenAiCompliance,
-    _idkRequestData,
+    _raRequestData,
   ) => {
     if (aiProviderResponseStatus !== 200) {
       return workersAIErrorResponseTransform(aiProviderResponseBody);

@@ -1,8 +1,8 @@
 import type { RealtimeLlmEventParser } from '@server/services/realtime-llm-event-parser';
 import type { AppContext } from '@server/types/hono';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
-import type { IdkRequestData } from '@shared/types/api/request';
-import type { IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 import type { RealtimeSessionOptions } from '@shared/types/realtime';
 
 export const addListeners = (
@@ -52,16 +52,16 @@ export const addListeners = (
 export const getOptionsForOutgoingConnection = async (
   c: AppContext,
   apiConfig: InternalProviderAPIConfig,
-  idkTarget: IdkTarget,
+  raTarget: ReactiveAgentsTarget,
 ): Promise<{
   headers: Record<string, string>;
   method: string;
 }> => {
-  const idkRequestData = c.get('idk_request_data');
+  const raRequestData = c.get('ra_request_data');
   const headers = await apiConfig.headers({
     c,
-    idkTarget,
-    idkRequestData,
+    raTarget,
+    raRequestData,
   });
   headers.Upgrade = 'websocket';
   headers.Connection = 'Keep-Alive';
@@ -75,18 +75,18 @@ export const getOptionsForOutgoingConnection = async (
 export const getURLForOutgoingConnection = (
   c: AppContext,
   apiConfig: InternalProviderAPIConfig,
-  idkTarget: IdkTarget,
-  idkRequestData: IdkRequestData,
+  raTarget: ReactiveAgentsTarget,
+  raRequestData: ReactiveAgentsRequestData,
 ): string => {
   const baseUrl = apiConfig.getBaseURL({
     c,
-    idkTarget,
-    idkRequestData,
+    raTarget,
+    raRequestData,
   });
   const endpoint = apiConfig.getEndpoint({
     c,
-    idkTarget,
-    idkRequestData,
+    raTarget,
+    raRequestData,
   });
   return `${baseUrl}${endpoint}`;
 };

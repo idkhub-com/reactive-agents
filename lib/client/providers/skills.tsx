@@ -5,7 +5,7 @@ import {
   deleteSkill,
   getSkills,
   updateSkill,
-} from '@client/api/v1/idk/skills';
+} from '@client/api/v1/reactive-agents/skills';
 import { useToast } from '@client/hooks/use-toast';
 import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';

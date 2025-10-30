@@ -1,9 +1,9 @@
 import type { HooksConnector } from '@server/types/connector';
 import type { AppContext, AppEnv } from '@server/types/hono';
-import type { IdkRequestData } from '@shared/types/api/request/body';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
-import type { IdkConfig } from '@shared/types/api/request/headers';
-import type { IdkResponseBody } from '@shared/types/api/response/body';
+import type { ReactiveAgentsConfig } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
 import type { HookLog } from '@shared/types/data';
 
 import { CacheStatus } from '@shared/types/middleware/cache';
@@ -45,7 +45,11 @@ function shouldSkipHook(
   fn: FunctionName,
   statusCode: number | null,
   isStreamingRequest: boolean,
-  idkResponseBody?: IdkResponseBody | ReadableStream | FormData | ArrayBuffer,
+  raResponseBody?:
+    | ReactiveAgentsResponseBody
+    | ReadableStream
+    | FormData
+    | ArrayBuffer,
 ): boolean {
   return (
     ![
@@ -57,7 +61,7 @@ function shouldSkipHook(
     (hook.type === HookType.OUTPUT_HOOK && statusCode !== 200) ||
     (hook.type === HookType.OUTPUT_HOOK &&
       isStreamingRequest &&
-      !idkResponseBody)
+      !raResponseBody)
   );
 }
 
@@ -66,8 +70,8 @@ async function executeHook(
   hook: Hook,
   statusCode: number | null,
   isStreamingRequest: boolean,
-  idkRequestData: IdkRequestData,
-  idkResponseBody?: IdkResponseBody,
+  raRequestData: ReactiveAgentsRequestData,
+  raResponseBody?: ReactiveAgentsResponseBody,
 ): Promise<{
   hookResult: HookResult;
   cacheStatus: CacheStatus;
@@ -75,10 +79,10 @@ async function executeHook(
   if (
     shouldSkipHook(
       hook,
-      idkRequestData.functionName,
+      raRequestData.functionName,
       statusCode,
       isStreamingRequest,
-      idkResponseBody,
+      raResponseBody,
     )
   ) {
     const hookResult: HookResult = {
@@ -93,17 +97,17 @@ async function executeHook(
     };
   }
 
-  const idkConfig = c.get('idk_config');
+  const raConfig = c.get('ra_config');
 
   let cacheStatus = CacheStatus.MISS;
-  if (!idkConfig.force_hook_refresh) {
+  if (!raConfig.force_hook_refresh) {
     const getHookResponseFromCache = c.get('getHookResponseFromCache');
 
     const cacheResult = await getHookResponseFromCache(
       c,
       hook,
-      idkRequestData,
-      idkResponseBody,
+      raRequestData,
+      raResponseBody,
     );
 
     if (cacheResult.status === CacheStatus.HIT) {
@@ -126,7 +130,10 @@ async function executeHook(
   };
 }
 
-function getHooksToExecute(config: IdkConfig, hookType: HookType): Hook[] {
+function getHooksToExecute(
+  config: ReactiveAgentsConfig,
+  hookType: HookType,
+): Hook[] {
   const hooksToExecute: Hook[] = [];
   hooksToExecute.push(...config.hooks.filter((h) => h.type === hookType));
 
@@ -138,12 +145,12 @@ export async function executeHooks(
   hookType: HookType,
   statusCode: number | null,
   isStreamingRequest: boolean,
-  idkRequestData: IdkRequestData,
-  idkResponseBody?: IdkResponseBody,
+  raRequestData: ReactiveAgentsRequestData,
+  raResponseBody?: ReactiveAgentsResponseBody,
 ): Promise<HookLog[]> {
-  const idkConfig = c.get('idk_config');
+  const raConfig = c.get('ra_config');
 
-  const hooksToExecute = getHooksToExecute(idkConfig, hookType);
+  const hooksToExecute = getHooksToExecute(raConfig, hookType);
 
   if (hooksToExecute.length === 0) {
     return [];
@@ -158,14 +165,14 @@ export async function executeHooks(
           hook,
           statusCode,
           isStreamingRequest,
-          idkRequestData,
-          idkResponseBody,
+          raRequestData,
+          raResponseBody,
         );
         const endTime = Date.now();
         const duration = endTime - startTime;
 
         const hookLog: HookLog = {
-          trace_id: idkConfig.trace_id,
+          trace_id: raConfig.trace_id,
           hook: hook,
           result: hookResult,
           start_time: startTime,

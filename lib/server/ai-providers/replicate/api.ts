@@ -3,11 +3,11 @@ import { FunctionName } from '@shared/types/api/request';
 
 const replicateAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.replicate.com/v1',
-  headers: ({ idkTarget }) => {
-    return { Authorization: `Bearer ${idkTarget.api_key}` };
+  headers: ({ raTarget }) => {
+    return { Authorization: `Bearer ${raTarget.api_key}` };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/predictions'; // Replicate uses predictions endpoint for all model runs
       default:

@@ -1,4 +1,4 @@
-# IDK Roadmap
+# Reactive Agents Roadmap
 
 ## 🎯 Current Priority
 
@@ -31,4 +31,4 @@
   - [ ] Add configuration options for the connectors to use
   - [ ] Test the connectors to use
   - [ ] Document the connectors to use
-  - [ ] Add unit and integration tests  
+  - [ ] Add unit and integration tests

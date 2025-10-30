@@ -5,7 +5,7 @@ import {
   deleteAIProvider,
   getAIProviderAPIKeys,
   updateAIProvider,
-} from '@client/api/v1/idk/ai-providers';
+} from '@client/api/v1/reactive-agents/ai-providers';
 import { useToast } from '@client/hooks/use-toast';
 import type {
   AIProviderConfig,

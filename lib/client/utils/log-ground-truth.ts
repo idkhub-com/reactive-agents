@@ -1,4 +1,4 @@
-import { getImprovedResponseByLogId } from '@client/api/v1/idk/improved-responses';
+import { getImprovedResponseByLogId } from '@client/api/v1/reactive-agents/improved-responses';
 import type { ImprovedResponse } from '@shared/types/data/improved-response';
 import type { Log } from '@shared/types/data/log';
 

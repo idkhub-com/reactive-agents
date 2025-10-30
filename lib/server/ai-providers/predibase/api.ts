@@ -4,18 +4,18 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const predibaseAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://serving.app.predibase.com',
-  headers: ({ idkTarget: providerOptions }) => {
+  headers: ({ raTarget: providerOptions }) => {
     return {
       Authorization: `Bearer ${providerOptions.api_key}`,
       Accept: 'application/json',
     };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    // const user = idkTarget.user;
+  getEndpoint: ({ raRequestData }) => {
+    // const user = raTarget.user;
     const user = 'predibase'; // TODO: Get from header config
-    switch (idkRequestData.functionName) {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE: {
-        const model = idkRequestData.requestBody?.model;
+        const model = raRequestData.requestBody?.model;
         const base_model = splitString(`${model}`, ':').before;
         /*
         The Predibase model format is "<base_model>[:adapter_id]",

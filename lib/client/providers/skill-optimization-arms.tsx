@@ -1,6 +1,6 @@
 'use client';
 
-import { getSkillArms } from '@client/api/v1/idk/skills';
+import { getSkillArms } from '@client/api/v1/reactive-agents/skills';
 import { useNavigation } from '@client/providers/navigation';
 import type { SkillOptimizationArm } from '@shared/types/data/skill-optimization-arm';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

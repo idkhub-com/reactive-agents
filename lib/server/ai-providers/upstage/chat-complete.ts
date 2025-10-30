@@ -24,9 +24,9 @@ export const upstageChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     default: '',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      if (!idkRequestBody.messages) return [];
-      return idkRequestBody.messages?.map((message) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      if (!raRequestBody.messages) return [];
+      return raRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;
@@ -122,7 +122,7 @@ export const upstageChatCompleteResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  _idkRequestData,
+  _raRequestData,
 ) => {
   if ('message' in aiProviderResponseBody && aiProviderResponseStatus !== 200) {
     return generateErrorResponse(
@@ -177,7 +177,7 @@ export const upstageChatCompleteStreamChunkTransform: ResponseChunkStreamTransfo
     _fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    _idkRequestData,
+    _raRequestData,
   ) => {
     let chunk = responseChunk.trim();
     chunk = chunk.replace(/^data: /, '');

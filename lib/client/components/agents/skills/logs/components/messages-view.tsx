@@ -2,7 +2,7 @@
 
 import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
 import { FunctionName } from '@shared/types/api/request';
-import type { IdkRequestData } from '@shared/types/api/request/body';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import {
   type ChatCompletionMessage,
   ChatCompletionMessageRole,
@@ -26,25 +26,25 @@ function getMessageValue(
 
 export function MessagesView({
   logId,
-  idkRequestData,
+  raRequestData,
 }: {
   logId: string;
-  idkRequestData: IdkRequestData;
+  raRequestData: ReactiveAgentsRequestData;
 }): React.ReactElement {
   const [messages, setMessages] = useState<ChatCompletionMessage[]>([]);
 
   useEffect(() => {
-    if (idkRequestData) {
+    if (raRequestData) {
       if (
-        idkRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-        idkRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
+        raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+        raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
       ) {
-        setMessages(idkRequestData.requestBody.messages);
+        setMessages(raRequestData.requestBody.messages);
       } else if (
-        idkRequestData.functionName === FunctionName.COMPLETE ||
-        idkRequestData.functionName === FunctionName.STREAM_COMPLETE
+        raRequestData.functionName === FunctionName.COMPLETE ||
+        raRequestData.functionName === FunctionName.STREAM_COMPLETE
       ) {
-        const messageValue = getMessageValue(idkRequestData.requestBody.prompt);
+        const messageValue = getMessageValue(raRequestData.requestBody.prompt);
         setMessages([
           {
             role: ChatCompletionMessageRole.USER,
@@ -52,41 +52,41 @@ export function MessagesView({
           },
         ]);
       } else if (
-        idkRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
+        raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
       ) {
-        if (typeof idkRequestData.requestBody.input === 'string') {
+        if (typeof raRequestData.requestBody.input === 'string') {
           setMessages([
             {
               role: ChatCompletionMessageRole.USER,
-              content: idkRequestData.requestBody.input,
+              content: raRequestData.requestBody.input,
             },
           ]);
         } else {
           // Filter for message objects that have role property (ChatCompletionMessage)
-          const messageInputs = idkRequestData.requestBody.input.filter(
+          const messageInputs = raRequestData.requestBody.input.filter(
             (item): item is ChatCompletionMessage =>
               typeof item === 'object' && item !== null && 'role' in item,
           );
           setMessages(messageInputs);
         }
-      } else if (idkRequestData.functionName === FunctionName.EMBED) {
-        const messageValue = getMessageValue(idkRequestData.requestBody.input);
+      } else if (raRequestData.functionName === FunctionName.EMBED) {
+        const messageValue = getMessageValue(raRequestData.requestBody.input);
         setMessages([
           {
             role: ChatCompletionMessageRole.USER,
             content: messageValue,
           },
         ]);
-      } else if (idkRequestData.functionName === FunctionName.GENERATE_IMAGE) {
+      } else if (raRequestData.functionName === FunctionName.GENERATE_IMAGE) {
         setMessages([
           {
             role: ChatCompletionMessageRole.USER,
-            content: idkRequestData.requestBody.prompt,
+            content: raRequestData.requestBody.prompt,
           },
         ]);
       }
     }
-  }, [idkRequestData]);
+  }, [raRequestData]);
 
   return (
     <>

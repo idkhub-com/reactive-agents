@@ -56,7 +56,7 @@ export async function extractTaskAndOutcome(
     baseURL: `${API_URL}/v1`,
   });
 
-  const idkhubConfig = {
+  const raConfig = {
     targets: [
       {
         provider: 'openai',
@@ -64,7 +64,7 @@ export async function extractTaskAndOutcome(
         api_key: apiKey,
       },
     ],
-    agent_name: 'idkhub',
+    agent_name: 'reactive-agents',
     skill_name: 'extract-task-and-outcome',
   };
 
@@ -75,7 +75,7 @@ export async function extractTaskAndOutcome(
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
       defaultHeaders: {
-        'x-idk-config': JSON.stringify(idkhubConfig),
+        'ra-config': JSON.stringify(raConfig),
       },
     })
     .chat.completions.parse({

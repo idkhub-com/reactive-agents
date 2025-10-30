@@ -113,7 +113,7 @@ export const xaiChatCompleteResponseTransform: ResponseTransformFunction = (
   responseStatus,
   _aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  _idkRequestData,
+  _raRequestData,
 ) => {
   if (responseStatus !== 200 && 'error' in aiProviderResponseBody) {
     return openAIErrorResponseTransform(aiProviderResponseBody, AIProvider.XAI);

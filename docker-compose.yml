@@ -2,7 +2,7 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:17-alpine
-    container_name: idkhub-postgres
+    container_name: ra-postgres
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -22,12 +22,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - idkhub-network
+      - ra-network
 
   # PostgREST API Server
   postgrest:
     image: postgrest/postgrest:latest
-    container_name: idkhub-postgrest
+    container_name: ra-postgrest
     restart: unless-stopped
     ports:
       - "3001:3000"
@@ -42,7 +42,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - idkhub-network
+      - ra-network
 
   # Next.js Application
   app:
@@ -51,7 +51,7 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: production
-    container_name: idkhub
+    container_name: reactive-agents
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -62,8 +62,8 @@ services:
 
       # App Config
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
-      ACCESS_PASSWORD: ${ACCESS_PASSWORD:-idk}
-      BEARER_TOKEN: ${BEARER_TOKEN:-idk}
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD:-reactive-agents}
+      BEARER_TOKEN: ${BEARER_TOKEN:-reactive-agents}
       JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
 
@@ -77,11 +77,11 @@ services:
       postgrest:
         condition: service_started
     networks:
-      - idkhub-network
+      - ra-network
 
 volumes:
   postgres_data:
 
 networks:
-  idkhub-network:
+  ra-network:
     driver: bridge

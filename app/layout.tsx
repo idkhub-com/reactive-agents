@@ -22,7 +22,7 @@ const lato: NextFontWithVariable = Lato({
 });
 
 export const metadata: Metadata = {
-  title: 'IDK',
+  title: 'Reactive Agents',
   description: 'AI management without existing knowledge',
 };
 

@@ -14,11 +14,11 @@ export const bedrockCohereEmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'texts',
     required: true,
-    transform: (idkRequestBody: CreateEmbeddingsRequestBody): string[] => {
-      if (Array.isArray(idkRequestBody.input)) {
-        return idkRequestBody.input as string[];
+    transform: (raRequestBody: CreateEmbeddingsRequestBody): string[] => {
+      if (Array.isArray(raRequestBody.input)) {
+        return raRequestBody.input as string[];
       } else {
-        return [idkRequestBody.input as string];
+        return [raRequestBody.input as string];
       }
     },
   },
@@ -43,7 +43,7 @@ export const bedrockTitanEmbedResponseTransform: ResponseTransformFunction = (
   responseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  idkRequestData,
+  raRequestData,
 ) => {
   if (responseStatus !== 200) {
     const errorResposne = bedrockErrorResponseTransform(response);
@@ -51,7 +51,7 @@ export const bedrockTitanEmbedResponseTransform: ResponseTransformFunction = (
   }
 
   const embedRequestBody =
-    idkRequestData.requestBody as CreateEmbeddingsRequestBody;
+    raRequestData.requestBody as CreateEmbeddingsRequestBody;
 
   const model = (embedRequestBody.model as string) || '';
   if ('embedding' in response) {
@@ -84,7 +84,7 @@ export const bedrockCohereEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  idkRequestData,
+  raRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResposne = bedrockErrorResponseTransform(aiProviderResponseBody);
@@ -92,7 +92,7 @@ export const bedrockCohereEmbedResponseTransform: ResponseTransformFunction = (
   }
 
   const embedRequestBody =
-    idkRequestData.requestBody as CreateEmbeddingsRequestBody;
+    raRequestData.requestBody as CreateEmbeddingsRequestBody;
 
   const model = (embedRequestBody.model as string) || '';
 

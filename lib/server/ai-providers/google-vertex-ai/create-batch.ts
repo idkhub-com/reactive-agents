@@ -16,12 +16,12 @@ export const GoogleBatchCreateConfig: AIProviderFunctionConfig = {
   model: {
     param: 'model',
     required: true,
-    transform: (idkRequestBody: CreateEmbeddingsRequestBody): string => {
-      if (!idkRequestBody.model) {
+    transform: (raRequestBody: CreateEmbeddingsRequestBody): string => {
+      if (!raRequestBody.model) {
         throw new Error('Model is required');
       }
 
-      const { model, provider } = getModelAndProvider(idkRequestBody.model);
+      const { model, provider } = getModelAndProvider(raRequestBody.model);
       return `publishers/${provider}/models/${model}`;
     },
   },

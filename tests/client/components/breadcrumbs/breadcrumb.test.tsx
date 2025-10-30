@@ -46,16 +46,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock API functions with proper typing
-vi.mock('@client/api/v1/idk/agents', () => ({
+vi.mock('@client/api/v1/reactive-agents/agents', () => ({
   getAgents: vi.fn(),
 }));
 
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
-import { getAgents } from '@client/api/v1/idk/agents';
-import { getSkills } from '@client/api/v1/idk/skills';
+import { getAgents } from '@client/api/v1/reactive-agents/agents';
+import { getSkills } from '@client/api/v1/reactive-agents/skills';
 
 const _mockGetAgents = vi.mocked(getAgents);
 const _mockGetSkills = vi.mocked(getSkills);

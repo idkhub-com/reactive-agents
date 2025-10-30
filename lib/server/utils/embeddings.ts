@@ -18,9 +18,9 @@ export class RequestEmbeddingError extends Error {
 }
 
 function extractMessagesFromResponsesRequest(
-  idkRequestData: ResponsesRequestData,
+  raRequestData: ResponsesRequestData,
 ): ChatCompletionMessage[] {
-  const input = idkRequestData.requestBody.input;
+  const input = raRequestData.requestBody.input;
   let messages: ChatCompletionMessage[] = [];
 
   if (typeof input === 'string') {
@@ -102,18 +102,18 @@ function extractMessagesFromResponsesRequest(
 }
 
 export function extractMessagesFromRequestData(
-  idkRequestData:
+  raRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
 ): ChatCompletionMessage[] {
-  switch (idkRequestData.functionName) {
+  switch (raRequestData.functionName) {
     case FunctionName.CHAT_COMPLETE:
-      return idkRequestData.requestBody.messages;
+      return raRequestData.requestBody.messages;
     case FunctionName.STREAM_CHAT_COMPLETE:
-      return idkRequestData.requestBody.messages;
+      return raRequestData.requestBody.messages;
     case FunctionName.CREATE_MODEL_RESPONSE:
-      return extractMessagesFromResponsesRequest(idkRequestData);
+      return extractMessagesFromResponsesRequest(raRequestData);
   }
 }
 
@@ -191,7 +191,7 @@ export function formatMessagesForEmbedding(
 }
 
 export async function generateEmbeddingForRequest(
-  idkRequestData:
+  raRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
@@ -205,7 +205,7 @@ export async function generateEmbeddingForRequest(
   }
 
   try {
-    const messages = extractMessagesFromRequestData(idkRequestData);
+    const messages = extractMessagesFromRequestData(raRequestData);
     const inputText = formatMessagesForEmbedding(messages);
 
     if (!inputText.trim()) {
@@ -219,7 +219,7 @@ export async function generateEmbeddingForRequest(
       baseURL: `${API_URL}/v1`,
     });
 
-    const idkhubConfig = {
+    const raConfig = {
       targets: [
         {
           provider: 'openai',
@@ -227,14 +227,14 @@ export async function generateEmbeddingForRequest(
           api_key: apiKey,
         },
       ],
-      agent_name: 'idkhub',
+      agent_name: 'reactive-agents',
       skill_name: 'embedding',
     };
 
     const response = await client
       .withOptions({
         defaultHeaders: {
-          'x-idk-config': JSON.stringify(idkhubConfig),
+          'ra-config': JSON.stringify(raConfig),
         },
       })
       .embeddings.create({

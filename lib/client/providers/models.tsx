@@ -1,7 +1,7 @@
 'use client';
 
-import { getModels } from '@client/api/v1/idk/models';
-import { getSkillModels } from '@client/api/v1/idk/skills';
+import { getModels } from '@client/api/v1/reactive-agents/models';
+import { getSkillModels } from '@client/api/v1/reactive-agents/skills';
 import type { Model, ModelQueryParams } from '@shared/types/data/model';
 import {
   createContext,

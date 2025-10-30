@@ -29,8 +29,8 @@ export const predibaseChatCompleteConfig: AIProviderFunctionConfig = {
     where adapter_id format is "<adapter_repository_reference/version_number"
     (version_number is required).
     */
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      const model = idkRequestBody.model;
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      const model = raRequestBody.model;
       return [
         {
           role: ChatCompletionMessageRole.SYSTEM,
@@ -43,9 +43,9 @@ export const predibaseChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'messages',
     required: true,
     default: [],
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       return (
-        idkRequestBody.messages?.map((message) => {
+        raRequestBody.messages?.map((message) => {
           if (message.role === ChatCompletionMessageRole.DEVELOPER)
             return { ...message, role: ChatCompletionMessageRole.SYSTEM };
           return message;

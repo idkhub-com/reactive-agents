@@ -78,13 +78,13 @@ export function shouldTriggerRealtimeEvaluation(
     return false;
   }
 
-  // Only evaluate actual AI provider calls, not internal IDK API calls
+  // Only evaluate actual AI provider calls, not internal Reactive Agents API calls
   if (!url.pathname.startsWith('/v1/')) {
     return false;
   }
 
-  // Don't evaluate IDK internal API calls
-  if (url.pathname.startsWith('/v1/idk')) {
+  // Don't evaluate Reactive Agents internal API calls
+  if (url.pathname.startsWith('/v1/reactive-agents')) {
     return false;
   }
 

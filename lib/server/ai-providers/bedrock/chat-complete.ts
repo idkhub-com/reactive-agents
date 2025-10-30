@@ -201,7 +201,6 @@ const getMessageContent = (
     });
   }
 
-  // If message is an array of objects, handle text content, tool calls, tool results, this would be much cleaner if portkeys chat create object were a union type
   message.tool_calls?.forEach((toolCall: ChatCompletionToolCall) => {
     out.push({
       toolUse: {
@@ -444,7 +443,7 @@ export const bedrockChatCompleteResponseTransform: ResponseTransformFunction = (
   responseStatus,
   _responseHeaders,
   strictOpenAiCompliance,
-  idkRequestData,
+  raRequestData,
 ) => {
   if (responseStatus !== 200) {
     const errorResponse = bedrockErrorResponseTransform(response);
@@ -453,7 +452,7 @@ export const bedrockChatCompleteResponseTransform: ResponseTransformFunction = (
 
   if ('output' in response) {
     const chatCompletionRequestBody =
-      idkRequestData.requestBody as ChatCompletionRequestBody;
+      raRequestData.requestBody as ChatCompletionRequestBody;
 
     const bedrockResponse =
       response as unknown as BedrockChatCompletionResponse;
@@ -527,7 +526,7 @@ export const bedrockChatCompleteStreamChunkTransform: ResponseChunkStreamTransfo
     fallbackId,
     streamState,
     strictOpenAiCompliance,
-    idkRequestData,
+    raRequestData,
   ) => {
     const parsedChunk: BedrockChatCompleteStreamChunk =
       JSON.parse(responseChunk);
@@ -538,7 +537,7 @@ export const bedrockChatCompleteStreamChunkTransform: ResponseChunkStreamTransfo
       streamState.currentToolCallIndex = -1;
     }
     const chatCompletionRequestBody =
-      idkRequestData.requestBody as ChatCompletionRequestBody;
+      raRequestData.requestBody as ChatCompletionRequestBody;
 
     if (parsedChunk.usage) {
       const shouldSendCacheUsage =
@@ -768,10 +767,10 @@ export const bedrockCohereChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'prompt',
     required: true,
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       let prompt = '';
-      if (idkRequestBody.messages) {
-        const messages = idkRequestBody.messages;
+      if (raRequestBody.messages) {
+        const messages = raRequestBody.messages;
         messages.forEach((msg, index) => {
           if (
             index === 0 &&
@@ -853,7 +852,7 @@ export const bedrockCohereChatCompleteResponseTransform: ResponseTransformFuncti
     responseStatus,
     responseHeaders,
     _strictOpenAiCompliance,
-    idkRequestData,
+    raRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResponse = bedrockErrorResponseTransform(response);
@@ -864,7 +863,7 @@ export const bedrockCohereChatCompleteResponseTransform: ResponseTransformFuncti
 
     if ('generations' in response) {
       const chatCompletionRequestBody =
-        idkRequestData.requestBody as ChatCompletionRequestBody;
+        raRequestData.requestBody as ChatCompletionRequestBody;
       const bedrockResponse =
         response as unknown as BedrockCohereCompleteResponse;
       const prompt_tokens =
@@ -910,7 +909,7 @@ export const bedrockCohereChatCompleteStreamChunkTransform: ResponseChunkStreamT
     fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    idkRequestData,
+    raRequestData,
   ) => {
     let chunk = responseChunk.trim();
     chunk = chunk.replace(/^data: /, '');
@@ -918,7 +917,7 @@ export const bedrockCohereChatCompleteStreamChunkTransform: ResponseChunkStreamT
     const parsedChunk: BedrockCohereStreamChunk = JSON.parse(chunk);
 
     const chatCompletionRequestBody =
-      idkRequestData.requestBody as ChatCompletionRequestBody;
+      raRequestData.requestBody as ChatCompletionRequestBody;
 
     // discard the last cohere chunk as it sends the whole response combined.
     if (parsedChunk.is_finished) {
@@ -973,10 +972,10 @@ export const bedrockAI21ChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'prompt',
     required: true,
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       let prompt = '';
-      if (idkRequestBody.messages) {
-        const messages = idkRequestBody.messages;
+      if (raRequestBody.messages) {
+        const messages = raRequestBody.messages;
         messages.forEach((msg, index) => {
           if (
             index === 0 &&
@@ -1019,17 +1018,17 @@ export const bedrockAI21ChatCompleteConfig: AIProviderFunctionConfig = {
   },
   presence_penalty: {
     param: 'presencePenalty',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       return {
-        scale: idkRequestBody.presence_penalty,
+        scale: raRequestBody.presence_penalty,
       };
     },
   },
   frequency_penalty: {
     param: 'frequencyPenalty',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       return {
-        scale: idkRequestBody.frequency_penalty,
+        scale: raRequestBody.frequency_penalty,
       };
     },
   },
@@ -1050,7 +1049,7 @@ export const bedrockAI21ChatCompleteResponseTransform: ResponseTransformFunction
     responseStatus,
     responseHeaders,
     _strictOpenAiCompliance,
-    idkRequestData,
+    raRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResponse = bedrockErrorResponseTransform(response);
@@ -1061,7 +1060,7 @@ export const bedrockAI21ChatCompleteResponseTransform: ResponseTransformFunction
 
     if ('completions' in response) {
       const chatCompletionRequestBody =
-        idkRequestData.requestBody as ChatCompletionRequestBody;
+        raRequestData.requestBody as ChatCompletionRequestBody;
       const bedrockResponse =
         response as unknown as BedrockAI21CompleteResponse;
 

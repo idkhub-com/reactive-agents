@@ -21,8 +21,8 @@ export const siliconFlowChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     default: '',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      return idkRequestBody.messages?.map((message) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      return raRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;
@@ -33,9 +33,9 @@ export const siliconFlowChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'max_tokens',
     default: 100,
     min: 0,
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
       // Handle precedence: max_completion_tokens takes priority over max_tokens
-      return idkRequestBody.max_completion_tokens || idkRequestBody.max_tokens;
+      return raRequestBody.max_completion_tokens || raRequestBody.max_tokens;
     },
   },
   temperature: {
