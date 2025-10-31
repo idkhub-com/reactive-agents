@@ -1,6 +1,6 @@
 import { Toaster } from '@client/components/ui/toaster';
 import type { Metadata, Viewport } from 'next';
-import { Lato } from 'next/font/google';
+import { Lato, Ubuntu } from 'next/font/google';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 
@@ -19,6 +19,14 @@ const lato: NextFontWithVariable = Lato({
   variable: '--font-lato',
   preload: false,
   weight: ['100', '300', '400', '700', '900'],
+});
+
+const ubuntu: NextFontWithVariable = Ubuntu({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-ubuntu',
+  preload: false,
+  weight: ['500'],
 });
 
 export const metadata: Metadata = {
@@ -41,7 +49,11 @@ export default async function RootLayout({
   const nonceScriptId = useId();
   const nonce = (await headers()).get('X-Nonce');
   return (
-    <html lang="en" className={`${lato.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${lato.variable} ${ubuntu.variable}`}
+      suppressHydrationWarning
+    >
       <body className="flex flex-col overflow-hidden overscroll-none w-screen h-screen">
         <Script
           strategy="afterInteractive"

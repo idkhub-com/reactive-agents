@@ -119,8 +119,12 @@ export const AgentsProvider = ({
     initialPageParam: 0,
   });
 
-  // Flatten pages into single array
-  const agents: Agent[] = data?.pages?.flat() ?? [];
+  // Flatten pages into single array and filter out internal agents
+  const agents: Agent[] = useMemo(() => {
+    const allAgents = data?.pages?.flat() ?? [];
+    // Filter out internal agents (e.g., 'reactive-agents')
+    return allAgents.filter((agent) => agent.name !== 'reactive-agents');
+  }, [data]);
 
   // Fetch individual agent by name when URL has a selected agent
   const { data: selectedAgentData } = useQuery({

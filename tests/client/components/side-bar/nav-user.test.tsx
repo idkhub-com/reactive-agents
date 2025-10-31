@@ -2,6 +2,7 @@ import { NavUser } from '@client/components/side-bar/nav-user';
 import { API_URL } from '@client/constants';
 import { SidebarProvider } from '@client/providers/side-bar';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Next.js router
@@ -38,91 +39,88 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 describe('NavUser', () => {
-  const mockUser = {
-    name: 'Test User',
-    email: 'test@example.com',
-    avatar: 'https://example.com/avatar.jpg',
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockPush.mockClear();
   });
 
-  it('should render user information correctly', () => {
+  it('should render logout button', () => {
     render(
       <SidebarProvider>
-        <NavUser user={mockUser} />
+        <NavUser />
       </SidebarProvider>,
     );
 
-    // The user name and email appear twice (in trigger and in dropdown label)
-    expect(screen.getAllByText(mockUser.name)[0]).toBeInTheDocument();
-    expect(screen.getAllByText(mockUser.email)[0]).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /log out/i });
+    expect(button).toBeInTheDocument();
   });
 
-  it('should have correct dropdown trigger attributes', () => {
+  it('should call logout endpoint when button is clicked', async () => {
+    const user = userEvent.setup();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: 'Logged out' }),
+    } as Response);
+
     render(
       <SidebarProvider>
-        <NavUser user={mockUser} />
+        <NavUser />
       </SidebarProvider>,
     );
 
-    const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('aria-expanded', 'false');
-    expect(button).toHaveAttribute('aria-haspopup', 'menu');
-    expect(button).toHaveTextContent(mockUser.name);
-    expect(button).toHaveTextContent(mockUser.email);
-  });
+    const button = screen.getByRole('button', { name: /log out/i });
+    await user.click(button);
 
-  describe('signOut function', () => {
-    it('should call the correct logout endpoint with correct parameters', async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ message: 'Logged out' }),
-      } as Response);
-
-      // Access the NavUser component instance to test signOut directly
-      render(
-        <SidebarProvider>
-          <NavUser user={mockUser} />
-        </SidebarProvider>,
-      );
-
-      // Simulate the signOut function being called
-      // In a real scenario, this would be triggered by clicking the logout button
-      // But since Radix dropdowns don't render properly in jsdom, we test the fetch behavior
-      const expectedUrl = `${API_URL}/v1/reactive-agents/auth/logout`;
-
-      // Call fetch manually as the signOut function would
-      await fetch(expectedUrl, {
+    const expectedUrl = `${API_URL}/v1/reactive-agents/auth/logout`;
+    expect(global.fetch).toHaveBeenCalledWith(
+      expectedUrl,
+      expect.objectContaining({
         credentials: 'include',
         method: 'POST',
-      });
+      }),
+    );
+  });
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expectedUrl,
-        expect.objectContaining({
-          credentials: 'include',
-          method: 'POST',
-        }),
-      );
+  it('should redirect to login page on successful logout', async () => {
+    const user = userEvent.setup();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: 'Logged out' }),
+    } as Response);
+
+    render(
+      <SidebarProvider>
+        <NavUser />
+      </SidebarProvider>,
+    );
+
+    const button = screen.getByRole('button', { name: /log out/i });
+    await user.click(button);
+
+    // Wait for async operations to complete
+    await vi.waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/login');
     });
+  });
 
-    it('should use the correct endpoint path', () => {
-      render(
-        <SidebarProvider>
-          <NavUser user={mockUser} />
-        </SidebarProvider>,
-      );
+  it('should not redirect if logout fails', async () => {
+    const user = userEvent.setup();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Logout failed' }),
+    } as Response);
 
-      // Verify the component is rendered and would call the correct endpoint
-      // The actual endpoint path is tested in the component implementation
-      expect(screen.getByRole('button')).toBeInTheDocument();
+    render(
+      <SidebarProvider>
+        <NavUser />
+      </SidebarProvider>,
+    );
 
-      // The endpoint should be /v1/reactive-agents/auth/logout (not /v1/auth/logout)
-      const expectedEndpoint = `${API_URL}/v1/reactive-agents/auth/logout`;
-      expect(expectedEndpoint).toContain('/v1/reactive-agents/auth/logout');
-    });
+    const button = screen.getByRole('button', { name: /log out/i });
+    await user.click(button);
+
+    // Wait a bit to ensure no redirect happens
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

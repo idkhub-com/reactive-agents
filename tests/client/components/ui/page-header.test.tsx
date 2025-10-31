@@ -1,3 +1,4 @@
+import { PageHeader } from '@client/components/ui/page-header';
 import { fireEvent, render, screen } from '@testing-library/react';
 import {
   beforeEach,
@@ -7,7 +8,6 @@ import {
   type MockedFunction,
   vi,
 } from 'vitest';
-import { PageHeader } from './page-header';
 
 // Mock Next.js router
 const mockBack = vi.fn();
@@ -202,11 +202,10 @@ describe('PageHeader', () => {
     it('applies correct CSS classes for layout', () => {
       render(<PageHeader title="Test Page" />);
 
-      // Check for card structure
-      const card = screen
-        .getByRole('heading')
-        .closest('[class*="border-border"]');
-      expect(card).toBeInTheDocument();
+      // Check for sticky header with border
+      const header = screen.getByRole('heading').closest('.sticky');
+      expect(header).toBeInTheDocument();
+      expect(header).toHaveClass('sticky', 'top-0', 'z-10', 'border-b');
     });
 
     it('maintains proper spacing between elements', () => {

@@ -1,5 +1,6 @@
 'use client';
 
+import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
 import {
   AGENT_SHORTCUT_KEYS,
   MAX_AGENT_SHORTCUTS,
@@ -202,6 +203,7 @@ export function NavMain({
                           className="size-4 rounded-sm"
                         />
                         <span className="truncate">{agent.name}</span>
+                        <AgentStatusIndicator agent={agent} />
                         {index < MAX_AGENT_SHORTCUTS && (
                           <span className="ml-auto text-xs text-muted-foreground shrink-0">
                             {modifierKey}

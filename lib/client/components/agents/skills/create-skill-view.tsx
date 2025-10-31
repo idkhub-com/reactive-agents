@@ -268,7 +268,14 @@ export function CreateSkillView(): React.ReactElement {
                         <Input
                           placeholder="e.g., data-analysis, email_templates, code-review"
                           className="h-11"
+                          pattern="[a-z0-9_-]+"
+                          title="Only lowercase letters, numbers, underscores, and hyphens are allowed"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Trigger validation on every change
+                            form.trigger('name');
+                          }}
                           disabled={isCreating}
                         />
                       </FormControl>

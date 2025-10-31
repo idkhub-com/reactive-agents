@@ -681,7 +681,7 @@ export function BreadcrumbComponent(): ReactElement {
   const { navigationState } = useNavigation();
 
   return (
-    <Breadcrumb className="py-2">
+    <Breadcrumb>
       <BreadcrumbList className="px-1! h-9 pr-0 gap-0! spacing-x-0! border rounded-md bg-sidebar dark:bg-sidebar overflow-hidden">
         {navigationState.breadcrumbs.map((segment, index) => (
           <React.Fragment

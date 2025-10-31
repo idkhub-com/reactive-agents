@@ -13,11 +13,13 @@ import {
 } from '@client/components/ui/card';
 import { Separator } from '@client/components/ui/separator';
 import { Textarea } from '@client/components/ui/textarea';
+import { useAgentValidation } from '@client/hooks/use-agent-validation';
 import { useAgents } from '@client/providers/agents';
 import type { Agent } from '@shared/types/data';
 import { sanitizeMetadata, sanitizeUserInput } from '@shared/utils/security';
 import { format } from 'date-fns';
 import {
+  AlertCircle,
   Bot,
   Calendar,
   Check,
@@ -27,6 +29,7 @@ import {
   X,
   XIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useId } from 'react';
@@ -49,6 +52,9 @@ export function AgentView({
   const [isEditing, setIsEditing] = React.useState(false);
   const [editDescription, setEditDescription] = React.useState('');
   const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // Validate agent readiness
+  const validation = useAgentValidation(currentAgent);
 
   // Find agent by ID
   React.useEffect(() => {
@@ -179,6 +185,15 @@ export function AgentView({
           <CardTitle className="text-sm font-light m-0 pl-2 flex flex-row items-center gap-2">
             <Bot className="h-4 w-4 text-primary" />
             <span className="text-sm font-light">{currentAgent.name}</span>
+            {!validation.isLoading && !validation.isReady && (
+              <>
+                <Separator orientation="vertical" />
+                <span className="text-xs font-light bg-orange-100 dark:bg-orange-950 px-2 py-1 rounded-full text-orange-800 dark:text-orange-200 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Not Ready
+                </span>
+              </>
+            )}
             {isActiveAgent && (
               <>
                 <Separator orientation="vertical" />
@@ -259,6 +274,40 @@ export function AgentView({
         </CardHeader>
         <CardContent className="flex flex-row p-0 h-full relative border-t overflow-hidden">
           <div className="inset-0 flex flex-col flex-1 w-full p-4 gap-4 overflow-hidden overflow-y-auto">
+            {/* Agent Readiness Warning */}
+            {!validation.isLoading && !validation.isReady && (
+              <Card className="border-orange-300 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 space-y-2">
+                      <h3 className="font-medium text-orange-900 dark:text-orange-200">
+                        Agent Not Ready
+                      </h3>
+                      <p className="text-sm text-orange-800 dark:text-orange-300">
+                        This agent is missing required configuration and cannot
+                        be used yet.
+                      </p>
+                      <ul className="text-sm text-orange-700 dark:text-orange-400 list-disc pl-4 space-y-1">
+                        {validation.missingRequirements.map((req) => (
+                          <li key={req}>{req}</li>
+                        ))}
+                      </ul>
+                      <div className="pt-2">
+                        <Link
+                          href={`/agents/${encodeURIComponent(currentAgent.name)}/skills/create`}
+                        >
+                          <Button size="sm" variant="default">
+                            Add a Skill
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Basic Information */}
             <Card>
               <CardHeader className="pb-3">

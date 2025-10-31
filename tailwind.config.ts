@@ -165,6 +165,7 @@ module.exports = {
       },
       fontFamily: {
         editor: ['var(--font-lato)'],
+        logo: ['var(--font-ubuntu)'],
       },
       keyframes: {
         'accordion-down': {
