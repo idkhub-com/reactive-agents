@@ -49,7 +49,7 @@ That's it! The application will be available at `http://localhost:3000`.
 > [!WARNING]
 > **Experimental Project** - Reactive Agents is currently in active development and is **not production-ready**. We are working on critical features including authorization, performance optimizations, and stability improvements. Use this project for experimentation and development only.
 
-For future production deployment guides and best practices, visit our [documentation](https://reactiveagents.ai).
+For future production deployment guides and best practices, visit our [documentation](https://docs.reactiveagents.ai).
 
 ---
 
@@ -69,7 +69,7 @@ Check out the [examples/](examples/) directory for sample implementations showin
 
 ## 📚 Learn More
 
-- **[Documentation](https://reactiveagents.ai)** - Complete guides and API reference
+- **[Documentation](https://docs.reactiveagents.ai)** - Complete guides and API reference
 - [Contributing Guide](CONTRIBUTING.md)
 - [Notice](NOTICE)
 
