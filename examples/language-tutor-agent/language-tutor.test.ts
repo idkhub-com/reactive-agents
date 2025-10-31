@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock environment variables
 process.env.OPENAI_API_KEY = 'test-key-sk-1234567890abcdef1234567890abcdef';
-process.env.IDKHUB_URL = 'http://localhost:3000';
-process.env.IDKHUB_AUTH_TOKEN = 'test-token';
+process.env.RA_URL = 'http://localhost:3000';
+process.env.RA_AUTH_TOKEN = 'test-token';
 
 describe('Language Tutor Agent - Validation Tests', () => {
   beforeEach(() => {

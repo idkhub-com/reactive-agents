@@ -1,6 +1,6 @@
 import type { AppContext } from '@server/types/hono';
-import { getAgent } from '@server/utils/idkhub/agents';
-import { getSkill } from '@server/utils/idkhub/skills';
+import { getAgent } from '@server/utils/reactive-agents/agents';
+import { getSkill } from '@server/utils/reactive-agents/skills';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
@@ -10,16 +10,16 @@ export const agentAndSkillMiddleware = createMiddleware(
 
     // Only set variables for API requests
     if (url.pathname.startsWith('/v1/')) {
-      // Don't set variables for IDK API requests
-      if (!url.pathname.startsWith('/v1/idk')) {
-        const idkConfig = c.get('idk_config_pre_processed');
+      // Don't set variables for Reactive Agents API requests
+      if (!url.pathname.startsWith('/v1/reactive-agents')) {
+        const raConfig = c.get('ra_config_pre_processed');
         const agent = await getAgent(
           c.get('user_data_storage_connector'),
-          idkConfig.agent_name,
+          raConfig.agent_name,
         );
         if (!agent) {
           return c.json(
-            { error: `Agent with name ${idkConfig.agent_name} not found` },
+            { error: `Agent with name ${raConfig.agent_name} not found` },
             404,
           );
         }
@@ -27,11 +27,11 @@ export const agentAndSkillMiddleware = createMiddleware(
           c.get('user_data_storage_connector'),
           agent.id,
           agent.name,
-          idkConfig.skill_name,
+          raConfig.skill_name,
         );
         if (!skill) {
           return c.json(
-            { error: `Skill with name ${idkConfig.skill_name} not found` },
+            { error: `Skill with name ${raConfig.skill_name} not found` },
             404,
           );
         }

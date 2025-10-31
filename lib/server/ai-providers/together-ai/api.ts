@@ -3,11 +3,11 @@ import { FunctionName } from '@shared/types/api/request';
 
 const togetherAIAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.together.xyz',
-  headers: ({ idkTarget }) => {
-    return { Authorization: `Bearer ${idkTarget.api_key}` };
+  headers: ({ raTarget }) => {
+    return { Authorization: `Bearer ${raTarget.api_key}` };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.COMPLETE:
         return '/v1/completions';
       case FunctionName.CHAT_COMPLETE:

@@ -13,8 +13,8 @@ import { workersAIErrorResponseTransform } from './utils';
 export const workersAICompleteConfig: AIProviderFunctionConfig = {
   prompt: {
     param: 'prompt',
-    transform: (idkRequestBody: CompletionRequestBody) =>
-      `\n\nHuman: ${idkRequestBody.prompt}\n\nAssistant:`,
+    transform: (raRequestBody: CompletionRequestBody) =>
+      `\n\nHuman: ${raRequestBody.prompt}\n\nAssistant:`,
     required: true,
   },
   model: {
@@ -63,7 +63,7 @@ export const workersAICompleteResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  _idkRequestData,
+  _raRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     return workersAIErrorResponseTransform(aiProviderResponseBody);

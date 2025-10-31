@@ -3,11 +3,11 @@ import { FunctionName } from '@shared/types/api/request';
 
 const deepSeekAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.deepseek.com',
-  headers: ({ idkTarget: providerOptions }) => {
+  headers: ({ raTarget: providerOptions }) => {
     return { Authorization: `Bearer ${providerOptions.api_key}` }; // https://platform.deepseek.com/api_keys
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/v1/chat/completions';
       default:

@@ -3,7 +3,7 @@ import type {
   ResponseTransformFunction,
 } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
-import type { IdkRequestBody } from '@shared/types/api/request/body';
+import type { ReactiveAgentsRequestBody } from '@shared/types/api/request/body';
 import { AIProvider } from '@shared/types/constants';
 import { chatCompleteParams, responseTransformers } from '../open-ai-base';
 import { vertexAPIConfig } from './api';
@@ -55,7 +55,11 @@ import { getModelAndProvider } from './utils';
 export const googleVertexAIConfig: AIProviderConfig = {
   api: vertexAPIConfig,
   getConfig: (
-    idkRequestBody?: IdkRequestBody | ReadableStream | FormData | ArrayBuffer,
+    raRequestBody?:
+      | ReactiveAgentsRequestBody
+      | ReadableStream
+      | FormData
+      | ArrayBuffer,
   ) => {
     const requestConfig = {
       [FunctionName.UPLOAD_FILE]: {},
@@ -96,11 +100,11 @@ export const googleVertexAIConfig: AIProviderConfig = {
       },
     };
 
-    if (!idkRequestBody || !('model' in idkRequestBody)) {
+    if (!raRequestBody || !('model' in raRequestBody)) {
       return baseConfig;
     }
 
-    const providerModel = idkRequestBody?.model;
+    const providerModel = raRequestBody?.model;
 
     if (!providerModel) {
       return baseConfig;

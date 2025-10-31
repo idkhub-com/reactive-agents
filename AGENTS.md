@@ -28,7 +28,7 @@
 
 ## Testing Guidelines
 - Framework: Vitest (jsdom) + Testing Library.
-- Location: under `tests/` mirroring source paths (e.g., `tests/server/api/v1/idk/agents.test.ts`).
+- Location: under `tests/` mirroring source paths (e.g., `tests/server/api/v1/reactive-agents/agents.test.ts`).
 - Naming: `*.test.ts` or `*.test.tsx`; use `*.spec.*` if useful.
 - Run: `pnpm test` (CI mode) or `pnpm test:watch` (dev). Coverage reports (text/json/html) are generated; keep meaningful coverage for changed code.
 
@@ -43,4 +43,3 @@
 - Secrets: never commit; use `.env` for local. Regenerate CF types with `pnpm cf-typegen` when env changes.
 - Supabase: start/stop with `supabase start|stop`; migrations in `supabase/migrations` and seed via `supabase/seed.sql`.
 - Middleware and API changes should include server/client tests and docs updates in `docs/` when relevant.
-

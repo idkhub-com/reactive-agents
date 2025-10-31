@@ -3,11 +3,11 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const upstageAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.upstage.ai/v1/solar',
-  headers: ({ idkTarget }) => {
-    return { Authorization: `Bearer ${idkTarget.api_key}` };
+  headers: ({ raTarget }) => {
+    return { Authorization: `Bearer ${raTarget.api_key}` };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.EMBED:

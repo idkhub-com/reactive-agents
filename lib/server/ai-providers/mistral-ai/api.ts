@@ -2,19 +2,19 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 export const mistralAIAPIConfig: InternalProviderAPIConfig = {
-  headers: ({ idkTarget }) => {
+  headers: ({ raTarget }) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    if (idkTarget.api_key) {
-      headers.Authorization = `Bearer ${idkTarget.api_key}`;
+    if (raTarget.api_key) {
+      headers.Authorization = `Bearer ${raTarget.api_key}`;
     }
 
     return headers;
   },
-  getBaseURL: ({ idkTarget }) => {
-    const customHost = idkTarget.custom_host;
+  getBaseURL: ({ raTarget }) => {
+    const customHost = raTarget.custom_host;
     if (customHost) {
       try {
         const url = new URL(customHost);
@@ -55,9 +55,9 @@ export const mistralAIAPIConfig: InternalProviderAPIConfig = {
     }
     return 'https://api.mistral.ai/v1';
   },
-  getEndpoint: ({ idkRequestData, idkTarget }) => {
-    const mappedFn = idkRequestData.functionName;
-    const mistralFimCompletion = idkTarget.mistral_fim_completion;
+  getEndpoint: ({ raRequestData, raTarget }) => {
+    const mappedFn = raRequestData.functionName;
+    const mistralFimCompletion = raTarget.mistral_fim_completion;
 
     if (mistralFimCompletion === 'true') {
       return '/fim/completions';

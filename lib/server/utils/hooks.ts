@@ -1,9 +1,9 @@
 import type { AppContext } from '@server/types/hono';
 import type {
-  IdkRequestBody,
-  IdkRequestData,
+  ReactiveAgentsRequestBody,
+  ReactiveAgentsRequestData,
 } from '@shared/types/api/request/body';
-import type { IdkResponseBody } from '@shared/types/api/response/body';
+import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
 import type { HookLog } from '@shared/types/data';
 
 import { HookType } from '@shared/types/middleware/hooks';
@@ -11,7 +11,7 @@ import { HookType } from '@shared/types/middleware/hooks';
 function createHookResponse(
   baseResponse: Response,
   baseResponseBody:
-    | IdkResponseBody
+    | ReactiveAgentsResponseBody
     | ReadableStream
     | FormData
     | ArrayBuffer
@@ -44,12 +44,16 @@ function createHookResponse(
 
 function handleFailedOutputHook(
   response: Response,
-  idkResponseBody: IdkResponseBody | ReadableStream | FormData | ArrayBuffer,
+  raResponseBody:
+    | ReactiveAgentsResponseBody
+    | ReadableStream
+    | FormData
+    | ArrayBuffer,
   hookLogs: HookLog[],
   failedHook?: HookLog,
 ): Response {
-  if (!idkResponseBody) {
-    return new Response(idkResponseBody, {
+  if (!raResponseBody) {
+    return new Response(raResponseBody, {
       ...response,
       status: 246,
       statusText: 'Hooks failed',
@@ -65,9 +69,9 @@ function handleFailedOutputHook(
 
 export async function outputHookHandler(
   c: AppContext,
-  idkRequestData: IdkRequestData,
+  raRequestData: ReactiveAgentsRequestData,
   response: Response,
-  idkResponseBody: IdkResponseBody,
+  raResponseBody: ReactiveAgentsResponseBody,
   retryAttemptsMade: number,
 ): Promise<Response> {
   try {
@@ -90,22 +94,22 @@ export async function outputHookHandler(
       HookType.OUTPUT_HOOK,
       response.status,
       false,
-      idkRequestData,
-      idkResponseBody,
+      raRequestData,
+      raResponseBody,
     );
 
     for (const hookLog of hookLogs) {
       if (hookLog.result.deny_request) {
         return handleFailedOutputHook(
           response,
-          idkResponseBody,
+          raResponseBody,
           hookLogs,
           hookLog,
         );
       }
     }
 
-    return createHookResponse(response, idkResponseBody, hookLogs);
+    return createHookResponse(response, raResponseBody, hookLogs);
   } catch (err) {
     console.error(err);
     return response;
@@ -124,10 +128,10 @@ function handleFailedInputHook(
 
 export async function inputHookHandler(
   c: AppContext,
-  idkRequestData: IdkRequestData,
+  raRequestData: ReactiveAgentsRequestData,
 ): Promise<{
   errorResponse?: Response;
-  transformedIdkBody?: IdkRequestBody;
+  transformedReactiveAgentsBody?: ReactiveAgentsRequestBody;
 }> {
   try {
     const executeHooks = c.get('executeHooks');
@@ -137,11 +141,11 @@ export async function inputHookHandler(
       HookType.INPUT_HOOK,
       null,
       false,
-      idkRequestData,
+      raRequestData,
     );
 
-    let latestTransformedIdkBody:
-      | IdkRequestBody
+    let latestTransformedReactiveAgentsBody:
+      | ReactiveAgentsRequestBody
       | ReadableStream
       | ArrayBuffer
       | FormData
@@ -151,16 +155,17 @@ export async function inputHookHandler(
       if (hookLog.result.deny_request) {
         return {
           errorResponse: handleFailedInputHook(hookLogs, hookLog),
-          transformedIdkBody: idkRequestData.requestBody,
+          transformedReactiveAgentsBody: raRequestData.requestBody,
         };
       }
       if (hookLog.result.request_body_override) {
-        latestTransformedIdkBody = hookLog.result.request_body_override;
+        latestTransformedReactiveAgentsBody =
+          hookLog.result.request_body_override;
       }
     }
-    if (latestTransformedIdkBody) {
+    if (latestTransformedReactiveAgentsBody) {
       return {
-        transformedIdkBody: latestTransformedIdkBody,
+        transformedReactiveAgentsBody: latestTransformedReactiveAgentsBody,
       };
     }
   } catch (err) {

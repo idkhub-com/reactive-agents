@@ -32,7 +32,7 @@ INCLUDE_IN_DEPTH=true pnpm test tests/server/connectors/in-depth/tool-correctnes
 
 API testing:
 ```bash
-curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer idk"
+curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer reactive-agents"
 ```
 
 ## Architecture Overview
@@ -52,9 +52,9 @@ The application uses **Hono** web framework with TypeScript path aliases:
 
 Key API endpoints:
 - `/v1/chat/completions` - OpenAI-compatible chat API
-- `/v1/idk/agents` - Agent management
-- `/v1/idk/evaluations` - Dataset and evaluation management
-- `/v1/idk/observability/logs` - Request logging
+- `/v1/reactive-agents/agents` - Agent management
+- `/v1/reactive-agents/evaluations` - Dataset and evaluation management
+- `/v1/reactive-agents/observability/logs` - Request logging
 
 ### Database Integration (Supabase)
 
@@ -84,7 +84,7 @@ const mockUserDataStorageConnector: unknown = {
 
 **Client API Tests**: Mock the entire API module to control HTTP responses:
 ```typescript
-vi.mock('@client/api/v1/idk/agents', () => ({
+vi.mock('@client/api/v1/reactive-agents/agents', () => ({
   getAgents: vi.fn().mockImplementation(async (params) => {
     const response = await mockGet({ query: params });
     if (!response.ok) throw new Error('Failed to fetch agents');
@@ -131,7 +131,7 @@ Provider implementations are in `/lib/server/ai-providers/[provider]/`.
 
 Dual authentication system:
 - **Client**: Next.js middleware with JWT cookies for dashboard access
-- **API**: Hono middleware with Bearer token validation (`Authorization: Bearer idk`)
+- **API**: Hono middleware with Bearer token validation (`Authorization: Bearer reactive-agents`)
 
 ## Development Workflow
 

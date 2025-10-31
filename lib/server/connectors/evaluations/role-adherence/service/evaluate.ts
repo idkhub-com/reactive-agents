@@ -1,8 +1,8 @@
 import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/role-adherence/templates/main';
 import { RoleAdherenceEvaluationParameters } from '@server/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
-import { extractOutputFromResponseBody } from '@server/utils/idkhub/responses';
-import { IdkResponseBody } from '@shared/types/api/response';
+import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
+import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
@@ -25,7 +25,7 @@ function pickRoleData(
   let assistant_output = params.assistant_output;
   if (!assistant_output) {
     try {
-      const responseBody = IdkResponseBody.parse(
+      const responseBody = ReactiveAgentsResponseBody.parse(
         log.ai_provider_request_log.response_body,
       );
       assistant_output = extractOutputFromResponseBody(responseBody);

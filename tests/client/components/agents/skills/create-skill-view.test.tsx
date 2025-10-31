@@ -46,7 +46,7 @@ vi.mock('next/navigation', () => ({
 import { CreateSkillView } from '@client/components/agents/skills/create-skill-view';
 
 // Mock the agents API
-vi.mock('@client/api/v1/idk/agents', () => {
+vi.mock('@client/api/v1/reactive-agents/agents', () => {
   const mockAgents = [
     {
       id: 'agent-1',
@@ -75,7 +75,7 @@ vi.mock('@client/api/v1/idk/agents', () => {
 });
 
 // Mock the skills API
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn().mockResolvedValue([]),
   createSkill: vi.fn().mockResolvedValue({
     id: 'new-skill-id',
@@ -292,7 +292,7 @@ describe('CreateSkillView', () => {
 
   it('validates max configurations field', async () => {
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     await waitFor(() => {
@@ -328,7 +328,7 @@ describe('CreateSkillView', () => {
 
   it('allows editing max configurations field', async () => {
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     await waitFor(() => {
@@ -414,11 +414,13 @@ describe('CreateSkillView', () => {
   });
 
   it('creates skill successfully with valid data', async () => {
-    const { createSkill } = await import('@client/api/v1/idk/skills');
+    const { createSkill } = await import(
+      '@client/api/v1/reactive-agents/skills'
+    );
     const _createSkillMock = vi.mocked(createSkill);
 
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Fill in skill name first (easier to validate)
@@ -444,7 +446,7 @@ describe('CreateSkillView', () => {
 
   it('creates skill with empty description', () => {
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Fill in skill name only (description optional)
@@ -475,7 +477,7 @@ describe('CreateSkillView', () => {
 
   it('shows form elements for skill creation', () => {
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Fill form fields to test functionality
@@ -494,7 +496,7 @@ describe('CreateSkillView', () => {
 
   it('has proper form field accessibility', () => {
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Test form field accessibility
@@ -513,7 +515,7 @@ describe('CreateSkillView', () => {
 
   it('maintains form state during user interaction', () => {
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Fill form and verify state is maintained
@@ -534,12 +536,14 @@ describe('CreateSkillView', () => {
   });
 
   it('handles creation error gracefully', async () => {
-    const { createSkill } = await import('@client/api/v1/idk/skills');
+    const { createSkill } = await import(
+      '@client/api/v1/reactive-agents/skills'
+    );
     const createSkillMock = vi.mocked(createSkill);
     createSkillMock.mockRejectedValue(new Error('Creation failed'));
 
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Fill and submit form
@@ -559,7 +563,7 @@ describe('CreateSkillView', () => {
 
   it('renders while agents are loading', async () => {
     // Mock agents loading
-    const { getAgents } = await import('@client/api/v1/idk/agents');
+    const { getAgents } = await import('@client/api/v1/reactive-agents/agents');
     const getAgentsMock = vi.mocked(getAgents);
 
     let resolveAgents: (value: Awaited<ReturnType<typeof getAgents>>) => void;
@@ -571,7 +575,7 @@ describe('CreateSkillView', () => {
     getAgentsMock.mockReturnValue(agentsPromise);
 
     // Ensure an agent is selected so submit is enabled
-    localStorageMock.setItem('idkhub-selected-agent-id', 'agent-1');
+    localStorageMock.setItem('ra-selected-agent-id', 'agent-1');
     renderCreateSkillView();
 
     // Page header still renders
@@ -585,7 +589,7 @@ describe('CreateSkillView', () => {
 
   it('shows no agents state', async () => {
     // Mock no agents
-    const { getAgents } = await import('@client/api/v1/idk/agents');
+    const { getAgents } = await import('@client/api/v1/reactive-agents/agents');
     const getAgentsMock = vi.mocked(getAgents);
     getAgentsMock.mockResolvedValue([]);
 

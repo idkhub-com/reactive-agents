@@ -1,4 +1,7 @@
-import type { IdkRequestBody, IdkTarget } from '@shared/types/api/request';
+import type {
+  ReactiveAgentsRequestBody,
+  ReactiveAgentsTarget,
+} from '@shared/types/api/request';
 import {
   CreateSpeechResponseBody,
   CreateTranscriptionResponseBody,
@@ -64,36 +67,36 @@ export type ParameterValueTypes =
   | null;
 
 export type ParameterConfigDefaultFunction = (params: {
-  idkRequestBody: IdkRequestBody;
-  idkTarget: IdkTarget;
+  raRequestBody: ReactiveAgentsRequestBody;
+  raTarget: ReactiveAgentsTarget;
 }) => ParameterValueTypes;
 
 export type CreateBatchRequestParameterTransformFunction = (
-  idkRequestBody: CreateBatchRequestBody,
+  raRequestBody: CreateBatchRequestBody,
 ) => ParameterValueTypes;
 
 export type ChatCompletionParameterTransformFunction = (
-  idkRequestBody: ChatCompletionRequestBody,
+  raRequestBody: ChatCompletionRequestBody,
 ) => ParameterValueTypes;
 
 export type CompletionParameterTransformFunction = (
-  idkRequestBody: CompletionRequestBody,
+  raRequestBody: CompletionRequestBody,
 ) => ParameterValueTypes;
 
 export type CreateFineTuningJobParameterTransformFunction = (
-  idkRequestBody: CreateFineTuningJobRequestBody,
+  raRequestBody: CreateFineTuningJobRequestBody,
 ) => ParameterValueTypes;
 
 export type ImageGenerationParameterTransformFunction = (
-  idkRequestBody: GenerateImageRequestBody,
+  raRequestBody: GenerateImageRequestBody,
 ) => ParameterValueTypes;
 
 export type ResponsesParameterTransformFunction = (
-  idkRequestBody: ResponsesRequestBody,
+  raRequestBody: ResponsesRequestBody,
 ) => ParameterValueTypes;
 
 export type EmbeddingsParameterTransformFunction = (
-  idkRequestBody: CreateEmbeddingsRequestBody,
+  raRequestBody: CreateEmbeddingsRequestBody,
 ) => ParameterValueTypes;
 
 /**
@@ -180,7 +183,7 @@ export const ErrorResponseBody = z.object({
 
 export type ErrorResponseBody = z.infer<typeof ErrorResponseBody>;
 
-export const IdkResponseBody = z.union([
+export const ReactiveAgentsResponseBody = z.union([
   // Audio API
   CreateSpeechResponseBody,
   CreateTranscriptionResponseBody,
@@ -234,7 +237,9 @@ export const IdkResponseBody = z.union([
   ErrorResponseBody,
 ]);
 
-export type IdkResponseBody = z.infer<typeof IdkResponseBody>;
+export type ReactiveAgentsResponseBody = z.infer<
+  typeof ReactiveAgentsResponseBody
+>;
 
 export type AIProviderResponseBody =
   | Record<string, unknown>

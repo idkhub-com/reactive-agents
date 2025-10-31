@@ -60,12 +60,12 @@ export const tritonCompleteConfig: AIProviderFunctionConfig = {
   prompt: {
     param: 'inputs',
     required: true,
-    transform: (idkRequestBody: CompletionRequestBody) => [
+    transform: (raRequestBody: CompletionRequestBody) => [
       {
         name: 'text_input',
         shape: [1],
         datatype: 'BYTES',
-        data: [idkRequestBody.prompt || ''],
+        data: [raRequestBody.prompt || ''],
       },
     ],
   },
@@ -93,13 +93,13 @@ export const tritonCompleteConfig: AIProviderFunctionConfig = {
   },
   stop: {
     param: 'parameters.stop_words',
-    transform: (idkRequestBody: CompletionRequestBody) => {
-      if (idkRequestBody.stop === null || idkRequestBody.stop === undefined) {
+    transform: (raRequestBody: CompletionRequestBody) => {
+      if (raRequestBody.stop === null || raRequestBody.stop === undefined) {
         return [];
       }
-      return Array.isArray(idkRequestBody.stop)
-        ? idkRequestBody.stop
-        : [idkRequestBody.stop];
+      return Array.isArray(raRequestBody.stop)
+        ? raRequestBody.stop
+        : [raRequestBody.stop];
     },
   },
   stream: {

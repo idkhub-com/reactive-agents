@@ -30,7 +30,7 @@ const app = new Hono<AppEnv>()
       get: (key: string) => unknown;
     };
 
-    mockContext.set('idk_config', {
+    mockContext.set('ra_config', {
       targets: [
         {
           provider: AIProvider.OPENAI,
@@ -41,7 +41,7 @@ const app = new Hono<AppEnv>()
       skill_name: 'test-skill',
     });
 
-    mockContext.set('idk_request_data', {
+    mockContext.set('ra_request_data', {
       function_name: 'embed',
       requestBody: {
         model: 'text-embedding-3-small',
@@ -177,9 +177,9 @@ describe('Embeddings API', () => {
 
       expect(mockTryTargets).toHaveBeenCalledTimes(1);
 
-      const [context, idkConfig, idkRequestData] = mockTryTargets.mock.calls[0];
+      const [context, raConfig, raRequestData] = mockTryTargets.mock.calls[0];
       expect(context).toBeDefined();
-      expect(idkConfig).toMatchObject({
+      expect(raConfig).toMatchObject({
         targets: expect.arrayContaining([
           expect.objectContaining({
             provider: AIProvider.OPENAI,
@@ -189,7 +189,7 @@ describe('Embeddings API', () => {
         agent_name: 'test-agent',
         skill_name: 'test-skill',
       });
-      expect(idkRequestData).toMatchObject({
+      expect(raRequestData).toMatchObject({
         function_name: 'embed',
         requestBody: {
           model: 'text-embedding-3-small',

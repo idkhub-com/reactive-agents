@@ -6,7 +6,7 @@ import type {
   BedrockConverseCohereChatCompletionsParams,
   BedrockFinetuneRecord,
 } from '@server/ai-providers/bedrock/types';
-import type { IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 
 import type { CreateFineTuningJobRequestBody } from '@shared/types/api/routes/fine-tuning-api/request';
 import { SignatureV4 } from '@smithy/signature-v4';
@@ -374,18 +374,18 @@ export const bedrockFinetuneToOpenAI = (
 };
 
 export async function providerAssumedRoleCredentials(
-  idkTarget: IdkTarget,
+  raTarget: ReactiveAgentsTarget,
 ): Promise<void> {
   try {
     // Assume the role in the source account
     const sourceRoleCredentials = await getAssumedRoleCredentials(
-      idkTarget.aws_role_arn || '', // Role ARN in the source account
-      idkTarget.aws_external_id || '', // External ID for source role (if needed)
-      idkTarget.aws_region || '',
+      raTarget.aws_role_arn || '', // Role ARN in the source account
+      raTarget.aws_external_id || '', // External ID for source role (if needed)
+      raTarget.aws_region || '',
       {
-        accessKeyId: idkTarget.aws_access_key_id || '',
-        secretAccessKey: idkTarget.aws_secret_access_key || '',
-        sessionToken: idkTarget.aws_session_token || '',
+        accessKeyId: raTarget.aws_access_key_id || '',
+        secretAccessKey: raTarget.aws_secret_access_key || '',
+        sessionToken: raTarget.aws_session_token || '',
       },
     );
 
@@ -396,18 +396,18 @@ export async function providerAssumedRoleCredentials(
     // Assume role in destination account using temporary creds obtained in first step
     const { accessKeyId, secretAccessKey, sessionToken } =
       (await getAssumedRoleCredentials(
-        idkTarget.aws_role_arn || '',
-        idkTarget.aws_external_id || '',
-        idkTarget.aws_region || '',
+        raTarget.aws_role_arn || '',
+        raTarget.aws_external_id || '',
+        raTarget.aws_region || '',
         {
           accessKeyId: sourceRoleCredentials.accessKeyId,
           secretAccessKey: sourceRoleCredentials.secretAccessKey,
           sessionToken: sourceRoleCredentials.sessionToken,
         },
       )) || {};
-    idkTarget.aws_access_key_id = accessKeyId;
-    idkTarget.aws_secret_access_key = secretAccessKey;
-    idkTarget.aws_session_token = sessionToken;
+    raTarget.aws_access_key_id = accessKeyId;
+    raTarget.aws_secret_access_key = secretAccessKey;
+    raTarget.aws_session_token = sessionToken;
   } catch (e: unknown) {
     if (e instanceof Error) {
       throw new GatewayError(e.message);
@@ -417,13 +417,13 @@ export async function providerAssumedRoleCredentials(
 }
 
 export const populateHyperParameters = (
-  idkRequestBody: CreateFineTuningJobRequestBody,
+  raRequestBody: CreateFineTuningJobRequestBody,
 ): Record<string, unknown> => {
-  const hyperParameters = idkRequestBody.hyperparameters ?? {};
+  const hyperParameters = raRequestBody.hyperparameters ?? {};
 
-  // if (idkRequestBody.method) {
-  //   const method = idkRequestBody.method.type;
-  //   hyperParameters = idkRequestBody.method?.[method]?.hyperparameters ?? {};
+  // if (raRequestBody.method) {
+  //   const method = raRequestBody.method.type;
+  //   hyperParameters = raRequestBody.method?.[method]?.hyperparameters ?? {};
   // }  // TODO: fix this
 
   return hyperParameters;

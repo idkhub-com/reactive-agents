@@ -27,7 +27,7 @@ function generateToken(secret, role, expiresIn = '10y') {
 
   const payload = {
     role: role,
-    iss: 'idk',
+    iss: 'reactive-agents',
     iat: now,
     exp: exp,
   };

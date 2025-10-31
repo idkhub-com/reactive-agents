@@ -1,4 +1,4 @@
-import { IdkTarget } from '@shared/types/api/request/headers';
+import { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 import { z } from 'zod';
 
 export const RealtimeSession = z.object({
@@ -64,7 +64,7 @@ export const RealtimeSessionState = z.object({
 export type RealtimeSessionState = z.infer<typeof RealtimeSessionState>;
 
 export const RealtimeAIProviderOptions = z.intersection(
-  IdkTarget,
+  ReactiveAgentsTarget,
   z.object({
     requestURL: z.string(),
     rubeusURL: z.string(),

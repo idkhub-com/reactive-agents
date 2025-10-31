@@ -3,10 +3,10 @@ import { GatewayError } from '@server/errors/gateway';
 import type { AIProviderFunctionConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
 import type {
-  IdkRequestBody,
-  IdkRequestData,
+  ReactiveAgentsRequestBody,
+  ReactiveAgentsRequestData,
 } from '@shared/types/api/request/body';
-import type { IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 import type {
   ChatCompletionParameterTransformFunction,
   ParameterConfig,
@@ -36,22 +36,22 @@ function setNestedProperty(
 
 const getValue = (
   configParam: string,
-  idkRequestBody: IdkRequestBody,
+  raRequestBody: ReactiveAgentsRequestBody,
   paramConfig: ParameterConfig,
 ): ParameterValueTypes => {
-  let value = idkRequestBody[
-    configParam as keyof typeof idkRequestBody
+  let value = raRequestBody[
+    configParam as keyof typeof raRequestBody
   ] as ParameterValueTypes;
 
   // If a transformation is defined for this parameter, apply it
   if (paramConfig.transform) {
     value = (paramConfig.transform as ChatCompletionParameterTransformFunction)(
-      idkRequestBody as ChatCompletionRequestBody,
+      raRequestBody as ChatCompletionRequestBody,
     );
   }
 
   if (
-    value === 'idk-default' &&
+    value === 'ra-default' &&
     paramConfig &&
     paramConfig.default !== undefined
   ) {
@@ -92,8 +92,8 @@ const getValue = (
 
 export const transformUsingProviderConfig = (
   providerConfig: AIProviderFunctionConfig,
-  idkRequestBody: IdkRequestBody,
-  idkTarget: IdkTarget,
+  raRequestBody: ReactiveAgentsRequestBody,
+  raTarget: ReactiveAgentsTarget,
 ): Record<string, unknown> => {
   const transformedRequest: Record<string, unknown> = {};
 
@@ -107,9 +107,9 @@ export const transformUsingProviderConfig = (
 
     for (const paramConfig of paramConfigs) {
       // If the parameter is present in the incoming request body
-      if (configParam in idkRequestBody) {
+      if (configParam in raRequestBody) {
         // Get the value for this parameter
-        const value = getValue(configParam, idkRequestBody, paramConfig);
+        const value = getValue(configParam, raRequestBody, paramConfig);
 
         // Set the transformed parameter to the validated value
         setNestedProperty(
@@ -122,7 +122,7 @@ export const transformUsingProviderConfig = (
       else if (paramConfig?.required && paramConfig?.default !== undefined) {
         let value: unknown;
         if (typeof paramConfig.default === 'function') {
-          value = paramConfig.default({ idkRequestBody, idkTarget });
+          value = paramConfig.default({ raRequestBody, raTarget });
         } else {
           value = paramConfig.default;
         }
@@ -145,9 +145,9 @@ export const transformUsingProviderConfig = (
  */
 const transformToProviderRequestJSON = (
   provider: AIProvider,
-  idkRequestBody: IdkRequestBody,
+  raRequestBody: ReactiveAgentsRequestBody,
   fn: FunctionName,
-  idkTarget: IdkTarget,
+  raTarget: ReactiveAgentsTarget,
 ): Record<string, unknown> => {
   // Get the configuration for the specified provider
   const providerConfig = providerConfigs[provider];
@@ -158,7 +158,7 @@ const transformToProviderRequestJSON = (
 
   let functionConfig: AIProviderFunctionConfig | undefined;
   if (providerConfig.getConfig) {
-    functionConfig = providerConfig.getConfig(idkRequestBody)[
+    functionConfig = providerConfig.getConfig(raRequestBody)[
       fn
     ] as AIProviderFunctionConfig;
   } else {
@@ -169,18 +169,14 @@ const transformToProviderRequestJSON = (
     throw new GatewayError(`${fn} is not supported by ${provider}`);
   }
 
-  return transformUsingProviderConfig(
-    functionConfig,
-    idkRequestBody,
-    idkTarget,
-  );
+  return transformUsingProviderConfig(functionConfig, raRequestBody, raTarget);
 };
 
 const transformToProviderRequestFormData = (
   provider: AIProvider,
-  idkRequestBody: IdkRequestBody,
+  raRequestBody: ReactiveAgentsRequestBody,
   fn: FunctionName,
-  idkTarget: IdkTarget,
+  raTarget: ReactiveAgentsTarget,
 ): FormData => {
   const providerConfig = providerConfigs[provider];
 
@@ -190,7 +186,7 @@ const transformToProviderRequestFormData = (
 
   let functionConfig: AIProviderFunctionConfig | undefined;
   if (providerConfig?.getConfig) {
-    const overrideConfig = providerConfig.getConfig(idkRequestBody);
+    const overrideConfig = providerConfig.getConfig(raRequestBody);
     functionConfig = overrideConfig[fn] as AIProviderFunctionConfig;
   } else {
     functionConfig = providerConfig[fn] as AIProviderFunctionConfig;
@@ -202,14 +198,14 @@ const transformToProviderRequestFormData = (
       paramConfigs = [paramConfigs];
     }
     for (const paramConfig of paramConfigs) {
-      if (configParam in idkRequestBody) {
-        const value = getValue(configParam, idkRequestBody, paramConfig);
+      if (configParam in raRequestBody) {
+        const value = getValue(configParam, raRequestBody, paramConfig);
 
         formData.append(paramConfig.param, value as unknown as string);
       } else if (paramConfig?.required && paramConfig?.default !== undefined) {
         let value: unknown;
         if (typeof paramConfig.default === 'function') {
-          value = paramConfig.default({ idkRequestBody, idkTarget });
+          value = paramConfig.default({ raRequestBody, raTarget });
         } else {
           value = paramConfig.default;
         }
@@ -253,64 +249,64 @@ const transformToProviderRequestReadableStream = (
  */
 export const transformToProviderRequest = (
   aiProvider: AIProvider,
-  idkTarget: IdkTarget,
-  idkRequestData: IdkRequestData,
+  raTarget: ReactiveAgentsTarget,
+  raRequestData: ReactiveAgentsRequestData,
 ): Record<string, unknown> | ReadableStream | FormData | ArrayBuffer => {
   // this returns a ReadableStream
-  if (idkRequestData.functionName === FunctionName.UPLOAD_FILE) {
-    if (!(idkRequestData.requestBody instanceof ReadableStream)) {
+  if (raRequestData.functionName === FunctionName.UPLOAD_FILE) {
+    if (!(raRequestData.requestBody instanceof ReadableStream)) {
       throw new GatewayError(
-        `Expected a ReadableStream for ${idkRequestData.functionName} but got ${typeof idkRequestData.requestBody}`,
+        `Expected a ReadableStream for ${raRequestData.functionName} but got ${typeof raRequestData.requestBody}`,
       );
     }
 
     return transformToProviderRequestReadableStream(
       aiProvider,
-      idkRequestData.requestBody as ReadableStream,
-      idkRequestData.functionName,
+      raRequestData.requestBody as ReadableStream,
+      raRequestData.functionName,
     );
   }
 
   if (
-    idkRequestData.requestBody instanceof FormData ||
-    idkRequestData.requestBody instanceof ArrayBuffer
+    raRequestData.requestBody instanceof FormData ||
+    raRequestData.requestBody instanceof ArrayBuffer
   )
-    return idkRequestData.requestBody;
+    return raRequestData.requestBody;
 
-  if (idkRequestData.requestBody instanceof ReadableStream) {
+  if (raRequestData.requestBody instanceof ReadableStream) {
     throw new GatewayError(
-      `Unsupported request body type for ${idkRequestData.functionName}: ${typeof idkRequestData.requestBody}`,
+      `Unsupported request body type for ${raRequestData.functionName}: ${typeof raRequestData.requestBody}`,
     );
   }
 
-  if (idkRequestData.functionName === FunctionName.PROXY) {
-    return idkRequestData.requestBody;
+  if (raRequestData.functionName === FunctionName.PROXY) {
+    return raRequestData.requestBody;
   }
 
   const providerConfig = providerConfigs[aiProvider];
 
   if (!providerConfig) {
     throw new GatewayError(
-      `${idkRequestData.functionName} is not supported by ${aiProvider}`,
+      `${raRequestData.functionName} is not supported by ${aiProvider}`,
     );
   }
 
   const providerAPIConfig = providerConfig.api;
 
-  if (providerAPIConfig.transformToFormData?.({ idkRequestData })) {
+  if (providerAPIConfig.transformToFormData?.({ raRequestData })) {
     return transformToProviderRequestFormData(
       aiProvider,
-      idkRequestData.requestBody,
-      idkRequestData.functionName,
-      idkTarget,
+      raRequestData.requestBody,
+      raRequestData.functionName,
+      raTarget,
     );
   }
 
   return transformToProviderRequestJSON(
     aiProvider,
-    idkRequestData.requestBody,
-    idkRequestData.functionName,
-    idkTarget,
+    raRequestData.requestBody,
+    raRequestData.functionName,
+    raTarget,
   );
 };
 

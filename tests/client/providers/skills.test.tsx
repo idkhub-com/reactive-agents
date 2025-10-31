@@ -26,14 +26,14 @@ vi.mock('@client/providers/agents', () => ({
 }));
 
 // Mock the API module
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn(),
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
 }));
 
-import { getSkills } from '@client/api/v1/idk/skills';
+import { getSkills } from '@client/api/v1/reactive-agents/skills';
 
 const mockSkills: Skill[] = [
   {

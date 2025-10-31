@@ -47,7 +47,7 @@ const mockAgent = {
 };
 
 // Mock the agents API
-vi.mock('@client/api/v1/idk/agents', () => {
+vi.mock('@client/api/v1/reactive-agents/agents', () => {
   const mockUpdateAgent = vi.fn();
 
   return {

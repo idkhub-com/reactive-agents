@@ -1,9 +1,9 @@
 import { agentAndSkillMiddleware } from '@server/middlewares/agent-and-skill';
 import type { AppContext } from '@server/types/hono';
-import * as agentsUtils from '@server/utils/idkhub/agents';
-import * as skillsUtils from '@server/utils/idkhub/skills';
+import * as agentsUtils from '@server/utils/reactive-agents/agents';
+import * as skillsUtils from '@server/utils/reactive-agents/skills';
 import {
-  type IdkConfig,
+  type ReactiveAgentsConfig,
   StrategyModes,
 } from '@shared/types/api/request/headers';
 import type { Agent } from '@shared/types/data/agent';
@@ -12,8 +12,8 @@ import type { Next } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the utility functions
-vi.mock('@server/utils/idkhub/agents');
-vi.mock('@server/utils/idkhub/skills');
+vi.mock('@server/utils/reactive-agents/agents');
+vi.mock('@server/utils/reactive-agents/skills');
 
 describe('agentAndSkillMiddleware', () => {
   let mockNext: Next; // Mock connector
@@ -42,15 +42,15 @@ describe('agentAndSkillMiddleware', () => {
     createTool: vi.fn(),
     deleteTool: vi.fn(),
   };
-  let mockIdkConfig: IdkConfig;
+  let mockReactiveAgentsConfig: ReactiveAgentsConfig;
 
   const createMockContext = (url: string): AppContext => {
     return {
       req: { url } as unknown,
       get: vi.fn().mockImplementation((key: string) => {
         switch (key) {
-          case 'idk_config_pre_processed':
-            return mockIdkConfig;
+          case 'ra_config_pre_processed':
+            return mockReactiveAgentsConfig;
           case 'user_data_storage_connector':
             return mockConnector;
           default:
@@ -64,8 +64,8 @@ describe('agentAndSkillMiddleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock IDK config
-    const mockIdkConfig2: IdkConfig = {
+    // Mock Reactive Agents config
+    const mockReactiveAgentsConfig2: ReactiveAgentsConfig = {
       agent_name: 'test-agent',
       skill_name: 'test-skill',
       strategy: { mode: StrategyModes.SINGLE },
@@ -74,14 +74,14 @@ describe('agentAndSkillMiddleware', () => {
       trace_id: 'test-trace',
     };
 
-    mockIdkConfig = mockIdkConfig2;
+    mockReactiveAgentsConfig = mockReactiveAgentsConfig2;
 
     // Mock next function
     mockNext = vi.fn();
   });
 
   describe('URL filtering', () => {
-    it('should process v1 API requests (not IDK)', async () => {
+    it('should process v1 API requests (not Reactive Agents)', async () => {
       const mockAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'test-agent',
@@ -129,9 +129,9 @@ describe('agentAndSkillMiddleware', () => {
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
 
-    it('should skip processing for IDK API requests', async () => {
+    it('should skip processing for Reactive Agents API requests', async () => {
       const mockContext = createMockContext(
-        'https://api.example.com/v1/idk/logs',
+        'https://api.example.com/v1/reactive-agents/logs',
       );
       await agentAndSkillMiddleware(mockContext, mockNext);
 
@@ -207,14 +207,14 @@ describe('agentAndSkillMiddleware', () => {
     });
   });
 
-  describe('IDK API endpoint variations', () => {
-    const idkUrls = [
-      'https://api.example.com/v1/idk/logs',
-      'https://api.example.com/v1/idk/auth/login',
-      'https://api.example.com/v1/idk/feedbacks',
+  describe('Reactive Agents API endpoint variations', () => {
+    const raUrls = [
+      'https://api.example.com/v1/reactive-agents/logs',
+      'https://api.example.com/v1/reactive-agents/auth/login',
+      'https://api.example.com/v1/reactive-agents/feedbacks',
     ];
 
-    idkUrls.forEach((url) => {
+    raUrls.forEach((url) => {
       it(`should skip processing for ${url}`, async () => {
         const mockContext = createMockContext(url);
         await agentAndSkillMiddleware(mockContext, mockNext);
@@ -263,7 +263,7 @@ describe('agentAndSkillMiddleware', () => {
 
   describe('configuration scenarios', () => {
     it('should handle different agent and skill names', async () => {
-      const customConfig: IdkConfig = {
+      const customConfig: ReactiveAgentsConfig = {
         agent_name: 'custom-agent-123',
         skill_name: 'custom-skill-456',
         strategy: { mode: StrategyModes.SINGLE },
@@ -285,7 +285,7 @@ describe('agentAndSkillMiddleware', () => {
         req: { url: 'https://api.example.com/v1/chat/completions' } as unknown,
         get: vi.fn().mockImplementation((key: string) => {
           switch (key) {
-            case 'idk_config_pre_processed':
+            case 'ra_config_pre_processed':
               return customConfig;
             case 'user_data_storage_connector':
               return mockConnector;

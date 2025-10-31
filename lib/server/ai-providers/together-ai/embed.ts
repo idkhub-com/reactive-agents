@@ -19,12 +19,12 @@ export const togetherAIEmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'input',
     required: true,
-    transform: (idkRequestBody: CreateEmbeddingsRequestBody): string[] => {
-      if ('input' in idkRequestBody) {
-        if (Array.isArray(idkRequestBody.input)) {
-          return idkRequestBody.input as string[];
+    transform: (raRequestBody: CreateEmbeddingsRequestBody): string[] => {
+      if ('input' in raRequestBody) {
+        if (Array.isArray(raRequestBody.input)) {
+          return raRequestBody.input as string[];
         }
-        return [idkRequestBody.input as string];
+        return [raRequestBody.input as string];
       }
       throw new Error('Invalid input for embedding');
     },
@@ -59,7 +59,7 @@ export const togetherAIEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  idkRequestData,
+  raRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = togetherAIErrorResponseTransform(
@@ -72,7 +72,7 @@ export const togetherAIEmbedResponseTransform: ResponseTransformFunction = (
     const response =
       aiProviderResponseBody as unknown as TogetherAIEmbedResponse;
     const _requestBody =
-      idkRequestData.requestBody as unknown as CreateEmbeddingsRequestBody;
+      raRequestData.requestBody as unknown as CreateEmbeddingsRequestBody;
 
     const responseBody: CreateEmbeddingsResponseBody = {
       object: response.object as 'list',

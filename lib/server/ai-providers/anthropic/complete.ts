@@ -23,8 +23,8 @@ export const anthropicCompleteConfig: AIProviderFunctionConfig = {
   },
   prompt: {
     param: 'prompt',
-    transform: (idkRequestBody: CompletionRequestBody) =>
-      `\n\nHuman: ${idkRequestBody.prompt}\n\nAssistant:`,
+    transform: (raRequestBody: CompletionRequestBody) =>
+      `\n\nHuman: ${raRequestBody.prompt}\n\nAssistant:`,
     required: true,
   },
   max_tokens: {
@@ -48,11 +48,11 @@ export const anthropicCompleteConfig: AIProviderFunctionConfig = {
   },
   stop: {
     param: 'stop_sequences',
-    transform: (idkRequestBody: CompletionRequestBody) => {
-      if (idkRequestBody.stop === null) {
+    transform: (raRequestBody: CompletionRequestBody) => {
+      if (raRequestBody.stop === null) {
         return [];
       }
-      return idkRequestBody.stop;
+      return raRequestBody.stop;
     },
   },
   stream: {

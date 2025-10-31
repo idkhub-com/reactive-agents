@@ -1,8 +1,8 @@
 import type { AppContext } from '@server/types/hono';
 import type { HttpMethod } from '@server/types/http';
 
-import { IdkConfigPreProcessed } from '@shared/types/api/request/headers';
-import { produceIdkRequestData } from '@shared/utils/idk-request-data';
+import { ReactiveAgentsConfigPreProcessed } from '@shared/types/api/request/headers';
+import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
@@ -15,42 +15,43 @@ export const commonVariablesMiddleware = createMiddleware(
   async (c: AppContext, next: Next) => {
     // Only set variables for  API requests
     if (c.req.url.includes('/v1/')) {
-      // Don't set variables for IDK API requests
-      if (!c.req.url.includes('/v1/idk')) {
-        const configString = c.req.header('x-idk-config');
+      // Don't set variables for Reactive Agents API requests
+      if (!c.req.url.includes('/v1/reactive-agents')) {
+        const configString = c.req.header('ra-config');
         if (!configString) {
-          return c.json({ error: 'Missing IDK config' }, 422);
+          return c.json({ error: 'Missing Reactive Agents config' }, 422);
         }
         const rawConfig = JSON.parse(configString);
 
-        const idkConfigPreProcessed = IdkConfigPreProcessed.safeParse(
+        const raConfigPreProcessed = ReactiveAgentsConfigPreProcessed.safeParse(
           rawConfig,
           {
-            error: (error) => `Invalid IDK config as ${error.message}`,
+            error: (error) =>
+              `Invalid Reactive Agents config as ${error.message}`,
           },
         );
-        if (idkConfigPreProcessed.error) {
-          const prettyError = z.prettifyError(idkConfigPreProcessed.error);
+        if (raConfigPreProcessed.error) {
+          const prettyError = z.prettifyError(raConfigPreProcessed.error);
 
           return c.json(
             {
-              error: `--Invalid IDK config--\n ${prettyError}`,
-              details: idkConfigPreProcessed.error.message,
+              error: `--Invalid Reactive Agents config--\n ${prettyError}`,
+              details: raConfigPreProcessed.error.message,
             },
             422,
           );
         }
-        c.set('idk_config_pre_processed', idkConfigPreProcessed.data);
+        c.set('ra_config_pre_processed', raConfigPreProcessed.data);
 
         const body = await c.req.json();
 
-        const idkRequestData = produceIdkRequestData(
+        const raRequestData = produceReactiveAgentsRequestData(
           c.req.method as HttpMethod,
           c.req.url,
           c.req.header(),
           body,
         );
-        c.set('idk_request_data', idkRequestData);
+        c.set('ra_request_data', raRequestData);
       }
     }
     await next();

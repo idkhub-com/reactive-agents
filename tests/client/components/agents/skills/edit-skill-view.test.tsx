@@ -62,7 +62,7 @@ const mockNavigationState = {
 };
 
 // Mock the skills API
-vi.mock('@client/api/v1/idk/skills', () => {
+vi.mock('@client/api/v1/reactive-agents/skills', () => {
   const mockUpdateSkill = vi.fn();
 
   return {

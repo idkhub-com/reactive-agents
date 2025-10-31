@@ -1,6 +1,6 @@
 import { HttpMethod } from '@server/types/http';
-import { IdkRequestBody } from '@shared/types/api/request';
-import { IdkResponseBody } from '@shared/types/api/response';
+import { ReactiveAgentsRequestBody } from '@shared/types/api/request';
+import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
 
 import { AIProvider } from '@shared/types/constants';
 import { CacheMode } from '@shared/types/middleware/cache';
@@ -48,8 +48,8 @@ export type Hook = z.infer<typeof Hook>;
 
 export const HookResult = z.object({
   deny_request: z.boolean(),
-  request_body_override: IdkRequestBody.optional(),
-  response_body_override: IdkResponseBody.optional(),
+  request_body_override: ReactiveAgentsRequestBody.optional(),
+  response_body_override: ReactiveAgentsResponseBody.optional(),
   skipped: z.boolean(),
 });
 

@@ -13,10 +13,10 @@ export const bedrockStabilityAIImageGenerateV1Config: AIProviderFunctionConfig =
     prompt: {
       param: 'text_prompts',
       required: true,
-      transform: (idkRequestBody: GenerateImageRequestBody) => {
+      transform: (raRequestBody: GenerateImageRequestBody) => {
         return [
           {
-            text: idkRequestBody.prompt,
+            text: raRequestBody.prompt,
             weight: 1,
           },
         ];
@@ -30,14 +30,14 @@ export const bedrockStabilityAIImageGenerateV1Config: AIProviderFunctionConfig =
     size: [
       {
         param: 'height',
-        transform: (idkRequestBody: GenerateImageRequestBody): number =>
-          parseInt(idkRequestBody.size?.toLowerCase().split('x')[1] || '0', 10),
+        transform: (raRequestBody: GenerateImageRequestBody): number =>
+          parseInt(raRequestBody.size?.toLowerCase().split('x')[1] || '0', 10),
         min: 320,
       },
       {
         param: 'width',
-        transform: (idkRequestBody: GenerateImageRequestBody): number =>
-          parseInt(idkRequestBody.size?.toLowerCase().split('x')[0] || '0', 10),
+        transform: (raRequestBody: GenerateImageRequestBody): number =>
+          parseInt(raRequestBody.size?.toLowerCase().split('x')[0] || '0', 10),
         min: 320,
       },
     ],

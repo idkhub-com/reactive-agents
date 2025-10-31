@@ -173,7 +173,7 @@ describe('toolMiddleware', () => {
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
 
-    it('should do nothing if idk_request_data is not set', async () => {
+    it('should do nothing if ra_request_data is not set', async () => {
       mockContext.get = vi.fn().mockReturnValue(undefined);
 
       await toolMiddleware(mockContext, mockNext);
@@ -189,7 +189,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         return undefined;
       });
 
@@ -223,7 +223,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -253,7 +253,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -274,7 +274,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -309,7 +309,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -348,7 +348,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -384,7 +384,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -416,7 +416,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;
@@ -464,7 +464,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return errorMockConnector;
         return undefined;
@@ -505,7 +505,7 @@ describe('toolMiddleware', () => {
       };
 
       mockContext.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'idk_request_data') return requestData;
+        if (key === 'ra_request_data') return requestData;
         if (key === 'agent') return mockAgent;
         if (key === 'user_data_storage_connector') return mockConnector;
         return undefined;

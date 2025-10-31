@@ -1,4 +1,4 @@
-# 🚀 IDK
+# 🚀 Reactive Agents
 
 > A platform for training and deploying LLMs.
 
@@ -58,7 +58,7 @@ pnpm tsx ./path/to/example.ts
 ## 🔑 Default Password
 
 ```
-idk
+reactive-agents
 ```
 
 ---
@@ -116,5 +116,5 @@ We use MIT-licensed code from Portkey-AI/gateway in this project and gratefully 
 ---
 
 <p align="center">
-  <b>Made with ❤️ by the IDK team</b>
+  <b>Made with ❤️ by the Reactive Agents team</b>
 </p>

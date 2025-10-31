@@ -59,13 +59,13 @@ export const chatCompleteParams = (
       param: 'messages',
       default: '',
       transform: (
-        idkRequestBody: ChatCompletionRequestBody,
+        raRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown>[] => {
-        if (!idkRequestBody.messages) {
+        if (!raRequestBody.messages) {
           return [];
         }
 
-        const updatedMessages = idkRequestBody.messages?.map(
+        const updatedMessages = raRequestBody.messages?.map(
           (message: ChatCompletionMessage) => {
             if (message.role === ChatCompletionMessageRole.DEVELOPER) {
               return { ...message, role: ChatCompletionMessageRole.SYSTEM };
@@ -470,7 +470,7 @@ export const openAICreateModelResponseTransformer = (
 
     if (!parsedResponse.success) {
       throw new Error(
-        `IdkHub failed to parse response: ${parsedResponse.error.message}`,
+        `Reactive Agents failed to parse response: ${parsedResponse.error.message}`,
       );
     }
 

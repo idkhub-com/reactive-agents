@@ -140,12 +140,12 @@ const BedrockAnthropicChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'messages',
       required: true,
       transform: (
-        idkRequestBody: ChatCompletionRequestBody,
+        raRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown>[] => {
         const messages: AnthropicMessage[] = [];
         // Transform the chat messages into a simple prompt
-        if (idkRequestBody.messages) {
-          idkRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
+        if (raRequestBody.messages) {
+          raRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
             if (msg.role === ChatCompletionMessageRole.SYSTEM) return;
 
             if (msg.role === ChatCompletionMessageRole.ASSISTANT) {
@@ -239,11 +239,11 @@ const BedrockAnthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'tools',
     required: false,
     transform: (
-      idkRequestBody: ChatCompletionRequestBody,
+      raRequestBody: ChatCompletionRequestBody,
     ): Record<string, unknown> => {
       const tools: AnthropicTool[] = [];
-      if (idkRequestBody.tools) {
-        idkRequestBody.tools.forEach((tool) => {
+      if (raRequestBody.tools) {
+        raRequestBody.tools.forEach((tool) => {
           if (tool.function) {
             tools.push({
               name: tool.function.name,
@@ -429,7 +429,6 @@ const getMessageContent = (message: ChatCompletionMessage): string => {
   This function transforms the messages for the LLama 3.1 prompt.
   It adds the special tokens to the beginning and end of the prompt.
   refer: https://www.llama.com/docs/model-cards-and-prompt-formats/llama3_1
-  NOTE: Portkey does not restrict messages to alternate user and assistant roles, this is to support more flexible use cases.
 */
 const transformMessagesForLLama3Prompt = (
   messages: ChatCompletionMessage[],

@@ -14,35 +14,35 @@ import { useMemo } from 'react';
 
 export function ResponsesAPIViewer({
   logId,
-  idkRequestBody,
-  idkResponseBody,
+  raRequestBody,
+  raResponseBody,
 }: {
   logId: string;
-  idkRequestBody: ResponsesRequestBody;
-  idkResponseBody: ResponsesResponseBody;
+  raRequestBody: ResponsesRequestBody;
+  raResponseBody: ResponsesResponseBody;
 }): React.ReactElement {
   const language =
-    'text' in idkRequestBody
-      ? idkRequestBody.text?.format?.type === 'json_schema'
+    'text' in raRequestBody
+      ? raRequestBody.text?.format?.type === 'json_schema'
         ? 'json'
         : 'text'
       : 'text';
 
   const rawSchema =
-    'text' in idkRequestBody ? idkRequestBody.text?.format?.schema : undefined;
+    'text' in raRequestBody ? raRequestBody.text?.format?.schema : undefined;
 
   const reasoningOutput = useMemo((): string | undefined => {
-    for (const output of idkResponseBody.output) {
+    for (const output of raResponseBody.output) {
       if (output.type === 'reasoning' && 'summary' in output) {
         // Handle reasoning output if it exists
         return output.summary.join('\n');
       }
     }
     return undefined;
-  }, [idkResponseBody.output]);
+  }, [raResponseBody.output]);
 
   const messageOutput = useMemo((): string => {
-    for (const message of idkResponseBody.output) {
+    for (const message of raResponseBody.output) {
       if (message.type === 'message' && 'role' in message) {
         if (message.role === ChatCompletionMessageRole.ASSISTANT) {
           // Check if this is a structured output with content
@@ -61,7 +61,7 @@ export function ResponsesAPIViewer({
       }
     }
     return '';
-  }, [idkResponseBody.output]);
+  }, [raResponseBody.output]);
 
   return (
     <div className="">
@@ -85,10 +85,10 @@ export function ResponsesAPIViewer({
         <div className="text-sm font-normal text-right">
           {
             PrettyChatCompletionMessageRole[
-              idkResponseBody.output[0].type === 'message' &&
-              'role' in idkResponseBody.output[0]
-                ? idkResponseBody.output[0].role
-                : idkResponseBody.output[0].type === 'reasoning'
+              raResponseBody.output[0].type === 'message' &&
+              'role' in raResponseBody.output[0]
+                ? raResponseBody.output[0].role
+                : raResponseBody.output[0].type === 'reasoning'
                   ? 'reasoning'
                   : ChatCompletionMessageRole.ASSISTANT
             ]

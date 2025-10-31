@@ -168,7 +168,7 @@ export function AgentPerformanceChart({
           label: (context) => {
             const label = context.dataset.label || '';
             const value = context.parsed.y;
-            return `${label}: ${value.toFixed(3)}`;
+            return `${label}: ${value!.toFixed(3)}`;
           },
         },
       },

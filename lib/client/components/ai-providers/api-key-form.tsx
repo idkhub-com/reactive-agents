@@ -1,7 +1,7 @@
 'use client';
 
-import type { AIProviderSchemaResponse } from '@client/api/v1/idk/ai-providers';
-import { getAIProviderSchemas } from '@client/api/v1/idk/ai-providers';
+import type { AIProviderSchemaResponse } from '@client/api/v1/reactive-agents/ai-providers';
+import { getAIProviderSchemas } from '@client/api/v1/reactive-agents/ai-providers';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -116,7 +116,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
       // In create mode, API key is required
       if (mode === 'create' && isAPIKeyEmpty) {
         return {
-          values: baseResult.values,
+          values: {},
           errors: {
             ...baseResult.errors,
             api_key: {
@@ -130,7 +130,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
       // In edit mode, only required if no existing key
       if (mode === 'edit' && isAPIKeyEmpty && !apiKey?.api_key) {
         return {
-          values: baseResult.values,
+          values: {},
           errors: {
             ...baseResult.errors,
             api_key: {

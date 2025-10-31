@@ -23,9 +23,9 @@ export const BedrockCreateFinetuneConfig: AIProviderFunctionConfig = {
   hyperparameters: {
     param: 'hyperParameters',
     required: false,
-    transform: (idkRequestBody: CreateFineTuningJobRequestBody) => {
+    transform: (raRequestBody: CreateFineTuningJobRequestBody) => {
       const hyperParameters = populateHyperParameters(
-        idkRequestBody as unknown as CreateFineTuningJobRequestBody,
+        raRequestBody as unknown as CreateFineTuningJobRequestBody,
       );
       const epochCount = hyperParameters.n_epochs;
       const learningRateMultiplier = hyperParameters.learning_rate_multiplier;
@@ -42,30 +42,30 @@ export const BedrockCreateFinetuneConfig: AIProviderFunctionConfig = {
   training_file: {
     param: 'trainingDataConfig',
     required: true,
-    transform: (idkRequestBody: CreateFineTuningJobRequestBody) => {
+    transform: (raRequestBody: CreateFineTuningJobRequestBody) => {
       return {
-        s3Uri: decodeURIComponent(idkRequestBody.training_file as string),
+        s3Uri: decodeURIComponent(raRequestBody.training_file as string),
       };
     },
   },
   validation_file: {
     param: 'validationDataConfig',
     required: false,
-    transform: (idkRequestBody: CreateFineTuningJobRequestBody) => {
-      if (!idkRequestBody.validation_file) {
+    transform: (raRequestBody: CreateFineTuningJobRequestBody) => {
+      if (!raRequestBody.validation_file) {
         return undefined;
       }
       return {
-        s3Uri: decodeURIComponent(idkRequestBody.validation_file as string),
+        s3Uri: decodeURIComponent(raRequestBody.validation_file as string),
       };
     },
   },
   output_file: {
     param: 'outputDataConfig',
     required: true,
-    default: (({ idkRequestBody }): Record<string, unknown> => {
+    default: (({ raRequestBody }): Record<string, unknown> => {
       const finetuneRequestBody =
-        idkRequestBody as CreateFineTuningJobRequestBody;
+        raRequestBody as CreateFineTuningJobRequestBody;
       const trainingFile = decodeURIComponent(
         finetuneRequestBody.training_file as string,
       );
@@ -80,11 +80,11 @@ export const BedrockCreateFinetuneConfig: AIProviderFunctionConfig = {
   // job_name: {
   //   param: 'jobName',
   //   required: true,
-  //   default: (({ idkRequestBody }): string => {
+  //   default: (({ raRequestBody }): string => {
   //     const finetuneRequestBody =
-  //       idkRequestBody as CreateFineTuningJobRequestBody;
+  //       raRequestBody as CreateFineTuningJobRequestBody;
   //     return (
-  //       finetuneRequestBody.job_name ?? `idk-finetune-${crypto.randomUUID()}`
+  //       finetuneRequestBody.job_name ?? `ra-finetune-${crypto.randomUUID()}`
   //     );
   //   }) as ParameterConfigDefaultFunction,
   // },  // TODO: Fix this

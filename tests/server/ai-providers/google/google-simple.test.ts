@@ -12,11 +12,14 @@ import {
   GoogleToolChoiceType,
 } from '@server/ai-providers/google/types';
 import {
-  FinishReasonsGeminiToIdk,
-  RoleIdkToGemini,
-  transformToolChoiceIdkToGemini,
+  FinishReasonsGeminiToReactiveAgents,
+  RoleReactiveAgentsToGemini,
+  transformToolChoiceReactiveAgentsToGemini,
 } from '@server/ai-providers/google/utils';
-import { FunctionName, type IdkRequestData } from '@shared/types/api/request';
+import {
+  FunctionName,
+  type ReactiveAgentsRequestData,
+} from '@shared/types/api/request';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
 import { ChatCompletionFinishReason } from '@shared/types/api/routes/chat-completions-api';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
@@ -62,7 +65,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct headers with API key', () => {
       const headers = googleAPIConfig.headers({
-        idkTarget: { provider: AIProvider.GOOGLE, api_key: 'test-key' },
+        raTarget: { provider: AIProvider.GOOGLE, api_key: 'test-key' },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -73,7 +76,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should handle missing API key', () => {
       const headers = googleAPIConfig.headers({
-        idkTarget: { provider: AIProvider.GOOGLE },
+        raTarget: { provider: AIProvider.GOOGLE },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -84,7 +87,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'gemini-1.5-pro', messages: [] },
         },
@@ -95,7 +98,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct endpoint for streaming', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.STREAM_CHAT_COMPLETE,
           requestBody: { model: 'gemini-1.5-flash', messages: [] },
         },
@@ -108,7 +111,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct endpoint for embeddings', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.EMBED,
           requestBody: { model: 'text-embedding-004', input: 'test' },
         },
@@ -119,7 +122,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: 'UNSUPPORTED' as FunctionName,
           requestBody: { model: 'test', messages: [] },
         },
@@ -224,7 +227,7 @@ describe('Google AI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('test-uuid-1234');
@@ -274,7 +277,7 @@ describe('Google AI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -350,7 +353,7 @@ describe('Google AI Provider Tests', () => {
         'test-id',
         streamState,
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       );
 
       expect(typeof result).toBe('string');
@@ -376,7 +379,7 @@ describe('Google AI Provider Tests', () => {
           'test-id',
           streamState,
           true,
-          {} as IdkRequestData,
+          {} as ReactiveAgentsRequestData,
         );
       }).toThrow(); // It tries to parse "[DONE]" as JSON which fails
     });
@@ -408,7 +411,7 @@ describe('Google AI Provider Tests', () => {
         'test-id',
         streamState,
         true,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as string;
 
       const parsedResult = JSON.parse(result.replace('data: ', '').trim());
@@ -421,77 +424,85 @@ describe('Google AI Provider Tests', () => {
 
   describe('Utility Functions', () => {
     it('should map finish reasons correctly', () => {
-      expect(FinishReasonsGeminiToIdk.STOP).toBe(
+      expect(FinishReasonsGeminiToReactiveAgents.STOP).toBe(
         ChatCompletionFinishReason.STOP,
       );
-      expect(FinishReasonsGeminiToIdk.MAX_TOKENS).toBe(
+      expect(FinishReasonsGeminiToReactiveAgents.MAX_TOKENS).toBe(
         ChatCompletionFinishReason.LENGTH,
       );
-      expect(FinishReasonsGeminiToIdk.SAFETY).toBe(
+      expect(FinishReasonsGeminiToReactiveAgents.SAFETY).toBe(
         ChatCompletionFinishReason.CONTENT_FILTER,
       );
-      expect(FinishReasonsGeminiToIdk.RECITATION).toBe(
+      expect(FinishReasonsGeminiToReactiveAgents.RECITATION).toBe(
         ChatCompletionFinishReason.CONTENT_FILTER,
       );
-      expect(FinishReasonsGeminiToIdk.MALFORMED_FUNCTION_CALL).toBe(
+      expect(FinishReasonsGeminiToReactiveAgents.MALFORMED_FUNCTION_CALL).toBe(
         ChatCompletionFinishReason.FUNCTION_CALL,
       );
-      expect(FinishReasonsGeminiToIdk.UNEXPECTED_TOOL_CALL).toBe(
+      expect(FinishReasonsGeminiToReactiveAgents.UNEXPECTED_TOOL_CALL).toBe(
         ChatCompletionFinishReason.TOOL_CALLS,
       );
     });
 
     it('should map roles correctly', () => {
-      expect(RoleIdkToGemini[ChatCompletionMessageRole.USER]).toBe(
+      expect(RoleReactiveAgentsToGemini[ChatCompletionMessageRole.USER]).toBe(
         GoogleMessageRole.USER,
       );
-      expect(RoleIdkToGemini[ChatCompletionMessageRole.ASSISTANT]).toBe(
-        GoogleMessageRole.MODEL,
-      );
-      expect(RoleIdkToGemini[ChatCompletionMessageRole.SYSTEM]).toBe(
+      expect(
+        RoleReactiveAgentsToGemini[ChatCompletionMessageRole.ASSISTANT],
+      ).toBe(GoogleMessageRole.MODEL);
+      expect(RoleReactiveAgentsToGemini[ChatCompletionMessageRole.SYSTEM]).toBe(
         GoogleMessageRole.SYSTEM,
       );
-      expect(RoleIdkToGemini[ChatCompletionMessageRole.TOOL]).toBe(
+      expect(RoleReactiveAgentsToGemini[ChatCompletionMessageRole.TOOL]).toBe(
         GoogleMessageRole.FUNCTION,
       );
-      expect(RoleIdkToGemini[ChatCompletionMessageRole.FUNCTION]).toBe(
-        GoogleMessageRole.FUNCTION,
-      );
+      expect(
+        RoleReactiveAgentsToGemini[ChatCompletionMessageRole.FUNCTION],
+      ).toBe(GoogleMessageRole.FUNCTION);
     });
 
     it('should transform tool choice correctly', () => {
       expect(
-        transformToolChoiceIdkToGemini('auto' as ChatCompletionToolChoice),
+        transformToolChoiceReactiveAgentsToGemini(
+          'auto' as ChatCompletionToolChoice,
+        ),
       ).toBe(GoogleToolChoiceType.AUTO);
       expect(
-        transformToolChoiceIdkToGemini('none' as ChatCompletionToolChoice),
+        transformToolChoiceReactiveAgentsToGemini(
+          'none' as ChatCompletionToolChoice,
+        ),
       ).toBe(GoogleToolChoiceType.NONE);
       expect(
-        transformToolChoiceIdkToGemini('required' as ChatCompletionToolChoice),
+        transformToolChoiceReactiveAgentsToGemini(
+          'required' as ChatCompletionToolChoice,
+        ),
       ).toBe(GoogleToolChoiceType.ANY);
 
       const functionChoice: ChatCompletionToolChoice = {
         type: 'function',
         function: { name: 'test' },
       };
-      expect(transformToolChoiceIdkToGemini(functionChoice)).toBe(
+      expect(transformToolChoiceReactiveAgentsToGemini(functionChoice)).toBe(
         GoogleToolChoiceType.ANY,
       );
     });
 
     it('should handle invalid tool choices', () => {
       expect(
-        transformToolChoiceIdkToGemini('invalid' as ChatCompletionToolChoice),
+        transformToolChoiceReactiveAgentsToGemini(
+          'invalid' as ChatCompletionToolChoice,
+        ),
       ).toBeUndefined();
       expect(
-        transformToolChoiceIdkToGemini(
+        transformToolChoiceReactiveAgentsToGemini(
           undefined as unknown as ChatCompletionToolChoice,
         ),
       ).toBeUndefined();
 
       // null causes a TypeError because the function checks tool_choice.type without null check
       expect(() =>
-        transformToolChoiceIdkToGemini(
+        transformToolChoiceReactiveAgentsToGemini(
           null as unknown as ChatCompletionToolChoice,
         ),
       ).toThrow();
@@ -540,7 +551,7 @@ describe('Google AI Provider Tests', () => {
           'test-id',
           streamState,
           true,
-          {} as IdkRequestData,
+          {} as ReactiveAgentsRequestData,
         );
       }).toThrow();
     });
@@ -570,7 +581,7 @@ describe('Google AI Provider Tests', () => {
         'test-id',
         streamState,
         false, // not strict OpenAI compliance
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as string;
 
       const parsedResult = JSON.parse(result.replace('data: ', '').trim());
@@ -597,7 +608,7 @@ describe('Google AI Provider Tests', () => {
     it('should construct complete request URLs', () => {
       const baseURL = googleAPIConfig.getBaseURL({} as unknown as TestContext);
       const endpoint = googleAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'gemini-1.5-pro', messages: [] },
         },

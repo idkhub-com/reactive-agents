@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 
 /**
- * IDKHub Unified AI Workflow Example
+ * Reactive Agents Unified AI Workflow Example
  *
  * This example demonstrates both basic chat completion and complex multi-node AI agent workflows.
- * It shows how IDKHub can handle simple requests and sophisticated enterprise workflows.
+ * It shows how Reactive Agents can handle simple requests and sophisticated enterprise workflows.
  *
  * IMPROVEMENTS & FIXES:
  * ✅ Enhanced type safety with proper type guards and null checks
@@ -25,8 +25,8 @@
 import type { ChatCompletionResponseBody } from '../../lib/shared/types/api/routes/chat-completions-api';
 
 // Configuration
-const IDKHUB_URL = 'http://localhost:3000/v1';
-const AUTH_TOKEN = 'idk';
+const RA_URL = 'http://localhost:3000/v1';
+const AUTH_TOKEN = 'reactive-agents';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Configuration constants for better maintainability
@@ -141,7 +141,7 @@ interface ChatMessage {
   content: string;
 }
 
-interface IdkConfig {
+interface ReactiveAgentsConfig {
   agent_name: string;
   skill_name: string;
   strategy: { mode: string };
@@ -279,7 +279,7 @@ async function basicChatExample(): Promise<void> {
   const headers = {
     Authorization: `Bearer ${AUTH_TOKEN}`,
     'Content-Type': 'application/json',
-    'x-idk-config': JSON.stringify({
+    'ra-config': JSON.stringify({
       agent_name: 'basic-example-agent',
       skill_name: 'chat-completion',
       strategy: { mode: 'single' },
@@ -294,7 +294,7 @@ async function basicChatExample(): Promise<void> {
 
   try {
     const response = await fetchWithTimeout(
-      `${IDKHUB_URL}/chat/completions`,
+      `${RA_URL}/chat/completions`,
       {
         method: 'POST',
         headers,
@@ -327,7 +327,7 @@ async function basicChatExample(): Promise<void> {
 // Helper function to make agent requests with improved error handling
 export async function makeAgentRequest(
   messages: ChatMessage[],
-  config: IdkConfig,
+  config: ReactiveAgentsConfig,
   model = 'gpt-3.5-turbo',
   temperature = 0.7,
   max_tokens = 500,
@@ -357,12 +357,12 @@ export async function makeAgentRequest(
   const headers = {
     Authorization: `Bearer ${AUTH_TOKEN}`,
     'Content-Type': 'application/json',
-    'x-idk-config': JSON.stringify(config),
+    'ra-config': JSON.stringify(config),
   };
 
   try {
     const response = await fetchWithTimeout(
-      `${IDKHUB_URL}/chat/completions`,
+      `${RA_URL}/chat/completions`,
       {
         method: 'POST',
         headers,
@@ -419,7 +419,7 @@ async function researchAnalysisWorkflow(userQuery: string): Promise<void> {
     },
   ];
 
-  const analysisConfig: IdkConfig = {
+  const analysisConfig: ReactiveAgentsConfig = {
     agent_name: 'research-analyzer',
     skill_name: 'query-analysis',
     strategy: { mode: 'single' },
@@ -453,7 +453,7 @@ async function researchAnalysisWorkflow(userQuery: string): Promise<void> {
     },
   ];
 
-  const synthesisConfig: IdkConfig = {
+  const synthesisConfig: ReactiveAgentsConfig = {
     agent_name: 'content-synthesizer',
     skill_name: 'content-synthesis',
     strategy: { mode: 'single' },
@@ -487,7 +487,7 @@ async function researchAnalysisWorkflow(userQuery: string): Promise<void> {
     },
   ];
 
-  const reviewConfig: IdkConfig = {
+  const reviewConfig: ReactiveAgentsConfig = {
     agent_name: 'quality-reviewer',
     skill_name: 'quality-review',
     strategy: { mode: 'single' },
@@ -529,7 +529,7 @@ async function strategicPlanningWorkflow(planningGoal: string): Promise<void> {
     },
   ];
 
-  const planningConfig: IdkConfig = {
+  const planningConfig: ReactiveAgentsConfig = {
     agent_name: 'strategic-planner',
     skill_name: 'strategic-planning',
     strategy: { mode: 'single' },
@@ -562,7 +562,7 @@ async function strategicPlanningWorkflow(planningGoal: string): Promise<void> {
     },
   ];
 
-  const detailConfig: IdkConfig = {
+  const detailConfig: ReactiveAgentsConfig = {
     agent_name: 'detail-analyzer',
     skill_name: 'detail-analysis',
     strategy: { mode: 'single' },
@@ -592,7 +592,7 @@ async function strategicPlanningWorkflow(planningGoal: string): Promise<void> {
     },
   ];
 
-  const riskConfig: IdkConfig = {
+  const riskConfig: ReactiveAgentsConfig = {
     agent_name: 'risk-assessor',
     skill_name: 'risk-assessment',
     strategy: { mode: 'single' },
@@ -633,7 +633,7 @@ async function contentCreationWorkflow(contentBrief: string): Promise<void> {
     },
   ];
 
-  const ideationConfig: IdkConfig = {
+  const ideationConfig: ReactiveAgentsConfig = {
     agent_name: 'creative-ideator',
     skill_name: 'creative-ideation',
     strategy: { mode: 'single' },
@@ -666,7 +666,7 @@ async function contentCreationWorkflow(contentBrief: string): Promise<void> {
     },
   ];
 
-  const developmentConfig: IdkConfig = {
+  const developmentConfig: ReactiveAgentsConfig = {
     agent_name: 'content-developer',
     skill_name: 'content-development',
     strategy: { mode: 'single' },
@@ -690,7 +690,7 @@ async function contentCreationWorkflow(contentBrief: string): Promise<void> {
 
 // Main execution function with performance optimization options
 async function runUnifiedExample(runInParallel = false): Promise<void> {
-  console.log('IDKHub Unified AI Workflow Example');
+  console.log('Reactive Agents Unified AI Workflow Example');
   console.log('==================================\n');
 
   try {

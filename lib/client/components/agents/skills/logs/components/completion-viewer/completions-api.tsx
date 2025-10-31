@@ -9,17 +9,17 @@ import {
 
 export function CompletionsAPIViewer({
   logId,
-  idkResponseBody,
+  raResponseBody,
 }: {
   logId: string;
-  idkResponseBody: CompletionResponseBody;
+  raResponseBody: CompletionResponseBody;
 }): React.ReactElement {
   return (
     <div className="">
       <GenericViewer
         path={`${logId}-completion`}
         language={'text'}
-        defaultValue={idkResponseBody.choices[0].text}
+        defaultValue={raResponseBody.choices[0].text}
         readOnly={false}
         onSave={async (): Promise<void> => {
           //pass

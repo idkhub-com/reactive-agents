@@ -1,7 +1,5 @@
 import z from 'zod';
 
-export const POWERED_BY = 'portkey';
-
 export enum AIProvider {
   AI21 = 'ai21',
   ANTHROPIC = 'anthropic',

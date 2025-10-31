@@ -17,8 +17,8 @@ import { isStabilityV1Model } from './utils';
 
 const StabilityAIConfig: AIProviderConfig = {
   api: StabilityAIAPIConfig,
-  getConfig: (idkRequestBody): AIProviderConfig => {
-    const generateImageRequestBody = idkRequestBody as GenerateImageRequestBody;
+  getConfig: (raRequestBody): AIProviderConfig => {
+    const generateImageRequestBody = raRequestBody as GenerateImageRequestBody;
     const model = generateImageRequestBody?.model;
     if (typeof model === 'string' && isStabilityV1Model(model)) {
       return {

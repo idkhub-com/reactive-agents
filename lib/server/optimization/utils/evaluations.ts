@@ -53,7 +53,7 @@ export async function generateEvaluationCreateParams(
     baseURL: `${API_URL}/v1`,
   });
 
-  const idkhubConfig = {
+  const raConfig = {
     targets: [
       {
         provider: 'openai',
@@ -61,7 +61,7 @@ export async function generateEvaluationCreateParams(
         api_key: apiKey,
       },
     ],
-    agent_name: 'idkhub',
+    agent_name: 'reactive-agents',
     skill_name: 'create-evaluations',
   };
 
@@ -78,7 +78,7 @@ export async function generateEvaluationCreateParams(
   const response: ParsedChatCompletion<typeof schema> = await client
     .withOptions({
       defaultHeaders: {
-        'x-idk-config': JSON.stringify(idkhubConfig),
+        'ra-config': JSON.stringify(raConfig),
       },
     })
     .chat.completions.parse({

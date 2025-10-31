@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@server/constants', () => ({
   OPENAI_API_KEY: 'test-api-key',
   API_URL: 'http://localhost:3000',
-  BEARER_TOKEN: 'idk',
+  BEARER_TOKEN: 'reactive-agents',
 }));
 
 // Mock OpenAI client
@@ -101,7 +101,7 @@ describe('Task Completion - evaluateLog', () => {
       start_time: 1677652288000,
       end_time: 1677652289000,
       duration: 1000,
-      base_idk_config: {},
+      base_ra_config: {},
       ai_provider: AIProvider.OPENAI,
       model: 'gpt-4',
       hook_logs: [],
@@ -225,7 +225,7 @@ describe('Task Completion - evaluateLog', () => {
       start_time: 1677652288000,
       end_time: 1677652289000,
       duration: 1000,
-      base_idk_config: {},
+      base_ra_config: {},
       ai_provider: AIProvider.OPENAI,
       model: 'gpt-4',
       hook_logs: [],

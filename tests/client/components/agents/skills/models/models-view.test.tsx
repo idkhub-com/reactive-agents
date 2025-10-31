@@ -7,7 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   removeModelsFromSkill: vi.fn(),
 }));
 

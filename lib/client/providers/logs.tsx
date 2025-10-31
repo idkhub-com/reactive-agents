@@ -1,5 +1,5 @@
 'use client';
-import { queryLogs } from '@client/api/v1/idk/observability/logs';
+import { queryLogs } from '@client/api/v1/reactive-agents/observability/logs';
 import { useToast } from '@client/hooks/use-toast';
 import { useNavigation } from '@client/providers/navigation';
 import { type Log, LogsQueryParams } from '@shared/types/data/log';

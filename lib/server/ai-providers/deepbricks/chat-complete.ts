@@ -25,11 +25,11 @@ export const deepbricksChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     default: '',
-    transform: (idkRequestBody: ChatCompletionRequestBody) => {
-      if (!idkRequestBody.messages || idkRequestBody.messages.length === 0) {
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      if (!raRequestBody.messages || raRequestBody.messages.length === 0) {
         return undefined;
       }
-      return idkRequestBody.messages.map((message: ChatCompletionMessage) => {
+      return raRequestBody.messages.map((message: ChatCompletionMessage) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;

@@ -1,8 +1,8 @@
 import type { BedrockGetBatchResponse } from '@server/ai-providers/bedrock/types';
 import { getOctetStreamToOctetStreamTransformer } from '@server/handlers/stream-handler-utils';
 import type { AppContext } from '@server/types/hono';
-import type { IdkRequestData } from '@shared/types/api/request';
-import type { IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 import { AIProvider } from '@shared/types/constants';
 import bedrockAPIConfig from './api';
 import { BedrockUploadFileResponseTransforms } from './upload-file-utils';
@@ -66,29 +66,29 @@ const getRowTransform = (
 
 export const bedrockGetBatchOutputRequestHandler = async ({
   c,
-  idkTarget,
-  idkRequestData,
+  raTarget,
+  raRequestData,
 }: {
   c: AppContext;
-  idkTarget: IdkTarget;
-  idkRequestData: IdkRequestData;
+  raTarget: ReactiveAgentsTarget;
+  raRequestData: ReactiveAgentsRequestData;
 }): Promise<Response> => {
   try {
     // get s3 file id from batch details
     // get file from s3
     const baseUrl = bedrockAPIConfig.getBaseURL({
       c,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
     });
-    const batchId = idkRequestData.url
+    const batchId = raRequestData.url
       .split('/v1/batches/')[1]
       .replace('/output', '');
     const retrieveBatchURL = `${baseUrl}/model-invocation-job/${batchId}`;
     const retrieveBatchesHeaders = await bedrockAPIConfig.headers({
       c,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
     });
     const retrieveBatchesResponse = await fetch(retrieveBatchURL, {
       method: 'GET',
@@ -99,7 +99,7 @@ export const bedrockGetBatchOutputRequestHandler = async ({
       await retrieveBatchesResponse.json();
     const outputFileId = batchDetails.outputDataConfig.s3OutputDataConfig.s3Uri;
 
-    const { aws_region } = idkTarget;
+    const { aws_region } = raTarget;
     const awsS3Bucket = outputFileId.replace('s3://', '').split('/')[0];
     const jobId = batchDetails.jobArn.split('/')[1];
     const inputS3URIParts =
@@ -113,8 +113,8 @@ export const bedrockGetBatchOutputRequestHandler = async ({
     const s3FileURL = `https://${awsS3Bucket}.s3.${aws_region}.amazonaws.com/${awsS3ObjectKey}`;
     const s3FileHeaders = await bedrockAPIConfig.headers({
       c,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
     });
     const s3FileResponse = await fetch(s3FileURL, {
       method: 'GET',

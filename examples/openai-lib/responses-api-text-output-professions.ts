@@ -3,13 +3,13 @@ import 'dotenv/config';
 import logger from '@shared/console-logging';
 
 const client = new OpenAI({
-  // This is the API key to IDKHub
+  // This is the API key to Reactive Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
   apiKey: process.env.BEARER_TOKEN ?? '',
   baseURL: 'http://localhost:3000/v1',
 });
 
-const idkhubConfig = {
+const raConfig = {
   targets: [{ optimization: 'auto' }],
   agent_name: 'sales_agent',
   skill_name: 'outreach',
@@ -428,7 +428,7 @@ for (let i = 0; i < selectedInputs.length; i++) {
   const response = await client
     .withOptions({
       defaultHeaders: {
-        'x-idk-config': JSON.stringify(idkhubConfig),
+        'ra-config': JSON.stringify(raConfig),
       },
     })
     .responses.create({

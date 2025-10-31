@@ -1,13 +1,13 @@
 #!/usr/bin/env tsx
 
 /**
- * IDKHub Language Tutor Agent Example
+ * Reactive Agents Language Tutor Agent Example
  *
  * This example demonstrates a language tutor agent that can explain
- * learners' mistakes using IDKHub's unified AI provider system.
+ * learners' mistakes using Reactive Agents's unified AI provider system.
  *
  * FEATURES:
- * ✅ Proper IDKHub integration with type safety
+ * ✅ Proper Reactive Agents integration with type safety
  * ✅ Input validation and sanitization
  * ✅ Error handling and retry logic
  * ✅ Evaluation functionality for correctness assessment
@@ -56,12 +56,12 @@ import { allSkills, getLanguageSkill } from './skills';
 
 // Configuration with strict validation
 function validateConfiguration(): {
-  idkhubUrl: string;
+  raUrl: string;
   authToken: string;
   openaiApiKey: string;
 } {
-  const idkhubUrl = process.env.IDKHUB_URL || 'http://localhost:3000';
-  const authToken = process.env.IDKHUB_AUTH_TOKEN || 'idk';
+  const raUrl = process.env.RA_URL || 'http://localhost:3000';
+  const authToken = process.env.RA_AUTH_TOKEN || 'reactive-agents';
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
   if (!openaiApiKey) {
@@ -72,37 +72,35 @@ function validateConfiguration(): {
 
   // Production environment validation
   if (process.env.NODE_ENV === 'production') {
-    if (idkhubUrl.includes('localhost') || idkhubUrl.includes('127.0.0.1')) {
+    if (raUrl.includes('localhost') || raUrl.includes('127.0.0.1')) {
       throw new Error(
-        'Production environment cannot use localhost URLs. Set IDKHUB_URL to a proper production endpoint.',
+        'Production environment cannot use localhost URLs. Set RA_URL to a proper production endpoint.',
       );
     }
-    if (authToken === 'idk') {
+    if (authToken === 'reactive-agents') {
       throw new Error(
-        'Production environment cannot use default auth token. Set IDKHUB_AUTH_TOKEN to a secure token.',
+        'Production environment cannot use default auth token. Set RA_AUTH_TOKEN to a secure token.',
       );
     }
-    if (idkhubUrl.startsWith('http://') && !idkhubUrl.includes('localhost')) {
+    if (raUrl.startsWith('http://') && !raUrl.includes('localhost')) {
       throw new Error(
-        'Production environment must use HTTPS URLs for security. Update IDKHUB_URL to use https://',
+        'Production environment must use HTTPS URLs for security. Update RA_URL to use https://',
       );
     }
   }
 
   // Validate URL format
   try {
-    new URL(idkhubUrl);
+    new URL(raUrl);
   } catch {
-    throw new Error(
-      `Invalid IDKHUB_URL format: ${idkhubUrl}. Must be a valid URL.`,
-    );
+    throw new Error(`Invalid RA_URL format: ${raUrl}. Must be a valid URL.`);
   }
 
-  return { idkhubUrl, authToken, openaiApiKey };
+  return { raUrl, authToken, openaiApiKey };
 }
 
 const config = validateConfiguration();
-const IDKHUB_URL = config.idkhubUrl;
+const RA_URL = config.raUrl;
 const AUTH_TOKEN = config.authToken;
 const OPENAI_API_KEY = config.openaiApiKey;
 
@@ -245,7 +243,7 @@ interface ChatMessage {
   content: string;
 }
 
-interface IdkConfig {
+interface ReactiveAgentsConfig {
   agent_name: string;
   skill_name: string;
   strategy: { mode: string };
@@ -328,21 +326,21 @@ function extractResponseContent(data: ChatCompletionResponseBody): string {
   return content;
 }
 
-// IDKHub AI provider request function
+// Reactive Agents AI provider request function
 export async function makeLanguageTutorRequest(
   messages: ChatMessage[],
-  config: IdkConfig,
+  config: ReactiveAgentsConfig,
 ): Promise<string> {
   try {
-    // Use the IDKHub API endpoint
-    const idkhubUrl = `${IDKHUB_URL}/v1/chat/completions`;
+    // Use the Reactive Agents API endpoint
+    const raUrl = `${RA_URL}/v1/chat/completions`;
 
-    const response = await fetch(idkhubUrl, {
+    const response = await fetch(raUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${AUTH_TOKEN}`,
         'Content-Type': 'application/json',
-        'x-idk-config': JSON.stringify(config),
+        'ra-config': JSON.stringify(config),
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
@@ -428,7 +426,7 @@ export async function multiLanguageTutorWorkflow(
     },
   ];
 
-  const englishConfig: IdkConfig = {
+  const englishConfig: ReactiveAgentsConfig = {
     agent_name: 'language-tutor',
     skill_name: 'english-language-analysis',
     strategy: { mode: 'single' },
@@ -494,7 +492,7 @@ Text: "${validatedText}"
 ${meta ? `Metadata: ${JSON.stringify(meta)}` : ''}
 Return ONLY a JSON object with keys: correct, and explanation if correct is false.`;
 
-  const idkConfig: IdkConfig = {
+  const raConfig: ReactiveAgentsConfig = {
     agent_name: 'language-tutor',
     skill_name: `${targetSkill.code}-evaluation`,
     strategy: { mode: 'single' },
@@ -516,7 +514,7 @@ Return ONLY a JSON object with keys: correct, and explanation if correct is fals
       { role: 'user', content: userPrompt },
     ];
 
-    const responseText = await makeLanguageTutorRequest(messages, idkConfig);
+    const responseText = await makeLanguageTutorRequest(messages, raConfig);
     return tryParseEvaluationJson(responseText);
   } catch (_error) {
     // Fallback evaluation
@@ -524,7 +522,7 @@ Return ONLY a JSON object with keys: correct, and explanation if correct is fals
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ];
-    const fallbackConfig: IdkConfig = {
+    const fallbackConfig: ReactiveAgentsConfig = {
       agent_name: 'language-tutor',
       skill_name: `${targetSkill.code}-evaluation-fallback`,
       strategy: { mode: 'single' },
@@ -625,7 +623,7 @@ const exampleLearnerTexts: ProcessedExample[] = (() => {
 
 // Main execution function
 async function runLanguageTutorExamples(runInParallel = false): Promise<void> {
-  console.log('IDKHub Multi-Language Tutor Agent Example');
+  console.log('Reactive Agents Multi-Language Tutor Agent Example');
   console.log('==========================================\n');
 
   try {

@@ -2,8 +2,8 @@ import { bedrockErrorResponseTransform } from '@server/ai-providers/bedrock/chat
 import { getOctetStreamToOctetStreamTransformer } from '@server/handlers/stream-handler-utils';
 import type { AppContext } from '@server/types/hono';
 import type { ResponseTransformFunction } from '@shared/types/ai-providers/config';
-import type { IdkRequestData } from '@shared/types/api/request';
-import type { IdkTarget } from '@shared/types/api/request/headers';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
 import type { FileContentResponseBody } from '@shared/types/api/routes/files-api';
 import { AIProvider } from '@shared/types/constants';
 import bedrockAPIConfig from './api';
@@ -16,32 +16,32 @@ const getRowTransform = (): ((
 
 export const bedrockRetrieveFileContentRequestHandler = async ({
   c,
-  idkTarget,
-  idkRequestData,
+  raTarget,
+  raRequestData,
 }: {
   c: AppContext;
-  idkTarget: IdkTarget;
-  idkRequestData: IdkRequestData;
+  raTarget: ReactiveAgentsTarget;
+  raRequestData: ReactiveAgentsRequestData;
 }): Promise<Response> => {
   try {
     // construct the base url and endpoint
     const baseURL = bedrockAPIConfig.getBaseURL({
       c,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
     });
     const endpoint = bedrockAPIConfig.getEndpoint({
       c,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
     });
     const url = `${baseURL}${endpoint}`;
 
     // generate the headers
     const headers = await bedrockAPIConfig.headers({
       c,
-      idkTarget,
-      idkRequestData,
+      raTarget,
+      raRequestData,
     });
 
     // make the request

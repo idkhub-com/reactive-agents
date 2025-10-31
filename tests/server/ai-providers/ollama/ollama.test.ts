@@ -15,7 +15,7 @@ import type {
   OllamaStreamChunk,
 } from '@server/ai-providers/ollama/types';
 import { ollamaErrorResponseTransform } from '@server/ai-providers/ollama/utils';
-import type { IdkRequestData } from '@shared/types/api/request';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
 import { FunctionName } from '@shared/types/api/request';
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
@@ -76,14 +76,14 @@ describe('Ollama Provider Tests', () => {
   describe('API Configuration', () => {
     it('should return localhost as default base URL for self-hosting', () => {
       const baseURL = OllamaAPIConfig.getBaseURL({
-        idkTarget: { provider: AIProvider.OLLAMA },
+        raTarget: { provider: AIProvider.OLLAMA },
       } as unknown as TestContext);
       expect(baseURL).toBe('http://localhost:11434');
     });
 
     it('should use custom_host when provided', () => {
       const baseURL = OllamaAPIConfig.getBaseURL({
-        idkTarget: {
+        raTarget: {
           provider: AIProvider.OLLAMA,
           custom_host: 'http://192.168.1.100:11434',
         },
@@ -93,7 +93,7 @@ describe('Ollama Provider Tests', () => {
 
     it('should use custom_host for remote Ollama instances', () => {
       const baseURL = OllamaAPIConfig.getBaseURL({
-        idkTarget: {
+        raTarget: {
           provider: AIProvider.OLLAMA,
           custom_host: 'https://ollama.example.com',
         },
@@ -103,7 +103,7 @@ describe('Ollama Provider Tests', () => {
 
     it('should return correct headers with API key for remote instances', () => {
       const headers = OllamaAPIConfig.headers({
-        idkTarget: { provider: AIProvider.OLLAMA, api_key: 'ollama-key-123' },
+        raTarget: { provider: AIProvider.OLLAMA, api_key: 'ollama-key-123' },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -114,7 +114,7 @@ describe('Ollama Provider Tests', () => {
 
     it('should return headers without API key for local instances', () => {
       const headers = OllamaAPIConfig.headers({
-        idkTarget: { provider: AIProvider.OLLAMA },
+        raTarget: { provider: AIProvider.OLLAMA },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -124,11 +124,11 @@ describe('Ollama Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = OllamaAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'llama3.2:latest', messages: [] },
         },
-        idkTarget: { provider: AIProvider.OLLAMA },
+        raTarget: { provider: AIProvider.OLLAMA },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('/v1/chat/completions');
@@ -136,11 +136,11 @@ describe('Ollama Provider Tests', () => {
 
     it('should return correct endpoint for streaming chat completion', () => {
       const endpoint = OllamaAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.STREAM_CHAT_COMPLETE,
           requestBody: { model: 'llama3.2:latest', messages: [] },
         },
-        idkTarget: { provider: AIProvider.OLLAMA },
+        raTarget: { provider: AIProvider.OLLAMA },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('/v1/chat/completions');
@@ -148,11 +148,11 @@ describe('Ollama Provider Tests', () => {
 
     it('should return correct endpoint for embeddings', () => {
       const endpoint = OllamaAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.EMBED,
           requestBody: { model: 'llama3.2:latest', input: 'test' },
         },
-        idkTarget: { provider: AIProvider.OLLAMA },
+        raTarget: { provider: AIProvider.OLLAMA },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('/api/embeddings');
@@ -160,11 +160,11 @@ describe('Ollama Provider Tests', () => {
 
     it('should handle proxy requests for chat', () => {
       const endpoint = OllamaAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.PROXY,
           requestBody: {},
         },
-        idkTarget: {
+        raTarget: {
           provider: AIProvider.OLLAMA,
           ollama_url_to_fetch: '/api/chat/something',
         },
@@ -175,11 +175,11 @@ describe('Ollama Provider Tests', () => {
 
     it('should handle proxy requests for embeddings', () => {
       const endpoint = OllamaAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.PROXY,
           requestBody: {},
         },
-        idkTarget: {
+        raTarget: {
           provider: AIProvider.OLLAMA,
           ollama_url_to_fetch: '/embeddings',
         },
@@ -190,11 +190,11 @@ describe('Ollama Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = OllamaAPIConfig.getEndpoint({
-        idkRequestData: {
+        raRequestData: {
           functionName: FunctionName.GENERATE_IMAGE,
           requestBody: {},
         },
-        idkTarget: { provider: AIProvider.OLLAMA },
+        raTarget: { provider: AIProvider.OLLAMA },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('');
@@ -383,7 +383,7 @@ describe('Ollama Provider Tests', () => {
         200,
         new Headers(),
         false,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('chatcmpl-123');
@@ -411,7 +411,7 @@ describe('Ollama Provider Tests', () => {
         404,
         new Headers(),
         false,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -432,7 +432,7 @@ describe('Ollama Provider Tests', () => {
         200,
         new Headers(),
         false,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -465,7 +465,7 @@ describe('Ollama Provider Tests', () => {
         'fallback-id',
         {},
         false,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       );
 
       expect(result).toContain('data: ');
@@ -480,7 +480,7 @@ describe('Ollama Provider Tests', () => {
         'fallback-id',
         {},
         false,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       );
 
       expect(result).toBe('data: [DONE]\n\n');
@@ -493,7 +493,7 @@ describe('Ollama Provider Tests', () => {
           'fallback-id',
           {},
           false,
-          {} as IdkRequestData,
+          {} as ReactiveAgentsRequestData,
         );
       }).toThrow();
     });
@@ -519,7 +519,7 @@ describe('Ollama Provider Tests', () => {
         'fallback-id',
         {},
         false,
-        {} as IdkRequestData,
+        {} as ReactiveAgentsRequestData,
       );
 
       expect(result).toContain('"provider":"ollama"');
@@ -540,7 +540,7 @@ describe('Ollama Provider Tests', () => {
         false,
         {
           requestBody: { model: 'llama3.2:latest', input: 'test' },
-        } as IdkRequestData,
+        } as ReactiveAgentsRequestData,
       ) as EmbedResponseType;
 
       expect(result.object).toBe('list');
@@ -563,7 +563,7 @@ describe('Ollama Provider Tests', () => {
         false,
         {
           requestBody: { model: 'nomic-embed-text', input: 'test' },
-        } as IdkRequestData,
+        } as ReactiveAgentsRequestData,
       ) as EmbedResponseType;
 
       expect(result.model).toBe('nomic-embed-text');
@@ -581,7 +581,7 @@ describe('Ollama Provider Tests', () => {
         false,
         {
           requestBody: { model: 'llama3.2:latest', input: 'test' },
-        } as IdkRequestData,
+        } as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -601,7 +601,7 @@ describe('Ollama Provider Tests', () => {
         false,
         {
           requestBody: { model: 'llama3.2:latest', input: 'test' },
-        } as IdkRequestData,
+        } as ReactiveAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -621,7 +621,7 @@ describe('Ollama Provider Tests', () => {
         false,
         {
           requestBody: { model: 'llama3.2:latest', input: 'test' },
-        } as IdkRequestData,
+        } as ReactiveAgentsRequestData,
       ) as EmbedResponseType;
 
       expect(result.usage?.prompt_tokens).toBe(0);

@@ -28,11 +28,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock API functions
-vi.mock('@client/api/v1/idk/agents', () => ({
+vi.mock('@client/api/v1/reactive-agents/agents', () => ({
   getAgents: vi.fn(),
 }));
 
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
@@ -85,8 +85,8 @@ vi.mock('@client/components/agents/skills/models/models-view', () => ({
   ModelsView: () => <div data-testid="models-view">Models</div>,
 }));
 
-import { getAgents } from '@client/api/v1/idk/agents';
-import { getSkills } from '@client/api/v1/idk/skills';
+import { getAgents } from '@client/api/v1/reactive-agents/agents';
+import { getSkills } from '@client/api/v1/reactive-agents/skills';
 
 // Mock localStorage
 const mockLocalStorage = {

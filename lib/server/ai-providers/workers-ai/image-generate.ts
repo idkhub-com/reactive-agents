@@ -33,29 +33,29 @@ export const workersAIImageGenerateConfig: AIProviderFunctionConfig = {
   size: [
     {
       param: 'height',
-      transform: (idkRequestBody: GenerateImageRequestBody): number => {
+      transform: (raRequestBody: GenerateImageRequestBody): number => {
         // Validate that params.size is a string and contains 'x'
         if (
-          !idkRequestBody.size ||
-          typeof idkRequestBody.size !== 'string' ||
-          !idkRequestBody.size.includes('x')
+          !raRequestBody.size ||
+          typeof raRequestBody.size !== 'string' ||
+          !raRequestBody.size.includes('x')
         ) {
           throw new Error(
-            `Invalid size parameter: ${idkRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
+            `Invalid size parameter: ${raRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
           );
         }
 
-        const parts = idkRequestBody.size.toLowerCase().split('x');
+        const parts = raRequestBody.size.toLowerCase().split('x');
         if (parts.length !== 2) {
           throw new Error(
-            `Invalid size format: ${idkRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
+            `Invalid size format: ${raRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
           );
         }
 
         const height = parseInt(parts[1], 10);
         if (Number.isNaN(height) || height <= 0) {
           throw new Error(
-            `Invalid height value in size parameter: ${idkRequestBody.size}`,
+            `Invalid height value in size parameter: ${raRequestBody.size}`,
           );
         }
 
@@ -64,29 +64,29 @@ export const workersAIImageGenerateConfig: AIProviderFunctionConfig = {
     },
     {
       param: 'width',
-      transform: (idkRequestBody: GenerateImageRequestBody): number => {
+      transform: (raRequestBody: GenerateImageRequestBody): number => {
         // Validate that params.size is a string and contains 'x'
         if (
-          !idkRequestBody.size ||
-          typeof idkRequestBody.size !== 'string' ||
-          !idkRequestBody.size.includes('x')
+          !raRequestBody.size ||
+          typeof raRequestBody.size !== 'string' ||
+          !raRequestBody.size.includes('x')
         ) {
           throw new Error(
-            `Invalid size parameter: ${idkRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
+            `Invalid size parameter: ${raRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
           );
         }
 
-        const parts = idkRequestBody.size.toLowerCase().split('x');
+        const parts = raRequestBody.size.toLowerCase().split('x');
         if (parts.length !== 2) {
           throw new Error(
-            `Invalid size format: ${idkRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
+            `Invalid size format: ${raRequestBody.size}. Expected format: "widthxheight" (e.g., "1024x1024")`,
           );
         }
 
         const width = parseInt(parts[0], 10);
         if (Number.isNaN(width) || width <= 0) {
           throw new Error(
-            `Invalid width value in size parameter: ${idkRequestBody.size}`,
+            `Invalid width value in size parameter: ${raRequestBody.size}`,
           );
         }
 

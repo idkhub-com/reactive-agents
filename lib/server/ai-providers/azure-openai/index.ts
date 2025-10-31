@@ -59,7 +59,7 @@ export const azureOpenAIConfig: AIProviderConfig = {
   requestHandlers: {
     [FunctionName.GET_BATCH_OUTPUT]: azureOpenAIGetBatchOutputRequestHandler,
   },
-  // Transforms the Azure OpenAI response to the IDK response
+  // Transforms the Azure OpenAI response to the Reactive Agents response
   responseTransforms: {
     [FunctionName.COMPLETE]: azureOpenAICompleteResponseTransform,
     [FunctionName.CHAT_COMPLETE]: azureOpenAIChatCompleteResponseTransform,

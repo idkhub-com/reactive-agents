@@ -68,7 +68,7 @@ import {
 } from './constants';
 
 export const getRandomId = (): string => {
-  return `idk_cache_${crypto.randomUUID()}`;
+  return `ra_cache_${crypto.randomUUID()}`;
 };
 
 export const getResponseErrorEvent = (error: ResponseError): string => {

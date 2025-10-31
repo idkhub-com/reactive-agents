@@ -17,8 +17,8 @@ import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
 import { useSkills } from '@client/providers/skills';
-import type { IdkRequestData } from '@shared/types/api/request/body';
-import { produceIdkRequestData } from '@shared/utils/idk-request-data';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 import { format } from 'date-fns';
 import { AlertTriangle, ArrowLeftIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
@@ -29,9 +29,8 @@ export function LogDetailsView(): ReactElement {
   const { selectedSkill } = useSkills();
   const { selectedLog, isLoading, setAgentId, setSkillId } = useLogs();
   const smartBack = useSmartBack();
-  const [idkRequestData, setIdkRequestData] = useState<IdkRequestData | null>(
-    null,
-  );
+  const [raRequestData, setReactiveAgentsRequestData] =
+    useState<ReactiveAgentsRequestData | null>(null);
 
   // Set agentId and skillId when agent/skill changes
   useEffect(() => {
@@ -52,7 +51,7 @@ export function LogDetailsView(): ReactElement {
 
   useEffect(() => {
     if (selectedLog) {
-      const idkRequestData = produceIdkRequestData(
+      const raRequestData = produceReactiveAgentsRequestData(
         selectedLog.ai_provider_request_log.method,
         selectedLog.ai_provider_request_log.request_url,
         {},
@@ -60,7 +59,7 @@ export function LogDetailsView(): ReactElement {
         selectedLog.ai_provider_request_log.response_body,
       );
 
-      setIdkRequestData(idkRequestData);
+      setReactiveAgentsRequestData(raRequestData);
     }
   }, [selectedLog]);
 
@@ -142,21 +141,21 @@ export function LogDetailsView(): ReactElement {
               <LogMap logs={[selectedLog]} />
             </div>
             <div className="inset-0 flex flex-col flex-1 w-full p-4 gap-4 overflow-hidden overflow-y-auto">
-              {selectedLog && idkRequestData && (
+              {selectedLog && raRequestData && (
                 <MessagesView
                   logId={selectedLog.id}
-                  idkRequestData={idkRequestData}
+                  raRequestData={raRequestData}
                 />
               )}
               {selectedLog &&
-                idkRequestData &&
+                raRequestData &&
                 ('choices' in
                   selectedLog.ai_provider_request_log.response_body ||
                   'output' in
                     selectedLog.ai_provider_request_log.response_body) && (
                   <CompletionViewer
                     logId={selectedLog.id}
-                    idkRequestData={idkRequestData}
+                    raRequestData={raRequestData}
                   />
                 )}
             </div>

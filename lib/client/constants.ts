@@ -21,7 +21,7 @@ export const ENVIRONMENT = process.env.NEXT_PUBLIC_ENV;
 
 export const SideBarData: SideBarDataSchema = {
   user: {
-    name: 'IDK User',
+    name: 'Reactive Agents User',
     email: '',
     avatar: `data:image/svg+xml;base64,${Buffer.from(
       createAvatar(micah, {

@@ -1,7 +1,7 @@
 /**
  * Language Skills for Multi-Language Tutor Agent
  *
- * This module defines the language-specific skills for the IDKHub language tutor.
+ * This module defines the language-specific skills for the Reactive Agents language tutor.
  * Each skill contains the system prompt and configuration for analyzing learner text
  * in a specific language.
  */

@@ -5,7 +5,7 @@ import {
   deleteAgent,
   getAgents,
   updateAgent,
-} from '@client/api/v1/idk/agents';
+} from '@client/api/v1/reactive-agents/agents';
 import { useToast } from '@client/hooks/use-toast';
 import { useNavigation } from '@client/providers/navigation';
 import type {

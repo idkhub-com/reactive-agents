@@ -3,38 +3,38 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const openAIAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.openai.com/v1',
-  headers: ({ idkTarget, idkRequestData }) => {
+  headers: ({ raTarget, raRequestData }) => {
     const headersObj: Record<string, string> = {
-      Authorization: `Bearer ${idkTarget.api_key}`,
+      Authorization: `Bearer ${raTarget.api_key}`,
     };
-    if (idkTarget.openai_organization) {
+    if (raTarget.openai_organization) {
       headersObj['OpenAI-Organization'] =
-        idkTarget.openai_organization as string;
+        raTarget.openai_organization as string;
     }
 
-    if (idkTarget.openai_project) {
-      headersObj['OpenAI-Project'] = idkTarget.openai_project as string;
+    if (raTarget.openai_project) {
+      headersObj['OpenAI-Project'] = raTarget.openai_project as string;
     }
 
     if (
-      idkRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
-      idkRequestData.functionName === FunctionName.CREATE_TRANSLATION ||
-      idkRequestData.functionName === FunctionName.UPLOAD_FILE
+      raRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
+      raRequestData.functionName === FunctionName.CREATE_TRANSLATION ||
+      raRequestData.functionName === FunctionName.UPLOAD_FILE
     ) {
       headersObj['Content-Type'] = 'multipart/form-data';
     } else {
       headersObj['Content-Type'] = 'application/json';
     }
 
-    if (idkTarget.openai_beta) {
-      headersObj['OpenAI-Beta'] = idkTarget.openai_beta as string;
+    if (raTarget.openai_beta) {
+      headersObj['OpenAI-Beta'] = raTarget.openai_beta as string;
     }
 
     return headersObj;
   },
-  getEndpoint: ({ idkRequestData }) => {
-    const basePath = idkRequestData.url.split('/v1')?.[1];
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    const basePath = raRequestData.url.split('/v1')?.[1];
+    switch (raRequestData.functionName) {
       case FunctionName.COMPLETE:
         return '/completions';
       case FunctionName.CHAT_COMPLETE:

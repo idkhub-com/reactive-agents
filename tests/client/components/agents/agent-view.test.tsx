@@ -32,7 +32,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the agents API
-vi.mock('@client/api/v1/idk/agents', () => {
+vi.mock('@client/api/v1/reactive-agents/agents', () => {
   const mockAgents = [
     {
       id: '550e8400-e29b-41d4-a716-446655440001',
@@ -301,7 +301,9 @@ describe('AgentView', () => {
   });
 
   it('saves changes when save button is clicked', async () => {
-    const { updateAgent } = await import('@client/api/v1/idk/agents');
+    const { updateAgent } = await import(
+      '@client/api/v1/reactive-agents/agents'
+    );
     const updateAgentMock = vi.mocked(updateAgent);
 
     renderAgentView('550e8400-e29b-41d4-a716-446655440001');
@@ -344,7 +346,9 @@ describe('AgentView', () => {
   });
 
   it('cancels editing when cancel button is clicked', async () => {
-    const { updateAgent } = await import('@client/api/v1/idk/agents');
+    const { updateAgent } = await import(
+      '@client/api/v1/reactive-agents/agents'
+    );
     const updateAgentMock = vi.mocked(updateAgent);
 
     renderAgentView('550e8400-e29b-41d4-a716-446655440001');
@@ -381,7 +385,9 @@ describe('AgentView', () => {
   });
 
   it('deletes agent when delete button is clicked and confirmed', async () => {
-    const { deleteAgent } = await import('@client/api/v1/idk/agents');
+    const { deleteAgent } = await import(
+      '@client/api/v1/reactive-agents/agents'
+    );
     const deleteAgentMock = vi.mocked(deleteAgent);
 
     renderAgentView('550e8400-e29b-41d4-a716-446655440001');
@@ -404,7 +410,9 @@ describe('AgentView', () => {
   });
 
   it('cancels deletion when user clicks cancel', async () => {
-    const { deleteAgent } = await import('@client/api/v1/idk/agents');
+    const { deleteAgent } = await import(
+      '@client/api/v1/reactive-agents/agents'
+    );
     const deleteAgentMock = vi.mocked(deleteAgent);
     vi.mocked(window.confirm).mockReturnValue(false);
 
@@ -440,7 +448,9 @@ describe('AgentView', () => {
 
   it('disables save/cancel buttons during update', async () => {
     // Mock slow update that never resolves during the test
-    const { updateAgent } = await import('@client/api/v1/idk/agents');
+    const { updateAgent } = await import(
+      '@client/api/v1/reactive-agents/agents'
+    );
     const updateAgentMock = vi.mocked(updateAgent);
     updateAgentMock.mockImplementation(
       () => new Promise((resolve) => setTimeout(resolve, 1000)),

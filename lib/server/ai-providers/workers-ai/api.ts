@@ -2,7 +2,7 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 export const workersAIAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ idkTarget }) => {
+  getBaseURL: ({ raTarget }) => {
     // Workers AI requires account ID which should be part of the target configuration
     // Multiple ways to provide the account ID:
     // 1. Direct custom_host with full URL
@@ -12,14 +12,14 @@ export const workersAIAPIConfig: InternalProviderAPIConfig = {
     let accountId: string | null = null;
 
     // Check if custom_host is provided
-    if (idkTarget.custom_host) {
+    if (raTarget.custom_host) {
       // If custom_host contains a full Cloudflare URL, extract account ID
-      if (idkTarget.custom_host.includes('cloudflare.com')) {
-        const match = idkTarget.custom_host.match(/\/accounts\/([^/]+)/);
+      if (raTarget.custom_host.includes('cloudflare.com')) {
+        const match = raTarget.custom_host.match(/\/accounts\/([^/]+)/);
         accountId = match ? match[1] : null;
       } else {
         // If custom_host is just the account ID
-        accountId = idkTarget.custom_host;
+        accountId = raTarget.custom_host;
       }
     }
 
@@ -35,18 +35,18 @@ export const workersAIAPIConfig: InternalProviderAPIConfig = {
 
     return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run`;
   },
-  headers: ({ idkTarget }) => {
+  headers: ({ raTarget }) => {
     return {
-      Authorization: `Bearer ${idkTarget.api_key}`,
+      Authorization: `Bearer ${raTarget.api_key}`,
       'Content-Type': 'application/json',
     };
   },
-  getEndpoint: ({ idkRequestData }) => {
+  getEndpoint: ({ raRequestData }) => {
     // Extract model from request body
-    const requestBody = idkRequestData.requestBody as Record<string, unknown>;
+    const requestBody = raRequestData.requestBody as Record<string, unknown>;
     const model = requestBody.model as string;
 
-    switch (idkRequestData.functionName) {
+    switch (raRequestData.functionName) {
       case FunctionName.COMPLETE:
       case FunctionName.CHAT_COMPLETE:
       case FunctionName.EMBED:

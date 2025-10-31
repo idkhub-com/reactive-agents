@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS logs (
   start_time BIGINT NOT NULL,
   end_time BIGINT NOT NULL,
   duration BIGINT NOT NULL,
-  base_idk_config JSONB NOT NULL,
+  base_ra_config JSONB NOT NULL,
   -- Maybe redundant. Used for indexing.
   ai_provider TEXT NOT NULL,
   model TEXT NOT NULL,

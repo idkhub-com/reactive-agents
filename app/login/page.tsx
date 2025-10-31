@@ -41,7 +41,7 @@ export default function LoginPage(): React.ReactNode {
   async function insertPassword(
     data: z.infer<typeof formSchema>,
   ): Promise<void> {
-    const response = await fetch(`${APP_URL}/v1/idk/auth/login`, {
+    const response = await fetch(`${APP_URL}/v1/reactive-agents/auth/login`, {
       method: 'POST',
       credentials: 'include',
       body: JSON.stringify(data),
@@ -65,7 +65,7 @@ export default function LoginPage(): React.ReactNode {
             <div className="flex flex-col gap-2">
               <Image
                 className="dark:brightness-0 dark:invert"
-                src="/assets/brand/idk-logo.png"
+                src="/assets/brand/ra-logo.png"
                 alt="logo"
                 width={100}
                 height={100}
@@ -91,8 +91,9 @@ export default function LoginPage(): React.ReactNode {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input
+                        type="password"
                         autoComplete="off"
-                        placeholder="Default: idk"
+                        placeholder="Default: reactive-agents"
                         {...field}
                       />
                     </FormControl>

@@ -40,10 +40,10 @@ export const POSTGREST_SERVICE_ROLE_KEY =
   process.env.POSTGREST_SERVICE_ROLE_KEY ??
   (SUPABASE_SECRET_KEY ? SUPABASE_SECRET_KEY : undefined);
 
-export const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD ?? 'idk';
+export const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD ?? 'reactive-agents';
 export const JWT_SECRET =
   process.env.JWT_SECRET ?? 'you-should-change-this-in-production';
-export const BEARER_TOKEN = process.env.BEARER_TOKEN ?? 'idk';
+export const BEARER_TOKEN = process.env.BEARER_TOKEN ?? 'reactive-agents';
 
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'demo-key';
 
@@ -57,9 +57,9 @@ export const AI_PROVIDER_API_KEY_ENCRYPTION_KEY =
   'default-32-byte-key-change-in-prod';
 
 /**
- * Special skills that idk uses internally. We auto generate these if they don't exist.
+ * Special skills that reactive-agents uses internally. We auto generate these if they don't exist.
  */
-export const IDKHUB_SKILLS = [
+export const RA_SKILLS = [
   'judge',
   'extract-task-and-outcome',
   'create-evaluations',

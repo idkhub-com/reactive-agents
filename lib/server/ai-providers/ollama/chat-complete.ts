@@ -82,7 +82,7 @@ export const ollamaChatCompleteResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  _idkRequestData,
+  _raRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200 && 'error' in aiProviderResponseBody) {
     return ollamaErrorResponseTransform(
@@ -123,7 +123,7 @@ export const ollamaChatCompleteStreamChunkTransform: ResponseChunkStreamTransfor
     _fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    _idkRequestData,
+    _raRequestData,
   ) => {
     const chunk = responseChunk
       .trim()

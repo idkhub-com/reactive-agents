@@ -1,6 +1,6 @@
 'use client';
 
-import { getSkillEvaluationRuns } from '@client/api/v1/idk/skills';
+import { getSkillEvaluationRuns } from '@client/api/v1/reactive-agents/skills';
 import type { SkillOptimizationEvaluationRun } from '@shared/types/data/skill-optimization-evaluation-run';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';

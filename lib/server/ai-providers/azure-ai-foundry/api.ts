@@ -14,8 +14,8 @@ const EndpointMap: Partial<Record<FunctionName, string>> = {
 };
 
 export const azureAIInferenceAPI: InternalProviderAPIConfig = {
-  getBaseURL: ({ idkTarget }) => {
-    const { configuration, azure_ai_foundry_config } = idkTarget;
+  getBaseURL: ({ raTarget }) => {
+    const { configuration, azure_ai_foundry_config } = raTarget;
     if (configuration.ai_provider === AIProvider.GITHUB) {
       return 'https://models.inference.ai.azure.com';
     }
@@ -26,7 +26,7 @@ export const azureAIInferenceAPI: InternalProviderAPIConfig = {
 
     return azure_ai_foundry_config.url;
   },
-  headers: async ({ idkTarget: providerOptions }) => {
+  headers: async ({ raTarget: providerOptions }) => {
     const { api_key, azure_extra_params, azure_ad_token, azure_auth_mode } =
       providerOptions;
 
@@ -77,8 +77,8 @@ export const azureAIInferenceAPI: InternalProviderAPIConfig = {
     }
     return headers;
   },
-  getEndpoint: ({ idkRequestData }) => {
-    const fn = idkRequestData.functionName;
+  getEndpoint: ({ raRequestData }) => {
+    const fn = raRequestData.functionName;
     const endpoint = EndpointMap[fn];
     if (!endpoint) {
       throw new Error(`Endpoint not found for function ${fn}`);

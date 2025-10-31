@@ -19,8 +19,8 @@ import {
 import { error } from '@shared/console-logging';
 import type { FunctionName } from '@shared/types/api/request';
 import {
-  type IdkConfig,
-  NonPrivateIdkConfig,
+  NonPrivateReactiveAgentsConfig,
+  type ReactiveAgentsConfig,
 } from '@shared/types/api/request/headers';
 import type {
   SkillOptimizationArm,
@@ -96,7 +96,7 @@ interface ProcessLogsParams {
   status: number;
   method: HttpMethod;
   functionName: FunctionName;
-  idkConfig: IdkConfig;
+  raConfig: ReactiveAgentsConfig;
   agent: Agent;
   skill: Skill;
   startTime: number;
@@ -116,7 +116,7 @@ async function processLogs({
   status,
   method,
   functionName,
-  idkConfig,
+  raConfig,
   agent,
   skill,
   startTime,
@@ -131,7 +131,8 @@ async function processLogs({
   const endTime = Date.now();
   const duration = endTime - startTime;
 
-  const baseIdkConfig = NonPrivateIdkConfig.parse(idkConfig);
+  const baseReactiveAgentsConfig =
+    NonPrivateReactiveAgentsConfig.parse(raConfig);
 
   if (!('model' in aiProviderLog.request_body)) {
     error('No model found in request body');
@@ -145,7 +146,7 @@ async function processLogs({
     start_time: startTime,
     end_time: endTime,
     duration: duration,
-    trace_id: idkConfig.trace_id,
+    trace_id: raConfig.trace_id,
     status: status,
     method: method,
     model: (aiProviderLog.request_body.model as string | undefined) || '',
@@ -155,16 +156,16 @@ async function processLogs({
     ai_provider_request_log: aiProviderLog,
     embedding: embedding ?? undefined,
     endpoint: url.pathname,
-    base_idk_config: baseIdkConfig,
+    base_ra_config: baseReactiveAgentsConfig,
     ai_provider: aiProviderLog.provider,
     cache_status: aiProviderLog.cache_status,
-    parent_span_id: idkConfig.parent_span_id,
-    span_id: idkConfig.span_id,
-    span_name: idkConfig.span_name,
-    app_id: idkConfig.app_id,
+    parent_span_id: raConfig.parent_span_id,
+    span_id: raConfig.span_id,
+    span_name: raConfig.span_name,
+    app_id: raConfig.app_id,
     external_user_id:
       (aiProviderLog.request_body.user as string | null) || undefined,
-    external_user_human_name: idkConfig.user_human_name || undefined,
+    external_user_human_name: raConfig.user_human_name || undefined,
     user_metadata: undefined,
   };
 
@@ -213,13 +214,13 @@ async function processLogs({
 }
 
 const shouldLogRequest = (url: URL): boolean => {
-  // Only log requests to the IDK API
+  // Only log requests to the Reactive Agents API
   if (!url.pathname.startsWith('/v1/')) {
     return false;
   }
 
-  // Don't log requests to the IDK app APIs
-  if (url.pathname.startsWith('/v1/idk')) {
+  // Don't log requests to the Reactive Agents app APIs
+  if (url.pathname.startsWith('/v1/reactive-agents')) {
     return false;
   }
 
@@ -290,15 +291,15 @@ export const logsMiddleware = (
     // Logs produced by the hooks middleware
     const hookLogs = c.get('hook_logs') || [];
 
-    const idkRequestData = c.get('idk_request_data');
+    const raRequestData = c.get('ra_request_data');
     const pulledArm = c.get('pulled_arm');
 
     const processLogsParams: ProcessLogsParams = {
       url,
       status: c.res.status,
-      method: idkRequestData.method,
-      functionName: idkRequestData.functionName,
-      idkConfig: c.get('idk_config'),
+      method: raRequestData.method,
+      functionName: raRequestData.functionName,
+      raConfig: c.get('ra_config'),
       agent: c.get('agent'),
       skill: c.get('skill'),
       startTime,

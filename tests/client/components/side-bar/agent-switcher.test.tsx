@@ -8,7 +8,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the agents API
-vi.mock('@client/api/v1/idk/agents', () => {
+vi.mock('@client/api/v1/reactive-agents/agents', () => {
   const mockAgents = [
     {
       id: '550e8400-e29b-41d4-a716-446655440001',
@@ -45,7 +45,7 @@ vi.mock('@client/api/v1/idk/agents', () => {
 });
 
 // Mock the skills API (required by NavigationProvider)
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn().mockResolvedValue([]),
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
@@ -114,7 +114,7 @@ describe('AgentSwitcher', () => {
     localStorageMock.getItem.mockReturnValue(null);
 
     // Ensure getAgents mock returns the expected data
-    const { getAgents } = await import('@client/api/v1/idk/agents');
+    const { getAgents } = await import('@client/api/v1/reactive-agents/agents');
     const mockAgentsData = [
       {
         id: '550e8400-e29b-41d4-a716-446655440001',
@@ -248,7 +248,7 @@ describe('AgentSwitcher', () => {
   it('shows create first agent button when no agents are available', async () => {
     // Mock empty agents array
     const getAgentsMock = vi.mocked(
-      (await import('@client/api/v1/idk/agents')).getAgents,
+      (await import('@client/api/v1/reactive-agents/agents')).getAgents,
     );
     getAgentsMock.mockResolvedValue([]);
 
@@ -269,7 +269,7 @@ describe('AgentSwitcher', () => {
   it('displays first agent from multiple agents', async () => {
     // Mock more agents to verify first one is selected
     const getAgentsMock = vi.mocked(
-      (await import('@client/api/v1/idk/agents')).getAgents,
+      (await import('@client/api/v1/reactive-agents/agents')).getAgents,
     );
     getAgentsMock.mockResolvedValue(
       Array.from({ length: 5 }, (_, i) => ({
@@ -333,7 +333,7 @@ describe('AgentSwitcher', () => {
   it('handles loading state gracefully', async () => {
     // Mock loading state
     const getAgentsMock = vi.mocked(
-      (await import('@client/api/v1/idk/agents')).getAgents,
+      (await import('@client/api/v1/reactive-agents/agents')).getAgents,
     );
     getAgentsMock.mockImplementation(
       () => new Promise((resolve) => setTimeout(resolve, 1000)),
@@ -348,7 +348,7 @@ describe('AgentSwitcher', () => {
   it('handles error state gracefully', async () => {
     // Mock error
     const getAgentsMock = vi.mocked(
-      (await import('@client/api/v1/idk/agents')).getAgents,
+      (await import('@client/api/v1/reactive-agents/agents')).getAgents,
     );
     getAgentsMock.mockRejectedValue(new Error('Failed to fetch agents'));
 

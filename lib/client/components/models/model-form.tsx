@@ -4,7 +4,7 @@ import {
   createModel,
   getModelById,
   updateModel,
-} from '@client/api/v1/idk/models';
+} from '@client/api/v1/reactive-agents/models';
 import { Button } from '@client/components/ui/button';
 import {
   Card,

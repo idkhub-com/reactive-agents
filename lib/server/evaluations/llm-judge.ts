@@ -119,7 +119,7 @@ export function createLLMJudge(
   const client =
     openaiClient ||
     new OpenAI({
-      apiKey: BEARER_TOKEN ?? 'idk',
+      apiKey: BEARER_TOKEN ?? 'reactive-agents',
       baseURL: 'http://localhost:3000/v1',
       dangerouslyAllowBrowser: true, // Safe in server-side Node.js context
     });
@@ -188,7 +188,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
       });
     }
 
-    const idkhubConfig = {
+    const raConfig = {
       targets: [
         {
           provider: AIProvider.OPENAI,
@@ -199,7 +199,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           api_key,
         },
       ],
-      agent_name: 'idkhub',
+      agent_name: 'reactive-agents',
       skill_name: 'judge',
     };
 
@@ -211,7 +211,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         const response = await client
           .withOptions({
             defaultHeaders: {
-              'x-idk-config': JSON.stringify(idkhubConfig),
+              'ra-config': JSON.stringify(raConfig),
             },
           })
           .chat.completions.parse({

@@ -12,16 +12,16 @@ import {
 } from 'vitest';
 
 // Mock the API functions
-vi.mock('@client/api/v1/idk/models', () => ({
+vi.mock('@client/api/v1/reactive-agents/models', () => ({
   getModels: vi.fn(),
 }));
 
-vi.mock('@client/api/v1/idk/skills', () => ({
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkillModels: vi.fn(),
 }));
 
-import { getModels } from '@client/api/v1/idk/models';
-import { getSkillModels } from '@client/api/v1/idk/skills';
+import { getModels } from '@client/api/v1/reactive-agents/models';
+import { getSkillModels } from '@client/api/v1/reactive-agents/skills';
 
 const mockGetModels = getModels as Mock;
 const mockGetSkillModels = getSkillModels as Mock;

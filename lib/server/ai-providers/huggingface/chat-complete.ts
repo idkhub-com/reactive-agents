@@ -11,6 +11,7 @@ import type {
 } from '@shared/types/api/routes/chat-completions-api';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import { AIProvider } from '@shared/types/constants';
+import { nanoid } from 'nanoid';
 import { huggingfaceErrorResponseTransform } from './utils';
 
 export const huggingfaceChatCompleteConfig: AIProviderFunctionConfig = {
@@ -131,7 +132,7 @@ export const huggingfaceChatCompleteStreamChunkTransform: ResponseChunkStreamTra
     const parsedChunk = JSON.parse(chunk);
     return `data: ${JSON.stringify({
       ...parsedChunk,
-      id: `portkey-${crypto.randomUUID()}`,
+      id: `ra-${nanoid()}`,
       provider: AIProvider.HUGGINGFACE,
     })}\n\n`;
   };

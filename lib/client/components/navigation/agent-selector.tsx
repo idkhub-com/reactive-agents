@@ -1,6 +1,6 @@
 'use client';
 
-import { getAgents } from '@client/api/v1/idk/agents';
+import { getAgents } from '@client/api/v1/reactive-agents/agents';
 import {
   Select,
   SelectContent,

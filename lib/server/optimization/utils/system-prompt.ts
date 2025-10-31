@@ -41,7 +41,7 @@ export async function generateSeedSystemPromptForSkill(skill: Skill) {
     baseURL: `${API_URL}/v1`,
   });
 
-  const idkhubConfig = {
+  const raConfig = {
     targets: [
       {
         provider: 'openai',
@@ -49,7 +49,7 @@ export async function generateSeedSystemPromptForSkill(skill: Skill) {
         api_key: apiKey,
       },
     ],
-    agent_name: 'idkhub',
+    agent_name: 'reactive-agents',
     skill_name: 'system-prompt-seeding',
   };
 
@@ -59,7 +59,7 @@ export async function generateSeedSystemPromptForSkill(skill: Skill) {
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
       defaultHeaders: {
-        'x-idk-config': JSON.stringify(idkhubConfig),
+        'ra-config': JSON.stringify(raConfig),
       },
     })
     .chat.completions.parse({
@@ -153,7 +153,7 @@ export async function generateReflectiveSystemPromptForSkill(
     baseURL: `${API_URL}/v1`,
   });
 
-  const idkhubConfig = {
+  const raConfig = {
     targets: [
       {
         provider: 'openai',
@@ -161,7 +161,7 @@ export async function generateReflectiveSystemPromptForSkill(
         api_key: apiKey,
       },
     ],
-    agent_name: 'idkhub',
+    agent_name: 'reactive-agents',
     skill_name: 'system-prompt-reflection',
   };
 
@@ -171,7 +171,7 @@ export async function generateReflectiveSystemPromptForSkill(
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
       defaultHeaders: {
-        'x-idk-config': JSON.stringify(idkhubConfig),
+        'ra-config': JSON.stringify(raConfig),
       },
     })
     .chat.completions.parse({

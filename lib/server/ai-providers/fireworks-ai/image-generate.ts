@@ -12,10 +12,10 @@ export const FireworksAIImageGenerateConfig: AIProviderFunctionConfig = {
   prompt: {
     param: 'text_prompts',
     required: true,
-    transform: (idkRequestBody: GenerateImageRequestBody) => {
+    transform: (raRequestBody: GenerateImageRequestBody) => {
       return [
         {
-          text: idkRequestBody.prompt,
+          text: raRequestBody.prompt,
           weight: 1,
         },
       ];
@@ -29,22 +29,16 @@ export const FireworksAIImageGenerateConfig: AIProviderFunctionConfig = {
   size: [
     {
       param: 'height',
-      transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseInt(
-          idkRequestBody.size?.toLowerCase().split('x')[1] ?? '1024',
-          10,
-        ),
+      transform: (raRequestBody: GenerateImageRequestBody): number =>
+        parseInt(raRequestBody.size?.toLowerCase().split('x')[1] ?? '1024', 10),
       min: 512,
       max: 1024,
       default: 1024,
     },
     {
       param: 'width',
-      transform: (idkRequestBody: GenerateImageRequestBody): number =>
-        parseInt(
-          idkRequestBody.size?.toLowerCase().split('x')[0] ?? '1024',
-          10,
-        ),
+      transform: (raRequestBody: GenerateImageRequestBody): number =>
+        parseInt(raRequestBody.size?.toLowerCase().split('x')[0] ?? '1024', 10),
       min: 512,
       max: 1024,
       default: 1024,

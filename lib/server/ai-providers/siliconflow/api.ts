@@ -3,14 +3,14 @@ import { FunctionName } from '@shared/types/api/request';
 
 const siliconFlowAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.siliconflow.cn/v1',
-  headers: ({ idkTarget }) => {
+  headers: ({ raTarget }) => {
     return {
-      Authorization: `Bearer ${idkTarget.api_key}`,
+      Authorization: `Bearer ${raTarget.api_key}`,
       'Content-Type': 'application/json',
     };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.EMBED:

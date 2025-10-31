@@ -4,7 +4,7 @@ import {
   createSkillEvaluation,
   deleteSkillEvaluation,
   getSkillEvaluations,
-} from '@client/api/v1/idk/skills';
+} from '@client/api/v1/reactive-agents/skills';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
 import type { ReactElement, ReactNode } from 'react';

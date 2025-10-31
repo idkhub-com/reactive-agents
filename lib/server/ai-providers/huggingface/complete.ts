@@ -7,6 +7,7 @@ import type {
 } from '@shared/types/ai-providers/config';
 import type { CompletionResponseBody } from '@shared/types/api/routes/completions-api';
 import { AIProvider } from '@shared/types/constants';
+import { nanoid } from 'nanoid';
 
 // interface HuggingfaceCompleteResponse extends CompletionResponse {}
 
@@ -114,7 +115,7 @@ export const huggingfaceCompleteStreamChunkTransform: ResponseChunkStreamTransfo
     const parsedChunk = JSON.parse(chunk);
     return `data: ${JSON.stringify({
       ...parsedChunk,
-      id: `portkey-${crypto.randomUUID()}`,
+      id: `ra-${nanoid()}`,
       provider: AIProvider.HUGGINGFACE,
     })}\n\n`;
   };

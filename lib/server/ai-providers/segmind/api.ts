@@ -3,15 +3,15 @@ import { FunctionName } from '@shared/types/api/request';
 
 const segmindAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.segmind.com/v1',
-  headers: ({ idkTarget }) => {
-    return { 'x-api-key': `${idkTarget.api_key}` };
+  headers: ({ raTarget }) => {
+    return { 'x-api-key': `${raTarget.api_key}` };
   },
-  getEndpoint: ({ idkRequestData }) => {
-    switch (idkRequestData.functionName) {
+  getEndpoint: ({ raRequestData }) => {
+    switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.GENERATE_IMAGE: {
-        const model = idkRequestData.requestBody.model;
+        const model = raRequestData.requestBody.model;
 
         // Validate model parameter to prevent invalid endpoints
         if (!model || typeof model !== 'string' || model.trim().length === 0) {

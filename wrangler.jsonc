@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "idk",
+  "name": "reactive-agents",
   "compatibility_date": "2025-04-24",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "observability": {
@@ -18,8 +18,8 @@
   },
   "kv_namespaces": [
     {
-      "binding": "IDK_CACHE",
-      "id": "<IDK_CACHE_ID>" // <- replace with your KV namespace ID
+      "binding": "RA_CACHE",
+      "id": "<RA_CACHE_ID>" // <- replace with your KV namespace ID
     }
   ],
   "vars": {

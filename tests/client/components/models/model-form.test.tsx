@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@client/api/v1/idk/models', () => ({
+vi.mock('@client/api/v1/reactive-agents/models', () => ({
   createModel: vi.fn(),
   getModelById: vi.fn(),
   updateModel: vi.fn(),
@@ -198,7 +198,9 @@ describe('ModelForm', () => {
 
   describe('Form Submission', () => {
     it('should create model on form submission', async () => {
-      const { createModel } = await import('@client/api/v1/idk/models');
+      const { createModel } = await import(
+        '@client/api/v1/reactive-agents/models'
+      );
       (createModel as Mock).mockResolvedValue(mockModel);
 
       render(<ModelForm />);

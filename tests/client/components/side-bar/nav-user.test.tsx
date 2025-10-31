@@ -92,7 +92,7 @@ describe('NavUser', () => {
       // Simulate the signOut function being called
       // In a real scenario, this would be triggered by clicking the logout button
       // But since Radix dropdowns don't render properly in jsdom, we test the fetch behavior
-      const expectedUrl = `${API_URL}/v1/idk/auth/logout`;
+      const expectedUrl = `${API_URL}/v1/reactive-agents/auth/logout`;
 
       // Call fetch manually as the signOut function would
       await fetch(expectedUrl, {
@@ -120,9 +120,9 @@ describe('NavUser', () => {
       // The actual endpoint path is tested in the component implementation
       expect(screen.getByRole('button')).toBeInTheDocument();
 
-      // The endpoint should be /v1/idk/auth/logout (not /v1/auth/logout)
-      const expectedEndpoint = `${API_URL}/v1/idk/auth/logout`;
-      expect(expectedEndpoint).toContain('/v1/idk/auth/logout');
+      // The endpoint should be /v1/reactive-agents/auth/logout (not /v1/auth/logout)
+      const expectedEndpoint = `${API_URL}/v1/reactive-agents/auth/logout`;
+      expect(expectedEndpoint).toContain('/v1/reactive-agents/auth/logout');
     });
   });
 });
