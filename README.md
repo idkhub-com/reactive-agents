@@ -1,58 +1,56 @@
-# 🚀 Reactive Agents
+# Reactive Agents
 
-> A platform for training and deploying LLMs.
+> Automatically optimize your AI agents based on performance with OpenAI API compatibility.
 
----
+## What is Reactive Agents?
 
-<p align="center">
-  <img src="./.github/assets/supabase.svg" alt="Supabase Logo" title="Supabase" height="40"/>
-  <span style="font-size:2rem;vertical-align:middle;">&nbsp; + &nbsp;</span>
-  <img src="./.github/assets/biome.svg" alt="Biome Logo" title="Biome" height="40"/>
-</p>
-<p align="center"><em>Powered by Supabase &amp; Biome</em></p>
+Reactive Agents is a self-optimizing AI agent platform that automatically improves your agents by adjusting hyperparameters and system prompts based on their performance. Simply point your existing application to Reactive Agents instead of your AI provider, and it handles the optimization for you.
 
-<p align="center">
-  <a href="https://supabase.com/"> <img src="https://img.shields.io/badge/Powered%20by-Supabase-3ECF8E?logo=supabase&logoColor=white" alt="Supabase Badge"/> </a>
-  <a href="https://biomejs.dev/"> <img src="https://img.shields.io/badge/Code%20Style-Biome-1B1F23?logo=biome&logoColor=white" alt="Biome Badge"/> </a>
-  <a href="https://pnpm.io/"> <img src="https://img.shields.io/badge/Package%20Manager-pnpm-F69220?logo=pnpm&logoColor=white" alt="pnpm Badge"/> </a>
-</p>
+**Key Features:**
+- 🔄 **Automatic optimization** - Continuously improves agents based on real-world performance
+- 🎯 **Smart tuning** - Adjusts LLM hyperparameters and system prompts automatically
+- 🔌 **OpenAI API compatible** - Works as a drop-in replacement for applications using the OpenAI API
+- 🌐 **Multi-provider support** - Route to OpenAI, Anthropic, Google, and other providers
+- 📊 **Performance tracking** - Monitor agent performance and improvements over time
 
----
-
-## 🛠️ Tech Stack
-
-- **[Biome](https://biomejs.dev/)** &nbsp;:art: — Code formatting and linting
-- **[Supabase](https://supabase.com/)** &nbsp;:elephant: — Backend database & authentication
-- **pnpm** &nbsp;:package: — Fast, disk space efficient package manager
+**How it works:**
+1. Change your API URL from `api.openai.com` to your Reactive Agents instance
+2. Reactive Agents proxies requests to your chosen AI provider
+3. Performance is tracked and agents are automatically optimized
+4. Your application benefits from continuously improving AI agents
 
 ---
 
 ## 🚦 Getting Started
 
-### 1️⃣ Install Supabase CLI
-- Follow the [Supabase CLI Installation Guide](https://supabase.com/docs/guides/cli) for your platform.
+**Quick Start:**
 
-### 2️⃣ Start Supabase
-```sh
-supabase start
-```
+1. Create a `.env` file:
+   ```bash
+   OPENAI_API_KEY=your-openai-key
+   ```
 
-### 3️⃣ Install Dependencies
-```sh
-pnpm install
-```
+2. Start the application:
+   ```bash
+   docker-compose up
+   ```
 
-### 4️⃣ Start the Development Server
-```sh
-pnpm dev
-```
+That's it! The application will be available at `http://localhost:3000`.
 
-### 5️⃣ Run Examples
-Run any of the examples in the `examples` directory with the following command:
+**What's included:**
+- Complete backend infrastructure
+- Reactive Agents application
+- All necessary setup handled automatically
 
-```sh
-pnpm tsx ./path/to/example.ts
-```
+---
+
+### Production Deployment
+
+> [!WARNING]
+> **Experimental Project** - Reactive Agents is currently in active development and is **not production-ready**. We are working on critical features including authorization, performance optimizations, and stability improvements. Use this project for experimentation and development only.
+
+For future production deployment guides and best practices, visit our [documentation](https://reactiveagents.ai).
+
 ---
 
 ## 🔑 Default Password
@@ -63,55 +61,17 @@ reactive-agents
 
 ---
 
-## 📝 AI Providers Status
+## 📖 Examples
 
-### Chat Completion API
-
-***Streaming mode not yet implemented***
-
-| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | Vision | MCP Servers |
-| ---------------- | -------- | ---------- | ----------- | ----------------- | ------ | ------------- |
-| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
-| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
-| OpenAI           | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
-| OpenRouter       | ✅       | ✅         | ✅          | ✅                | ✅     | ⬛            |
-| Gemini (Google)  | ✅       | ✅         | ✅          | ⬛                | ⬛     | ⬛            |
-| XAI              | ✅       | ✅         | ✅          | ✅                | ⬛     | ⬛            |
-
-### Responses API
-
-***Streaming mode not yet implemented***
-
-| AI Provider      | Messages | Tool Calls | JSON Output | Structured Output | MCP Servers |
-| ---------------- | -------- | ---------- | ----------- | ----------------- | ------------- |
-| Azure AI Foundry | ✅       | ✅         | ✅          | ✅                | ✅            |
-| Azure OpenAI     | ✅       | ✅         | ✅          | ✅                | ✅            |
-| OpenAI           | ✅       | ✅         | ✅          | ✅                | ✅            |
-| Gemini (Google)  | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
-| XAI              | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
-| Anthropic        | 🔴       | 🔴         | 🔴          | 🔴                | 🔴            |
-
-- ✅: Fully supported
-- 🟡: Partial support (configuration exists but has known issues)
-- ⬛: Not yet implemented
-
-### Notes
-- **Anthropic Streaming**: Configuration exists but currently returns 500 errors due to server-side issues
-- **Responses API**: Only OpenAI-compatible providers (OpenAI, Azure OpenAI, XAI) support the Responses API
-
-## 📚 Learn More
-- [Supabase Documentation](https://supabase.com/docs)
-- [Biome Documentation](https://biomejs.dev/docs/)
-- [pnpm Documentation](https://pnpm.io/motivation)
-- [Contributing Guide](CONTRIBUTING.md)
+Check out the [examples/](examples/) directory for sample implementations showing how to integrate Reactive Agents with your applications.
 
 ---
 
-## 💡 Inspiration
+## 📚 Learn More
 
-This project was inspired by the amazing work at [Portkey-AI/gateway](https://github.com/Portkey-AI/gateway), a blazing fast AI Gateway with integrated guardrails and support for 200+ LLMs.
-
-We use MIT-licensed code from Portkey-AI/gateway in this project and gratefully acknowledge their contribution.
+- **[Documentation](https://reactiveagents.ai)** - Complete guides and API reference
+- [Contributing Guide](CONTRIBUTING.md)
+- [Notice](NOTICE)
 
 ---
 

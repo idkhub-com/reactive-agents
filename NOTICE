@@ -1,0 +1,142 @@
+NOTICE
+
+This project includes code from the following sources:
+
+================================================================================
+
+Portkey-AI Gateway
+https://github.com/Portkey-AI/gateway
+
+Copyright (c) Portkey-AI
+License: MIT
+Used for: AI provider integration patterns and utilities
+
+================================================================================
+
+Langfuse
+https://github.com/langfuse/langfuse
+
+Copyright (c) Langfuse GmbH
+License: MIT
+Used for: Evaluation metrics (ported from Python to TypeScript)
+
+================================================================================
+
+Next.js
+https://github.com/vercel/next.js
+
+Copyright (c) Vercel, Inc.
+License: MIT
+Used for: Web application framework
+
+================================================================================
+
+Hono
+https://github.com/honojs/hono
+
+Copyright (c) Yusuke Wada and Hono contributors
+License: MIT
+Used for: Web API framework
+
+================================================================================
+
+React
+https://github.com/facebook/react
+
+Copyright (c) Meta Platforms, Inc. and affiliates
+License: MIT
+Used for: User interface library
+
+================================================================================
+
+Radix UI
+https://github.com/radix-ui/primitives
+
+Copyright (c) WorkOS
+License: MIT
+Used for: Accessible UI components
+
+================================================================================
+
+TanStack Query
+https://github.com/TanStack/query
+
+Copyright (c) Tanner Linsley
+License: MIT
+Used for: Data fetching and state management
+
+================================================================================
+
+Biome
+https://github.com/biomejs/biome
+
+Copyright (c) Biome Contributors
+License: MIT OR Apache-2.0
+Used for: Code formatting and linting
+
+================================================================================
+
+Zod
+https://github.com/colinhacks/zod
+
+Copyright (c) Colin McDonnell
+License: MIT
+Used for: Schema validation
+
+================================================================================
+
+TailwindCSS
+https://github.com/tailwindlabs/tailwindcss
+
+Copyright (c) Tailwind Labs, Inc.
+License: MIT
+Used for: CSS framework
+
+================================================================================
+
+OpenAI Node SDK
+https://github.com/openai/openai-node
+
+Copyright (c) OpenAI
+License: Apache-2.0
+Used for: OpenAI API client library
+
+================================================================================
+
+Lucide Icons
+https://github.com/lucide-icons/lucide
+
+Copyright (c) Lucide Contributors
+License: ISC
+Used for: Icon library
+
+================================================================================
+
+Monaco Editor
+https://github.com/microsoft/monaco-editor
+
+Copyright (c) Microsoft Corporation
+License: MIT
+Used for: Code editor component
+
+================================================================================
+
+Tiptap
+https://github.com/ueberdosis/tiptap
+
+Copyright (c) überDosis GmbH
+License: MIT
+Used for: Rich text editor framework
+
+================================================================================
+
+OpenNext Cloudflare
+https://github.com/opennextjs/opennextjs-cloudflare
+
+Copyright (c) OpenNext Contributors
+License: MIT
+Used for: Next.js Cloudflare adapter
+
+================================================================================
+
+For a complete list of all dependencies and their licenses, see package.json.
