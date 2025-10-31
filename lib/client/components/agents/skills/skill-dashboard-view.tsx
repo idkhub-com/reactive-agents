@@ -1,5 +1,6 @@
 'use client';
 
+import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -11,6 +12,7 @@ import {
 } from '@client/components/ui/card';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
+import { useSkillValidation } from '@client/hooks/use-skill-validation';
 import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
@@ -19,6 +21,7 @@ import { useSkillOptimizationClusters } from '@client/providers/skill-optimizati
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@client/providers/skills';
 import {
+  AlertCircle,
   ArrowRightIcon,
   CheckCircle2,
   CpuIcon,
@@ -43,6 +46,9 @@ export function SkillDashboardView(): ReactElement {
   const { selectedAgent } = useAgents();
   const { selectedSkill } = useSkills();
   const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
+
+  // Skill validation
+  const { isReady, missingRequirements } = useSkillValidation(selectedSkill);
 
   // Logs via provider
   const {
@@ -128,7 +134,16 @@ export function SkillDashboardView(): ReactElement {
   return (
     <>
       <PageHeader
-        title={selectedSkill.name}
+        title={
+          <div className="flex items-center gap-2">
+            <span>{selectedSkill.name}</span>
+            <SkillStatusIndicator
+              skill={selectedSkill}
+              variant="badge"
+              tooltipSide="bottom"
+            />
+          </div>
+        }
         description={selectedSkill.description || 'No description available'}
         actions={
           <div className="flex gap-2">
@@ -154,6 +169,50 @@ export function SkillDashboardView(): ReactElement {
           </div>
         }
       />
+      {!isReady && (
+        <div className="mx-6 mt-6">
+          <Card className="bg-orange-100 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+            <CardContent className="flex items-start gap-3 pt-4">
+              <AlertCircle className="h-5 w-5 text-orange-800 dark:text-orange-200 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-1">
+                  Skill Not Ready
+                </h3>
+                <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                  This skill is missing required components:
+                </p>
+                <ul className="text-sm text-orange-800 dark:text-orange-200 list-disc pl-5 space-y-1 mb-3">
+                  {missingRequirements.map((req) => (
+                    <li key={req}>{req}</li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigateToModels(selectedAgent.name, selectedSkill.name)
+                    }
+                    className="bg-white dark:bg-orange-900 hover:bg-orange-50 dark:hover:bg-orange-800 border-orange-300 dark:border-orange-700"
+                  >
+                    <PlusIcon className="h-3 w-3 mr-1" />
+                    Add Model
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsManageEvaluationsOpen(true)}
+                    className="bg-white dark:bg-orange-900 hover:bg-orange-50 dark:hover:bg-orange-800 border-orange-300 dark:border-orange-700"
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Add Evaluation
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <div className="p-6 space-y-6">
         {/* Performance Chart - Full Width */}
         <Card>
@@ -169,7 +228,7 @@ export function SkillDashboardView(): ReactElement {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
-          {/* Clusters Card */}
+          {/* Partitions Card */}
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() =>
@@ -179,9 +238,9 @@ export function SkillDashboardView(): ReactElement {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
                 <CardTitle className="text-base font-medium">
-                  Clusters
+                  Partitions
                 </CardTitle>
-                <CardDescription>Optimization clusters</CardDescription>
+                <CardDescription>Optimization partitions</CardDescription>
               </div>
               <LayersIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>

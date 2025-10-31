@@ -1,6 +1,8 @@
 'use client';
 
 import { getAgentEvaluationRuns } from '@client/api/v1/reactive-agents/agents';
+import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
+import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -114,7 +116,16 @@ export function SkillsListView(): ReactElement {
   return (
     <>
       <PageHeader
-        title="Skills"
+        title={
+          <div className="flex items-center gap-2">
+            <span>Skills</span>
+            <AgentStatusIndicator
+              agent={selectedAgent}
+              variant="badge"
+              tooltipSide="bottom"
+            />
+          </div>
+        }
         description={`Manage skills for ${selectedAgent.name}`}
         showBackButton={true}
         onBack={() => router.push('/agents')}
@@ -198,8 +209,15 @@ export function SkillsListView(): ReactElement {
                   onClick={() => handleSkillSelect(skill)}
                 >
                   <CardHeader>
-                    <CardTitle className="flex justify-between items-start">
-                      <span className="truncate">{skill.name}</span>
+                    <CardTitle className="flex justify-between items-center">
+                      <span className="truncate leading-normal">
+                        {skill.name}
+                      </span>
+                      <SkillStatusIndicator
+                        skill={skill}
+                        variant="badge"
+                        tooltipSide="left"
+                      />
                     </CardTitle>
                     <CardDescription className="line-clamp-2">
                       {skill.description || 'No description available'}

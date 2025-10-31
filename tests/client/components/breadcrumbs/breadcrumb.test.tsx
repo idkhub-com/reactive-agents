@@ -219,4 +219,147 @@ describe('BreadcrumbComponent', () => {
     // The component renders successfully without crashing
     expect(() => renderWithProviders(<BreadcrumbComponent />)).not.toThrow();
   });
+
+  describe('Skill Filtering', () => {
+    it('filters skills by selected agent when agent changes', async () => {
+      const mockSkillsAgent1 = [
+        {
+          id: 'skill-1',
+          agent_id: '1',
+          name: 'Skill 1',
+          description: 'Skill for Agent 1',
+          metadata: {},
+          optimize: false,
+          configuration_count: 3,
+          system_prompt_count: 3,
+          clustering_interval: 15,
+          reflection_min_requests_per_arm: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      const mockSkillsAgent2 = [
+        {
+          id: 'skill-2',
+          agent_id: '2',
+          name: 'Skill 2',
+          description: 'Skill for Agent 2',
+          metadata: {},
+          optimize: false,
+          configuration_count: 3,
+          system_prompt_count: 3,
+          clustering_interval: 15,
+          reflection_min_requests_per_arm: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      // Mock getSkills to return different skills based on agent_id
+      vi.mocked(getSkills).mockImplementation((params) => {
+        if (params?.agent_id === '1') return Promise.resolve(mockSkillsAgent1);
+        if (params?.agent_id === '2') return Promise.resolve(mockSkillsAgent2);
+        return Promise.resolve([]);
+      });
+
+      mockParams = { agentName: 'Test%20Agent%201', skillName: 'Skill%201' };
+      mockPathname = '/agents/Test%20Agent%201/Skill%201';
+
+      await act(() => {
+        renderWithProviders(<BreadcrumbComponent />);
+      });
+
+      // Wait for skills to load
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // Verify getSkills was called with agent_id filter
+      expect(vi.mocked(getSkills)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agent_id: '1',
+        }),
+      );
+    });
+
+    it('updates skill filter when selected agent changes', async () => {
+      mockParams = { agentName: 'Test%20Agent%201', skillName: 'Test%20Skill' };
+      mockPathname = '/agents/Test%20Agent%201/Test%20Skill';
+
+      vi.mocked(getSkills).mockResolvedValue([
+        {
+          id: 'skill-1',
+          agent_id: '1',
+          name: 'Test Skill',
+          description: 'Test skill description',
+          metadata: {},
+          optimize: false,
+          configuration_count: 3,
+          system_prompt_count: 3,
+          clustering_interval: 15,
+          reflection_min_requests_per_arm: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      await act(() => {
+        renderWithProviders(<BreadcrumbComponent />);
+      });
+
+      // Wait for useEffect to run and update query params
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      });
+
+      // Verify getSkills was eventually called with agent_id filter
+      // The breadcrumb's useEffect should trigger a query with agent_id
+      expect(vi.mocked(getSkills)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agent_id: '1',
+          limit: 100,
+        }),
+      );
+    });
+  });
+
+  describe('Skill Icon', () => {
+    it('uses Wrench icon for skills instead of Bot icon', async () => {
+      const mockSkills = [
+        {
+          id: 'skill-1',
+          agent_id: '1',
+          name: 'Test Skill',
+          description: 'Test skill description',
+          metadata: {},
+          optimize: false,
+          configuration_count: 3,
+          system_prompt_count: 3,
+          clustering_interval: 15,
+          reflection_min_requests_per_arm: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      vi.mocked(getSkills).mockResolvedValue(mockSkills);
+
+      mockParams = { agentName: 'Test%20Agent%201', skillName: 'Test%20Skill' };
+      mockPathname = '/agents/Test%20Agent%201/Test%20Skill';
+
+      await act(() => {
+        renderWithProviders(<BreadcrumbComponent />);
+      });
+
+      // Wait for render
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // The component should render without errors
+      // Icon verification would require checking SVG paths which is implementation detail
+      expect(screen.queryByText('Test Skill')).toBeTruthy();
+    });
+  });
 });

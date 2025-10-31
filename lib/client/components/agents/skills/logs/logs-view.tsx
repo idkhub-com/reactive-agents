@@ -121,7 +121,7 @@ export function LogsView(): ReactElement {
           </Button>
         }
       />
-      <div className="p-6 space-y-6">
+      <div className="px-2 pt-6 pb-6 space-y-6">
         {/* Filters */}
         <Card>
           <CardHeader>

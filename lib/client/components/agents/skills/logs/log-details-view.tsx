@@ -118,7 +118,7 @@ export function LogDetailsView(): ReactElement {
         showBackButton
         onBack={handleBack}
       />
-      <div className="p-6 space-y-6">
+      <div className="px-2 pt-6 pb-6 space-y-6">
         {/* Log Detail Card */}
         <Card className="flex flex-col h-[calc(100vh-200px)] overflow-hidden">
           <CardHeader className="flex flex-row justify-between items-center p-4 bg-card-header border-b">

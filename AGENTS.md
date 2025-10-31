@@ -39,6 +39,23 @@
 - Before pushing: `pnpm typecheck && pnpm check && pnpm test`.
 - PRs include: problem/solution summary, linked issues, screenshots for UI, test notes, and any schema/migration callouts.
 
+## Agent Validation & Readiness
+- **Agent Requirements**: All agents must have at least one skill configured to be considered "ready"
+- **Skill Requirements**: All skills must meet the following to be considered "ready":
+  - At least one model must be configured
+  - If optimization is enabled, at least one evaluation must be configured
+- **UI Indicators**:
+  - Agents/skills without requirements display an orange indicator icon or badge
+  - Detail views show warning banners for incomplete agents/skills
+  - Popover tooltips explain what requirements are missing
+- **Validation Logic**:
+  - Agent validation: `lib/shared/utils/agent-validation.ts` and `lib/client/hooks/use-agent-validation.ts`
+  - Skill validation: `lib/shared/utils/skill-validation.ts` and `lib/client/hooks/use-skill-validation.ts`
+- **Reusable Components**:
+  - `AgentStatusIndicator` (`lib/client/components/agents/agent-status-indicator.tsx`)
+  - `SkillStatusIndicator` (`lib/client/components/agents/skills/skill-status-indicator.tsx`)
+- **User Experience**: Guide users to add required components when viewing incomplete agents/skills
+
 ## Security & Configuration Tips
 - Secrets: never commit; use `.env` for local. Regenerate CF types with `pnpm cf-typegen` when env changes.
 - Supabase: start/stop with `supabase start|stop`; migrations in `supabase/migrations` and seed via `supabase/seed.sql`.

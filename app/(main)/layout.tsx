@@ -67,9 +67,9 @@ export default function MainLayout({
   return (
     <AppProviders>
       <AppSidebar />
-      <SidebarInset className="h-full overflow-hidden">
+      <SidebarInset className="h-full overflow-hidden flex flex-col">
         <header className="flex pt-2 h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex w-full justify-between items-center p-2 m-0">
+          <div className="flex w-full justify-between items-center px-4 py-2 m-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <Separator
@@ -89,7 +89,7 @@ export default function MainLayout({
             <ThemeSelect />
           </div>
         </header>
-        <div className="relative flex w-full flex-1 flex-col h-full overflow-auto pt-4">
+        <div className="relative flex w-full flex-1 flex-col h-full overflow-auto">
           <MainContent>{children}</MainContent>
         </div>
       </SidebarInset>

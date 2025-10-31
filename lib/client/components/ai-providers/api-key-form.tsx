@@ -202,7 +202,9 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
           api_key: data.api_key,
           custom_fields: data.custom_fields || {},
         };
-        await createAPIKey(createParams);
+        const newProvider = await createAPIKey(createParams);
+        // Navigate to add models view for the new provider
+        router.push(`/ai-providers/${newProvider.id}/add-models`);
       } else if (apiKey) {
         const updateParams: AIProviderConfigUpdateParams = {
           ai_provider: data.ai_provider,
@@ -219,9 +221,8 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
         }
 
         await updateAPIKey(apiKey.id, updateParams);
+        router.push('/ai-providers');
       }
-
-      router.push('/ai-providers');
     } catch (_error) {
       // Error handling is done in the provider
     }
@@ -243,11 +244,11 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
   return (
     <>
       <PageHeader
-        title={mode === 'create' ? 'Add API Key' : 'Edit API Key'}
+        title={mode === 'create' ? 'Add AI Provider' : 'Edit AI Provider'}
         description={
           mode === 'create'
-            ? 'Add a new AI provider API key'
-            : 'Update your AI provider API key'
+            ? 'Add a new AI provider'
+            : 'Update your AI provider configuration'
         }
         onBack={handleBack}
       />
@@ -256,12 +257,12 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyIcon className="h-5 w-5" />
-              {mode === 'create' ? 'Add New API Key' : 'Edit API Key'}
+              {mode === 'create' ? 'Add New AI Provider' : 'Edit AI Provider'}
             </CardTitle>
             <CardDescription>
               {mode === 'create'
-                ? 'Configure your AI provider API key. The key will be encrypted and stored securely.'
-                : 'Update your AI provider API key details. Leave the API key field unchanged to keep the existing key.'}
+                ? 'Configure your AI provider. API keys will be encrypted and stored securely.'
+                : 'Update your AI provider configuration. Leave the API key field unchanged to keep the existing key.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -481,8 +482,8 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                       <>
                         <SaveIcon className="h-4 w-4 mr-2" />
                         {mode === 'create'
-                          ? 'Create API Key'
-                          : 'Update API Key'}
+                          ? 'Create AI Provider'
+                          : 'Update AI Provider'}
                       </>
                     )}
                   </Button>

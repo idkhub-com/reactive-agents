@@ -170,10 +170,10 @@ export function CreateSkillView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Navigate to evaluations setup page (URL will trigger skill selection)
+      // Navigate to models page to add models first
       if (agentName) {
         router.push(
-          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/evaluations-2/create`,
+          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/models?afterCreate=true`,
         );
       } else {
         router.push('/agents');
@@ -268,7 +268,14 @@ export function CreateSkillView(): React.ReactElement {
                         <Input
                           placeholder="e.g., data-analysis, email_templates, code-review"
                           className="h-11"
+                          pattern="[a-z0-9_-]+"
+                          title="Only lowercase letters, numbers, underscores, and hyphens are allowed"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Trigger validation on every change
+                            form.trigger('name');
+                          }}
                           disabled={isCreating}
                         />
                       </FormControl>

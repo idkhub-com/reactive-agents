@@ -2,6 +2,7 @@ import { AddModelsDialog } from '@client/components/agents/skills/models/add-mod
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { useSkills } from '@client/providers/skills';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
@@ -100,6 +101,7 @@ vi.mock('@client/components/ui/skeleton', () => ({
 
 // Mock Lucide icons
 vi.mock('lucide-react', () => ({
+  AlertCircle: () => <div data-testid="alert-circle-icon" />,
   CpuIcon: () => <div data-testid="cpu-icon" />,
   PlusIcon: () => <div data-testid="plus-icon" />,
   SearchIcon: () => <div data-testid="search-icon" />,
@@ -112,14 +114,26 @@ vi.mock('nanoid', () => ({
 
 describe('AddModelsDialog', () => {
   const mockOnModelsAdded = vi.fn();
+  let queryClient: QueryClient;
 
   const defaultProps = {
     skillId: 'skill-123',
     onModelsAdded: mockOnModelsAdded,
   };
 
+  // Wrapper component with QueryClientProvider
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
 
     (useAIProviderAPIKeys as Mock).mockReturnValue({
       apiKeys: [],
@@ -147,11 +161,15 @@ describe('AddModelsDialog', () => {
 
   describe('Basic Rendering', () => {
     it('should render without crashing', () => {
-      expect(() => render(<AddModelsDialog {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<AddModelsDialog {...defaultProps} />, { wrapper }),
+      ).not.toThrow();
     });
 
     it('should render dialog component', () => {
-      const { container } = render(<AddModelsDialog {...defaultProps} />);
+      const { container } = render(<AddModelsDialog {...defaultProps} />, {
+        wrapper,
+      });
 
       expect(
         container.querySelector('[data-testid="dialog"]'),
@@ -162,7 +180,9 @@ describe('AddModelsDialog', () => {
       const customTrigger = <button type="button">Custom Trigger</button>;
 
       expect(() =>
-        render(<AddModelsDialog {...defaultProps} trigger={customTrigger} />),
+        render(<AddModelsDialog {...defaultProps} trigger={customTrigger} />, {
+          wrapper,
+        }),
       ).not.toThrow();
     });
   });
@@ -182,7 +202,9 @@ describe('AddModelsDialog', () => {
         refetchSkillModels: vi.fn(),
       });
 
-      expect(() => render(<AddModelsDialog {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<AddModelsDialog {...defaultProps} />, { wrapper }),
+      ).not.toThrow();
     });
 
     it('should handle error state for models', () => {
@@ -199,7 +221,9 @@ describe('AddModelsDialog', () => {
         refetchSkillModels: vi.fn(),
       });
 
-      expect(() => render(<AddModelsDialog {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<AddModelsDialog {...defaultProps} />, { wrapper }),
+      ).not.toThrow();
     });
 
     it('should handle loading state for API keys', () => {
@@ -209,7 +233,9 @@ describe('AddModelsDialog', () => {
         error: null,
       });
 
-      expect(() => render(<AddModelsDialog {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<AddModelsDialog {...defaultProps} />, { wrapper }),
+      ).not.toThrow();
     });
 
     it('should handle error state for API keys', () => {
@@ -219,7 +245,9 @@ describe('AddModelsDialog', () => {
         error: 'Failed to load API keys',
       });
 
-      expect(() => render(<AddModelsDialog {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<AddModelsDialog {...defaultProps} />, { wrapper }),
+      ).not.toThrow();
     });
   });
 
@@ -231,6 +259,7 @@ describe('AddModelsDialog', () => {
             skillId="test-skill-id"
             onModelsAdded={mockOnModelsAdded}
           />,
+          { wrapper },
         ),
       ).not.toThrow();
     });
@@ -241,6 +270,9 @@ describe('AddModelsDialog', () => {
       expect(() =>
         render(
           <AddModelsDialog skillId="skill-123" onModelsAdded={callback} />,
+          {
+            wrapper,
+          },
         ),
       ).not.toThrow();
     });
@@ -248,7 +280,12 @@ describe('AddModelsDialog', () => {
     it('should handle missing props gracefully', () => {
       // Test with minimal required props
       expect(() =>
-        render(<AddModelsDialog skillId="skill-123" onModelsAdded={vi.fn()} />),
+        render(
+          <AddModelsDialog skillId="skill-123" onModelsAdded={vi.fn()} />,
+          {
+            wrapper,
+          },
+        ),
       ).not.toThrow();
     });
   });

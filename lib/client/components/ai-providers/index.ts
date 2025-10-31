@@ -1,2 +1,3 @@
+export { AIProvidersListView } from './ai-providers-list';
 export { APIKeyForm } from './api-key-form';
-export { APIKeysListView } from './api-keys-list';
+export { ProvidersAndModelsView } from './providers-and-models-view';

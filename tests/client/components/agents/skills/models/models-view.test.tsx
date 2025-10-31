@@ -3,7 +3,9 @@ import { useAgents } from '@client/providers/agents';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { useSkills } from '@client/providers/skills';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // Mock dependencies
@@ -37,13 +39,17 @@ vi.mock('@client/hooks/use-smart-back', () => ({
   useSmartBack: vi.fn(() => vi.fn()),
 }));
 
+const mockPush = vi.fn();
+const mockSearchParams = new URLSearchParams();
+
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
-    push: vi.fn(),
+    push: mockPush,
     back: vi.fn(),
     forward: vi.fn(),
     refresh: vi.fn(),
   })),
+  useSearchParams: vi.fn(() => mockSearchParams),
 }));
 
 vi.mock('@client/providers/navigation', () => ({
@@ -80,6 +86,7 @@ vi.mock('@client/providers/navigation', () => ({
 
 // Mock Lucide icons - comprehensive list to avoid whack-a-mole
 vi.mock('lucide-react', () => ({
+  AlertCircle: () => <div data-testid="alert-circle-icon" />,
   ArrowLeft: () => <div data-testid="arrow-left-icon" />,
   BookOpenIcon: () => <div data-testid="book-open-icon" />,
   CalendarIcon: () => <div data-testid="calendar-icon" />,
@@ -151,11 +158,25 @@ describe('ModelsView', () => {
   const mockSetSkillId = vi.fn();
   const mockRefetchSkillModels = vi.fn();
   const mockRefetchSkills = vi.fn();
+  let queryClient: QueryClient;
+
+  // Wrapper component with QueryClientProvider
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 
   // ModelsView doesn't take props - it gets data from navigation state
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPush.mockClear();
+    mockSearchParams.delete('afterCreate');
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
 
     (useAIProviderAPIKeys as Mock).mockReturnValue({
       apiKeys: mockAPIKeys,
@@ -214,7 +235,7 @@ describe('ModelsView', () => {
 
   describe('Rendering', () => {
     it('should render section header with title and description', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       expect(screen.getByText('Models for Test Skill')).toBeInTheDocument();
       expect(
@@ -223,14 +244,14 @@ describe('ModelsView', () => {
     });
 
     it('should render add models button', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       const addButton = screen.getByRole('button', { name: /Add Models/i });
       expect(addButton).toBeInTheDocument();
     });
 
     it('should render refresh button', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       const refreshButton = screen.getByTestId('refresh-icon');
       expect(refreshButton).toBeInTheDocument();
@@ -253,7 +274,7 @@ describe('ModelsView', () => {
         refetch: vi.fn(),
       });
 
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // When loading, the component still shows filter section but shows skeletons in models section
       expect(screen.getByText('Filter Models')).toBeInTheDocument();
@@ -285,7 +306,7 @@ describe('ModelsView', () => {
         refetch: vi.fn(),
       });
 
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // API keys loading doesn't show skeletons, just affects provider display
       expect(screen.getByText('Filter Models')).toBeInTheDocument();
@@ -309,7 +330,7 @@ describe('ModelsView', () => {
         refetch: vi.fn(),
       });
 
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       expect(
         screen.getByText('Failed to load skill models'),
@@ -339,7 +360,7 @@ describe('ModelsView', () => {
         refetch: vi.fn(),
       });
 
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // API keys error doesn't show a specific error message in the UI
       // It just affects provider names to show "Unknown"
@@ -350,14 +371,14 @@ describe('ModelsView', () => {
 
   describe('Models Display', () => {
     it('should render models section correctly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should render models section header with count
       expect(screen.getByText('Available Models (2)')).toBeInTheDocument();
     });
 
     it('should handle provider integration correctly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Component should render without crashing and show proper structure
       expect(screen.getByText('Filter Models')).toBeInTheDocument();
@@ -365,7 +386,7 @@ describe('ModelsView', () => {
     });
 
     it('should render models management interface', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should show the models section with proper UI
       expect(screen.getByText('Available Models (2)')).toBeInTheDocument();
@@ -389,7 +410,7 @@ describe('ModelsView', () => {
         refetch: vi.fn(),
       });
 
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       expect(screen.getByText('No models found')).toBeInTheDocument();
       expect(
@@ -400,7 +421,7 @@ describe('ModelsView', () => {
 
   describe('Actions', () => {
     it('should refresh models when refresh button is clicked', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       const refreshButton = screen
         .getByTestId('refresh-icon')
@@ -411,7 +432,7 @@ describe('ModelsView', () => {
     });
 
     it('should open add models dialog when add button is clicked', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       const addButton = screen.getByRole('button', { name: /Add Models/i });
       fireEvent.click(addButton);
@@ -421,7 +442,7 @@ describe('ModelsView', () => {
     });
 
     it('should handle user interactions properly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should have interactive elements
       expect(
@@ -433,14 +454,14 @@ describe('ModelsView', () => {
     });
 
     it('should handle API integration correctly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Component should render with proper API integration
       expect(mockSetSkillId).toHaveBeenCalledWith('skill-123');
     });
 
     it('should handle component lifecycle properly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should set skill ID on mount
       expect(mockSetSkillId).toHaveBeenCalledWith('skill-123');
@@ -449,20 +470,20 @@ describe('ModelsView', () => {
 
   describe('Skill ID Management', () => {
     it('should set skill ID in models provider on mount', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       expect(mockSetSkillId).toHaveBeenCalledWith('skill-123');
     });
 
     it('should handle navigation state changes', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should handle navigation state properly
       expect(mockSetSkillId).toHaveBeenCalledWith('skill-123');
     });
 
     it('should handle component lifecycle properly', () => {
-      const { unmount } = render(<ModelsView />);
+      const { unmount } = render(<ModelsView />, { wrapper });
 
       // Component should mount and unmount without errors
       expect(mockSetSkillId).toHaveBeenCalledWith('skill-123');
@@ -476,14 +497,14 @@ describe('ModelsView', () => {
 
   describe('Provider Integration', () => {
     it('should integrate with AI provider keys properly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Component should work with provider integration
       expect(screen.getByText('Filter Models')).toBeInTheDocument();
     });
 
     it('should handle provider API state correctly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should render with proper provider integration
       expect(screen.getByText('Available Models (2)')).toBeInTheDocument();
@@ -492,7 +513,7 @@ describe('ModelsView', () => {
 
   describe('Add Models Dialog Integration', () => {
     it('should handle dialog interaction correctly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Open dialog
       const addButton = screen.getByRole('button', { name: /Add Models/i });
@@ -505,11 +526,110 @@ describe('ModelsView', () => {
 
   describe('Responsive Design', () => {
     it('should render responsive layout properly', () => {
-      render(<ModelsView />);
+      render(<ModelsView />, { wrapper });
 
       // Should render responsive layout components
       expect(screen.getByText('Filter Models')).toBeInTheDocument();
       expect(screen.getByText('Available Models (2)')).toBeInTheDocument();
+    });
+  });
+
+  describe('After Create Flow', () => {
+    it('should show default description when afterCreate is not set', () => {
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.getByText(/Manage AI models available for this skill/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          /Add at least one model to your skill to get started/i,
+        ),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show afterCreate description when parameter is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.getByText(
+          /Add at least one model to your skill to get started/i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Manage AI models available for this skill/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show banner with instructions when afterCreate is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      expect(screen.getByText('Add Models to Your Skill')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Your skill has been created!/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Now add at least one AI model/i),
+      ).toBeInTheDocument();
+    });
+
+    it('should not show banner when afterCreate is false', () => {
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.queryByText('Add Models to Your Skill'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show Continue to Evaluations button when afterCreate is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.getByRole('button', { name: /Continue to Evaluations/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('should not show Continue to Evaluations button when afterCreate is false', () => {
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.queryByRole('button', { name: /Continue to Evaluations/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should navigate to evaluations page when Continue to Evaluations is clicked', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      const continueButton = screen.getByRole('button', {
+        name: /Continue to Evaluations/i,
+      });
+      fireEvent.click(continueButton);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        '/agents/Test%20Agent/Test%20Skill/evaluations-2/create',
+      );
+    });
+
+    it('should show Add Models button alongside Continue button when afterCreate is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      // Both buttons should be present
+      expect(
+        screen.getByRole('button', { name: /Add Models/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Continue to Evaluations/i }),
+      ).toBeInTheDocument();
     });
   });
 });

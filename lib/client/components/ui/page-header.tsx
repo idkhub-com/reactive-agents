@@ -1,13 +1,12 @@
 'use client';
 
 import { Button } from '@client/components/ui/button';
-import { Card, CardContent } from '@client/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement, ReactNode } from 'react';
 
 interface PageHeaderProps {
-  title: string;
+  title: string | ReactNode;
   description?: string;
   actions?: ReactNode;
   showBackButton?: boolean;
@@ -37,33 +36,33 @@ export function PageHeader({
   };
 
   return (
-    <Card className="mx-4 mb-4 border-border/40 bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {showBackButton && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="h-9 w-9 p-0 hover:bg-accent shrink-0"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="size-4" />
-              </Button>
+    <div className="sticky top-0 z-10 border-b bg-background">
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center gap-3">
+          {showBackButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="h-9 w-9 p-0 hover:bg-accent shrink-0"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="size-4" />
+            </Button>
+          )}
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-xl font-semibold text-foreground m-0 shrink-0">
+              {title}
+            </h1>
+            {description && (
+              <p className="text-sm text-muted-foreground m-0 truncate">
+                {description}
+              </p>
             )}
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-              {description && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {description}
-                </p>
-              )}
-            </div>
           </div>
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
-      </CardContent>
-    </Card>
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      </div>
+    </div>
   );
 }

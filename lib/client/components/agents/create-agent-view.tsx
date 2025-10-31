@@ -93,7 +93,7 @@ export function CreateAgentView(): React.ReactElement {
         description="Build a new AI agent to help with your tasks"
         onBack={handleBack}
       />
-      <div className="container mx-auto py-6 max-w-2xl">
+      <div className="container mx-auto px-2 pt-6 pb-6 max-w-2xl">
         {/* Main Form Card */}
         <Card className="shadow-lg">
           <CardHeader className="pb-6">
@@ -130,7 +130,14 @@ export function CreateAgentView(): React.ReactElement {
                         <Input
                           placeholder="e.g., customer-support-bot, content_writer, data-analyst"
                           className="h-11"
+                          pattern="[a-z0-9_-]+"
+                          title="Only lowercase letters, numbers, underscores, and hyphens are allowed"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Trigger validation on every change
+                            form.trigger('name');
+                          }}
                           disabled={isCreating}
                         />
                       </FormControl>

@@ -26,7 +26,8 @@ import { useToast } from '@client/hooks/use-toast';
 import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import { CpuIcon, PlusIcon, SearchIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, CpuIcon, PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useId, useState } from 'react';
@@ -42,6 +43,7 @@ export function AddModelsDialog({
   onModelsAdded,
   trigger,
 }: AddModelsDialogProps): ReactElement {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,7 +155,7 @@ export function AddModelsDialog({
 
       toast({
         title: 'Models added successfully',
-        description: `Added ${selectedModelIds.length} model(s) to the skill.`,
+        description: `Added ${selectedModelIds.length} model(s) to the skill. Configuration arms are being generated in the background.`,
       });
 
       // Reset state and close dialog
@@ -164,6 +166,12 @@ export function AddModelsDialog({
 
       // Refresh skill models and call callback
       await refetchSkillModels();
+
+      // Invalidate the skill validation cache to refresh the UI
+      await queryClient.invalidateQueries({
+        queryKey: ['skill-validation-models', skillId],
+      });
+
       onModelsAdded();
     } catch (error) {
       console.error('Error adding models to skill:', error);
@@ -198,6 +206,21 @@ export function AddModelsDialog({
             assigned are shown.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Warning Banner */}
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+              Processing time required
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              Adding models may take 1-2 minutes as we generate different
+              configuration arms (system prompts, parameters, etc.) using AI.
+              Please be patient while the process completes.
+            </p>
+          </div>
+        </div>
 
         <div className="flex-1 overflow-hidden flex flex-col space-y-4">
           {/* Filters */}

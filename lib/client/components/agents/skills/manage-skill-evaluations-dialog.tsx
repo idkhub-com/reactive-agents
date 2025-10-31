@@ -15,6 +15,7 @@ import { Label } from '@client/components/ui/label';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/evaluations';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
@@ -65,6 +66,7 @@ export function ManageSkillEvaluationsDialog({
   onOpenChange,
   skillId,
 }: ManageSkillEvaluationsDialogProps): ReactElement {
+  const queryClient = useQueryClient();
   const {
     evaluations,
     fetchEvaluations,
@@ -157,6 +159,11 @@ export function ManageSkillEvaluationsDialog({
 
       // Execute all operations in parallel
       await Promise.all([...deletePromises, ...createPromises]);
+
+      // Invalidate the skill validation cache to refresh the UI
+      await queryClient.invalidateQueries({
+        queryKey: ['skill-validation-evaluations', skillId],
+      });
 
       // Close dialog on success
       onOpenChange(false);

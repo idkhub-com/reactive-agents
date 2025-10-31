@@ -33,8 +33,6 @@ import { format } from 'date-fns';
 import {
   CheckIcon,
   CopyIcon,
-  EyeIcon,
-  EyeOffIcon,
   KeyIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -46,7 +44,15 @@ import Link from 'next/link';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
-export function APIKeysListView(): ReactElement {
+interface AIProvidersListViewProps {
+  onProviderSelect?: (providerId: string) => void;
+  selectedProviderId?: string | null;
+}
+
+export function AIProvidersListView({
+  onProviderSelect,
+  selectedProviderId,
+}: AIProvidersListViewProps = {}): ReactElement {
   const { toast } = useToast();
   const {
     apiKeys,
@@ -58,7 +64,6 @@ export function APIKeysListView(): ReactElement {
   } = useAIProviderAPIKeys();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [copiedKeys, setCopiedKeys] = useState<Set<string>>(new Set());
 
   const filteredAPIKeys = apiKeys.filter((apiKey) => {
@@ -71,16 +76,6 @@ export function APIKeysListView(): ReactElement {
     }
     return true;
   });
-
-  const toggleKeyVisibility = (keyId: string) => {
-    const newVisibleKeys = new Set(visibleKeys);
-    if (newVisibleKeys.has(keyId)) {
-      newVisibleKeys.delete(keyId);
-    } else {
-      newVisibleKeys.add(keyId);
-    }
-    setVisibleKeys(newVisibleKeys);
-  };
 
   const copyToClipboard = async (apiKey: AIProviderConfig) => {
     try {
@@ -128,8 +123,15 @@ export function APIKeysListView(): ReactElement {
   };
 
   const maskAPIKey = (apiKey: string): string => {
-    if (apiKey.length <= 4) return apiKey;
-    return '•'.repeat(apiKey.length - 4) + apiKey.slice(-4);
+    if (apiKey.length <= 8) {
+      // If key is too short, just show dots (fixed length for security)
+      return '•'.repeat(10);
+    }
+    // Always show first 4 characters, 10 dots, and last 4 characters
+    // This hides the actual length of the API key for security
+    const first4 = apiKey.slice(0, 4);
+    const last4 = apiKey.slice(-4);
+    return `${first4}${'•'.repeat(10)}${last4}`;
   };
 
   const getProviderColor = (provider: string): string => {
@@ -148,8 +150,9 @@ export function APIKeysListView(): ReactElement {
     return (
       <>
         <PageHeader
-          title="API Keys"
-          description="Manage your AI provider API keys"
+          title="AI Providers & Models"
+          description="Configure AI providers and manage available models"
+          showBackButton={false}
           actions={
             <div className="flex gap-2">
               <Skeleton className="h-10 w-20" />
@@ -162,10 +165,10 @@ export function APIKeysListView(): ReactElement {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <KeyIcon className="h-5 w-5" />
-                API Keys
+                AI Providers
               </CardTitle>
               <CardDescription>
-                Manage API keys for AI providers
+                Manage your AI providers and their configurations
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -187,8 +190,9 @@ export function APIKeysListView(): ReactElement {
   return (
     <>
       <PageHeader
-        title="API Keys"
-        description="Manage your AI provider API keys"
+        title="AI Providers & Models"
+        description="Configure AI providers and manage available models"
+        showBackButton={false}
         actions={
           <div className="flex gap-2">
             <Button
@@ -204,7 +208,7 @@ export function APIKeysListView(): ReactElement {
             <Button asChild>
               <Link href="/ai-providers/create">
                 <PlusIcon className="h-4 w-4 mr-2" />
-                Add API Key
+                Add AI Provider
               </Link>
             </Button>
           </div>
@@ -215,11 +219,12 @@ export function APIKeysListView(): ReactElement {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyIcon className="h-5 w-5" />
-              API Keys ({filteredAPIKeys.length})
+              AI Providers ({filteredAPIKeys.length})
             </CardTitle>
             <CardDescription>
-              Manage API keys for AI providers. Keys are encrypted and stored
-              securely.
+              {onProviderSelect
+                ? 'Select a provider to view and manage its models below'
+                : 'Manage your AI providers. API keys are encrypted and stored securely.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -240,18 +245,18 @@ export function APIKeysListView(): ReactElement {
                 <div className="text-center py-8">
                   <KeyIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
-                    No API keys found
+                    No AI providers found
                   </h3>
                   <p className="text-muted-foreground mb-4">
                     {searchQuery
-                      ? 'No API keys match your search criteria.'
-                      : 'Get started by adding your first API key.'}
+                      ? 'No AI providers match your search criteria.'
+                      : 'Get started by adding your first AI provider.'}
                   </p>
                   {!searchQuery && (
                     <Button asChild>
                       <Link href="/ai-providers/create">
                         <PlusIcon className="h-4 w-4 mr-2" />
-                        Add Your First API Key
+                        Add Your First AI Provider
                       </Link>
                     </Button>
                   )}
@@ -260,8 +265,8 @@ export function APIKeysListView(): ReactElement {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Provider</TableHead>
                       <TableHead>Name</TableHead>
+                      <TableHead>Provider</TableHead>
                       <TableHead>API Key</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
@@ -269,7 +274,22 @@ export function APIKeysListView(): ReactElement {
                   </TableHeader>
                   <TableBody>
                     {filteredAPIKeys.map((apiKey) => (
-                      <TableRow key={apiKey.id}>
+                      <TableRow
+                        key={apiKey.id}
+                        className={`${
+                          onProviderSelect
+                            ? 'cursor-pointer hover:bg-muted/50'
+                            : ''
+                        } ${
+                          selectedProviderId === apiKey.id
+                            ? 'bg-muted/30 border-l-4 border-l-primary'
+                            : ''
+                        }`}
+                        onClick={() => onProviderSelect?.(apiKey.id)}
+                      >
+                        <TableCell className="font-medium">
+                          {apiKey.name}
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant="secondary"
@@ -278,39 +298,32 @@ export function APIKeysListView(): ReactElement {
                             {apiKey.ai_provider}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-medium">
-                          {apiKey.name}
-                        </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                              {visibleKeys.has(apiKey.id)
-                                ? apiKey.api_key || 'No API key'
-                                : maskAPIKey(apiKey.api_key || '')}
-                            </code>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleKeyVisibility(apiKey.id)}
-                            >
-                              {visibleKeys.has(apiKey.id) ? (
-                                <EyeOffIcon className="h-4 w-4" />
-                              ) : (
-                                <EyeIcon className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(apiKey)}
-                            >
-                              {copiedKeys.has(apiKey.id) ? (
-                                <CheckIcon className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <CopyIcon className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                          {apiKey.api_key ? (
+                            <div className="flex items-center gap-2">
+                              <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                                {maskAPIKey(apiKey.api_key)}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(apiKey);
+                                }}
+                              >
+                                {copiedKeys.has(apiKey.id) ? (
+                                  <CheckIcon className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <CopyIcon className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground italic">
+                              No API key set
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {format(new Date(apiKey.created_at), 'MMM d, yyyy')}
@@ -318,7 +331,11 @@ export function APIKeysListView(): ReactElement {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <MoreHorizontalIcon className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

@@ -1,6 +1,7 @@
 'use client';
 
 import { getAgentEvaluationRuns } from '@client/api/v1/reactive-agents/agents';
+import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -188,7 +189,9 @@ export function AgentsListView(): ReactElement {
                         className="rounded-lg shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="truncate">{agent.name}</CardTitle>
+                        <CardTitle className="truncate leading-normal">
+                          {agent.name}
+                        </CardTitle>
                         <CardDescription className="line-clamp-2 mt-1">
                           {agent.description || 'No description available'}
                         </CardDescription>
@@ -198,6 +201,11 @@ export function AgentsListView(): ReactElement {
                   <CardContent>
                     <div className="flex gap-2 flex-wrap">
                       <Badge variant="secondary">Agent</Badge>
+                      <AgentStatusIndicator
+                        agent={agent}
+                        variant="badge"
+                        tooltipSide="top"
+                      />
                     </div>
                   </CardContent>
                 </Card>

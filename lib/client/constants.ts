@@ -1,7 +1,7 @@
 import type { SideBarDataSchema } from '@client/types/ui/side-bar';
 import { micah } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { BookOpenIcon, CpuIcon, KeyIcon, Settings2Icon } from 'lucide-react';
+import { BookOpenIcon, KeyIcon } from 'lucide-react';
 
 export const AVATAR_SEED = '';
 
@@ -43,48 +43,20 @@ export const SideBarData: SideBarDataSchema = {
   teams: [],
   sections: [
     {
-      title: 'AI Providers',
+      title: 'AI Providers & Models',
       url: '/ai-providers',
       icon: KeyIcon,
       items: [
         {
-          title: 'API Keys',
+          title: 'Providers & Models',
           url: '/ai-providers',
         },
       ],
     },
     {
-      title: 'Models',
-      url: '/models',
-      icon: CpuIcon,
-      items: [
-        {
-          title: 'All Models',
-          url: '/models',
-        },
-      ],
-    },
-    {
       title: 'Documentation',
-      url: '#',
+      url: 'https://docs.reactiveagents.ai',
       icon: BookOpenIcon,
-      items: [
-        {
-          title: 'Coming Soon',
-          fragment: 'documentation-coming-soon',
-        },
-      ],
-    },
-    {
-      title: 'Settings',
-      url: '#',
-      icon: Settings2Icon,
-      items: [
-        {
-          title: 'Coming Soon',
-          fragment: 'settings-coming-soon',
-        },
-      ],
     },
   ],
   projects: [],

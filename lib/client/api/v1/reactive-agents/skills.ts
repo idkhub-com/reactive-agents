@@ -29,14 +29,18 @@ export async function createSkill(params: SkillCreateParams): Promise<Skill> {
 }
 
 export async function getSkills(params: SkillQueryParams): Promise<Skill[]> {
+  const query: Record<string, string> = {};
+
+  if (params.id) query.id = params.id;
+  if (params.agent_id) query.agent_id = params.agent_id;
+  if (params.name) query.name = params.name;
+  if (params.optimize !== undefined)
+    query.optimize = params.optimize.toString();
+  if (params.limit) query.limit = params.limit.toString();
+  if (params.offset) query.offset = params.offset.toString();
+
   const response = await client.v1['reactive-agents'].skills.$get({
-    query: {
-      id: params.id,
-      agent_id: params.agent_id,
-      name: params.name,
-      limit: params.limit?.toString(),
-      offset: params.offset?.toString(),
-    },
+    query,
   });
 
   if (!response.ok) {

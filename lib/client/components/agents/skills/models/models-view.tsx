@@ -47,6 +47,7 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { AddModelsDialog } from './add-models-dialog';
@@ -55,6 +56,9 @@ export function ModelsView(): ReactElement {
   const { selectedAgent } = useAgents();
   const { selectedSkill } = useSkills();
   const goBack = useSmartBack();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const afterCreate = searchParams.get('afterCreate') === 'true';
   const {
     apiKeys,
     isLoading: isLoadingAPIKeys,
@@ -135,6 +139,14 @@ export function ModelsView(): ReactElement {
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
+  const handleContinueToEvaluations = () => {
+    if (selectedAgent && selectedSkill) {
+      router.push(
+        `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/evaluations-2/create`,
+      );
+    }
+  };
+
   // Early return if no skill or agent selected
   if (!selectedSkill || !selectedAgent) {
     return (
@@ -156,18 +168,48 @@ export function ModelsView(): ReactElement {
     <>
       <PageHeader
         title={`Models for ${selectedSkill.name}`}
-        description="Manage AI models available for this skill"
+        description={
+          afterCreate
+            ? 'Add at least one model to your skill to get started'
+            : 'Manage AI models available for this skill'
+        }
         showBackButton={true}
         onBack={goBack}
         actions={
-          <AddModelsDialog
-            skillId={selectedSkill.id}
-            onModelsAdded={refetchSkillModels}
-          />
+          <div className="flex gap-2">
+            <AddModelsDialog
+              skillId={selectedSkill.id}
+              onModelsAdded={refetchSkillModels}
+            />
+            {afterCreate && (
+              <Button onClick={handleContinueToEvaluations} variant="default">
+                Continue to Evaluations
+              </Button>
+            )}
+          </div>
         }
       />
 
       <div className="p-6 space-y-6">
+        {afterCreate && (
+          <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <CpuIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                    Add Models to Your Skill
+                  </h3>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
+                    Your skill has been created! Now add at least one AI model
+                    to enable your skill to process requests. Click "Add Models"
+                    above to select from your configured AI providers.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {/* Controls */}
         <Card>
           <CardHeader>
