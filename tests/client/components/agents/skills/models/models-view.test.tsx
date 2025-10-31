@@ -39,13 +39,17 @@ vi.mock('@client/hooks/use-smart-back', () => ({
   useSmartBack: vi.fn(() => vi.fn()),
 }));
 
+const mockPush = vi.fn();
+const mockSearchParams = new URLSearchParams();
+
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
-    push: vi.fn(),
+    push: mockPush,
     back: vi.fn(),
     forward: vi.fn(),
     refresh: vi.fn(),
   })),
+  useSearchParams: vi.fn(() => mockSearchParams),
 }));
 
 vi.mock('@client/providers/navigation', () => ({
@@ -165,6 +169,8 @@ describe('ModelsView', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPush.mockClear();
+    mockSearchParams.delete('afterCreate');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -525,6 +531,105 @@ describe('ModelsView', () => {
       // Should render responsive layout components
       expect(screen.getByText('Filter Models')).toBeInTheDocument();
       expect(screen.getByText('Available Models (2)')).toBeInTheDocument();
+    });
+  });
+
+  describe('After Create Flow', () => {
+    it('should show default description when afterCreate is not set', () => {
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.getByText(/Manage AI models available for this skill/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          /Add at least one model to your skill to get started/i,
+        ),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show afterCreate description when parameter is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.getByText(
+          /Add at least one model to your skill to get started/i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Manage AI models available for this skill/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show banner with instructions when afterCreate is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      expect(screen.getByText('Add Models to Your Skill')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Your skill has been created!/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Now add at least one AI model/i),
+      ).toBeInTheDocument();
+    });
+
+    it('should not show banner when afterCreate is false', () => {
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.queryByText('Add Models to Your Skill'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show Continue to Evaluations button when afterCreate is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.getByRole('button', { name: /Continue to Evaluations/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('should not show Continue to Evaluations button when afterCreate is false', () => {
+      render(<ModelsView />, { wrapper });
+
+      expect(
+        screen.queryByRole('button', { name: /Continue to Evaluations/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should navigate to evaluations page when Continue to Evaluations is clicked', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      const continueButton = screen.getByRole('button', {
+        name: /Continue to Evaluations/i,
+      });
+      fireEvent.click(continueButton);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        '/agents/Test%20Agent/Test%20Skill/evaluations-2/create',
+      );
+    });
+
+    it('should show Add Models button alongside Continue button when afterCreate is true', () => {
+      mockSearchParams.set('afterCreate', 'true');
+
+      render(<ModelsView />, { wrapper });
+
+      // Both buttons should be present
+      expect(
+        screen.getByRole('button', { name: /Add Models/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Continue to Evaluations/i }),
+      ).toBeInTheDocument();
     });
   });
 });

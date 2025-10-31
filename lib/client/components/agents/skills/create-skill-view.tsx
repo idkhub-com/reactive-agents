@@ -170,10 +170,10 @@ export function CreateSkillView(): React.ReactElement {
       // Reset form after successful creation
       form.reset();
 
-      // Navigate to evaluations setup page (URL will trigger skill selection)
+      // Navigate to models page to add models first
       if (agentName) {
         router.push(
-          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/evaluations-2/create`,
+          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(newSkill.name)}/models?afterCreate=true`,
         );
       } else {
         router.push('/agents');

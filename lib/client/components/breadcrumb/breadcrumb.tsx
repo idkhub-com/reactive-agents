@@ -32,7 +32,7 @@ import { useSkillOptimizationClusters } from '@client/providers/skill-optimizati
 import { useSkills } from '@client/providers/skills';
 import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { Bot, ChevronRight, Plus, PlusCircleIcon } from 'lucide-react';
+import { Bot, ChevronRight, Plus, PlusCircleIcon, Wrench } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { type ReactElement, useMemo } from 'react';
@@ -228,7 +228,7 @@ function NoAgentSelectedSkillBreadcrumb(): ReactElement {
         disabled
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
       >
-        <Bot className="size-5" />
+        <Wrench className="size-5" />
         <span className="truncate font-medium">Select Agent First</span>
       </Button>
     </BreadcrumbItem>
@@ -248,7 +248,7 @@ function CreateFirstSkillBreadcrumb({
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         onClick={onClick}
       >
-        <Bot className="size-5" />
+        <Wrench className="size-5" />
         <span className="truncate font-medium">Create your first skill</span>
         <Plus className="size-4" />
       </Button>
@@ -265,7 +265,7 @@ function LoadingSkillsBreadcrumb(): ReactElement {
         disabled
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
       >
-        <Bot className="size-5" />
+        <Wrench className="size-5" />
         <span className="truncate font-medium">Loading skills...</span>
       </Button>
     </BreadcrumbItem>
@@ -296,7 +296,7 @@ function SkillCombobox<T extends { id: string; name: string }>({
             size="sm"
             className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Bot className="size-5 shrink-0" />
+            <Wrench className="size-5 shrink-0" />
             <span className="truncate font-medium">{activeSkill.name}</span>
           </Button>
         </PopoverTrigger>
@@ -347,9 +347,20 @@ function SkillCombobox<T extends { id: string; name: string }>({
 
 function SkillDropdownBreadcrumb(): ReactElement {
   const { navigationState } = useNavigation();
-  const { skills, selectedSkill } = useSkills();
+  const { selectedAgent } = useAgents();
+  const { skills, selectedSkill, setQueryParams } = useSkills();
   const router = useRouter();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
+
+  // Filter skills by selected agent
+  React.useEffect(() => {
+    if (selectedAgent) {
+      setQueryParams({
+        agent_id: selectedAgent.id,
+        limit: 100,
+      });
+    }
+  }, [selectedAgent, setQueryParams]);
 
   const handleCreateSkillClick = () => {
     setComboboxOpen(false);
