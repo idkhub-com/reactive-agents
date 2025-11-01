@@ -190,54 +190,56 @@ export function AddModelsView({
             {/* Model Fields */}
             <div className="space-y-4">
               {modelFields.map((field, index) => (
-                <div key={field.id} className="flex items-start gap-2">
-                  <div className="flex-1">
-                    <Label htmlFor={`model-${field.id}`}>
-                      Model {index + 1}
-                      {modelFields.length > 1 && (
-                        <span className="text-muted-foreground text-xs ml-1">
-                          (optional)
-                        </span>
-                      )}
-                    </Label>
-                    <Input
-                      id={`model-${field.id}`}
-                      placeholder="e.g., gpt-5, claude-sonnet-4-5"
-                      value={field.modelName}
-                      onChange={(e) =>
-                        handleModelNameChange(field.id, e.target.value)
-                      }
-                      className={field.error ? 'border-destructive' : ''}
-                    />
-                    {field.error && (
-                      <p className="text-xs text-destructive mt-1">
-                        {field.error}
-                      </p>
-                    )}
-                  </div>
-                  <div className="pt-6 flex gap-1">
-                    {index === modelFields.length - 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleAddField}
-                        className="shrink-0"
-                      >
-                        <PlusIcon className="h-4 w-4" />
-                      </Button>
-                    )}
+                <div key={field.id} className="space-y-2">
+                  <Label htmlFor={`model-${field.id}`}>
+                    Model {index + 1}
                     {modelFields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleRemoveField(field.id)}
-                        className="shrink-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2Icon className="h-4 w-4" />
-                      </Button>
+                      <span className="text-muted-foreground text-xs ml-1">
+                        (optional)
+                      </span>
                     )}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Input
+                        id={`model-${field.id}`}
+                        placeholder="e.g., gpt-5, claude-sonnet-4-5"
+                        value={field.modelName}
+                        onChange={(e) =>
+                          handleModelNameChange(field.id, e.target.value)
+                        }
+                        className={field.error ? 'border-destructive' : ''}
+                      />
+                      {field.error && (
+                        <p className="text-xs text-destructive mt-1">
+                          {field.error}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      {index === modelFields.length - 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleAddField}
+                          className="shrink-0"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {modelFields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleRemoveField(field.id)}
+                          className="shrink-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

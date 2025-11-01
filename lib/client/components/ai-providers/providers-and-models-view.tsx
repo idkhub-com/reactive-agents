@@ -1,6 +1,7 @@
 'use client';
 
 import { deleteModel } from '@client/api/v1/reactive-agents/models';
+import { DeleteModelDialog } from '@client/components/agents/skills/models/delete-model-dialog';
 import { AIProvidersListView } from '@client/components/ai-providers/ai-providers-list';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
@@ -69,6 +70,8 @@ export function ProvidersAndModelsView({
   const [activeProvider, setActiveProvider] = useState<string | null>(
     selectedProviderId || null,
   );
+  const [modelToDelete, setModelToDelete] = useState<Model | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const modelsRef = useRef<HTMLDivElement>(null);
 
@@ -112,16 +115,21 @@ export function ProvidersAndModelsView({
     return true;
   });
 
-  const handleDeleteModel = async (model: Model) => {
-    if (isDeleting) return;
+  const handleDeleteClick = (model: Model) => {
+    setModelToDelete(model);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!modelToDelete || isDeleting) return;
 
     try {
-      setIsDeleting(model.id);
-      await deleteModel(model.id);
+      setIsDeleting(modelToDelete.id);
+      await deleteModel(modelToDelete.id);
 
       toast({
         title: 'Model deleted',
-        description: `Model "${model.model_name}" has been deleted successfully.`,
+        description: `Model "${modelToDelete.model_name}" has been deleted successfully.`,
       });
 
       await refetch();
@@ -328,7 +336,7 @@ export function ProvidersAndModelsView({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onClick={() => handleDeleteModel(model)}
+                                  onClick={() => handleDeleteClick(model)}
                                   disabled={isDeleting === model.id}
                                   className="text-destructive focus:text-destructive"
                                 >
@@ -350,6 +358,13 @@ export function ProvidersAndModelsView({
           </CardContent>
         </Card>
       </div>
+
+      <DeleteModelDialog
+        model={modelToDelete}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

@@ -87,6 +87,7 @@ vi.mock('@client/providers/navigation', () => ({
 // Mock Lucide icons - comprehensive list to avoid whack-a-mole
 vi.mock('lucide-react', () => ({
   AlertCircle: () => <div data-testid="alert-circle-icon" />,
+  AlertTriangle: () => <div data-testid="alert-triangle-icon" />,
   ArrowLeft: () => <div data-testid="arrow-left-icon" />,
   BookOpenIcon: () => <div data-testid="book-open-icon" />,
   CalendarIcon: () => <div data-testid="calendar-icon" />,
@@ -99,6 +100,7 @@ vi.mock('lucide-react', () => ({
   RefreshCwIcon: () => <div data-testid="refresh-icon" />,
   SearchIcon: () => <div data-testid="search-icon" />,
   Settings2Icon: () => <div data-testid="settings2-icon" />,
+  Trash2: () => <div data-testid="trash2-icon" />,
   TrashIcon: () => <div data-testid="trash-icon" />,
   XIcon: () => <div data-testid="x-icon" />,
 }));

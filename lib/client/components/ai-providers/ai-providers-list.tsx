@@ -43,6 +43,7 @@ import {
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
+import { DeleteAIProviderDialog } from './delete-ai-provider-dialog';
 
 interface AIProvidersListViewProps {
   onProviderSelect?: (providerId: string) => void;
@@ -66,6 +67,9 @@ export function AIProvidersListView({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedKeys, setCopiedKeys] = useState<Set<string>>(new Set());
+  const [providerToDelete, setProviderToDelete] =
+    useState<AIProviderConfig | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const filteredAPIKeys = apiKeys.filter((apiKey) => {
     if (searchQuery) {
@@ -115,9 +119,15 @@ export function AIProvidersListView({
     }
   };
 
-  const handleDeleteAPIKey = async (apiKey: AIProviderConfig) => {
+  const handleDeleteClick = (apiKey: AIProviderConfig) => {
+    setProviderToDelete(apiKey);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!providerToDelete) return;
     try {
-      await deleteAPIKey(apiKey.id);
+      await deleteAPIKey(providerToDelete.id);
     } catch (_error) {
       // Error handling is done in the provider
     }
@@ -345,7 +355,10 @@ export function AIProvidersListView({
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDeleteAPIKey(apiKey)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(apiKey);
+                                }}
                                 disabled={isDeleting}
                                 className="text-destructive"
                               >
@@ -364,6 +377,13 @@ export function AIProvidersListView({
           </CardContent>
         </Card>
       </div>
+
+      <DeleteAIProviderDialog
+        provider={providerToDelete}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+      />
     </>
   );
 }
