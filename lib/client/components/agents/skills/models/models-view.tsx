@@ -1,5 +1,6 @@
 'use client';
 
+import { deleteModel } from '@client/api/v1/reactive-agents/models';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -38,6 +39,7 @@ import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
 import { useModels } from '@client/providers/models';
 import { useSkills } from '@client/providers/skills';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { Model } from '@shared/types/data/model';
 import { format } from 'date-fns';
 import {
   CalendarIcon,
@@ -51,6 +53,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { AddModelsDialog } from './add-models-dialog';
+import { DeleteModelDialog } from './delete-model-dialog';
 
 export function ModelsView(): ReactElement {
   const { selectedAgent } = useAgents();
@@ -78,6 +81,8 @@ export function ModelsView(): ReactElement {
     'created_at',
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [modelToDelete, setModelToDelete] = useState<Model | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Get provider info for a model
   const getProviderInfo = (apiKeyId: string) => {
@@ -144,6 +149,21 @@ export function ModelsView(): ReactElement {
       router.push(
         `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/evaluations-2/create`,
       );
+    }
+  };
+
+  const handleDeleteClick = (model: Model) => {
+    setModelToDelete(model);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!modelToDelete) return;
+    try {
+      await deleteModel(modelToDelete.id);
+      await refetchSkillModels();
+    } catch (error) {
+      console.error('Error deleting model:', error);
     }
   };
 
@@ -391,6 +411,7 @@ export function ModelsView(): ReactElement {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleDeleteClick(model)}
                                 >
                                   <TrashIcon className="h-4 w-4" />
                                 </Button>
@@ -410,6 +431,13 @@ export function ModelsView(): ReactElement {
           </CardContent>
         </Card>
       </div>
+
+      <DeleteModelDialog
+        model={modelToDelete}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+      />
     </>
   );
 }

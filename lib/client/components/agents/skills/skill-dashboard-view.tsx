@@ -25,16 +25,19 @@ import {
   ArrowRightIcon,
   CheckCircle2,
   CpuIcon,
+  Edit,
   FileTextIcon,
   LayersIcon,
   PlusIcon,
   RefreshCwIcon,
-  Settings,
+  Trash2,
+  Wrench,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
+import { DeleteSkillDialog } from './delete-skill-dialog';
 import { ManageSkillEvaluationsDialog } from './manage-skill-evaluations-dialog';
 import { SkillPerformanceChart } from './skill-performance-chart';
 
@@ -44,8 +47,9 @@ export function SkillDashboardView(): ReactElement {
   const router = useRouter();
 
   const { selectedAgent } = useAgents();
-  const { selectedSkill } = useSkills();
+  const { selectedSkill, deleteSkill } = useSkills();
   const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
+  const [isDeleteSkillDialogOpen, setIsDeleteSkillDialogOpen] = useState(false);
 
   // Skill validation
   const { isReady, missingRequirements } = useSkillValidation(selectedSkill);
@@ -114,6 +118,12 @@ export function SkillDashboardView(): ReactElement {
     setSkillEvaluationRunsSkillId(selectedSkill.id);
   }, [selectedSkill, setSkillEvaluationRunsSkillId]);
 
+  const handleDeleteSkill = async () => {
+    if (!selectedSkill || !selectedAgent) return;
+    await deleteSkill(selectedSkill.id);
+    router.push(`/agents/${encodeURIComponent(selectedAgent.name)}`);
+  };
+
   // Early return if no skill or agent selected - AFTER all hooks
   if (!selectedSkill || !selectedAgent) {
     return (
@@ -136,6 +146,7 @@ export function SkillDashboardView(): ReactElement {
       <PageHeader
         title={
           <div className="flex items-center gap-2">
+            <Wrench className="h-5 w-5 text-primary" />
             <span>{selectedSkill.name}</span>
             <SkillStatusIndicator
               skill={selectedSkill}
@@ -149,22 +160,32 @@ export function SkillDashboardView(): ReactElement {
           <div className="flex gap-2">
             <Button
               variant="outline"
+              onClick={() => setIsManageEvaluationsOpen(true)}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Manage Evaluations
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() =>
                 router.push(
                   `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/edit`,
                 )
               }
+              title="Edit Skill"
             >
-              <Settings className="h-4 w-4 mr-2" />
-              Edit Skill
+              <Edit className="h-4 w-4" />
             </Button>
 
             <Button
-              variant="outline"
-              onClick={() => setIsManageEvaluationsOpen(true)}
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsDeleteSkillDialogOpen(true)}
+              title="Delete Skill"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Manage Evaluations
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         }
@@ -439,6 +460,14 @@ export function SkillDashboardView(): ReactElement {
           skillId={selectedSkill.id}
         />
       )}
+
+      {/* Delete Skill Dialog */}
+      <DeleteSkillDialog
+        skill={selectedSkill || null}
+        open={isDeleteSkillDialogOpen}
+        onOpenChange={setIsDeleteSkillDialogOpen}
+        onConfirm={handleDeleteSkill}
+      />
     </>
   );
 }

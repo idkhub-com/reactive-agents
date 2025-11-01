@@ -2,6 +2,7 @@
 
 import { getAgentEvaluationRuns } from '@client/api/v1/reactive-agents/agents';
 import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
+import { DeleteAgentDialog } from '@client/components/agents/delete-agent-dialog';
 import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
 import { Button } from '@client/components/ui/button';
 import {
@@ -17,20 +18,60 @@ import { Skeleton } from '@client/components/ui/skeleton';
 import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
+import { botttsNeutral } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
 import type { Skill } from '@shared/types/data';
 import { useQuery } from '@tanstack/react-query';
-import { Edit, PlusIcon, SearchIcon } from 'lucide-react';
+import { Edit, PlusIcon, SearchIcon, Trash2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { AgentPerformanceChart } from './agent-performance-chart';
 
+const createAgentAvatar = (agentName: string) => {
+  return `data:image/svg+xml;base64,${Buffer.from(
+    createAvatar(botttsNeutral, {
+      seed: agentName,
+      size: 24,
+      backgroundColor: [
+        '00acc1',
+        '039be5',
+        '1e88e5',
+        '43a047',
+        '546e7a',
+        '5e35b1',
+        '6d4c41',
+        '757575',
+        '7cb342',
+        '8e24aa',
+        'c0ca33',
+        'd81b60',
+        'e53935',
+        'f4511e',
+        'fb8c00',
+        'fdd835',
+        'ffb300',
+        '00897b',
+        '3949ab',
+      ],
+    }).toString(),
+  ).toString('base64')}`;
+};
+
 export function SkillsListView(): ReactElement {
   const { navigateToSkillDashboard } = useNavigation();
-  const { selectedAgent } = useAgents();
+  const { selectedAgent, deleteAgent } = useAgents();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const agentAvatar = useMemo(() => {
+    if (!selectedAgent) return '';
+    return createAgentAvatar(selectedAgent.name);
+  }, [selectedAgent]);
+
+  const [isDeleteAgentDialogOpen, setIsDeleteAgentDialogOpen] = useState(false);
 
   // Use providers
   const {
@@ -90,6 +131,12 @@ export function SkillsListView(): ReactElement {
     }
   };
 
+  const handleDeleteAgent = async () => {
+    if (!selectedAgent) return;
+    await deleteAgent(selectedAgent.id);
+    router.push('/agents');
+  };
+
   // Removed automatic redirect to create skill - let users decide when to create
 
   if (!selectedAgent) {
@@ -118,7 +165,14 @@ export function SkillsListView(): ReactElement {
       <PageHeader
         title={
           <div className="flex items-center gap-2">
-            <span>Skills</span>
+            <Image
+              src={agentAvatar}
+              alt={`${selectedAgent.name} avatar`}
+              width={20}
+              height={20}
+              className="size-5 rounded-sm"
+            />
+            <span>{selectedAgent.name}</span>
             <AgentStatusIndicator
               agent={selectedAgent}
               variant="badge"
@@ -126,18 +180,26 @@ export function SkillsListView(): ReactElement {
             />
           </div>
         }
-        description={`Manage skills for ${selectedAgent.name}`}
+        description={selectedAgent.description || 'No description provided'}
         showBackButton={true}
         onBack={() => router.push('/agents')}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleEditAgent}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Agent
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleEditAgent}
+              title="Edit Agent"
+            >
+              <Edit className="h-4 w-4" />
             </Button>
-            <Button onClick={handleCreateSkill}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Create Skill
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsDeleteAgentDialogOpen(true)}
+              title="Delete Agent"
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         }
@@ -156,14 +218,20 @@ export function SkillsListView(): ReactElement {
           </CardContent>
         </Card>
 
-        <div className="relative">
-          <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search skills..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex justify-between items-center gap-4">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search skills..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={handleCreateSkill}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Create Skill
+          </Button>
         </div>
 
         {isLoadingSkills ? (
@@ -229,6 +297,13 @@ export function SkillsListView(): ReactElement {
           </div>
         )}
       </div>
+
+      <DeleteAgentDialog
+        agent={selectedAgent}
+        open={isDeleteAgentDialogOpen}
+        onOpenChange={setIsDeleteAgentDialogOpen}
+        onConfirm={handleDeleteAgent}
+      />
     </>
   );
 }
