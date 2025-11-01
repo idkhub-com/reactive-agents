@@ -48,7 +48,7 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -59,6 +59,7 @@ interface ProvidersAndModelsViewProps {
 export function ProvidersAndModelsView({
   selectedProviderId,
 }: ProvidersAndModelsViewProps): ReactElement {
+  const router = useRouter();
   const { toast } = useToast();
   const { apiKeys } = useAIProviderAPIKeys();
   const { models, isLoading, setQueryParams, refetch } = useModels();
@@ -192,12 +193,14 @@ export function ProvidersAndModelsView({
                   <RefreshCwIcon className="h-4 w-4" />
                 </Button>
                 {activeProvider && (
-                  <Link href={`/ai-providers/${activeProvider}/add-models`}>
-                    <Button>
-                      <PlusIcon className="h-4 w-4 mr-2" />
-                      Add Models
-                    </Button>
-                  </Link>
+                  <Button
+                    onClick={() =>
+                      router.push(`/ai-providers/${activeProvider}/add-models`)
+                    }
+                  >
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Add Models
+                  </Button>
                 )}
               </div>
             </div>
@@ -247,12 +250,14 @@ export function ProvidersAndModelsView({
                     ? 'No models match your search criteria.'
                     : 'This provider has no models configured yet.'}
                 </p>
-                <Link href={`/ai-providers/${activeProvider}/add-models`}>
-                  <Button>
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Add your first model
-                  </Button>
-                </Link>
+                <Button
+                  onClick={() =>
+                    router.push(`/ai-providers/${activeProvider}/add-models`)
+                  }
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Add your first model
+                </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">

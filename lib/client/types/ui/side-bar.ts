@@ -30,6 +30,7 @@ export interface NavigationSection {
   icon?: React.ElementType;
   items?: NavigationItem[];
   isActive?: boolean;
+  external?: boolean;
 }
 
 export interface Project {
@@ -39,8 +40,6 @@ export interface Project {
 }
 
 export interface SideBarDataSchema {
-  user: User;
-  teams: Team[];
   sections: NavigationSection[];
   projects: Project[];
 }

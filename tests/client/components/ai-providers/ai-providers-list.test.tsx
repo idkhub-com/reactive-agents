@@ -26,6 +26,15 @@ vi.mock('next/link', () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  })),
+  usePathname: vi.fn(() => '/ai-providers'),
+}));
+
 // Mock UI components
 vi.mock('@client/components/ui/page-header', () => ({
   PageHeader: ({
@@ -48,22 +57,17 @@ vi.mock('@client/components/ui/page-header', () => ({
 vi.mock('@client/components/ui/button', () => ({
   Button: ({
     children,
-    asChild,
     onClick,
     ...props
   }: {
     children: React.ReactNode;
-    asChild?: boolean;
     onClick?: () => void;
     [key: string]: unknown;
-  }) =>
-    asChild ? (
-      children
-    ) : (
-      <button onClick={onClick} {...props}>
-        {children}
-      </button>
-    ),
+  }) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock('@client/components/ui/input', () => ({

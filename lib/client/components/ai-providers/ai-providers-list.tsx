@@ -40,7 +40,7 @@ import {
   SearchIcon,
   TrashIcon,
 } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
@@ -53,6 +53,7 @@ export function AIProvidersListView({
   onProviderSelect,
   selectedProviderId,
 }: AIProvidersListViewProps = {}): ReactElement {
+  const router = useRouter();
   const { toast } = useToast();
   const {
     apiKeys,
@@ -205,11 +206,9 @@ export function AIProvidersListView({
               <RefreshCwIcon className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            <Button asChild>
-              <Link href="/ai-providers/create">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add AI Provider
-              </Link>
+            <Button onClick={() => router.push('/ai-providers/create')}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add AI Provider
             </Button>
           </div>
         }
@@ -253,11 +252,9 @@ export function AIProvidersListView({
                       : 'Get started by adding your first AI provider.'}
                   </p>
                   {!searchQuery && (
-                    <Button asChild>
-                      <Link href="/ai-providers/create">
-                        <PlusIcon className="h-4 w-4 mr-2" />
-                        Add Your First AI Provider
-                      </Link>
+                    <Button onClick={() => router.push('/ai-providers/create')}>
+                      <PlusIcon className="h-4 w-4 mr-2" />
+                      Add Your First AI Provider
                     </Button>
                   )}
                 </div>
@@ -340,10 +337,12 @@ export function AIProvidersListView({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/ai-providers/${apiKey.id}/edit`}>
-                                  Edit
-                                </Link>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(`/ai-providers/${apiKey.id}/edit`)
+                                }
+                              >
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDeleteAPIKey(apiKey)}

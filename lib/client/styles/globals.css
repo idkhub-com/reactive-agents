@@ -121,9 +121,13 @@
   }
 
   a:-webkit-any-link {
-    color: -webkit-link;
+    color: inherit;
     cursor: pointer;
-    text-decoration: underline;
+    text-decoration: none;
+  }
+
+  a:visited {
+    color: inherit;
   }
 
   p {
