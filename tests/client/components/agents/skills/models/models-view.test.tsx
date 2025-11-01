@@ -536,6 +536,37 @@ describe('ModelsView', () => {
     });
   });
 
+  describe('Delete Model Functionality', () => {
+    it('should show delete button for each model in the list', () => {
+      render(<ModelsView />, { wrapper });
+
+      // Should have delete buttons for all models
+      const deleteButtons = screen.getAllByTestId('trash-icon');
+      expect(deleteButtons).toHaveLength(mockSkillModels.length);
+    });
+
+    it('should show delete button with appropriate icon', () => {
+      render(<ModelsView />, { wrapper });
+
+      // Should have trash icons for delete buttons
+      const trashIcons = screen.getAllByTestId('trash-icon');
+      expect(trashIcons).toHaveLength(mockSkillModels.length);
+    });
+
+    it('should render delete buttons for model removal', () => {
+      // This test verifies that delete buttons are present for each model
+      // The component uses removeModelsFromSkill from skills API (not deleteModel)
+      render(<ModelsView />, { wrapper });
+      const deleteButtons = screen.getAllByTestId('trash-icon');
+
+      // Verify delete buttons are clickable
+      expect(deleteButtons.length).toBeGreaterThan(0);
+      deleteButtons.forEach((button) => {
+        expect(button.closest('button')).toBeInTheDocument();
+      });
+    });
+  });
+
   describe('After Create Flow', () => {
     it('should show default description when afterCreate is not set', () => {
       render(<ModelsView />, { wrapper });

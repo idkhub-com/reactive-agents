@@ -94,6 +94,13 @@ export function ProvidersAndModelsView({
     }
   }, [selectedProviderId]);
 
+  // Auto-select first provider if none is selected
+  useEffect(() => {
+    if (!activeProvider && apiKeys.length > 0) {
+      setActiveProvider(apiKeys[0].id);
+    }
+  }, [activeProvider, apiKeys]);
+
   // Filter models by active provider
   const filteredModels = models.filter((model) => {
     // Filter by active provider

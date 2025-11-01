@@ -1,6 +1,6 @@
 'use client';
 
-import { deleteModel } from '@client/api/v1/reactive-agents/models';
+import { removeModelsFromSkill } from '@client/api/v1/reactive-agents/skills';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -158,12 +158,12 @@ export function ModelsView(): ReactElement {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!modelToDelete) return;
+    if (!modelToDelete || !selectedSkill) return;
     try {
-      await deleteModel(modelToDelete.id);
+      await removeModelsFromSkill(selectedSkill.id, [modelToDelete.id]);
       await refetchSkillModels();
     } catch (error) {
-      console.error('Error deleting model:', error);
+      console.error('Error removing model from skill:', error);
     }
   };
 
