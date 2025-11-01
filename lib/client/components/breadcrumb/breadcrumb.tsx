@@ -30,9 +30,9 @@ import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkills } from '@client/providers/skills';
-import { botttsNeutral } from '@dicebear/collection';
+import { botttsNeutral, shapes } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { Bot, ChevronRight, Plus, PlusCircleIcon, Wrench } from 'lucide-react';
+import { Bot, ChevronRight, Plus, PlusCircleIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { type ReactElement, useMemo } from 'react';
@@ -45,6 +45,36 @@ const createAgentAvatar = (agentName: string) => {
   return `data:image/svg+xml;base64,${Buffer.from(
     createAvatar(botttsNeutral, {
       seed: agentName,
+      size: 24,
+      backgroundColor: [
+        '00acc1',
+        '039be5',
+        '1e88e5',
+        '43a047',
+        '546e7a',
+        '5e35b1',
+        '6d4c41',
+        '757575',
+        '7cb342',
+        '8e24aa',
+        'c0ca33',
+        'd81b60',
+        'e53935',
+        'f4511e',
+        'fb8c00',
+        'fdd835',
+        'ffb300',
+        '00897b',
+        '3949ab',
+      ],
+    }).toString(),
+  ).toString('base64')}`;
+};
+
+const createSkillAvatar = (skillName: string) => {
+  return `data:image/svg+xml;base64,${Buffer.from(
+    createAvatar(shapes, {
+      seed: skillName,
       size: 24,
       backgroundColor: [
         '00acc1',
@@ -220,6 +250,8 @@ function AgentCombobox<T extends { id: string; name: string }>({
 // ============================================================================
 
 function NoAgentSelectedSkillBreadcrumb(): ReactElement {
+  const placeholderAvatar = createSkillAvatar('placeholder');
+
   return (
     <BreadcrumbItem>
       <Button
@@ -228,7 +260,13 @@ function NoAgentSelectedSkillBreadcrumb(): ReactElement {
         disabled
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
       >
-        <Wrench className="size-5" />
+        <Image
+          src={placeholderAvatar}
+          alt="Skill icon"
+          width={20}
+          height={20}
+          className="size-5 rounded-sm"
+        />
         <span className="truncate font-medium">Select Agent First</span>
       </Button>
     </BreadcrumbItem>
@@ -240,6 +278,8 @@ function CreateFirstSkillBreadcrumb({
 }: {
   onClick: () => void;
 }): ReactElement {
+  const placeholderAvatar = createSkillAvatar('new-skill');
+
   return (
     <BreadcrumbItem>
       <Button
@@ -248,7 +288,13 @@ function CreateFirstSkillBreadcrumb({
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         onClick={onClick}
       >
-        <Wrench className="size-5" />
+        <Image
+          src={placeholderAvatar}
+          alt="Skill icon"
+          width={20}
+          height={20}
+          className="size-5 rounded-sm"
+        />
         <span className="truncate font-medium">Create your first skill</span>
         <Plus className="size-4" />
       </Button>
@@ -257,6 +303,8 @@ function CreateFirstSkillBreadcrumb({
 }
 
 function LoadingSkillsBreadcrumb(): ReactElement {
+  const placeholderAvatar = createSkillAvatar('loading');
+
   return (
     <BreadcrumbItem>
       <Button
@@ -265,7 +313,13 @@ function LoadingSkillsBreadcrumb(): ReactElement {
         disabled
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
       >
-        <Wrench className="size-5" />
+        <Image
+          src={placeholderAvatar}
+          alt="Skill icon"
+          width={20}
+          height={20}
+          className="size-5 rounded-sm"
+        />
         <span className="truncate font-medium">Loading skills...</span>
       </Button>
     </BreadcrumbItem>
@@ -275,6 +329,7 @@ function LoadingSkillsBreadcrumb(): ReactElement {
 function SkillCombobox<T extends { id: string; name: string }>({
   activeSkill,
   skills,
+  skillAvatars,
   comboboxOpen,
   setComboboxOpen,
   onSkillSelect,
@@ -282,6 +337,7 @@ function SkillCombobox<T extends { id: string; name: string }>({
 }: {
   activeSkill: T;
   skills: T[];
+  skillAvatars: Map<string, string>;
   comboboxOpen: boolean;
   setComboboxOpen: (open: boolean) => void;
   onSkillSelect: (skill: T) => void;
@@ -296,7 +352,13 @@ function SkillCombobox<T extends { id: string; name: string }>({
             size="sm"
             className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Wrench className="size-5 shrink-0" />
+            <Image
+              src={skillAvatars.get(activeSkill.name) || ''}
+              alt={`${activeSkill.name} icon`}
+              width={20}
+              height={20}
+              className="size-5 rounded-sm shrink-0"
+            />
             <span className="truncate font-medium">{activeSkill.name}</span>
           </Button>
         </PopoverTrigger>
@@ -352,6 +414,20 @@ function SkillDropdownBreadcrumb(): ReactElement {
   const router = useRouter();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
+  // Memoize skill avatar generation to prevent recalculation on every render
+  const skillAvatars = useMemo(() => {
+    const avatars = new Map<string, string>();
+    if (selectedSkill) {
+      avatars.set(selectedSkill.name, createSkillAvatar(selectedSkill.name));
+    }
+    skills.forEach((skill) => {
+      if (!avatars.has(skill.name)) {
+        avatars.set(skill.name, createSkillAvatar(skill.name));
+      }
+    });
+    return avatars;
+  }, [skills, selectedSkill]);
+
   // Filter skills by selected agent
   React.useEffect(() => {
     if (selectedAgent) {
@@ -399,6 +475,7 @@ function SkillDropdownBreadcrumb(): ReactElement {
     <SkillCombobox
       activeSkill={activeSkill}
       skills={skills}
+      skillAvatars={skillAvatars}
       comboboxOpen={comboboxOpen}
       setComboboxOpen={setComboboxOpen}
       onSkillSelect={handleSkillSelect}

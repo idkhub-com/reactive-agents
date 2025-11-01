@@ -20,6 +20,8 @@ import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@client/providers/skills';
+import { shapes } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
 import {
   AlertCircle,
   ArrowRightIcon,
@@ -31,15 +33,49 @@ import {
   PlusIcon,
   RefreshCwIcon,
   Trash2,
-  Wrench,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { DeleteSkillDialog } from './delete-skill-dialog';
 import { ManageSkillEvaluationsDialog } from './manage-skill-evaluations-dialog';
 import { SkillPerformanceChart } from './skill-performance-chart';
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+const createSkillAvatar = (skillName: string) => {
+  return `data:image/svg+xml;base64,${Buffer.from(
+    createAvatar(shapes, {
+      seed: skillName,
+      size: 24,
+      backgroundColor: [
+        '00acc1',
+        '039be5',
+        '1e88e5',
+        '43a047',
+        '546e7a',
+        '5e35b1',
+        '6d4c41',
+        '757575',
+        '7cb342',
+        '8e24aa',
+        'c0ca33',
+        'd81b60',
+        'e53935',
+        'f4511e',
+        'fb8c00',
+        'fdd835',
+        'ffb300',
+        '00897b',
+        '3949ab',
+      ],
+    }).toString(),
+  ).toString('base64')}`;
+};
 
 export function SkillDashboardView(): ReactElement {
   const { navigateToLogs, navigateToModels, navigateToClusters } =
@@ -146,7 +182,13 @@ export function SkillDashboardView(): ReactElement {
       <PageHeader
         title={
           <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-primary" />
+            <Image
+              src={createSkillAvatar(selectedSkill.name)}
+              alt={`${selectedSkill.name} icon`}
+              width={20}
+              height={20}
+              className="h-5 w-5 rounded-sm"
+            />
             <span>{selectedSkill.name}</span>
             <SkillStatusIndicator
               skill={selectedSkill}

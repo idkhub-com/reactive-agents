@@ -325,7 +325,7 @@ describe('BreadcrumbComponent', () => {
   });
 
   describe('Skill Icon', () => {
-    it('uses Wrench icon for skills instead of Bot icon', async () => {
+    it('uses DiceBear avatar for skills instead of Wrench icon', async () => {
       const mockSkills = [
         {
           id: 'skill-1',
@@ -357,9 +357,19 @@ describe('BreadcrumbComponent', () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
-      // The component should render without errors
-      // Icon verification would require checking SVG paths which is implementation detail
+      // Should render skill name
       expect(screen.queryByText('Test Skill')).toBeTruthy();
+
+      // Should render an image element for the skill avatar
+      const images = screen.getAllByRole('img');
+      const skillAvatar = images.find((img) =>
+        img.getAttribute('alt')?.includes('Test Skill'),
+      );
+      expect(skillAvatar).toBeTruthy();
+
+      // Avatar should have base64 SVG data
+      const src = skillAvatar?.getAttribute('src');
+      expect(src).toContain('data:image/svg+xml;base64');
     });
   });
 });
