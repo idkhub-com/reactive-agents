@@ -128,7 +128,7 @@ export async function removeModelsFromSkill(
     param: {
       skillId,
     },
-    query: { ids: modelIds },
+    query: { ids: modelIds.join(',') },
   });
 
   if (!response.ok) {

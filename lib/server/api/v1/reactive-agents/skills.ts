@@ -176,7 +176,22 @@ export const skillsRouter = new Hono<AppEnv>()
   .delete(
     '/:skillId/models',
     zValidator('param', z.object({ skillId: z.uuid() })),
-    zValidator('query', z.object({ ids: z.array(z.uuid()) })),
+    zValidator(
+      'query',
+      z.object({
+        ids: z
+          .string()
+          .or(z.array(z.string()))
+          .transform((val) => {
+            // Handle both comma-separated string and array formats
+            if (typeof val === 'string') {
+              return val.split(',').map((id) => id.trim());
+            }
+            return val;
+          })
+          .pipe(z.array(z.uuid())),
+      }),
+    ),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');
