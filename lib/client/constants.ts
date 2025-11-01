@@ -1,6 +1,4 @@
 import type { SideBarDataSchema } from '@client/types/ui/side-bar';
-import { micah } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
 import { BookOpenIcon, KeyIcon } from 'lucide-react';
 
 export const AVATAR_SEED = '';
@@ -20,27 +18,6 @@ export const API_URL =
 export const ENVIRONMENT = process.env.NEXT_PUBLIC_ENV;
 
 export const SideBarData: SideBarDataSchema = {
-  user: {
-    name: 'Reactive Agents User',
-    email: '',
-    avatar: `data:image/svg+xml;base64,${Buffer.from(
-      createAvatar(micah, {
-        seed: `${AVATAR_SEED}John Doe`,
-        size: 32,
-        backgroundColor: [
-          'FFD1DC',
-          'AEEEEE',
-          'BDFCC9',
-          'E6E6FA',
-          'FFFFCC',
-          'FFE5B4',
-          'D8BFD8',
-          'B0E0E6',
-        ],
-      }).toString(),
-    ).toString('base64')}`,
-  },
-  teams: [],
   sections: [
     {
       title: 'AI Providers & Models',
@@ -57,6 +34,7 @@ export const SideBarData: SideBarDataSchema = {
       title: 'Documentation',
       url: 'https://docs.reactiveagents.ai',
       icon: BookOpenIcon,
+      external: true,
     },
   ],
   projects: [],

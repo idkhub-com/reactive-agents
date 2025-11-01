@@ -8,7 +8,6 @@ import {
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from '@client/components/ui/collapsible';
 import {
   SidebarGroup,
@@ -25,12 +24,12 @@ import {
   useModifierKey,
 } from '@client/hooks/use-keyboard-shortcuts';
 import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
 import type { NavigationSection } from '@client/types/ui/side-bar';
 import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { BotIcon, Plus } from 'lucide-react';
+import { BotIcon, ExternalLink, Plus } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React from 'react';
 
@@ -69,7 +68,6 @@ export function NavMain({
 }: {
   sections: NavigationSection[];
 }): React.ReactElement {
-  const { setSection } = useNavigation();
   const { agents, selectedAgent, isLoading } = useAgents();
   const router = useRouter();
   const pathname = usePathname();
@@ -77,32 +75,11 @@ export function NavMain({
   const [isAgentsOpen, setIsAgentsOpen] = React.useState(true);
 
   const isSectionActive = (section: NavigationSection): boolean => {
-    if (section.url && section.url !== '#') {
+    if (section.url && section.url !== '#' && !section.external) {
       return pathname.startsWith(section.url);
     }
     return false;
   };
-
-  const handleSectionClick = (section: NavigationSection) => {
-    if (section.url && section.url !== '#') {
-      router.push(section.url);
-    } else if (section.title === 'Documentation') {
-      setSection('documentation');
-    } else if (section.title === 'Settings') {
-      setSection('settings');
-    }
-  };
-
-  const handleCreateAgentClick = () => {
-    router.push('/agents/create');
-  };
-
-  const handleAgentClick = React.useCallback(
-    (agent: (typeof agents)[0]) => {
-      router.push(`/agents/${encodeURIComponent(agent.name)}`);
-    },
-    [router],
-  );
 
   // Handle keyboard shortcuts for agent switching
   const handleShortcut = React.useCallback(
@@ -111,11 +88,11 @@ export function NavMain({
       if (keyNumber >= 1 && keyNumber <= agents.length) {
         const targetAgent = agents[keyNumber - 1];
         if (targetAgent) {
-          handleAgentClick(targetAgent);
+          router.push(`/agents/${encodeURIComponent(targetAgent.name)}`);
         }
       }
     },
-    [agents, handleAgentClick],
+    [agents, router],
   );
 
   // Set up keyboard shortcuts for first MAX_AGENT_SHORTCUTS agents
@@ -132,23 +109,18 @@ export function NavMain({
         {/* Agents Section */}
         <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
           <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-              <SidebarMenuButton
-                tooltip={'Agents'}
-                className="cursor-pointer"
+            <SidebarMenuButton
+              tooltip={'Agents'}
+              className="cursor-pointer"
+              asChild
+            >
+              <Link
+                href="/agents"
                 onClick={(e) => {
-                  // If clicking on the main button area (not the Plus icon), navigate to agents list
-                  const target = e.target as HTMLElement;
-
-                  if (
-                    !target.closest('.create-agent-icon') &&
-                    !target.classList.contains('create-agent-icon')
-                  ) {
-                    // Prevent default collapsible toggle behavior
+                  // Only toggle collapse if we're already on /agents
+                  if (pathname === '/agents') {
                     e.preventDefault();
-                    e.stopPropagation();
-
-                    router.replace('/agents');
+                    setIsAgentsOpen(!isAgentsOpen);
                   }
                 }}
               >
@@ -159,17 +131,19 @@ export function NavMain({
                     <span className="ml-auto text-xs text-muted-foreground">
                       {agents.length}
                     </span>
-                    <Plus
-                      className="ml-1 size-4 cursor-pointer hover:opacity-70 create-agent-icon"
+                    <Link
+                      href="/agents/create"
+                      className="ml-1 size-4 cursor-pointer hover:opacity-70 flex items-center justify-center"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCreateAgentClick();
                       }}
-                    />
+                    >
+                      <Plus className="size-4" />
+                    </Link>
                   </>
                 )}
-              </SidebarMenuButton>
-            </CollapsibleTrigger>
+              </Link>
+            </SidebarMenuButton>
             <CollapsibleContent>
               <SidebarMenuSub>
                 {isLoading ? (
@@ -180,36 +154,39 @@ export function NavMain({
                   </SidebarMenuSubItem>
                 ) : agents.length === 0 ? (
                   <SidebarMenuSubItem>
-                    <SidebarMenuSubButton onClick={handleCreateAgentClick}>
-                      <Plus className="size-4" />
-                      <span>Create your first agent</span>
+                    <SidebarMenuSubButton asChild>
+                      <Link href="/agents/create">
+                        <Plus className="size-4" />
+                        <span>Create your first agent</span>
+                      </Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 ) : (
                   agents.map((agent, index) => (
-                    <SidebarMenuSubItem
-                      key={agent.id}
-                      className="cursor-pointer"
-                    >
+                    <SidebarMenuSubItem key={agent.id}>
                       <SidebarMenuSubButton
                         isActive={selectedAgent?.id === agent.id}
-                        onClick={() => handleAgentClick(agent)}
+                        asChild
                       >
-                        <Image
-                          src={createAgentAvatar(agent.name)}
-                          alt={`${agent.name} avatar`}
-                          width={16}
-                          height={16}
-                          className="size-4 rounded-sm"
-                        />
-                        <span className="truncate">{agent.name}</span>
-                        <AgentStatusIndicator agent={agent} />
-                        {index < MAX_AGENT_SHORTCUTS && (
-                          <span className="ml-auto text-xs text-muted-foreground shrink-0">
-                            {modifierKey}
-                            {index + 1}
-                          </span>
-                        )}
+                        <Link
+                          href={`/agents/${encodeURIComponent(agent.name)}`}
+                        >
+                          <Image
+                            src={createAgentAvatar(agent.name)}
+                            alt={`${agent.name} avatar`}
+                            width={16}
+                            height={16}
+                            className="size-4 rounded-sm"
+                          />
+                          <span className="truncate">{agent.name}</span>
+                          <AgentStatusIndicator agent={agent} />
+                          {index < MAX_AGENT_SHORTCUTS && (
+                            <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                              {modifierKey}
+                              {index + 1}
+                            </span>
+                          )}
+                        </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))
@@ -224,12 +201,21 @@ export function NavMain({
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               tooltip={item.title}
-              onClick={() => handleSectionClick(item)}
               isActive={isSectionActive(item)}
-              className="cursor-pointer"
+              asChild
             >
-              {item.icon && <item.icon />}
-              <span>{item.title}</span>
+              <Link
+                href={item.url}
+                target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noopener noreferrer' : undefined}
+                className="cursor-pointer"
+              >
+                {item.icon && <item.icon />}
+                <span>{item.title}</span>
+                {item.external && (
+                  <ExternalLink className="ml-auto size-3 text-muted-foreground" />
+                )}
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
