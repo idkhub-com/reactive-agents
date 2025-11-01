@@ -288,4 +288,32 @@ describe('SkillsListView', () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  it('displays DiceBear avatar for each skill', async () => {
+    renderWithProviders(<SkillsListView />);
+
+    await waitFor(() => {
+      // Should find images for each skill
+      const images = screen.getAllByRole('img');
+
+      // Find skill avatars (excluding agent avatar in header)
+      const emailSkillAvatar = images.find((img) =>
+        img.getAttribute('alt')?.includes('Email Response'),
+      );
+      const chatSkillAvatar = images.find((img) =>
+        img.getAttribute('alt')?.includes('Chat Support'),
+      );
+
+      expect(emailSkillAvatar).toBeTruthy();
+      expect(chatSkillAvatar).toBeTruthy();
+
+      // Avatars should have base64 SVG data
+      expect(emailSkillAvatar?.getAttribute('src')).toContain(
+        'data:image/svg+xml;base64',
+      );
+      expect(chatSkillAvatar?.getAttribute('src')).toContain(
+        'data:image/svg+xml;base64',
+      );
+    });
+  });
 });

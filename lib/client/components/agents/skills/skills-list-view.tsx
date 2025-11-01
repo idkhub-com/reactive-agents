@@ -18,7 +18,7 @@ import { Skeleton } from '@client/components/ui/skeleton';
 import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
-import { botttsNeutral } from '@dicebear/collection';
+import { botttsNeutral, shapes } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import type { Skill } from '@shared/types/data';
 import { useQuery } from '@tanstack/react-query';
@@ -34,6 +34,36 @@ const createAgentAvatar = (agentName: string) => {
   return `data:image/svg+xml;base64,${Buffer.from(
     createAvatar(botttsNeutral, {
       seed: agentName,
+      size: 24,
+      backgroundColor: [
+        '00acc1',
+        '039be5',
+        '1e88e5',
+        '43a047',
+        '546e7a',
+        '5e35b1',
+        '6d4c41',
+        '757575',
+        '7cb342',
+        '8e24aa',
+        'c0ca33',
+        'd81b60',
+        'e53935',
+        'f4511e',
+        'fb8c00',
+        'fdd835',
+        'ffb300',
+        '00897b',
+        '3949ab',
+      ],
+    }).toString(),
+  ).toString('base64')}`;
+};
+
+const createSkillAvatar = (skillName: string) => {
+  return `data:image/svg+xml;base64,${Buffer.from(
+    createAvatar(shapes, {
+      seed: skillName,
       size: 24,
       backgroundColor: [
         '00acc1',
@@ -278,9 +308,18 @@ export function SkillsListView(): ReactElement {
                 >
                   <CardHeader>
                     <CardTitle className="flex justify-between items-center">
-                      <span className="truncate leading-normal">
-                        {skill.name}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Image
+                          src={createSkillAvatar(skill.name)}
+                          alt={`${skill.name} icon`}
+                          width={20}
+                          height={20}
+                          className="size-5 rounded-sm shrink-0"
+                        />
+                        <span className="truncate leading-normal">
+                          {skill.name}
+                        </span>
+                      </div>
                       <SkillStatusIndicator
                         skill={skill}
                         variant="badge"
