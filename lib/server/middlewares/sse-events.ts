@@ -92,7 +92,10 @@ function mapRouteToEventType(
   }
 
   // Model events
-  if (normalizedPath.match(/\/skills\/[^/]+\/models/)) {
+  if (
+    normalizedPath.match(/\/skills\/[^/]+\/models/) ||
+    normalizedPath.startsWith('/models')
+  ) {
     if (method === 'POST') return 'model:created';
     if (method === 'PATCH') return 'model:updated';
     if (method === 'DELETE') return 'model:deleted';
