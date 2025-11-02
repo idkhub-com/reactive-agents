@@ -51,7 +51,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lato.variable} ${ubuntu.variable}`}
+      className={`${lato.variable} ${ubuntu.variable} antialiased`}
       suppressHydrationWarning
     >
       <body className="flex flex-col overflow-hidden overscroll-none w-screen h-screen">
