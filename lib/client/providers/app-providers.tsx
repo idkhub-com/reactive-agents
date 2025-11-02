@@ -13,6 +13,7 @@ import { SkillOptimizationClustersProvider } from './skill-optimization-clusters
 import { SkillOptimizationEvaluationRunsProvider } from './skill-optimization-evaluation-runs';
 import { SkillOptimizationEvaluationsProvider } from './skill-optimization-evaluations';
 import { SkillsProvider } from './skills';
+import { SSEProvider } from './sse';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -45,25 +46,27 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
           </div>
         )}
       >
-        <NavigationProvider>
-          <AgentsProvider>
-            <SkillsProvider>
-              <AIProviderAPIKeysProvider>
-                <ModelsProvider>
-                  <SkillOptimizationClustersProvider>
-                    <SkillOptimizationArmsProvider>
-                      <SkillOptimizationEvaluationRunsProvider>
-                        <SkillOptimizationEvaluationsProvider>
-                          <LogsProvider>{children}</LogsProvider>
-                        </SkillOptimizationEvaluationsProvider>
-                      </SkillOptimizationEvaluationRunsProvider>
-                    </SkillOptimizationArmsProvider>
-                  </SkillOptimizationClustersProvider>
-                </ModelsProvider>
-              </AIProviderAPIKeysProvider>
-            </SkillsProvider>
-          </AgentsProvider>
-        </NavigationProvider>
+        <SSEProvider>
+          <NavigationProvider>
+            <AgentsProvider>
+              <SkillsProvider>
+                <AIProviderAPIKeysProvider>
+                  <ModelsProvider>
+                    <SkillOptimizationClustersProvider>
+                      <SkillOptimizationArmsProvider>
+                        <SkillOptimizationEvaluationRunsProvider>
+                          <SkillOptimizationEvaluationsProvider>
+                            <LogsProvider>{children}</LogsProvider>
+                          </SkillOptimizationEvaluationsProvider>
+                        </SkillOptimizationEvaluationRunsProvider>
+                      </SkillOptimizationArmsProvider>
+                    </SkillOptimizationClustersProvider>
+                  </ModelsProvider>
+                </AIProviderAPIKeysProvider>
+              </SkillsProvider>
+            </AgentsProvider>
+          </NavigationProvider>
+        </SSEProvider>
       </ErrorBoundary>
     </ReactQueryProvider>
   );

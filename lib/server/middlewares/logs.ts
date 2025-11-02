@@ -16,6 +16,7 @@ import {
   runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import { error } from '@shared/console-logging';
 import type { FunctionName } from '@shared/types/api/request';
 import {
@@ -185,6 +186,13 @@ async function processLogs({
   // Store the log in the configured logs storage connector
   try {
     const insertedLog = await logsStorageConnector.createLog(createParams);
+
+    // Emit SSE event for real-time log updates
+    emitSSEEvent('log:created', {
+      logId: insertedLog.id,
+      agentId: agent.id,
+      skillId: skill.id,
+    });
 
     // Trigger evaluations if conditions are met
     if (

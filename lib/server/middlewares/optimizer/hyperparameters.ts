@@ -1,4 +1,5 @@
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import type {
   SkillOptimizationArm,
   SkillOptimizationEvaluationResult,
@@ -34,5 +35,12 @@ export async function updateArmStats(
       n2: newN2,
       total_reward: newTotalReward,
     },
+  });
+
+  // Emit SSE event for arm updates
+  emitSSEEvent('skill-optimization:arm-updated', {
+    armId: arm.id,
+    skillId: arm.skill_id,
+    clusterId: arm.cluster_id,
   });
 }

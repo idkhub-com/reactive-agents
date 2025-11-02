@@ -1,4 +1,5 @@
 import type { UserDataStorageConnector } from '@server/types/connector';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import type {
   SkillOptimizationArm,
   SkillOptimizationEvaluationResult,
@@ -17,7 +18,15 @@ export async function addSkillOptimizationEvaluationRun(
     results: evaluationResults,
   };
 
-  await userDataStorageConnector.createSkillOptimizationEvaluationRun(
-    createParams,
-  );
+  const evaluationRun =
+    await userDataStorageConnector.createSkillOptimizationEvaluationRun(
+      createParams,
+    );
+
+  // Emit SSE event for evaluation run creation
+  emitSSEEvent('skill-optimization:evaluation-run-created', {
+    evaluationRunId: evaluationRun.id,
+    skillId: arm.skill_id,
+    clusterId: arm.cluster_id,
+  });
 }

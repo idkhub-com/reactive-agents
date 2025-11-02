@@ -7,15 +7,23 @@ import {
 } from '@client/api/v1/reactive-agents/skills';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
+
+// Query keys for evaluations
+export const evaluationQueryKeys = {
+  all: ['evaluations'] as const,
+  skillEvaluations: (skillId: string) =>
+    ['evaluations', 'skill', skillId] as const,
+};
 
 interface SkillOptimizationEvaluationsContextType {
   evaluations: SkillOptimizationEvaluation[];
   isLoading: boolean;
   isCreating: boolean;
   isDeleting: boolean;
-  fetchEvaluations: (skillId: string) => Promise<void>;
+  setSkillId: (skillId: string | null) => void;
   createEvaluation: (
     skillId: string,
     methods: EvaluationMethodName[],
@@ -34,84 +42,83 @@ const SkillOptimizationEvaluationsContext = createContext<
 export function SkillOptimizationEvaluationsProvider({
   children,
 }: SkillOptimizationEvaluationsProviderProps): ReactElement {
-  const [evaluations, setEvaluations] = useState<SkillOptimizationEvaluation[]>(
-    [],
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
+  const [skillId, setSkillId] = useState<string | null>(null);
 
-  const fetchEvaluations = useCallback(async (skillId: string) => {
-    setIsLoading(true);
-    try {
-      const data = await getSkillEvaluations(skillId);
+  // Fetch evaluations using React Query
+  const { data: evaluations = [], isLoading } = useQuery({
+    queryKey: skillId
+      ? evaluationQueryKeys.skillEvaluations(skillId)
+      : ['evaluations-null'],
+    queryFn: () => {
+      if (!skillId) return [];
       console.log(
-        'SkillOptimizationEvaluationsProvider - Fetched evaluations:',
-        {
-          skillId,
-          count: data.length,
-          evaluations: data.map((e) => ({
-            id: e.id,
-            method: e.evaluation_method,
-          })),
-        },
+        'SkillOptimizationEvaluationsProvider - Fetching evaluations for skillId:',
+        skillId,
       );
-      setEvaluations(data);
-    } catch (error) {
-      console.error('Failed to fetch skill evaluations:', error);
-      setEvaluations([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      return getSkillEvaluations(skillId);
+    },
+    enabled: !!skillId,
+  });
+
+  // Create evaluation mutation
+  const createMutation = useMutation({
+    mutationFn: ({
+      skillId,
+      methods,
+    }: {
+      skillId: string;
+      methods: EvaluationMethodName[];
+    }) => createSkillEvaluation(skillId, methods),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: evaluationQueryKeys.skillEvaluations(variables.skillId),
+      });
+    },
+  });
+
+  // Delete evaluation mutation
+  const deleteMutation = useMutation({
+    mutationFn: ({
+      skillId,
+      evaluationId,
+    }: {
+      skillId: string;
+      evaluationId: string;
+    }) => deleteSkillEvaluation(skillId, evaluationId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: evaluationQueryKeys.skillEvaluations(variables.skillId),
+      });
+    },
+  });
 
   const createEvaluation = useCallback(
     async (skillId: string, methods: EvaluationMethodName[]) => {
-      setIsCreating(true);
-      try {
-        const newEvaluations = await createSkillEvaluation(skillId, methods);
-        setEvaluations((prev) => [...prev, ...newEvaluations]);
-        return newEvaluations;
-      } catch (error) {
-        console.error('Failed to create skill evaluation:', error);
-        throw error;
-      } finally {
-        setIsCreating(false);
-      }
+      return await createMutation.mutateAsync({ skillId, methods });
     },
-    [],
+    [createMutation],
   );
 
   const deleteEvaluation = useCallback(
     async (skillId: string, evaluationId: string) => {
-      setIsDeleting(true);
-      try {
-        await deleteSkillEvaluation(skillId, evaluationId);
-        setEvaluations((prev) =>
-          prev.filter((evaluation) => evaluation.id !== evaluationId),
-        );
-      } catch (error) {
-        console.error('Failed to delete skill evaluation:', error);
-        throw error;
-      } finally {
-        setIsDeleting(false);
-      }
+      await deleteMutation.mutateAsync({ skillId, evaluationId });
     },
-    [],
+    [deleteMutation],
   );
 
+  const contextValue: SkillOptimizationEvaluationsContextType = {
+    evaluations,
+    isLoading,
+    isCreating: createMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+    setSkillId,
+    createEvaluation,
+    deleteEvaluation,
+  };
+
   return (
-    <SkillOptimizationEvaluationsContext.Provider
-      value={{
-        evaluations,
-        isLoading,
-        isCreating,
-        isDeleting,
-        fetchEvaluations,
-        createEvaluation,
-        deleteEvaluation,
-      }}
-    >
+    <SkillOptimizationEvaluationsContext.Provider value={contextValue}>
       {children}
     </SkillOptimizationEvaluationsContext.Provider>
   );
@@ -121,7 +128,7 @@ export function useSkillOptimizationEvaluations(): SkillOptimizationEvaluationsC
   const context = useContext(SkillOptimizationEvaluationsContext);
   if (!context) {
     throw new Error(
-      'useSkillOptimizationEvaluations must be used within SkillOptimizationEvaluationsProvider',
+      'useSkillOptimizationEvaluations must be used within a SkillOptimizationEvaluationsProvider',
     );
   }
   return context;
