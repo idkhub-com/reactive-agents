@@ -69,7 +69,7 @@ export function ManageSkillEvaluationsDialog({
   const queryClient = useQueryClient();
   const {
     evaluations,
-    fetchEvaluations,
+    setSkillId: setEvaluationsSkillId,
     createEvaluation,
     deleteEvaluation,
     isCreating,
@@ -88,16 +88,19 @@ export function ManageSkillEvaluationsDialog({
   >(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch evaluations when dialog opens
+  // Set skill ID to trigger evaluation fetch when dialog opens
   useEffect(() => {
     if (open && skillId) {
       // Reset state before fetching
       setSelectedMethods([]);
       setInitialMethods([]);
       setEvaluationMap(new Map());
-      fetchEvaluations(skillId);
+      setEvaluationsSkillId(skillId);
+    } else if (!open) {
+      // Clear skill ID when dialog closes
+      setEvaluationsSkillId(null);
     }
-  }, [open, skillId, fetchEvaluations]);
+  }, [open, skillId, setEvaluationsSkillId]);
 
   // Update selected methods and map when evaluations change
   useEffect(() => {

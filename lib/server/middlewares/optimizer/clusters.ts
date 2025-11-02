@@ -3,6 +3,7 @@ import type {
   UserDataStorageConnector,
 } from '@server/types/connector';
 import { calculateDistance, kMeansClustering } from '@server/utils/math';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import { error } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
 import type { Log, Skill, SkillOptimizationArm } from '@shared/types/data';
@@ -114,6 +115,10 @@ export async function autoClusterSkill(
         await userDataStorageConnector.createSkillOptimizationClusters(
           clusterParams,
         );
+        // Emit SSE event for cluster updates
+        emitSSEEvent('skill-optimization:cluster-updated', {
+          skillId: skill.id,
+        });
       }
       // Update existing clusters
       else {
@@ -156,6 +161,10 @@ export async function autoClusterSkill(
             ),
           ),
         );
+        // Emit SSE event for cluster updates
+        emitSSEEvent('skill-optimization:cluster-updated', {
+          skillId: skill.id,
+        });
       }
 
       const lastLog = logs[logs.length - 1];

@@ -3,14 +3,23 @@
 import { getModels } from '@client/api/v1/reactive-agents/models';
 import { getSkillModels } from '@client/api/v1/reactive-agents/skills';
 import type { Model, ModelQueryParams } from '@shared/types/data/model';
+import { useQuery } from '@tanstack/react-query';
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useState,
 } from 'react';
+
+// Query keys for models
+export const modelQueryKeys = {
+  all: ['models'] as const,
+  lists: () => [...modelQueryKeys.all, 'list'] as const,
+  list: (params: ModelQueryParams) =>
+    [...modelQueryKeys.lists(), params] as const,
+  skillModels: (skillId: string) => ['models', 'skill', skillId] as const,
+};
 
 interface ModelsContextType {
   models: Model[];
@@ -35,94 +44,76 @@ interface ModelsProviderProps {
 }
 
 export function ModelsProvider({ children }: ModelsProviderProps) {
-  // All models state
-  const [models, setModels] = useState<Model[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [queryParams, setQueryParams] = useState<ModelQueryParams | null>(null);
-
-  // Skill-specific models state
-  const [skillModels, setSkillModels] = useState<Model[]>([]);
-  const [isLoadingSkillModels, setIsLoadingSkillModels] = useState(false);
-  const [skillModelsError, setSkillModelsError] = useState<string | null>(null);
   const [skillId, setSkillId] = useState<string | null>(null);
 
-  // Fetch all models
-  const fetchModels = useCallback(async () => {
-    if (!queryParams) return;
+  // Fetch all models using React Query
+  const {
+    data: models = [],
+    isLoading,
+    error: queryError,
+    refetch: refetchQuery,
+  } = useQuery({
+    queryKey: queryParams ? modelQueryKeys.list(queryParams) : ['models-null'],
+    queryFn: () => {
+      if (!queryParams) return [];
+      return getModels(queryParams);
+    },
+    enabled: !!queryParams,
+  });
 
-    setIsLoading(true);
-    setError(null);
+  // Fetch skill-specific models using React Query
+  const {
+    data: skillModels = [],
+    isLoading: isLoadingSkillModels,
+    error: skillModelsQueryError,
+    refetch: refetchSkillModelsQuery,
+  } = useQuery({
+    queryKey: skillId
+      ? modelQueryKeys.skillModels(skillId)
+      : ['skill-models-null'],
+    queryFn: () => {
+      if (!skillId) return [];
+      return getSkillModels(skillId);
+    },
+    enabled: !!skillId,
+  });
 
-    try {
-      const fetchedModels = await getModels(queryParams);
-      setModels(fetchedModels);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch models');
-      console.error('Error fetching models:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [queryParams]);
+  const refetch = useCallback(async () => {
+    await refetchQuery();
+  }, [refetchQuery]);
 
-  // Fetch skill-specific models
-  const fetchSkillModels = useCallback(async () => {
-    if (!skillId) {
-      setSkillModels([]);
-      return;
-    }
+  const refetchSkillModels = useCallback(async () => {
+    await refetchSkillModelsQuery();
+  }, [refetchSkillModelsQuery]);
 
-    setIsLoadingSkillModels(true);
-    setSkillModelsError(null);
-
-    try {
-      const fetchedSkillModels = await getSkillModels(skillId);
-      setSkillModels(fetchedSkillModels);
-    } catch (err) {
-      setSkillModelsError(
-        err instanceof Error ? err.message : 'Failed to fetch skill models',
-      );
-      console.error('Error fetching skill models:', err);
-    } finally {
-      setIsLoadingSkillModels(false);
-    }
-  }, [skillId]);
-
-  // Effect for fetching all models
-  useEffect(() => {
-    if (queryParams) {
-      fetchModels();
-    }
-  }, [fetchModels, queryParams]);
-
-  // Effect for fetching skill models
-  useEffect(() => {
-    fetchSkillModels();
-  }, [fetchSkillModels]);
-
-  const value: ModelsContextType = {
+  const contextValue: ModelsContextType = {
     models,
     isLoading,
-    error,
+    error: queryError ? (queryError as Error).message : null,
     queryParams,
     setQueryParams,
-    refetch: fetchModels,
+    refetch,
 
     skillModels,
     isLoadingSkillModels,
-    skillModelsError,
+    skillModelsError: skillModelsQueryError
+      ? (skillModelsQueryError as Error).message
+      : null,
     setSkillId,
-    refetchSkillModels: fetchSkillModels,
+    refetchSkillModels,
   };
 
   return (
-    <ModelsContext.Provider value={value}>{children}</ModelsContext.Provider>
+    <ModelsContext.Provider value={contextValue}>
+      {children}
+    </ModelsContext.Provider>
   );
 }
 
-export function useModels() {
+export function useModels(): ModelsContextType {
   const context = useContext(ModelsContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useModels must be used within a ModelsProvider');
   }
   return context;
