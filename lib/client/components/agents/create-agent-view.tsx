@@ -39,6 +39,10 @@ const CreateAgentFormSchema = z
       .regex(/^[a-z0-9_-]+$/, {
         message:
           'Agent name must only contain lowercase letters, numbers, underscores, and hyphens',
+      })
+      .refine((name) => name !== 'reactive-agents', {
+        message:
+          'The name "reactive-agents" is reserved for internal system use. Please choose a different name.',
       }),
     description: z
       .string()
