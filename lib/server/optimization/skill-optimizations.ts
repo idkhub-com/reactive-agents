@@ -50,13 +50,18 @@ export async function handleGenerateArms(
     return c.json({ error: 'Skill models or clusters not found' }, 404);
   }
 
+  // We don't need to create arms if there are no models or clusters
+  if (skillModels.length === 0 || skillClusters.length === 0) {
+    return c.json({ createdArms: [] }, 200);
+  }
+
   const numberOfSystemPrompts = skill.system_prompt_count;
 
-  const systemPromptPromises = [];
-  for (let i = 0; i < numberOfSystemPrompts; i++) {
-    systemPromptPromises.push(generateSeedSystemPromptForSkill(skill));
-  }
-  const systemPrompts = await Promise.all(systemPromptPromises);
+  const systemPrompts = await Promise.all(
+    Array.from({ length: numberOfSystemPrompts }, () =>
+      generateSeedSystemPromptForSkill(skill),
+    ),
+  );
 
   const createParamsList: SkillOptimizationArmCreateParams[] = [];
 
