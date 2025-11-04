@@ -106,11 +106,6 @@ export function ManageSkillEvaluationsDialog({
   useEffect(() => {
     if (!open) return; // Only update when dialog is open
 
-    console.log('ManageEvaluationsDialog - Updating from evaluations:', {
-      evaluationsCount: evaluations.length,
-      evaluations: evaluations.map((e) => e.evaluation_method),
-    });
-
     const map = new Map<EvaluationMethodName, SkillOptimizationEvaluation>();
     const methods: EvaluationMethodName[] = [];
 
@@ -119,7 +114,6 @@ export function ManageSkillEvaluationsDialog({
       methods.push(evaluation.evaluation_method);
     }
 
-    console.log('ManageEvaluationsDialog - Setting selected methods:', methods);
     setEvaluationMap(map);
     setSelectedMethods(methods);
     setInitialMethods(methods);
