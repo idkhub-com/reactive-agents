@@ -1,5 +1,6 @@
 'use client';
 
+import { ManageSkillModelsDialog } from '@client/components/agents/skills/manage-skill-models-dialog';
 import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
@@ -78,13 +79,13 @@ const createSkillAvatar = (skillName: string) => {
 };
 
 export function SkillDashboardView(): ReactElement {
-  const { navigateToLogs, navigateToModels, navigateToClusters } =
-    useNavigation();
+  const { navigateToLogs, navigateToClusters } = useNavigation();
   const router = useRouter();
 
   const { selectedAgent } = useAgents();
   const { selectedSkill, deleteSkill } = useSkills();
   const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
+  const [isManageModelsOpen, setIsManageModelsOpen] = useState(false);
   const [isDeleteSkillDialogOpen, setIsDeleteSkillDialogOpen] = useState(false);
 
   // Skill validation
@@ -100,7 +101,7 @@ export function SkillDashboardView(): ReactElement {
   } = useLogs();
 
   // Models via provider
-  const { skillModels, isLoadingSkillModels, setSkillId } = useModels();
+  const { setSkillId } = useModels();
 
   // Cluster states via provider
   const {
@@ -202,6 +203,13 @@ export function SkillDashboardView(): ReactElement {
           <div className="flex gap-2">
             <Button
               variant="outline"
+              onClick={() => setIsManageModelsOpen(true)}
+            >
+              <CpuIcon className="h-4 w-4 mr-2" />
+              Manage Models
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setIsManageEvaluationsOpen(true)}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -253,9 +261,7 @@ export function SkillDashboardView(): ReactElement {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      navigateToModels(selectedAgent.name, selectedSkill.name)
-                    }
+                    onClick={() => setIsManageModelsOpen(true)}
                     className="bg-white dark:bg-orange-900 hover:bg-orange-50 dark:hover:bg-orange-800 border-orange-300 dark:border-orange-700"
                   >
                     <PlusIcon className="h-3 w-3 mr-1" />
@@ -428,69 +434,6 @@ export function SkillDashboardView(): ReactElement {
               </div>
             </CardContent>
           </Card>
-
-          {/* Models Card */}
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() =>
-              navigateToModels(selectedAgent.name, selectedSkill.name)
-            }
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base font-medium">Models</CardTitle>
-                <CardDescription>Available AI models</CardDescription>
-              </div>
-              <CpuIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoadingSkillModels ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map(() => (
-                    <Skeleton key={nanoid()} className="h-4 w-full" />
-                  ))}
-                </div>
-              ) : skillModels.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No models configured
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {skillModels.slice(0, 3).map((model) => (
-                    <div
-                      key={model.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="truncate flex-1">
-                        {model.model_name}
-                      </span>
-                      <Badge variant="outline" className="ml-2">
-                        Model
-                      </Badge>
-                    </div>
-                  ))}
-                  {skillModels.length > 3 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-muted-foreground">
-                        +{skillModels.length - 3} more
-                      </span>
-                      <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-4">
-                <Button variant="ghost" size="sm">
-                  <PlusIcon className="h-3 w-3 mr-1" />
-                  Add
-                </Button>
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRightIcon className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -499,6 +442,15 @@ export function SkillDashboardView(): ReactElement {
         <ManageSkillEvaluationsDialog
           open={isManageEvaluationsOpen}
           onOpenChange={setIsManageEvaluationsOpen}
+          skillId={selectedSkill.id}
+        />
+      )}
+
+      {/* Manage Models Dialog */}
+      {selectedSkill && (
+        <ManageSkillModelsDialog
+          open={isManageModelsOpen}
+          onOpenChange={setIsManageModelsOpen}
           skillId={selectedSkill.id}
         />
       )}

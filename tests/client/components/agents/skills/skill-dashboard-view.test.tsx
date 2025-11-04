@@ -99,6 +99,20 @@ vi.mock('@client/providers/skill-optimization-evaluations', () => ({
   useSkillOptimizationEvaluations: vi.fn(),
 }));
 
+// Mock dialog components
+vi.mock('@client/components/agents/skills/manage-skill-models-dialog', () => ({
+  ManageSkillModelsDialog: () => <div data-testid="manage-models-dialog" />,
+}));
+
+vi.mock(
+  '@client/components/agents/skills/manage-skill-evaluations-dialog',
+  () => ({
+    ManageSkillEvaluationsDialog: () => (
+      <div data-testid="manage-evaluations-dialog" />
+    ),
+  }),
+);
+
 // Mock the skill validation hook
 vi.mock('@client/hooks/use-skill-validation', () => ({
   useSkillValidation: vi.fn(),
@@ -164,7 +178,6 @@ describe('SkillDashboardView', () => {
       navigateToAgentDetail: vi.fn(),
       navigateToSkillDashboard: vi.fn(),
       navigateToLogs: vi.fn(),
-      navigateToModels: vi.fn(),
       navigateToClusters: vi.fn(),
       navigateToClusterArms: vi.fn(),
       navigateToArmDetail: vi.fn(),

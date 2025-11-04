@@ -1,7 +1,7 @@
 'use client';
 
-import { Alert, AlertDescription } from '@client/components/ui/alert';
 import { Button } from '@client/components/ui/button';
+import { Card, CardContent } from '@client/components/ui/card';
 import { Checkbox } from '@client/components/ui/checkbox';
 import {
   Dialog,
@@ -106,11 +106,6 @@ export function ManageSkillEvaluationsDialog({
   useEffect(() => {
     if (!open) return; // Only update when dialog is open
 
-    console.log('ManageEvaluationsDialog - Updating from evaluations:', {
-      evaluationsCount: evaluations.length,
-      evaluations: evaluations.map((e) => e.evaluation_method),
-    });
-
     const map = new Map<EvaluationMethodName, SkillOptimizationEvaluation>();
     const methods: EvaluationMethodName[] = [];
 
@@ -119,7 +114,6 @@ export function ManageSkillEvaluationsDialog({
       methods.push(evaluation.evaluation_method);
     }
 
-    console.log('ManageEvaluationsDialog - Setting selected methods:', methods);
     setEvaluationMap(map);
     setSelectedMethods(methods);
     setInitialMethods(methods);
@@ -194,64 +188,67 @@ export function ManageSkillEvaluationsDialog({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
+            <CheckCircle2 size={20} />
             Manage Evaluation Methods
           </DialogTitle>
           <DialogDescription>
-            Select which evaluation methods to apply to your skill. Toggle any
-            method to add or remove it.
+            Evaluations help measure and improve your skill's performance. You
+            can add or remove them anytime.
           </DialogDescription>
         </DialogHeader>
 
-        <Alert className="my-4">
-          <Clock className="h-4 w-4" />
-          <AlertDescription>
-            Adding new evaluation methods may take some time as the AI generates
-            evaluation parameters for your skill. Please be patient while the
-            system processes your changes.
-          </AlertDescription>
-        </Alert>
-
-        <div className="space-y-3 py-4">
+        <div className="space-y-3 border rounded-md p-3 max-h-[400px] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2
+                size={24}
+                className="animate-spin text-muted-foreground"
+              />
             </div>
           ) : (
             EVALUATION_METHODS.map((method) => {
               const isSelected = selectedMethods.includes(method.name);
               return (
-                <button
+                <Card
                   key={method.name}
-                  type="button"
-                  className={`border rounded-lg p-4 cursor-pointer transition-all text-left w-full ${
+                  className={`cursor-pointer transition-all ${
                     isSelected
                       ? 'border-primary bg-primary/5'
                       : 'hover:border-primary/50'
                   } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => handleToggleMethod(method.name)}
-                  disabled={isProcessing}
                 >
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleToggleMethod(method.name)}
-                      onClick={(e) => e.stopPropagation()}
-                      disabled={isProcessing}
-                    />
-                    <div className="flex-1">
-                      <Label className="text-base font-medium cursor-pointer">
-                        {method.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {method.description}
-                      </p>
+                  <CardContent className="p-4">
+                    <div className="flex gap-3">
+                      <div className="pt-0.5">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() =>
+                            handleToggleMethod(method.name)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={isProcessing}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-base font-medium cursor-pointer">
+                          {method.label}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {method.description}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </CardContent>
+                </Card>
               );
             })
           )}
+        </div>
+
+        <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-500 mb-4">
+          <Clock size={16} />
+          <span>This process may take 1-2 minutes to complete.</span>
         </div>
 
         <DialogFooter>
@@ -265,11 +262,11 @@ export function ManageSkillEvaluationsDialog({
           <Button onClick={handleAccept} disabled={!hasChanges || isProcessing}>
             {isSaving ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 size={16} className="mr-2 animate-spin" />
                 Saving...
               </>
             ) : (
-              'Accept'
+              'Save Changes'
             )}
           </Button>
         </DialogFooter>
