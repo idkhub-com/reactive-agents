@@ -1,5 +1,6 @@
 'use client';
 
+import { AnimatedLogo } from '@client/components/side-bar/animated-logo';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -18,7 +19,6 @@ import {
 import { Input } from '@client/components/ui/input';
 import { APP_URL } from '@client/constants';
 import { zodResolver } from '@hookform/resolvers/zod';
-import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -63,13 +63,9 @@ export default function LoginPage(): React.ReactNode {
         <CardHeader>
           <CardTitle className="flex flex-col gap-2 mb-0">
             <div className="flex flex-col gap-2">
-              <Image
-                className="dark:brightness-0 dark:invert"
-                src="/assets/brand/ra-logo.png"
-                alt="logo"
-                width={100}
-                height={100}
-              />
+              <div className="w-full h-16">
+                <AnimatedLogo isCollapsed={false} />
+              </div>
               <span className="text-2xl font-bold">
                 Enter password to continue
               </span>
