@@ -38,7 +38,11 @@ export const AgentCreateParams = z
           'Name must only contain lowercase letters, numbers, underscores, and hyphens',
       })
       .min(3)
-      .max(100),
+      .max(100)
+      .refine((name) => name !== 'reactive-agents', {
+        message:
+          'The name "reactive-agents" is reserved for internal system use. Please choose a different name.',
+      }),
     description: z.string().min(25).max(10000),
     metadata: z.record(z.string(), z.unknown()).default({}),
   })

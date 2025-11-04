@@ -168,6 +168,29 @@ describe('Agent Data Transforms and Validation', () => {
       expect(() => AgentCreateParams.parse(inputData)).toThrow();
     });
 
+    it('should reject reserved agent names', () => {
+      const reservedNames = ['reactive-agents'];
+
+      for (const name of reservedNames) {
+        const inputData = {
+          name,
+          description: 'A test agent with sufficient description length',
+        };
+
+        expect(() => AgentCreateParams.parse(inputData)).toThrow();
+      }
+    });
+
+    it('should accept reactive-agent name (not reserved)', () => {
+      const inputData = {
+        name: 'reactive-agent',
+        description: 'A test agent with sufficient description length',
+      };
+
+      const result = AgentCreateParams.parse(inputData);
+      expect(result.name).toBe('reactive-agent');
+    });
+
     it('should accept name with exactly 100 characters', () => {
       const inputData = {
         name: 'a'.repeat(100),
