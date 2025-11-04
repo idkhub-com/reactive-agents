@@ -667,7 +667,7 @@ describe('CreateSkillView', () => {
     });
   });
 
-  it('navigates to models page with afterCreate parameter after successful skill creation', async () => {
+  it('navigates to setup page after successful skill creation', async () => {
     // Set up agent in URL params
     mockParams.agentName = 'Test Agent 1';
     mockPathname.current = '/agents/Test%20Agent%201/create-skill';
@@ -692,7 +692,7 @@ describe('CreateSkillView', () => {
     // Override the mock to test navigation
     mockCreateSkill.mockImplementation(() => {
       // Simulate the navigation that happens in onSubmit
-      mockPush('/agents/Test%20Agent%201/test-skill/models?afterCreate=true');
+      mockPush('/agents/Test%20Agent%201/test-skill/setup');
       return Promise.resolve(createdSkill);
     });
 
@@ -723,7 +723,7 @@ describe('CreateSkillView', () => {
 
     // Verify the navigation was called correctly
     expect(mockPush).toHaveBeenCalledWith(
-      '/agents/Test%20Agent%201/test-skill/models?afterCreate=true',
+      '/agents/Test%20Agent%201/test-skill/setup',
     );
   });
 });
