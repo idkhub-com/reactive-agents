@@ -150,7 +150,12 @@ export const retryRequest = async (
             // do nothing
           } else {
             // All error codes that aren't retried need to be propagated up
-            const errorObj = new HttpError(await response.clone().text(), {
+            const errorBody = await response.clone().text();
+            console.error(
+              `[HTTP ${response.status}] Request to ${url} failed:`,
+              errorBody,
+            );
+            const errorObj = new HttpError(errorBody, {
               status: response.status,
               statusText: response.statusText,
               body: await response.text(),

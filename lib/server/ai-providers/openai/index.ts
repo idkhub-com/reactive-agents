@@ -40,6 +40,7 @@ import {
 } from './image-generate';
 import { openAIListBatchesResponseTransform } from './list-batches';
 import { openAIGetFilesResponseTransform } from './list-files';
+import { openAIModelCapabilities } from './model-capabilities';
 import { openAIRetrieveBatchResponseTransform } from './retrieve-batch';
 import { openAIGetFileContentResponseTransform } from './retrieve-file-content';
 import {
@@ -49,6 +50,7 @@ import {
 
 export const openAIConfig: AIProviderConfig = {
   api: openAIAPIConfig,
+  modelCapabilities: openAIModelCapabilities,
   // Audio API
   [FunctionName.CREATE_SPEECH]: openAICreateSpeechConfig,
 

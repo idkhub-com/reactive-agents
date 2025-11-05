@@ -13,9 +13,11 @@ import {
   xaiChatCompleteConfig,
   xaiChatCompleteResponseTransform,
 } from './chat-complete';
+import { xaiModelCapabilities } from './model-capabilities';
 
 export const xaiConfig: AIProviderConfig = {
   api: xaiAPIConfig,
+  modelCapabilities: xaiModelCapabilities,
 
   // Chat Completions API
   [FunctionName.CHAT_COMPLETE]: xaiChatCompleteConfig,

@@ -1,3 +1,4 @@
+import { initializeModelCapabilities } from '@server/ai-providers/initialize-capabilities';
 import { chatRouter } from '@server/api/v1/chat';
 import { completionsRouter } from '@server/api/v1/completions';
 import { embeddingsRouter } from '@server/api/v1/embeddings';
@@ -33,6 +34,9 @@ import { prettyJSON } from 'hono/pretty-json';
 import { handle } from 'hono/vercel';
 
 const factory = createFactory<AppEnv>();
+
+// Initialize model capabilities on server startup
+initializeModelCapabilities();
 
 const app: AppHono = new Hono<AppEnv>().basePath('/v1');
 
