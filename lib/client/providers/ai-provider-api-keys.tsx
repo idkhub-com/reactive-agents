@@ -96,8 +96,9 @@ export function AIProviderAPIKeysProvider({
   // Create API key mutation
   const createMutation = useMutation({
     mutationFn: createAIProvider,
-    onSuccess: (newAPIKey) => {
-      queryClient.invalidateQueries({
+    onSuccess: async (newAPIKey) => {
+      // Wait for queries to be invalidated before proceeding
+      await queryClient.invalidateQueries({
         queryKey: aiProviderAPIKeyQueryKeys.lists(),
       });
       toast({
@@ -123,8 +124,9 @@ export function AIProviderAPIKeysProvider({
       id: string;
       params: AIProviderConfigUpdateParams;
     }) => updateAIProvider(id, params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Wait for queries to be invalidated before proceeding
+      await queryClient.invalidateQueries({
         queryKey: aiProviderAPIKeyQueryKeys.lists(),
       });
       toast({
@@ -144,8 +146,9 @@ export function AIProviderAPIKeysProvider({
   // Delete API key mutation
   const deleteMutation = useMutation({
     mutationFn: deleteAIProvider,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Wait for queries to be invalidated before proceeding
+      await queryClient.invalidateQueries({
         queryKey: aiProviderAPIKeyQueryKeys.lists(),
       });
       toast({
