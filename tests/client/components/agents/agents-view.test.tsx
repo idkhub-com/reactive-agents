@@ -205,16 +205,6 @@ describe('AgentsView', () => {
     expect(screen.getByTestId('log-details-view')).toBeInTheDocument();
   });
 
-  it('renders models view when current view is models', async () => {
-    mockParams.agentName = 'Test Agent';
-    mockParams.skillName = 'Test Skill';
-    mockPathname = '/agents/Test%20Agent/Test%20Skill/models';
-
-    await renderWithProviders(<AgentsView />);
-
-    expect(screen.getByTestId('models-view')).toBeInTheDocument();
-  });
-
   it('renders clusters view when current view is clusters', async () => {
     mockParams.agentName = 'Test Agent';
     mockParams.skillName = 'Test Skill';

@@ -204,6 +204,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
         };
         const newProvider = await createAPIKey(createParams);
         // Navigate to add models view for the new provider
+        // The mutation's onSuccess already waits for cache invalidation
         router.push(`/ai-providers/${newProvider.id}/add-models`);
       } else if (apiKey) {
         const updateParams: AIProviderConfigUpdateParams = {
@@ -223,8 +224,11 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
         await updateAPIKey(apiKey.id, updateParams);
         router.push('/ai-providers');
       }
-    } catch (_error) {
-      // Error handling is done in the provider
+    } catch (error) {
+      // Error handling is done in the provider, but log for debugging
+      console.error('Error in form submission:', error);
+      // Re-throw to prevent navigation on error
+      throw error;
     }
   };
 

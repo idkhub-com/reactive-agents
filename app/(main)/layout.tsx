@@ -23,7 +23,7 @@ function MainContent({ children }: { children: ReactNode }): ReactElement {
     pathname !== '/agents' &&
     !pathname.includes('/agents/create') &&
     !pathname.includes('/skills/create') &&
-    !pathname.includes('/evaluations-2/create') &&
+    !pathname.includes('/evaluations/create') &&
     !pathname.includes('/setup')
   ) {
     return (
