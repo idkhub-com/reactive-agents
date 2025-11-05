@@ -11,6 +11,7 @@ import type {
 } from '@shared/types/api/response/body';
 import type { AIProvider } from '@shared/types/constants';
 import { z } from 'zod';
+import type { ProviderModelCapabilities } from './model-capabilities';
 
 /**
  * Configuration for an AI provider.
@@ -133,6 +134,11 @@ export interface AIProviderConfig extends FunctionNameToFunctionConfig {
     [K in FunctionName]?: ResponseTransformFunctionType;
   };
   forward_headers?: string[];
+  /**
+   * Model capability configuration for this provider.
+   * Defines which parameters are supported by different models.
+   */
+  modelCapabilities?: ProviderModelCapabilities;
 }
 
 export const GatewayProvider = z.object({

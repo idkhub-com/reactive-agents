@@ -11,9 +11,11 @@ import {
   anthropicCompleteResponseTransform,
   anthropicCompleteStreamChunkTransform,
 } from './complete';
+import { anthropicModelCapabilities } from './model-capabilities';
 
 export const anthropicConfig: AIProviderConfig = {
   api: anthropicAPIConfig,
+  modelCapabilities: anthropicModelCapabilities,
   [FunctionName.COMPLETE]: anthropicCompleteConfig,
   [FunctionName.CHAT_COMPLETE]: anthropicChatCompleteConfig,
   responseTransforms: {

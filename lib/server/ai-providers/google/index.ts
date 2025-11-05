@@ -7,9 +7,11 @@ import {
   googleChatCompleteStreamChunkTransform,
 } from './chat-complete';
 import { googleEmbedConfig, googleEmbedResponseTransform } from './embed';
+import { googleModelCapabilities } from './model-capabilities';
 
 export const googleConfig: AIProviderConfig = {
   api: googleAPIConfig,
+  modelCapabilities: googleModelCapabilities,
   [FunctionName.CHAT_COMPLETE]: googleChatCompleteConfig,
   [FunctionName.STREAM_CHAT_COMPLETE]: googleChatCompleteConfig,
   [FunctionName.EMBED]: googleEmbedConfig,

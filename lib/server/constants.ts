@@ -69,16 +69,3 @@ export const RA_SKILLS = [
 ];
 
 export const EMBEDDINGS_DIMENSIONS = 1536;
-
-export const UNSUPPORTED_TEMPERATURE_MODELS = [
-  'gpt-5',
-  'gpt-5-mini',
-  'gpt-5-nano',
-  'o4-mini',
-];
-
-export const UNSUPPORTED_TOP_P_MODELS = ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'];
-
-export const UNSUPPORTED_REASONING_MODELS = ['gpt-4o', 'gpt-4-mini'];
-
-export const LEGACY_MAX_TOKENS_MODELS = ['o4-mini'];

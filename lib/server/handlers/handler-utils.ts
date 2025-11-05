@@ -1,10 +1,4 @@
 import { providerConfigs } from '@server/ai-providers';
-import {
-  LEGACY_MAX_TOKENS_MODELS,
-  UNSUPPORTED_REASONING_MODELS,
-  UNSUPPORTED_TEMPERATURE_MODELS,
-  UNSUPPORTED_TOP_P_MODELS,
-} from '@server/constants';
 import { GatewayError } from '@server/errors/gateway';
 import { HttpError } from '@server/errors/http';
 import { RouterError } from '@server/errors/router';
@@ -16,6 +10,10 @@ import type { AppContext } from '@server/types/hono';
 import { HttpMethod } from '@server/types/http';
 import { getCachedResponse } from '@server/utils/cache';
 import { inputHookHandler, outputHookHandler } from '@server/utils/hooks';
+import {
+  validateAndTransformParameter,
+  validateParameter,
+} from '@server/utils/model-validator';
 import { constructRequest } from '@server/utils/reactive-agents/requests';
 import {
   type CommonRequestOptions,
@@ -23,6 +21,7 @@ import {
   createResponse,
 } from '@server/utils/reactive-agents/responses';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
+import { ModelParameter } from '@shared/types/ai-providers/model-capabilities';
 import { FunctionName } from '@shared/types/api/request';
 import type {
   ReactiveAgentsRequestBody,
@@ -87,55 +86,104 @@ function getHyperParamDefaults(
     model: raTarget.configuration.model,
   };
 
-  // Only copy over fields that exist in the request body interface
-  if (
-    raTarget.configuration.temperature !== null &&
-    !UNSUPPORTED_TEMPERATURE_MODELS.includes(raTarget.configuration.model)
-  ) {
-    configDefaults.temperature = raTarget.configuration.temperature;
-  }
-  if (raTarget.configuration.max_tokens !== null) {
-    if (LEGACY_MAX_TOKENS_MODELS.includes(raTarget.configuration.model)) {
-      configDefaults.max_completion_tokens = raTarget.configuration.max_tokens;
-    } else {
-      configDefaults.max_tokens = raTarget.configuration.max_tokens;
+  const provider = raTarget.configuration.ai_provider;
+  const modelId = raTarget.configuration.model;
+
+  // Helper function to validate, transform, and add parameter
+  const addParameter = (
+    parameter: ModelParameter,
+    value: unknown,
+    paramKey?: string,
+  ) => {
+    if (value === null) return;
+
+    // Only transform numeric parameters (temperature, top_p, etc.)
+    const isNumericParameter = typeof value === 'number';
+
+    const validation = isNumericParameter
+      ? validateAndTransformParameter(
+          provider,
+          modelId,
+          parameter,
+          value,
+          functionName,
+          true, // shouldTransform = true
+        )
+      : validateParameter(provider, modelId, parameter, functionName);
+
+    if (validation.isSupported && validation.parameterName) {
+      const key = paramKey || validation.parameterName;
+      // Use transformed value if available, otherwise use original
+      const finalValue = validation.transformedValue ?? value;
+      configDefaults[key] = finalValue;
     }
-  }
-  if (
-    raTarget.configuration.top_p !== null &&
-    !UNSUPPORTED_TOP_P_MODELS.includes(raTarget.configuration.model)
-  ) {
-    configDefaults.top_p = raTarget.configuration.top_p;
-  }
-  if (raTarget.configuration.frequency_penalty !== null) {
-    configDefaults.frequency_penalty = raTarget.configuration.frequency_penalty;
-  }
-  if (raTarget.configuration.presence_penalty !== null) {
-    configDefaults.presence_penalty = raTarget.configuration.presence_penalty;
-  }
-  if (raTarget.configuration.stop !== null) {
-    configDefaults.stop = raTarget.configuration.stop;
-  }
-  if (raTarget.configuration.seed !== null) {
-    configDefaults.seed = raTarget.configuration.seed;
-  }
-  if (
-    raTarget.configuration.reasoning_effort !== null &&
-    !UNSUPPORTED_REASONING_MODELS.includes(raTarget.configuration.model)
-  ) {
-    switch (functionName) {
-      case FunctionName.STREAM_CHAT_COMPLETE:
-      case FunctionName.CHAT_COMPLETE:
-        configDefaults.reasoning_effort =
-          raTarget.configuration.reasoning_effort;
-        break;
-      case FunctionName.CREATE_MODEL_RESPONSE:
-        configDefaults.reasoning = {
-          effort: raTarget.configuration.reasoning_effort,
-        };
-        break;
-      default:
-        throw new Error(`Unsupported function name: ${functionName}`);
+  };
+
+  // Validate and add each parameter
+  addParameter(
+    ModelParameter.TEMPERATURE,
+    raTarget.configuration.temperature,
+    'temperature',
+  );
+
+  addParameter(
+    ModelParameter.MAX_TOKENS,
+    raTarget.configuration.max_tokens,
+    'max_tokens',
+  );
+
+  addParameter(ModelParameter.TOP_P, raTarget.configuration.top_p, 'top_p');
+
+  addParameter(
+    ModelParameter.FREQUENCY_PENALTY,
+    raTarget.configuration.frequency_penalty,
+    'frequency_penalty',
+  );
+
+  addParameter(
+    ModelParameter.PRESENCE_PENALTY,
+    raTarget.configuration.presence_penalty,
+    'presence_penalty',
+  );
+
+  addParameter(ModelParameter.STOP, raTarget.configuration.stop, 'stop');
+
+  addParameter(ModelParameter.SEED, raTarget.configuration.seed, 'seed');
+
+  // Handle reasoning_effort (different structure for different function names)
+  if (raTarget.configuration.reasoning_effort !== null) {
+    const validation = validateParameter(
+      provider,
+      modelId,
+      ModelParameter.REASONING_EFFORT,
+      functionName,
+    );
+
+    if (validation.isSupported) {
+      switch (functionName) {
+        case FunctionName.STREAM_CHAT_COMPLETE:
+        case FunctionName.CHAT_COMPLETE:
+          configDefaults.reasoning_effort =
+            raTarget.configuration.reasoning_effort;
+          break;
+        case FunctionName.CREATE_MODEL_RESPONSE:
+          configDefaults.reasoning = {
+            effort: raTarget.configuration.reasoning_effort,
+          };
+          break;
+        default:
+          throw new Error(`Unsupported function name: ${functionName}`);
+      }
+
+      if (validation.warning) {
+        console.warn(
+          `[${provider}/${modelId}][${functionName}] reasoning_effort: ${validation.warning}`,
+        );
+      }
+    } else if (validation.reason) {
+      console.warn(
+        `[${provider}/${modelId}][${functionName}] ✗ Skipped reasoning_effort (value: ${JSON.stringify(raTarget.configuration.reasoning_effort)}): ${validation.reason}`,
+      );
     }
   }
 
