@@ -1,8 +1,8 @@
 'use client';
 
 import { deleteModel } from '@client/api/v1/reactive-agents/models';
-import { DeleteModelDialog } from '@client/components/agents/skills/models/delete-model-dialog';
 import { AIProvidersListView } from '@client/components/ai-providers/ai-providers-list';
+import { DeleteModelDialog } from '@client/components/ai-providers/delete-model-dialog';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {

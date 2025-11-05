@@ -63,13 +63,13 @@ export function DeleteModelDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
-            Remove Model from Skill
+            Delete Model
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-4 pt-4">
             <p>
-              This action will remove the model{' '}
-              <span className="font-semibold">{model?.model_name}</span> from
-              this skill. This cannot be undone.
+              This action cannot be undone. This will permanently delete the
+              model <span className="font-semibold">{model?.model_name}</span>{' '}
+              and remove it from all skills that use it.
             </p>
             <div className="space-y-2">
               <Label htmlFor={inputId}>
@@ -104,7 +104,7 @@ export function DeleteModelDialog({
             disabled={isConfirmDisabled}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? 'Removing...' : 'Remove Model'}
+            {isDeleting ? 'Deleting...' : 'Delete Model'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

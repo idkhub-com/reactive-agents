@@ -12,7 +12,6 @@ import { ArmDetailView } from './skills/arms/arm-detail-view';
 import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
 import { ClustersView } from './skills/clusters/clusters-view';
 import { LogDetailsView, LogsView } from './skills/logs';
-import { ModelsView } from './skills/models/models-view';
 
 export function AgentsView(): ReactElement {
   const { navigationState } = useNavigation();
@@ -77,12 +76,6 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Log Detail">
             <LogDetailsView />
-          </AgentErrorBoundary>
-        );
-      case 'models':
-        return (
-          <AgentErrorBoundary sectionName="Models">
-            <ModelsView />
           </AgentErrorBoundary>
         );
       case 'clusters':
