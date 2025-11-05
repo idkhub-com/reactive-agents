@@ -23,7 +23,96 @@ import type {
 import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 
 /**
- * Converts a log into a conversation string with input and output
+ * Extracts relevant request parameters that affect the output format and constraints.
+ * This includes structured output requirements, tool definitions, and sampling parameters.
+ */
+function extractRequestConstraints(
+  raRequestData:
+    | ChatCompletionRequestData
+    | StreamChatCompletionRequestData
+    | ResponsesRequestData,
+): string {
+  const constraints: string[] = [];
+
+  // Extract response format (JSON schema, structured output)
+  if ('response_format' in raRequestData && raRequestData.response_format) {
+    constraints.push(
+      `Response Format: ${JSON.stringify(raRequestData.response_format, null, 2)}`,
+    );
+  }
+
+  // Extract text config for Responses API
+  if ('text' in raRequestData && raRequestData.text) {
+    constraints.push(
+      `Text Config: ${JSON.stringify(raRequestData.text, null, 2)}`,
+    );
+  }
+
+  // Extract tools/functions
+  if ('tools' in raRequestData && raRequestData.tools) {
+    constraints.push(
+      `Available Tools: ${JSON.stringify(raRequestData.tools, null, 2)}`,
+    );
+  }
+
+  if ('functions' in raRequestData && raRequestData.functions) {
+    constraints.push(
+      `Available Functions: ${JSON.stringify(raRequestData.functions, null, 2)}`,
+    );
+  }
+
+  // Extract tool choice constraints
+  if ('tool_choice' in raRequestData && raRequestData.tool_choice) {
+    constraints.push(
+      `Tool Choice: ${JSON.stringify(raRequestData.tool_choice)}`,
+    );
+  }
+
+  if ('function_call' in raRequestData && raRequestData.function_call) {
+    constraints.push(
+      `Function Call: ${JSON.stringify(raRequestData.function_call)}`,
+    );
+  }
+
+  // Extract reasoning configuration
+  if ('reasoning_effort' in raRequestData && raRequestData.reasoning_effort) {
+    constraints.push(`Reasoning Effort: ${raRequestData.reasoning_effort}`);
+  }
+
+  if ('reasoning' in raRequestData && raRequestData.reasoning) {
+    constraints.push(
+      `Reasoning Config: ${JSON.stringify(raRequestData.reasoning)}`,
+    );
+  }
+
+  // Extract sampling parameters
+  if (
+    'temperature' in raRequestData &&
+    raRequestData.temperature !== undefined
+  ) {
+    constraints.push(`Temperature: ${raRequestData.temperature}`);
+  }
+
+  if ('max_tokens' in raRequestData && raRequestData.max_tokens) {
+    constraints.push(`Max Tokens: ${raRequestData.max_tokens}`);
+  }
+
+  if ('max_output_tokens' in raRequestData && raRequestData.max_output_tokens) {
+    constraints.push(`Max Output Tokens: ${raRequestData.max_output_tokens}`);
+  }
+
+  // Extract other constraints
+  if ('stop' in raRequestData && raRequestData.stop) {
+    constraints.push(`Stop Sequences: ${JSON.stringify(raRequestData.stop)}`);
+  }
+
+  return constraints.length > 0
+    ? `\n\nRequest Constraints:\n${constraints.join('\n')}`
+    : '';
+}
+
+/**
+ * Converts a log into a conversation string with input, output, and request constraints
  */
 function generateExampleConversations(logs: Log[]): string[] {
   return logs
@@ -47,8 +136,14 @@ function generateExampleConversations(logs: Log[]): string[] {
         );
         const input = formatMessagesForExtraction(messages);
         const output = extractOutputFromResponseBody(responseBody);
+        const constraints = extractRequestConstraints(
+          raRequestData as
+            | ChatCompletionRequestData
+            | StreamChatCompletionRequestData
+            | ResponsesRequestData,
+        );
 
-        return `${input}\n\nAssistant: ${output}`;
+        return `${input}${constraints}\n\nAssistant: ${output}`;
       } catch (e) {
         error(
           `[OPTIMIZER] Failed to extract conversation from log ${log.id}:`,
@@ -66,6 +161,8 @@ async function autoGenerateSystemPromptsForCluster(
   cluster: SkillOptimizationCluster,
   minRequestsPerArm: number,
   numberOfSystemPrompts: number,
+  agentDescription: string,
+  skillDescription: string,
 ) {
   const clusterArms = await userDataStorageConnector.getSkillOptimizationArms({
     skill_id: cluster.skill_id,
@@ -134,6 +231,8 @@ async function autoGenerateSystemPromptsForCluster(
       generateReflectiveSystemPromptForSkill(
         bestArm.params.system_prompt,
         examplesConversations,
+        agentDescription,
+        skillDescription,
       ),
     );
   }
@@ -227,6 +326,17 @@ export async function autoGenerateSystemPromptsForSkill(
   const minRequestsPerArm = skill.reflection_min_requests_per_arm;
   const numberOfSystemPrompts = skill.system_prompt_count;
 
+  // Fetch the agent information for context
+  const agents = await userDataStorageConnector.getAgents({
+    id: skill.agent_id,
+  });
+
+  if (agents.length === 0) {
+    throw new Error(`Agent with id ${skill.agent_id} not found`);
+  }
+
+  const agent = agents[0];
+
   for (const cluster of skillClusters) {
     await autoGenerateSystemPromptsForCluster(
       userDataStorageConnector,
@@ -234,6 +344,8 @@ export async function autoGenerateSystemPromptsForSkill(
       cluster,
       minRequestsPerArm,
       numberOfSystemPrompts,
+      agent.description,
+      skill.description,
     );
   }
 }

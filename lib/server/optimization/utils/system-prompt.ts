@@ -104,10 +104,27 @@ Your task is to write a new instruction for the assistant and return it in a JSO
 function getReflectorFirstMessage(
   currentSystemPrompt: string,
   examples: string[],
+  agentDescription: string,
+  skillDescription: string,
 ) {
   const firstMessage = `
-I provided an assistant with the following instructions to perform a task for me:
+I am building an AI agent with the following purpose:
 
+Agent Description:
+'''
+${agentDescription}
+'''
+
+This agent has a specific skill that it needs to perform:
+
+Skill Description:
+'''
+${skillDescription}
+'''
+
+I provided the assistant with the following instructions to perform this skill:
+
+Current System Prompt:
 '''
 ${currentSystemPrompt}
 '''
@@ -117,13 +134,36 @@ along with the assistant's response for each of them, and some feedback on how
 the assistant's response could be better:
 
 '''
-${examples.join('\n')}
+${examples.join('\n\n---\n\n')}
 '''
 
 Your task is to write a new instruction for the assistant.
 
-Read the inputs carefully and identify the input format and infer detailed task
+CONTEXT UNDERSTANDING:
+First, carefully review the Agent Description and Skill Description above to understand the overall
+purpose and specific task requirements. These descriptions define the core objectives that the
+assistant must achieve.
+
+Then, read the inputs carefully and identify the input format and infer detailed task
 description about the task I wish to solve with the assistant.
+
+IMPORTANT: Pay special attention to any "Request Constraints" sections in the examples above.
+These constraints specify critical requirements such as:
+- Response format (e.g., JSON schema, structured outputs)
+- Available tools/functions the assistant can call
+- Tool choice constraints (which tools must/can be used)
+- Sampling parameters (temperature, max tokens)
+- Reasoning effort requirements
+- Stop sequences and other output constraints
+
+If the examples include structured output requirements (response_format, text config, or JSON schemas),
+make sure the new instruction explicitly guides the assistant on how to produce outputs that conform
+to these schemas. Include specific guidance about required fields, data types, and output structure.
+
+If the examples include tool/function definitions, ensure the instruction helps the assistant understand:
+- When to use each tool
+- How to construct proper tool call arguments
+- What information is needed before calling a tool
 
 Read all the assistant responses and the corresponding feedback. Identify all
 niche and domain specific factual information about the task and include it in
@@ -139,6 +179,8 @@ Return the new instruction in a JSON object.`;
 export async function generateReflectiveSystemPromptForSkill(
   currentSystemPrompt: string,
   examples: string[],
+  agentDescription: string,
+  skillDescription: string,
 ) {
   // Check if OpenAI API key is available
   const apiKey = OPENAI_API_KEY;
@@ -166,7 +208,12 @@ export async function generateReflectiveSystemPromptForSkill(
   };
 
   const systemPrompt = getReflectorSystemPrompt();
-  const firstMessage = getReflectorFirstMessage(currentSystemPrompt, examples);
+  const firstMessage = getReflectorFirstMessage(
+    currentSystemPrompt,
+    examples,
+    agentDescription,
+    skillDescription,
+  );
 
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
