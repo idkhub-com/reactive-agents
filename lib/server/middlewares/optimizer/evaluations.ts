@@ -73,7 +73,6 @@ export async function checkAndRegenerateEvaluationsEarly(
     });
 
     if (latestSkills.length === 0) {
-      console.log(`[EARLY_EVAL_REGEN] Skill ${skill.id} not found, skipping`);
       return;
     }
 
@@ -95,14 +94,8 @@ export async function checkAndRegenerateEvaluationsEarly(
       const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
       if (lockAge < LOCK_TIMEOUT_MS) {
-        console.log(
-          `[EARLY_EVAL_REGEN] Regeneration already in progress for skill ${skill.id} (locked ${Math.round(lockAge / 1000)}s ago), skipping`,
-        );
         return;
       }
-      console.log(
-        `[EARLY_EVAL_REGEN] Lock for skill ${skill.id} is stale (${Math.round(lockAge / 1000)}s old), proceeding`,
-      );
     }
 
     // Try to acquire lock by updating the skill
@@ -111,11 +104,7 @@ export async function checkAndRegenerateEvaluationsEarly(
       await userDataStorageConnector.updateSkill(skill.id, {
         evaluation_lock_acquired_at: lockTime,
       });
-      console.log(`[EARLY_EVAL_REGEN] Acquired lock for skill ${skill.id}`);
     } catch (_error) {
-      console.log(
-        `[EARLY_EVAL_REGEN] Failed to acquire lock for skill ${skill.id}, another worker may have it`,
-      );
       return;
     }
 
@@ -128,9 +117,6 @@ export async function checkAndRegenerateEvaluationsEarly(
     });
 
     if (postLockSkills.length === 0) {
-      console.log(
-        `[EARLY_EVAL_REGEN] Skill ${skill.id} disappeared after lock, aborting`,
-      );
       return;
     }
 
@@ -138,9 +124,6 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Check if completion flag was set by another process
     if (postLockSkill.evaluations_regenerated_at !== null) {
-      console.log(
-        `[EARLY_EVAL_REGEN] Skill ${skill.id} was completed by another process, releasing lock and aborting`,
-      );
       await userDataStorageConnector.updateSkill(skill.id, {
         evaluation_lock_acquired_at: null,
       });
@@ -155,15 +138,8 @@ export async function checkAndRegenerateEvaluationsEarly(
     const expectedLockTime = new Date(lockTime).getTime();
 
     if (postLockTime !== expectedLockTime) {
-      console.log(
-        `[EARLY_EVAL_REGEN] Lock for skill ${skill.id} was overwritten by another process (expected: ${lockTime}, got: ${postLockSkill.evaluation_lock_acquired_at}), aborting`,
-      );
       return;
     }
-
-    console.log(
-      `[EARLY_EVAL_REGEN] Lock verified for skill ${skill.id}, proceeding with regeneration`,
-    );
 
     // Count total logs for this skill
     const logs = await logsStorageConnector.getLogs({
@@ -171,10 +147,6 @@ export async function checkAndRegenerateEvaluationsEarly(
       embedding_not_null: true,
       limit: 10, // Get a few more than needed
     });
-
-    console.log(
-      `[EARLY_EVAL_REGEN] Skill ${skill.id}: Found ${logs.length} logs (need 5)`,
-    );
 
     // Need at least 5 logs to regenerate
     if (logs.length < 5) {
@@ -188,12 +160,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     const exampleLogs = logs.slice(0, 5); // Use first 5 logs
     const examples = generateExampleConversations(exampleLogs);
 
-    console.log(
-      `[EARLY_EVAL_REGEN] Generated ${examples.length} examples from logs`,
-    );
-
     if (examples.length === 0) {
-      console.log('[EARLY_EVAL_REGEN] No examples generated, skipping');
       // Release lock
       await userDataStorageConnector.updateSkill(skill.id, {
         evaluation_lock_acquired_at: null,
@@ -207,12 +174,7 @@ export async function checkAndRegenerateEvaluationsEarly(
         skill_id: skill.id,
       });
 
-    console.log(
-      `[EARLY_EVAL_REGEN] Found ${existingEvaluations?.length || 0} existing evaluations`,
-    );
-
     if (!existingEvaluations || existingEvaluations.length === 0) {
-      console.log('[EARLY_EVAL_REGEN] No existing evaluations, skipping');
       // Release lock
       await userDataStorageConnector.updateSkill(skill.id, {
         evaluation_lock_acquired_at: null,
@@ -222,10 +184,6 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     const evaluationMethods = existingEvaluations.map(
       (e) => e.evaluation_method,
-    );
-
-    console.log(
-      `[EARLY_EVAL_REGEN] Regenerating evaluations and system prompts in parallel`,
     );
 
     // Extract response format from the first log that has one (needed for system prompt)
@@ -241,59 +199,21 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Run evaluation regeneration and system prompt generation in parallel
     const [newEvaluationParams, newSystemPrompt] = await Promise.all([
       // Regenerate evaluations with real examples
-      (async () => {
-        console.log(
-          `[EARLY_EVAL_REGEN] Regenerating evaluations: ${evaluationMethods.join(', ')}`,
-        );
-        const params = await regenerateEvaluationsWithExamples(
-          skill,
-          agentDescription,
-          examples,
-          evaluationConnectorsMap,
-          evaluationMethods,
-        );
-        console.log('[EARLY_EVAL_REGEN] Successfully regenerated evaluations');
-        return params;
-      })(),
+      regenerateEvaluationsWithExamples(
+        skill,
+        agentDescription,
+        examples,
+        evaluationConnectorsMap,
+        evaluationMethods,
+      ),
 
       // Generate new system prompt with schema and examples
-      (async () => {
-        console.log(
-          '[EARLY_EVAL_REGEN] Regenerating system prompts with context',
-        );
-        console.log(
-          `[EARLY_EVAL_REGEN] Response format found: ${responseFormat !== undefined}`,
-        );
-        console.log(
-          `[EARLY_EVAL_REGEN] Input to generateSeedSystemPromptWithContext:`,
-        );
-        console.log(`  Agent description: ${agentDescription}`);
-        console.log(`  Skill description: ${skill.description}`);
-        console.log(`  Number of examples: ${examples.length}`);
-        console.log(
-          `  Response format present: ${responseFormat !== undefined}`,
-        );
-        if (responseFormat) {
-          console.log(
-            `  Response format: ${JSON.stringify(responseFormat, null, 2)}`,
-          );
-        }
-        console.log(`  Examples:`);
-        for (let i = 0; i < examples.length; i++) {
-          console.log(`    Example ${i + 1}:`);
-          console.log(examples[i]);
-        }
-
-        const prompt = await generateSeedSystemPromptWithContext(
-          agentDescription,
-          skill.description,
-          examples,
-          responseFormat,
-        );
-        console.log('[EARLY_EVAL_REGEN] Generated new system prompt:');
-        console.log(`${prompt.substring(0, 300)}...`);
-        return prompt;
-      })(),
+      generateSeedSystemPromptWithContext(
+        agentDescription,
+        skill.description,
+        examples,
+        responseFormat,
+      ),
     ]);
 
     // Delete old evaluations and create new ones
@@ -304,18 +224,10 @@ export async function checkAndRegenerateEvaluationsEarly(
       newEvaluationParams,
     );
 
-    console.log(
-      '[EARLY_EVAL_REGEN] Both evaluations and system prompt completed',
-    );
-
     // Delete all old arms and recreate with new system prompts
     const allArms = await userDataStorageConnector.getSkillOptimizationArms({
       skill_id: skill.id,
     });
-
-    console.log(
-      `[EARLY_EVAL_REGEN] Recreating ${allArms.length} arms with new system prompt`,
-    );
 
     // Create new arms with the same system prompt and fresh stats
     const newArmParams: SkillOptimizationArmCreateParams[] = allArms.map(
@@ -347,24 +259,11 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Create new arms
     await userDataStorageConnector.createSkillOptimizationArms(newArmParams);
 
-    console.log(
-      '[EARLY_EVAL_REGEN] Successfully recreated all arms with new system prompts',
-    );
-
     // Mark completion and release lock atomically
-    console.log('[EARLY_EVAL_REGEN] Updating skill with completion timestamp');
-    try {
-      await userDataStorageConnector.updateSkill(skill.id, {
-        evaluations_regenerated_at: new Date().toISOString(),
-        evaluation_lock_acquired_at: null, // Release lock
-      });
-      console.log(
-        '[EARLY_EVAL_REGEN] Successfully marked regeneration as complete',
-      );
-    } catch (updateError) {
-      console.error('[EARLY_EVAL_REGEN] Failed to update skill:', updateError);
-      throw updateError; // Re-throw to be caught by outer catch
-    }
+    await userDataStorageConnector.updateSkill(skill.id, {
+      evaluations_regenerated_at: new Date().toISOString(),
+      evaluation_lock_acquired_at: null, // Release lock
+    });
 
     // Reset all cluster total_steps to 0 since we're doing a soft reset
     // IMPORTANT: This happens AFTER marking completion to avoid race conditions
@@ -373,10 +272,6 @@ export async function checkAndRegenerateEvaluationsEarly(
       await userDataStorageConnector.getSkillOptimizationClusters({
         skill_id: skill.id,
       });
-
-    console.log(
-      `[EARLY_EVAL_REGEN] Resetting total_steps for ${allClusters.length} clusters`,
-    );
 
     for (const cluster of allClusters) {
       await userDataStorageConnector.updateSkillOptimizationCluster(
@@ -387,16 +282,12 @@ export async function checkAndRegenerateEvaluationsEarly(
       );
     }
 
-    console.log('[EARLY_EVAL_REGEN] Successfully reset all cluster stats');
-
     // Emit SSE event
     emitSSEEvent('skill-optimization:evaluations-regenerated', {
       skillId: skill.id,
       reason: 'early-regeneration',
       exampleCount: examples.length,
     });
-
-    console.log('[EARLY_EVAL_REGEN] Process completed successfully');
   } catch (error) {
     console.error('[EARLY_EVAL_REGEN] Error during regeneration:', error);
     // Release lock on error

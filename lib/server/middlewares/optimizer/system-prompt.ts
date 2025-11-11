@@ -6,7 +6,7 @@ import type {
 import { formatMessagesForExtraction } from '@server/utils/messages';
 import { extractMessagesFromRequestData } from '@server/utils/reactive-agents/requests';
 import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
-import { debug, error } from '@shared/console-logging';
+import { error } from '@shared/console-logging';
 import {
   type ChatCompletionRequestData,
   FunctionName,
@@ -145,9 +145,6 @@ async function autoGenerateSystemPromptsForCluster(
   });
 
   if (latestSkills.length === 0) {
-    console.log(
-      `[REFLECTION] Skill ${skill.id} not found for cluster ${cluster.id}, skipping`,
-    );
     return;
   }
 
@@ -160,14 +157,8 @@ async function autoGenerateSystemPromptsForCluster(
     const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
     if (lockAge < LOCK_TIMEOUT_MS) {
-      console.log(
-        `[REFLECTION] Reflection already in progress for skill ${skill.id}, cluster ${cluster.id} (locked ${Math.round(lockAge / 1000)}s ago), skipping`,
-      );
       return;
     }
-    console.log(
-      `[REFLECTION] Lock for skill ${skill.id} is stale (${Math.round(lockAge / 1000)}s old), proceeding`,
-    );
   }
 
   // Try to acquire lock by updating the skill
@@ -176,13 +167,7 @@ async function autoGenerateSystemPromptsForCluster(
     await userDataStorageConnector.updateSkill(skill.id, {
       reflection_lock_acquired_at: lockTime,
     });
-    console.log(
-      `[REFLECTION] Acquired lock for skill ${skill.id}, cluster ${cluster.id}`,
-    );
   } catch (_error) {
-    console.log(
-      `[REFLECTION] Failed to acquire lock for skill ${skill.id}, cluster ${cluster.id}, another worker may have it`,
-    );
     return;
   }
 
@@ -193,9 +178,6 @@ async function autoGenerateSystemPromptsForCluster(
   });
 
   if (postLockSkills.length === 0) {
-    console.log(
-      `[REFLECTION] Skill ${skill.id} disappeared after lock, aborting`,
-    );
     return;
   }
 
@@ -209,15 +191,8 @@ async function autoGenerateSystemPromptsForCluster(
   const expectedLockTime = new Date(lockTime).getTime();
 
   if (postLockTime !== expectedLockTime) {
-    console.log(
-      `[REFLECTION] Lock for skill ${skill.id}, cluster ${cluster.id} was overwritten by another process (expected: ${lockTime}, got: ${postLockSkill.reflection_lock_acquired_at}), aborting`,
-    );
     return;
   }
-
-  console.log(
-    `[REFLECTION] Lock verified for skill ${skill.id}, cluster ${cluster.id}, proceeding with reflection`,
-  );
 
   try {
     const clusterArms = await userDataStorageConnector.getSkillOptimizationArms(
@@ -227,15 +202,12 @@ async function autoGenerateSystemPromptsForCluster(
       },
     );
 
-    debug('clusterArms Len', clusterArms.length);
-
     if (clusterArms.length === 0) {
       throw new Error(`No arms found for cluster ${cluster.id}`);
     }
 
     // We have already optimized this cluster as much as possible
     if (clusterArms.length === 1) {
-      // Release lock before returning
       await userDataStorageConnector.updateSkill(skill.id, {
         reflection_lock_acquired_at: null,
       });
@@ -243,26 +215,12 @@ async function autoGenerateSystemPromptsForCluster(
     }
 
     // Check that all arms have been used at least minRequestsPerArm times
-    const armUsageCounts = clusterArms.reduce(
-      (acc, arm) => {
-        acc[arm.id] = arm.stats.n;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    debug('Arms usage', armUsageCounts);
-
-    const thresholdMetArms = Object.values(armUsageCounts).every(
-      (count) => count >= minRequestsPerArm,
+    const thresholdMetArms = clusterArms.every(
+      (arm) => arm.stats.n >= minRequestsPerArm,
     );
 
     // Minimum number of requests per arm not yet met for all arms
     if (!thresholdMetArms) {
-      console.log(
-        `[REFLECTION] Not all arms have met threshold (${minRequestsPerArm} requests) for cluster ${cluster.id}`,
-      );
-      // Release lock before returning
       await userDataStorageConnector.updateSkill(skill.id, {
         reflection_lock_acquired_at: null,
       });
@@ -306,35 +264,17 @@ async function autoGenerateSystemPromptsForCluster(
     );
 
     // Verify arms still exist and have sufficient requests
-    if (!revalidatedBestArm || !revalidatedWorstArm) {
-      console.log(
-        `[REFLECTION] Best or worst arm no longer exists for cluster ${cluster.id}, race condition detected. Aborting.`,
-      );
-      // Release lock before returning
-      await userDataStorageConnector.updateSkill(skill.id, {
-        reflection_lock_acquired_at: null,
-      });
-      return;
-    }
-
-    // Verify both arms still have sufficient requests
     if (
+      !revalidatedBestArm ||
+      !revalidatedWorstArm ||
       revalidatedBestArm.stats.n < minRequestsPerArm ||
       revalidatedWorstArm.stats.n < minRequestsPerArm
     ) {
-      console.log(
-        `[REFLECTION] Best or worst arm no longer has sufficient requests (need ${minRequestsPerArm}). Best: ${revalidatedBestArm.stats.n}, Worst: ${revalidatedWorstArm.stats.n}. Race condition detected. Aborting.`,
-      );
-      // Release lock before returning
       await userDataStorageConnector.updateSkill(skill.id, {
         reflection_lock_acquired_at: null,
       });
       return;
     }
-
-    console.log(
-      `[REFLECTION] Safety checks passed for cluster ${cluster.id}. Best arm: ${bestArm.id} (${revalidatedBestArm.stats.n} requests), Worst arm: ${worstArm.id} (${revalidatedWorstArm.stats.n} requests)`,
-    );
 
     // Sort arms by performance (mean reward, descending)
     const sortedArms = [...clusterArms].sort(
@@ -343,50 +283,15 @@ async function autoGenerateSystemPromptsForCluster(
 
     // Remove the worst performing arm to reduce search space over time
     const armsToKeep = sortedArms.slice(0, -1); // Remove last (worst) arm
-    const worstArmRemoved = sortedArms[sortedArms.length - 1];
-
-    console.log(
-      `[REFLECTION] Removing worst arm: ${worstArmRemoved.id} (mean: ${worstArmRemoved.stats.mean})`,
-    );
-    console.log(
-      `[REFLECTION] Arms count: ${sortedArms.length} -> ${armsToKeep.length}`,
-    );
 
     // Keep top 50% of remaining arms
     const halfPoint = Math.ceil(armsToKeep.length / 2);
     const topHalfArms = armsToKeep.slice(0, halfPoint);
     const bottomHalfCount = armsToKeep.length - halfPoint;
 
-    console.log(
-      `[REFLECTION] Keeping top ${topHalfArms.length} arm prompts, generating ${bottomHalfCount} new reflected prompts`,
-    );
-
     // Extract unique system prompts from top performers (memory efficient - just the prompts)
     const topPrompts = Array.from(
       new Set(topHalfArms.map((arm) => arm.params.system_prompt)),
-    );
-
-    console.log(
-      `[REFLECTION] Found ${topPrompts.length} unique system prompts in top performers`,
-    );
-
-    // Generate new reflected prompts to replace bottom half
-    console.log(
-      `[REFLECTION] Generating ${bottomHalfCount} new system prompts using reflection`,
-    );
-    console.log(`[REFLECTION] Input data:`);
-    console.log(`  Agent description: ${agentDescription}`);
-    console.log(`  Skill description: ${skill.description}`);
-    console.log(
-      `  Number of example conversations: ${examplesConversations.length}`,
-    );
-    console.log(`  Example conversations (first 3):`);
-    for (let i = 0; i < Math.min(3, examplesConversations.length); i++) {
-      console.log(`    Example ${i + 1}:`);
-      console.log(examplesConversations[i]);
-    }
-    console.log(
-      `  Best arm system prompt: ${bestArm.params.system_prompt.substring(0, 300)}...`,
     );
 
     const reflectedPromptPromises = [];
@@ -402,20 +307,9 @@ async function autoGenerateSystemPromptsForCluster(
     }
 
     const reflectedPrompts = await Promise.all(reflectedPromptPromises);
-    console.log(
-      `[REFLECTION] Generated ${reflectedPrompts.length} new reflected prompts`,
-    );
-    for (let i = 0; i < reflectedPrompts.length; i++) {
-      console.log(
-        `[REFLECTION] New reflected prompt ${i + 1}: ${reflectedPrompts[i].substring(0, 300)}...`,
-      );
-    }
 
     // Combine top prompts with new reflected prompts
     const allPrompts = [...topPrompts, ...reflectedPrompts];
-    console.log(
-      `[REFLECTION] Total prompt pool: ${allPrompts.length} prompts (${topPrompts.length} kept + ${reflectedPrompts.length} new)`,
-    );
 
     // Shuffle the combined pool for random assignment
     // Fisher-Yates shuffle (memory efficient - in-place)
@@ -423,8 +317,6 @@ async function autoGenerateSystemPromptsForCluster(
       const j = Math.floor(Math.random() * (i + 1));
       [allPrompts[i], allPrompts[j]] = [allPrompts[j], allPrompts[i]];
     }
-
-    console.log('[REFLECTION] Shuffled prompt pool for random assignment');
 
     // Create new arms with randomly assigned prompts from the pool
     // Note: Using armsToKeep (which excludes the worst arm)
@@ -453,20 +345,13 @@ async function autoGenerateSystemPromptsForCluster(
     );
 
     // Delete old arms for this cluster only
-    console.log(
-      `[REFLECTION] Deleting all ${sortedArms.length} old arms for cluster ${cluster.id}`,
-    );
     await userDataStorageConnector.deleteSkillOptimizationArmsForCluster(
       cluster.id,
     );
 
-    console.log(
-      `[REFLECTION] Creating ${createParamsList.length} new arms for cluster ${cluster.id}`,
-    );
     await userDataStorageConnector.createSkillOptimizationArms(
       createParamsList,
     );
-    console.log('[REFLECTION] Successfully recreated arms with new prompts');
 
     // Fetch latest cluster data and reset total_steps to 0
     // We do this AFTER creating new arms so the reset happens immediately
@@ -478,19 +363,10 @@ async function autoGenerateSystemPromptsForCluster(
     if (latestClusters.length === 0) {
       throw new Error(`Cluster ${cluster.id} not found during reset`);
     }
-    const latestCluster = latestClusters[0];
-
-    console.log(
-      `[REFLECTION] Resetting cluster ${cluster.id} total_steps from ${latestCluster.total_steps} to 0`,
-    );
 
     await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
       total_steps: 0,
     });
-
-    console.log(
-      `[REFLECTION] Successfully completed reflection for cluster ${cluster.id}`,
-    );
 
     // Release lock on successful completion
     await userDataStorageConnector.updateSkill(skill.id, {

@@ -90,21 +90,6 @@ function getOptimalArm(
     }
   }
 
-  // Log arm selection details for every request
-  console.log('[ARM_SELECTION] Thompson Sampling results:');
-  console.log(`  Exploration Temperature: ${explorationTemperature}`);
-  console.log(`  Selected Arm: ${optimalArm.id} (n=${optimalArm.stats.n})`);
-  console.log(`  Unpulled Arms: ${samples.filter((s) => s.n === 0).length}`);
-  console.log('  All Arms (sorted by sample):');
-  for (const s of samples.sort((a, b) => b.sample - a.sample)) {
-    console.log(
-      `    ${s.armId.substring(0, 8)}: n=${s.n}, reward=${s.total_reward.toFixed(2)}, ` +
-        `Beta(${s.alpha.toFixed(1)}, ${s.beta.toFixed(1)}) -> ` +
-        `Beta(${s.alpha_adjusted.toFixed(2)}, ${s.beta_adjusted.toFixed(2)}) -> ` +
-        `sample=${s.sample.toFixed(4)}`,
-    );
-  }
-
   return optimalArm;
 }
 

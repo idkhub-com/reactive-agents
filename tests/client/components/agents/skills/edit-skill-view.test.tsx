@@ -513,9 +513,6 @@ describe('EditSkillView', () => {
         screen.getByLabelText('Description (required)'),
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Number of Partitions')).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('System Prompts per Partition'),
-      ).toBeInTheDocument();
     });
 
     it('has proper form descriptions', () => {
@@ -528,9 +525,6 @@ describe('EditSkillView', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(/each request to the skill will be routed/i),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/number of prompt variations to generate/i),
       ).toBeInTheDocument();
     });
 

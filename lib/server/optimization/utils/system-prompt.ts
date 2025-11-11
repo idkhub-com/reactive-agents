@@ -1,5 +1,4 @@
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
-import { debug } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
@@ -181,13 +180,6 @@ export async function generateSeedSystemPromptWithContext(
     responseFormat,
   );
 
-  debug('[SEED_WITH_CONTEXT] Generating system prompt with context');
-  debug('[SEED_WITH_CONTEXT] Examples count:', examples.length);
-  debug(
-    '[SEED_WITH_CONTEXT] Has response format:',
-    responseFormat !== undefined,
-  );
-
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
       defaultHeaders: {
@@ -348,12 +340,6 @@ export async function generateReflectiveSystemPromptForSkill(
     agentDescription,
     skillDescription,
   );
-
-  debug(
-    '[REFLECTION] System prompt for reflection:',
-    JSON.stringify(systemPrompt, null, 2),
-  );
-  debug('[REFLECTION] User message for reflection:', firstMessage);
 
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({

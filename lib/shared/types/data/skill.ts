@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
-export const SkillMetadata = z.object({
-  // Empty for now - reserved for user-defined custom data
-  // State management fields have been moved to proper columns
-});
+export const SkillMetadata = z
+  .object({
+    // Empty for now - reserved for user-defined custom data
+    // State management fields have been moved to proper columns
+  })
+  .strict();
 
 export const Skill = z.object({
   id: z.uuid(),

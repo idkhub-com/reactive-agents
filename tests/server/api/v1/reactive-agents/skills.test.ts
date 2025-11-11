@@ -9,6 +9,12 @@ vi.mock('@server/optimization/utils/system-prompt', () => ({
   generateSystemPromptForSkill: vi
     .fn()
     .mockResolvedValue('Generated system prompt'),
+  generateSeedSystemPromptForSkill: vi
+    .fn()
+    .mockResolvedValue('Generated seed system prompt'),
+  generateSeedSystemPromptWithContext: vi
+    .fn()
+    .mockResolvedValue('Generated seed system prompt'),
 }));
 
 // Create a mock UserDataStorageConnector with all required methods

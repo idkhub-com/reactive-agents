@@ -23,8 +23,6 @@ export const eventsRouter = new Hono<AppEnv>().get('/', (c) => {
   // Generate unique client ID
   const clientId = `${String(userId)}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-  console.log(`[SSE] New connection request from user: ${userId}`);
-
   // Set SSE headers
   return stream(c, async (stream) => {
     // Set headers for SSE
@@ -50,7 +48,6 @@ export const eventsRouter = new Hono<AppEnv>().get('/', (c) => {
 
     // Clean up on connection close
     c.req.raw.signal.addEventListener('abort', () => {
-      console.log(`[SSE] Client ${clientId} connection aborted`);
       sseEventManager.removeClient(clientId);
     });
 
