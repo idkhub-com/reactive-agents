@@ -311,7 +311,6 @@ export const logsMiddleware = (
 
     // Log produced when calling the AI provider
     if (!aiProviderLog) {
-      console.error('No ai provider log found');
       return;
     }
 

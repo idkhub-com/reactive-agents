@@ -165,25 +165,38 @@ async function validateTargetConfiguration(
         });
 
       if (clusters.length === 0) {
-        // Create initial clusters with equally spaced centroids
-        const initialCentroids = getInitialClusterCentroids(
-          skill.configuration_count,
-        );
-        const clusterParams: SkillOptimizationClusterCreateParams[] =
-          initialCentroids.map((centroid, index) => ({
-            agent_id: skill.agent_id,
-            skill_id: skill.id,
-            name: `Partition ${index + 1}`,
-            total_steps: 0,
-            centroid,
-          }));
-
-        clusters =
-          await userDataStorageConnector.createSkillOptimizationClusters(
-            clusterParams,
+        try {
+          // Create initial clusters with equally spaced centroids
+          const initialCentroids = getInitialClusterCentroids(
+            skill.configuration_count,
           );
+          const clusterParams: SkillOptimizationClusterCreateParams[] =
+            initialCentroids.map((centroid, index) => ({
+              agent_id: skill.agent_id,
+              skill_id: skill.id,
+              name: `Partition ${index + 1}`,
+              total_steps: 0,
+              centroid,
+            }));
 
-        await handleGenerateArms(c, userDataStorageConnector, skill.id);
+          clusters =
+            await userDataStorageConnector.createSkillOptimizationClusters(
+              clusterParams,
+            );
+
+          await handleGenerateArms(c, userDataStorageConnector, skill.id);
+        } catch (_error) {
+          // If cluster creation fails (e.g., duplicate from concurrent request),
+          // fetch the existing clusters instead
+          clusters =
+            await userDataStorageConnector.getSkillOptimizationClusters({
+              skill_id: skill.id,
+            });
+          // If we still have no clusters, throw the original error
+          if (clusters.length === 0) {
+            throw _error;
+          }
+        }
       }
 
       const optimalCluster = getOptimalCluster(embedding, clusters);

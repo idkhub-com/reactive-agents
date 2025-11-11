@@ -111,7 +111,7 @@ export async function generateEvaluationCreateParams(
     targets: [
       {
         provider: 'openai',
-        model: 'gpt-5',
+        model: 'gpt-5-mini',
         api_key: apiKey,
       },
     ],
@@ -138,7 +138,7 @@ export async function generateEvaluationCreateParams(
       },
     })
     .chat.completions.parse({
-      model: 'gpt-5',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         {

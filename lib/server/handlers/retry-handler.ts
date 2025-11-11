@@ -152,10 +152,6 @@ export const retryRequest = async (
           } else {
             // All error codes that aren't retried need to be propagated up
             const responseText = await response.text();
-            console.error(
-              `[HTTP ${response.status}] Request to ${url} failed:`,
-              responseText,
-            );
             const errorObj = new HttpError(responseText, {
               status: response.status,
               statusText: response.statusText,
@@ -195,14 +191,12 @@ export const retryRequest = async (
 
     return result;
   } catch (error) {
-    console.error(error);
     let errorResponse: Response;
     if (
       error instanceof TypeError &&
       error.cause instanceof Error &&
       error.cause?.name === 'ConnectTimeoutError'
     ) {
-      console.error('ConnectTimeoutError: ', error.cause);
       // This error comes in case the host address is unreachable. Empty status code used to get returned
       // from here hence no retry logic used to get called.
       errorResponse = new Response(error.message, {
