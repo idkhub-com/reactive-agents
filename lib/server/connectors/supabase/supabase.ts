@@ -842,7 +842,7 @@ export const supabaseCacheStorageConnector: CacheStorageConnector = {
   getCache: async (key: string) => {
     const cachedValues = await selectFromSupabase(
       'cache',
-      { key: `eq.${key}`, expires_at: `lte.${new Date().toISOString()}` },
+      { key: `eq.${key}`, expires_at: `gte.${new Date().toISOString()}` },
       z.array(CachedValue),
     );
 

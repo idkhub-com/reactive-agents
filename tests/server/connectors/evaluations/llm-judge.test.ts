@@ -45,7 +45,7 @@ describe('LLM Judge', () => {
   });
 
   it('should create LLM judge with default config', () => {
-    expect(llmJudge.config.model).toBe('gpt-4o-mini');
+    expect(llmJudge.config.model).toBe('gpt-5-mini');
     expect(llmJudge.config.temperature).toBe(0.1);
     expect(llmJudge.config.max_tokens).toBe(1000);
     expect(llmJudge.config.timeout).toBe(30000);
@@ -96,7 +96,7 @@ describe('LLM Judge', () => {
     });
     expect(mockParse).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         messages: expect.arrayContaining([
           expect.objectContaining({ role: 'system' }),
           expect.objectContaining({ role: 'user' }),
