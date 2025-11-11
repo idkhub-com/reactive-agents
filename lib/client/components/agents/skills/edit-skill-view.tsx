@@ -20,6 +20,7 @@ import {
 } from '@client/components/ui/form';
 import { Input } from '@client/components/ui/input';
 import { PageHeader } from '@client/components/ui/page-header';
+import { Slider } from '@client/components/ui/slider';
 import { Textarea } from '@client/components/ui/textarea';
 import { useAgents } from '@client/providers/agents';
 import { useSkills } from '@client/providers/skills';
@@ -36,9 +37,9 @@ import { z } from 'zod';
 const CONSTRAINTS = {
   description: { min: 25, max: 10000 },
   configuration_count: { min: 1, max: 25 },
-  system_prompt_count: { min: 1, max: 25 },
   clustering_interval: { min: 1, max: 1000 },
   reflection_min_requests_per_arm: { min: 1, max: 1000 },
+  exploration_temperature: { min: 0.1, max: 10.0 },
 } as const;
 
 const EditSkillFormSchema = z
@@ -66,17 +67,6 @@ const EditSkillFormSchema = z
         CONSTRAINTS.configuration_count.max,
         'Max configurations cannot exceed 25',
       ),
-    system_prompt_count: z
-      .number()
-      .int()
-      .min(
-        CONSTRAINTS.system_prompt_count.min,
-        'Min system prompts must be at least 1',
-      )
-      .max(
-        CONSTRAINTS.system_prompt_count.max,
-        'Max system prompts cannot exceed 25',
-      ),
     clustering_interval: z
       .number()
       .int()
@@ -98,6 +88,16 @@ const EditSkillFormSchema = z
       .max(
         CONSTRAINTS.reflection_min_requests_per_arm.max,
         'Requests per arms cannot exceed 1000',
+      ),
+    exploration_temperature: z
+      .number()
+      .min(
+        CONSTRAINTS.exploration_temperature.min,
+        'Exploration temperature must be at least 0.1',
+      )
+      .max(
+        CONSTRAINTS.exploration_temperature.max,
+        'Exploration temperature cannot exceed 10.0',
       ),
   })
   .strict();
@@ -121,9 +121,9 @@ export function EditSkillView(): React.ReactElement {
       description: '',
       optimize: true,
       configuration_count: 3,
-      system_prompt_count: 3,
       clustering_interval: 15,
       reflection_min_requests_per_arm: 3,
+      exploration_temperature: 1.0,
     },
   });
 
@@ -137,10 +137,10 @@ export function EditSkillView(): React.ReactElement {
         description: selectedSkill.description || '',
         optimize: selectedSkill.optimize,
         configuration_count: selectedSkill.configuration_count,
-        system_prompt_count: selectedSkill.system_prompt_count,
         clustering_interval: selectedSkill.clustering_interval,
         reflection_min_requests_per_arm:
           selectedSkill.reflection_min_requests_per_arm,
+        exploration_temperature: selectedSkill.exploration_temperature,
       });
     }
   }, [selectedSkill, form]);
@@ -156,9 +156,9 @@ export function EditSkillView(): React.ReactElement {
         description: sanitizeUserInput(data.description),
         optimize: data.optimize,
         configuration_count: data.configuration_count,
-        system_prompt_count: data.system_prompt_count,
         clustering_interval: data.clustering_interval,
         reflection_min_requests_per_arm: data.reflection_min_requests_per_arm,
+        exploration_temperature: data.exploration_temperature,
       };
 
       await updateSkill(selectedSkill.id, updateParams);
@@ -342,36 +342,6 @@ export function EditSkillView(): React.ReactElement {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="system_prompt_count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-medium">
-                        System Prompts per Partition
-                      </FormLabel>
-                      <FormDescription>
-                        Number of prompt variations to generate while optimizing
-                        each skill partition.
-                      </FormDescription>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={CONSTRAINTS.system_prompt_count.min}
-                          max={CONSTRAINTS.system_prompt_count.max}
-                          className="h-11 max-w-xs"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                          disabled={isUpdating || !optimizeEnabled}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {/* Advanced Settings Toggle */}
                 {optimizeEnabled && (
                   <div className="pt-2">
@@ -459,6 +429,45 @@ export function EditSkillView(): React.ReactElement {
                                 field.onChange(Number(e.target.value))
                               }
                               disabled={isUpdating || !optimizeEnabled}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="exploration_temperature"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-base font-medium">
+                              Exploration Temperature
+                            </FormLabel>
+                            <span className="text-sm font-mono text-muted-foreground">
+                              {field.value.toFixed(1)}
+                            </span>
+                          </div>
+                          <FormDescription>
+                            Controls how aggressively the system explores
+                            different configurations. Higher values (above 1.0)
+                            make the system take more risks and try suboptimal
+                            configurations more often. Lower values (below 1.0)
+                            make it stick to known good configurations.
+                            Recommended range: 0.5 to 3.0
+                          </FormDescription>
+                          <FormControl>
+                            <Slider
+                              min={CONSTRAINTS.exploration_temperature.min}
+                              max={CONSTRAINTS.exploration_temperature.max}
+                              step={0.1}
+                              value={[field.value]}
+                              onValueChange={(values) =>
+                                field.onChange(values[0])
+                              }
+                              disabled={isUpdating || !optimizeEnabled}
+                              className="mt-2"
                             />
                           </FormControl>
                           <FormMessage />

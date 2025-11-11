@@ -73,7 +73,7 @@ export async function autoClusterSkill(
 
   const logs = await logsStorageConnector.getLogs({
     skill_id: skill.id,
-    after: skill.metadata.last_clustering_log_start_time,
+    after: skill.last_clustering_log_start_time ?? undefined,
     // Since the embedding is not null, we can assume that the logs are valid
     // and are for one of the allowed function names
     embedding_not_null: true,
@@ -169,11 +169,10 @@ export async function autoClusterSkill(
 
       const lastLog = logs[logs.length - 1];
 
+      // Update clustering state
       await userDataStorageConnector.updateSkill(skill.id, {
-        metadata: {
-          last_clustering_at: new Date().toISOString(),
-          last_clustering_log_start_time: lastLog.start_time,
-        },
+        last_clustering_at: new Date().toISOString(),
+        last_clustering_log_start_time: lastLog.start_time,
       });
     } catch (e) {
       error(`[OPTIMIZER] Error during optimization for skill ${skill.id}:`, e);
@@ -185,17 +184,8 @@ export async function updateClusterState(
   userDataStorageConnector: UserDataStorageConnector,
   pulledArm: SkillOptimizationArm,
 ) {
-  const clusters = await userDataStorageConnector.getSkillOptimizationClusters({
-    id: pulledArm.cluster_id,
-  });
-
-  if (!clusters) {
-    throw new Error(`Cluster not found`);
-  }
-
-  const cluster = clusters[0];
-
-  await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
-    total_steps: cluster.total_steps + 1,
-  });
+  // Use atomic increment to avoid race conditions
+  await userDataStorageConnector.incrementClusterTotalSteps(
+    pulledArm.cluster_id,
+  );
 }

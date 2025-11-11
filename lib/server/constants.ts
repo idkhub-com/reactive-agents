@@ -64,6 +64,7 @@ export const RA_SKILLS = [
   'extract-task-and-outcome',
   'create-evaluations',
   'system-prompt-seeding',
+  'system-prompt-seeding-with-context',
   'system-prompt-reflection',
   'embedding',
 ];

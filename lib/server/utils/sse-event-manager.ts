@@ -43,10 +43,6 @@ class SSEEventManager {
       userId,
       connectedAt: Date.now(),
     });
-
-    console.log(
-      `[SSE] Client connected: ${id} (userId: ${userId}). Total clients: ${this.clients.size}`,
-    );
   }
 
   /**
@@ -57,9 +53,6 @@ class SSEEventManager {
     if (client) {
       // Stream cleanup is handled by Hono
       this.clients.delete(id);
-      console.log(
-        `[SSE] Client disconnected: ${id}. Total clients: ${this.clients.size}`,
-      );
     }
   }
 
@@ -68,7 +61,6 @@ class SSEEventManager {
    */
   async broadcast(event: SSEEventData): Promise<void> {
     const message = this.formatSSEMessage(event);
-    let successCount = 0;
     const failedClients: string[] = [];
 
     // Send to all clients in parallel
@@ -76,7 +68,6 @@ class SSEEventManager {
       Array.from(this.clients.entries()).map(async ([clientId, client]) => {
         try {
           await client.stream.write(message);
-          successCount++;
         } catch (error) {
           console.error(`[SSE] Failed to send to client ${clientId}:`, error);
           failedClients.push(clientId);
@@ -88,12 +79,6 @@ class SSEEventManager {
     for (const clientId of failedClients) {
       this.removeClient(clientId);
     }
-
-    if (event.type !== 'ping') {
-      console.log(
-        `[SSE] Broadcast ${event.type}: ${successCount}/${this.clients.size} clients`,
-      );
-    }
   }
 
   /**
@@ -101,7 +86,6 @@ class SSEEventManager {
    */
   async broadcastToUser(userId: string, event: SSEEventData): Promise<void> {
     const message = this.formatSSEMessage(event);
-    let successCount = 0;
     const failedClients: string[] = [];
 
     // Send to user's clients in parallel
@@ -111,7 +95,6 @@ class SSEEventManager {
         .map(async ([clientId, client]) => {
           try {
             await client.stream.write(message);
-            successCount++;
           } catch (error) {
             console.error(`[SSE] Failed to send to client ${clientId}:`, error);
             failedClients.push(clientId);
@@ -123,10 +106,6 @@ class SSEEventManager {
     for (const clientId of failedClients) {
       this.removeClient(clientId);
     }
-
-    console.log(
-      `[SSE] Broadcast ${event.type} to user ${userId}: ${successCount} clients`,
-    );
   }
 
   /**

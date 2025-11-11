@@ -100,11 +100,11 @@ export type SkillOptimizationArmCreateParams = z.infer<
   typeof SkillOptimizationArmCreateParams
 >;
 
-// Only the stats should be updated
-// Name is an auto-generated constant defined at creation time
+// Only stats can be updated
+// Name and params (including system_prompt) are constants defined at creation time
 export const SkillOptimizationArmUpdateParams = z
   .object({
-    stats: SkillOptimizationArmStats.partial(),
+    stats: SkillOptimizationArmStats.partial().optional(),
   })
   .strict();
 export type SkillOptimizationArmUpdateParams = z.infer<

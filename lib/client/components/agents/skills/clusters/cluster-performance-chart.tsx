@@ -13,7 +13,7 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 
 // Register Chart.js components
@@ -50,11 +50,44 @@ const INTERVAL_CONFIG = {
   '1day': { label: '1 Day', minutes: 1440 },
 } as const;
 
+const STORAGE_KEY = 'cluster-performance-chart-interval';
+
+// Helper function to get initial interval from localStorage
+const getInitialInterval = (): TimeInterval => {
+  if (typeof window === 'undefined') return '1hour';
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (
+      stored &&
+      (stored === '5min' ||
+        stored === '30min' ||
+        stored === '1hour' ||
+        stored === '1day')
+    ) {
+      return stored as TimeInterval;
+    }
+  } catch {
+    // localStorage might not be available
+  }
+
+  return '1hour';
+};
+
 export function ClusterPerformanceChart({
   evaluationRuns,
 }: ClusterPerformanceChartProps) {
   const [selectedInterval, setSelectedInterval] =
-    useState<TimeInterval>('1hour');
+    useState<TimeInterval>(getInitialInterval);
+
+  // Persist interval to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, selectedInterval);
+    } catch {
+      // localStorage might not be available
+    }
+  }, [selectedInterval]);
 
   const chartData = useMemo(() => {
     if (evaluationRuns.length === 0) return null;

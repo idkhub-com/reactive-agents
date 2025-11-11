@@ -68,12 +68,20 @@ export const skillsRouter = new Hono<AppEnv>()
         const data = c.req.valid('json');
         const userDataStorageConnector = c.get('user_data_storage_connector');
 
+        // If description changes, reset evaluation regeneration
+        // so that early regeneration happens again with the new description
+        if (data.description) {
+          await userDataStorageConnector.updateSkill(skillId, {
+            evaluations_regenerated_at: null,
+          });
+        }
+
         const updatedSkill = await userDataStorageConnector.updateSkill(
           skillId,
           data,
         );
 
-        if (data.configuration_count || data.system_prompt_count) {
+        if (data.configuration_count) {
           const currentClusters =
             await userDataStorageConnector.getSkillOptimizationClusters({
               skill_id: updatedSkill.id,
@@ -103,11 +111,7 @@ export const skillsRouter = new Hono<AppEnv>()
           );
         }
 
-        if (
-          data.description ||
-          data.configuration_count ||
-          data.system_prompt_count
-        ) {
+        if (data.description || data.configuration_count) {
           await handleGenerateArms(c, userDataStorageConnector, skillId);
         }
 
@@ -324,6 +328,17 @@ export const skillsRouter = new Hono<AppEnv>()
 
         const skill = skills[0];
 
+        // Fetch the agent information for context
+        const agents = await userDataStorageConnector.getAgents({
+          id: skill.agent_id,
+        });
+
+        if (agents.length === 0) {
+          return c.json({ error: 'Agent not found' }, 404);
+        }
+
+        const agent = agents[0];
+
         const createParamsPromises = methods.map(async (method) => {
           const evaluationConnector = evaluationConnectorsMap[method];
           if (!evaluationConnector) {
@@ -336,6 +351,9 @@ export const skillsRouter = new Hono<AppEnv>()
             skill,
             evaluationConnector,
             method,
+            agent.description,
+            // No examples on initial creation
+            undefined,
           );
 
           return createParams;

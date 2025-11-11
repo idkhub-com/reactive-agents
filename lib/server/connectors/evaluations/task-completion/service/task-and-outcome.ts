@@ -69,7 +69,6 @@ export async function extractTaskAndOutcome(
   };
 
   const systemPrompt = getSystemPrompt(params.task);
-
   const firstMessage = getFirstMessage(input, output);
 
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client

@@ -20,10 +20,6 @@ export async function runEvaluationsForLog(
     return [];
   }
 
-  console.log(
-    `Triggering skill optimization evaluations for log ${log.id}: ${skillOptimizationEvaluations.length} evaluation(s)`,
-  );
-
   // Execute all evaluations in parallel for better performance
   const evaluationPromises = skillOptimizationEvaluations.map(
     async (evaluation) => {

@@ -24,9 +24,9 @@ export async function getSkill(
         metadata: {},
         configuration_count: 0,
         optimize: false,
-        system_prompt_count: 0,
         clustering_interval: 0,
         reflection_min_requests_per_arm: 0,
+        exploration_temperature: 1.0,
       });
       return newSkill;
     }

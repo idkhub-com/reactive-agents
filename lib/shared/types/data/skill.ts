@@ -1,12 +1,11 @@
 import { z } from 'zod';
 
-export const SkillMetadata = z.object({
-  last_clustering_at: z.iso.datetime({ offset: true }).optional(),
-  /** The timestamp of the most recent log used in the last clustering batch.
-   *
-   * We will query the logs from this timestamp to the current time to find the most recent logs. */
-  last_clustering_log_start_time: z.number().optional(),
-});
+export const SkillMetadata = z
+  .object({
+    // Empty for now - reserved for user-defined custom data
+    // State management fields have been moved to proper columns
+  })
+  .strict();
 
 export const Skill = z.object({
   id: z.uuid(),
@@ -18,7 +17,7 @@ export const Skill = z.object({
   /** Description of the skill. This will be used by Reactive Agents to automatically optimize the skill. */
   description: z.string(),
 
-  /** Internal metadata for the skill. */
+  /** Internal metadata for the skill. Reserved for user-defined custom data. */
   metadata: SkillMetadata,
 
   /** Whether to optimize the skill. */
@@ -26,9 +25,6 @@ export const Skill = z.object({
 
   /** Number of configurations for the skill. */
   configuration_count: z.int(),
-
-  /** The number of system prompts to generate */
-  system_prompt_count: z.int(),
 
   /** Recompute the centroid of the cluster every N requests
    *  so that they can better represent the last N requests.
@@ -39,6 +35,33 @@ export const Skill = z.object({
    * to trigger reflection.
    * This is to ensure that the arms for the cluster have convergence. */
   reflection_min_requests_per_arm: z.int(),
+
+  /** Temperature parameter for Thompson Sampling exploration.
+   * Controls the exploration/exploitation tradeoff:
+   * - 1.0: Standard Thompson Sampling (balanced)
+   * - > 1.0: More exploration (takes more risks, tries suboptimal arms more often)
+   * - < 1.0: More exploitation (sticks to known good arms)
+   * Recommended range: 0.5 to 3.0 */
+  exploration_temperature: z.number().min(0.1).max(10.0),
+
+  /** Timestamp when clustering was last performed for this skill */
+  last_clustering_at: z.iso.datetime({ offset: true }).nullable(),
+
+  /** Unix timestamp of the most recent log used in the last clustering batch.
+   * We will query the logs from this timestamp to the current time to find the most recent logs. */
+  last_clustering_log_start_time: z.number().nullable(),
+
+  /** The timestamp when evaluations were first regenerated with real examples.
+   * This happens after the first 5 requests to ensure evaluations align with actual usage. */
+  evaluations_regenerated_at: z.iso.datetime({ offset: true }).nullable(),
+
+  /** Lock timestamp to prevent concurrent evaluation regeneration across edge workers.
+   * If set and recent (< 5 minutes old), regeneration is in progress. */
+  evaluation_lock_acquired_at: z.iso.datetime({ offset: true }).nullable(),
+
+  /** Lock timestamp to prevent concurrent system prompt reflection across edge workers.
+   * If set and recent (< 10 minutes old), reflection is in progress. */
+  reflection_lock_acquired_at: z.iso.datetime({ offset: true }).nullable(),
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -81,9 +104,9 @@ export const SkillCreateParams = z
     metadata: SkillMetadata,
     optimize: z.boolean(),
     configuration_count: z.int().min(1).max(25).default(3),
-    system_prompt_count: z.int().min(1).max(25).default(3),
     clustering_interval: z.int().min(1).max(1000).default(15),
     reflection_min_requests_per_arm: z.int().min(1).max(1000).default(3),
+    exploration_temperature: z.number().min(0.1).max(10.0).default(3.0),
   })
   .strict();
 
@@ -95,9 +118,24 @@ export const SkillUpdateParams = z
     metadata: SkillMetadata.optional(),
     optimize: z.boolean().optional(),
     configuration_count: z.int().min(1).max(25).optional(),
-    system_prompt_count: z.int().min(1).max(25).optional(),
     clustering_interval: z.int().min(1).max(1000).optional(),
     reflection_min_requests_per_arm: z.int().min(1).max(1000).optional(),
+    exploration_temperature: z.number().min(0.1).max(10.0).optional(),
+    // State management fields (typically updated by system, not user)
+    last_clustering_at: z.iso.datetime({ offset: true }).nullable().optional(),
+    last_clustering_log_start_time: z.number().nullable().optional(),
+    evaluations_regenerated_at: z.iso
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
+    evaluation_lock_acquired_at: z.iso
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
+    reflection_lock_acquired_at: z.iso
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
   })
   .strict()
   .refine(
@@ -107,9 +145,14 @@ export const SkillUpdateParams = z
         'metadata',
         'optimize',
         'configuration_count',
-        'system_prompt_count',
         'clustering_interval',
         'reflection_min_requests_per_arm',
+        'exploration_temperature',
+        'last_clustering_at',
+        'last_clustering_log_start_time',
+        'evaluations_regenerated_at',
+        'evaluation_lock_acquired_at',
+        'reflection_lock_acquired_at',
       ];
       return updateFields.some(
         (field) => data[field as keyof typeof data] !== undefined,
@@ -122,9 +165,14 @@ export const SkillUpdateParams = z
         'metadata',
         'optimize',
         'configuration_count',
-        'system_prompt_count',
         'clustering_interval',
         'reflection_min_requests_per_arm',
+        'exploration_temperature',
+        'last_clustering_at',
+        'last_clustering_log_start_time',
+        'evaluations_regenerated_at',
+        'evaluation_lock_acquired_at',
+        'reflection_lock_acquired_at',
       ],
     },
   );

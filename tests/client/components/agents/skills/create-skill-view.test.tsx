@@ -682,9 +682,9 @@ describe('CreateSkillView', () => {
       metadata: {},
       optimize: true,
       configuration_count: 3,
-      system_prompt_count: 3,
       clustering_interval: 15,
       reflection_min_requests_per_arm: 3,
+      exploration_temperature: 1.0,
       created_at: '2023-01-01T00:00:00Z',
       updated_at: '2023-01-01T00:00:00Z',
     };
@@ -715,9 +715,9 @@ describe('CreateSkillView', () => {
         metadata: {},
         optimize: true,
         configuration_count: 3,
-        system_prompt_count: 3,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
       });
     });
 

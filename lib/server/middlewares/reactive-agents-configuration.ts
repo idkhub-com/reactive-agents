@@ -27,24 +27,62 @@ import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/sk
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
-function getOptimalArm(arms: SkillOptimizationArm[]): SkillOptimizationArm {
+function getOptimalArm(
+  arms: SkillOptimizationArm[],
+  explorationTemperature = 1.0,
+): SkillOptimizationArm {
   // Implement Thompson Sampling algorithm for multi-armed bandit
   // Thompson Sampling uses Bayesian approach: sample from posterior Beta distribution
   // and select the arm with highest sampled value
+  //
+  // The exploration_temperature parameter controls exploration/exploitation:
+  // - temperature = 1.0: Standard Thompson Sampling (balanced)
+  // - temperature > 1.0: More exploration (flattens distribution, takes more risks)
+  // - temperature < 1.0: More exploitation (sharpens distribution, sticks to known good arms)
 
   let optimalArm = arms[0];
   let maxSample = -Infinity;
+  const samples: {
+    armId: string;
+    n: number;
+    total_reward: number;
+    alpha: number;
+    beta: number;
+    alpha_adjusted: number;
+    beta_adjusted: number;
+    baseSample: number;
+    sample: number;
+  }[] = [];
 
   for (const arm of arms) {
     // Beta distribution parameters with uniform prior (Beta(1,1))
     // alpha = successes + 1, beta = failures + 1
     const successes = arm.stats.total_reward;
     const failures = arm.stats.n - arm.stats.total_reward;
-    const alpha = successes + 1;
-    const beta = failures + 1;
+    const baseAlpha = successes + 1;
+    const baseBeta = failures + 1;
 
-    // Sample from Beta(alpha, beta)
-    const sample = sampleBeta(alpha, beta);
+    // Apply temperature to Beta parameters BEFORE sampling
+    // Higher temperature (> 1) shrinks parameters toward 1, making distribution more uniform
+    // Lower temperature (< 1) exaggerates parameters, making distribution more peaked
+    // This is the correct way to apply temperature in Thompson Sampling
+    const alpha = (baseAlpha - 1) / explorationTemperature + 1;
+    const beta = (baseBeta - 1) / explorationTemperature + 1;
+
+    const baseSample = sampleBeta(alpha, beta);
+    const sample = baseSample;
+
+    samples.push({
+      armId: arm.id,
+      n: arm.stats.n,
+      total_reward: arm.stats.total_reward,
+      alpha: baseAlpha,
+      beta: baseBeta,
+      alpha_adjusted: alpha,
+      beta_adjusted: beta,
+      baseSample,
+      sample,
+    });
 
     if (sample > maxSample) {
       maxSample = sample;
@@ -155,7 +193,7 @@ async function validateTargetConfiguration(
         cluster_id: optimalCluster.id,
       });
 
-      const optimalArm = getOptimalArm(arms);
+      const optimalArm = getOptimalArm(arms, skill.exploration_temperature);
 
       c.set('pulled_arm', optimalArm);
 

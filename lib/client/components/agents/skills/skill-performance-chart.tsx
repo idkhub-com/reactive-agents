@@ -13,7 +13,7 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 
 // Register Chart.js components
@@ -43,13 +43,81 @@ const METHOD_COLORS: Record<string, string> = {
   custom: 'rgb(168, 85, 247)', // purple
 };
 
+type TimeInterval = '5min' | '30min' | '1hour' | '1day';
+
+const INTERVAL_CONFIG = {
+  '5min': { label: '5 Min', minutes: 5 },
+  '30min': { label: '30 Min', minutes: 30 },
+  '1hour': { label: '1 Hour', minutes: 60 },
+  '1day': { label: '1 Day', minutes: 1440 },
+} as const;
+
+const STORAGE_KEY = 'skill-performance-chart-interval';
+
+// Helper function to get initial interval from localStorage
+const getInitialInterval = (): TimeInterval => {
+  if (typeof window === 'undefined') return '1hour';
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (
+      stored &&
+      (stored === '5min' ||
+        stored === '30min' ||
+        stored === '1hour' ||
+        stored === '1day')
+    ) {
+      return stored as TimeInterval;
+    }
+  } catch {
+    // localStorage might not be available
+  }
+
+  return '1hour';
+};
+
 export function SkillPerformanceChart({
   evaluationRuns,
 }: SkillPerformanceChartProps) {
+  const [selectedInterval, setSelectedInterval] =
+    useState<TimeInterval>(getInitialInterval);
+
+  // Persist interval to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, selectedInterval);
+    } catch {
+      // localStorage might not be available
+    }
+  }, [selectedInterval]);
+
   const chartData = useMemo(() => {
     if (evaluationRuns.length === 0) return null;
 
-    // Group by method, then by hour
+    const intervalMinutes = INTERVAL_CONFIG[selectedInterval].minutes;
+
+    // Helper function to create time bucket key based on interval
+    const getTimeBucketKey = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      if (selectedInterval === '1day') {
+        return `${year}-${month}-${day}`;
+      }
+
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const totalMinutes = hours * 60 + minutes;
+      const bucketMinutes =
+        Math.floor(totalMinutes / intervalMinutes) * intervalMinutes;
+      const bucketHours = Math.floor(bucketMinutes / 60);
+      const bucketMins = bucketMinutes % 60;
+
+      return `${year}-${month}-${day} ${String(bucketHours).padStart(2, '0')}:${String(bucketMins).padStart(2, '0')}`;
+    };
+
+    // Group by method, then by time bucket
     const methodHourlyScores = new Map<
       EvaluationMethodName,
       Map<string, number[]>
@@ -57,7 +125,7 @@ export function SkillPerformanceChart({
 
     for (const run of evaluationRuns) {
       const date = new Date(run.created_at);
-      const hourKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
+      const bucketKey = getTimeBucketKey(date);
 
       for (const result of run.results) {
         if (!methodHourlyScores.has(result.method)) {
@@ -65,10 +133,10 @@ export function SkillPerformanceChart({
         }
         const hourlyScores = methodHourlyScores.get(result.method)!;
 
-        if (!hourlyScores.has(hourKey)) {
-          hourlyScores.set(hourKey, []);
+        if (!hourlyScores.has(bucketKey)) {
+          hourlyScores.set(bucketKey, []);
         }
-        hourlyScores.get(hourKey)!.push(result.score);
+        hourlyScores.get(bucketKey)!.push(result.score);
       }
     }
 
@@ -119,19 +187,23 @@ export function SkillPerformanceChart({
       },
     );
 
+    // Format labels based on interval
+    const formatLabel = (bucketKey: string): string => {
+      if (selectedInterval === '1day') {
+        // For 1day, show date in MM/DD format
+        const parts = bucketKey.split('-');
+        return `${parts[1]}/${parts[2]}`;
+      }
+      // For other intervals, show time
+      const parts = bucketKey.split(' ');
+      return parts[1] || bucketKey;
+    };
+
     return {
-      labels: sortedHours.map((hour) => {
-        // Format to show date and time for compact display
-        const parts = hour.split(' ');
-        const dateParts = parts[0]?.split('-');
-        if (dateParts && dateParts.length === 3) {
-          return `${dateParts[1]}/${dateParts[2]} ${parts[1] || ''}`;
-        }
-        return parts[1] || hour;
-      }),
+      labels: sortedHours.map(formatLabel),
       datasets,
     };
-  }, [evaluationRuns]);
+  }, [evaluationRuns, selectedInterval]);
 
   if (!chartData) {
     return (
@@ -223,8 +295,28 @@ export function SkillPerformanceChart({
   };
 
   return (
-    <div className="w-full h-64">
-      <Line data={chartData} options={options} />
+    <div className="w-full space-y-2">
+      {/* Interval selector tabs */}
+      <div className="flex gap-1 justify-end">
+        {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map((interval) => (
+          <button
+            key={interval}
+            type="button"
+            onClick={() => setSelectedInterval(interval)}
+            className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+              selectedInterval === interval
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {INTERVAL_CONFIG[interval].label}
+          </button>
+        ))}
+      </div>
+      {/* Chart */}
+      <div className="w-full h-64">
+        <Line data={chartData} options={options} />
+      </div>
     </div>
   );
 }

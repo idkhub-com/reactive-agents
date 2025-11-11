@@ -1,24 +1,7 @@
 import OpenAI from 'openai';
 import 'dotenv/config';
 import logger from '@shared/console-logging';
-import { makeParseableTextFormat } from 'openai/lib/parser.mjs';
-import { type ZodType, z } from 'zod';
-
-// Custom zodTextFormat to make it work with zod v4
-export function zodTextFormat<ZodInput extends ZodType>(
-  zodObject: ZodInput,
-  name: string,
-) {
-  return makeParseableTextFormat(
-    {
-      type: 'json_schema',
-      name,
-      strict: true,
-      schema: z.toJSONSchema(zodObject),
-    },
-    (content) => zodObject.parse(JSON.parse(content)),
-  );
-}
+import { z } from 'zod';
 
 const client = new OpenAI({
   // This is the API key to Reactive Agents
@@ -125,7 +108,7 @@ const eventInputs = [
 ];
 
 // Number of random inputs to process
-const N_INPUTS = 20;
+const N_INPUTS = 40;
 
 // Function to get random elements from array
 function getRandomElements<T>(array: T[], count: number): T[] {
@@ -144,28 +127,32 @@ for (let i = 0; i < selectedInputs.length; i++) {
 
   logger.printWithHeader(`Input ${i + 1}`, userMessage);
 
-  const response = await client
+  const completion = await client
     .withOptions({
       defaultHeaders: {
         'ra-config': JSON.stringify(raConfig),
       },
     })
-    .responses.parse({
+    .chat.completions.parse({
       model: 'gpt-4o-mini',
-      input: [
+      messages: [
         { role: 'system', content: 'Extract the event information.' },
         {
           role: 'user',
           content: userMessage,
         },
       ],
-      text: {
-        // This is a custom zodTextFormat to make it work with zod v4
-        format: zodTextFormat(CalendarEvent, 'event'),
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'event',
+          strict: true,
+          schema: z.toJSONSchema(CalendarEvent),
+        },
       },
     });
 
-  const agentResponse = response.output_parsed;
+  const agentResponse = completion.choices[0]?.message.parsed;
   logger.printWithHeader(
     `Response ${i + 1}`,
     JSON.stringify(agentResponse, null, 2),
