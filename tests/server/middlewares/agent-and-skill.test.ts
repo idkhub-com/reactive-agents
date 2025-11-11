@@ -101,9 +101,14 @@ describe('agentAndSkillMiddleware', () => {
         configuration_count: 1,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
-        system_prompt_count: 0,
         clustering_interval: 0,
         reflection_min_requests_per_arm: 0,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
       };
 
       vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
@@ -180,9 +185,14 @@ describe('agentAndSkillMiddleware', () => {
           configuration_count: 1,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
-          system_prompt_count: 0,
           clustering_interval: 0,
           reflection_min_requests_per_arm: 0,
+          exploration_temperature: 1.0,
+          last_clustering_at: null,
+          last_clustering_log_start_time: null,
+          evaluations_regenerated_at: null,
+          evaluation_lock_acquired_at: null,
+          reflection_lock_acquired_at: null,
         };
 
         vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);

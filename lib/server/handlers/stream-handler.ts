@@ -288,7 +288,9 @@ export async function handleNonStreamingMode(
   }
 
   let originalResponseBodyJson: Record<string, unknown> | null = null;
-  const originalResponseBodyText: string = await aiProviderResponse.text();
+  const originalResponseBodyText: string = await aiProviderResponse
+    .clone()
+    .text();
   try {
     originalResponseBodyJson = JSON.parse(originalResponseBodyText);
   } catch {

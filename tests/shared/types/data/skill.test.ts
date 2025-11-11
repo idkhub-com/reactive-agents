@@ -42,23 +42,18 @@ describe('Skill Data Transforms and Validation', () => {
       );
     });
 
-    it('should accept custom metadata with optional fields', () => {
-      const customMetadata = {
-        last_clustering_at: '2023-01-01T00:00:00.000Z',
-        last_clustering_log_start_time: 1234567890,
-      };
-
+    it('should accept empty metadata (reserved for user-defined data)', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
-        metadata: customMetadata,
+        metadata: {},
         optimize: false,
       };
 
       const result = SkillCreateParams.parse(inputData);
 
-      expect(result.metadata).toEqual(customMetadata);
+      expect(result.metadata).toEqual({});
     });
 
     it('should reject description that is too short', () => {
@@ -276,26 +271,23 @@ describe('Skill Data Transforms and Validation', () => {
       expect(() => SkillCreateParams.parse(inputData)).toThrow();
     });
 
-    it('should accept metadata with all optional fields', () => {
-      const fullMetadata = {
+    it('should reject metadata with restricted fields (state management fields moved to columns)', () => {
+      const invalidMetadata = {
         last_clustering_at: '2023-01-01T00:00:00.000Z',
-        last_clustering_log_start_time: 1234567890,
       };
 
       const inputData = {
         agent_id: testAgentId,
         name: 'test-skill',
         description: 'This is a test skill description with sufficient length',
-        metadata: fullMetadata,
+        metadata: invalidMetadata,
         optimize: false,
       };
 
-      const result = SkillCreateParams.parse(inputData);
-
-      expect(result.metadata).toEqual(fullMetadata);
+      expect(() => SkillCreateParams.parse(inputData)).toThrow();
     });
 
-    it('should accept default values for configuration_count and system_prompt_count', () => {
+    it('should apply default values for optional configuration fields', () => {
       const inputData = {
         agent_id: testAgentId,
         name: 'test-skill',
@@ -307,7 +299,6 @@ describe('Skill Data Transforms and Validation', () => {
       const result = SkillCreateParams.parse(inputData);
 
       expect(result.configuration_count).toBe(3);
-      expect(result.system_prompt_count).toBe(3);
       expect(result.clustering_interval).toBe(15);
       expect(result.reflection_min_requests_per_arm).toBe(3);
     });
@@ -345,17 +336,16 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result.metadata).toBeUndefined();
     });
 
-    it('should accept updates with metadata only', () => {
-      const newMetadata = {
-        last_clustering_at: '2023-02-01T00:00:00.000Z',
-      };
+    it('should accept updates with state management fields', () => {
       const inputData = {
-        metadata: newMetadata,
+        last_clustering_at: '2023-02-01T00:00:00.000Z',
+        last_clustering_log_start_time: 1675209600,
       };
 
       const result = SkillUpdateParams.parse(inputData);
 
-      expect(result.metadata).toEqual(newMetadata);
+      expect(result.last_clustering_at).toEqual('2023-02-01T00:00:00.000Z');
+      expect(result.last_clustering_log_start_time).toBe(1675209600);
       expect(result.description).toBeUndefined();
     });
 
@@ -523,9 +513,14 @@ describe('Skill Data Transforms and Validation', () => {
         metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -535,31 +530,34 @@ describe('Skill Data Transforms and Validation', () => {
       expect(result).toEqual(skillData);
     });
 
-    it('should validate skill with metadata fields', () => {
+    it('should validate skill with state management fields', () => {
       const skillData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         agent_id: testAgentId,
         name: 'test-skill',
         description: 'A test skill with sufficient description length',
-        metadata: {
-          last_clustering_at: '2023-01-01T00:00:00.000Z',
-          last_clustering_log_start_time: 1234567890,
-        },
+        metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: '2023-01-01T00:00:00.000Z',
+        last_clustering_log_start_time: 1234567890,
+        evaluations_regenerated_at: '2023-01-01T00:00:00.000Z',
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
 
       const result = Skill.parse(skillData);
 
-      expect(result.metadata.last_clustering_at).toBe(
+      expect(result.last_clustering_at).toBe('2023-01-01T00:00:00.000Z');
+      expect(result.last_clustering_log_start_time).toBe(1234567890);
+      expect(result.evaluations_regenerated_at).toBe(
         '2023-01-01T00:00:00.000Z',
       );
-      expect(result.metadata.last_clustering_log_start_time).toBe(1234567890);
     });
 
     it('should require description field', () => {
@@ -570,9 +568,14 @@ describe('Skill Data Transforms and Validation', () => {
         metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -589,9 +592,14 @@ describe('Skill Data Transforms and Validation', () => {
         metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -610,9 +618,14 @@ describe('Skill Data Transforms and Validation', () => {
         metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -631,9 +644,14 @@ describe('Skill Data Transforms and Validation', () => {
         metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -650,9 +668,14 @@ describe('Skill Data Transforms and Validation', () => {
         metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 5,
         clustering_interval: 15,
         reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1.0,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        reflection_lock_acquired_at: null,
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
       };

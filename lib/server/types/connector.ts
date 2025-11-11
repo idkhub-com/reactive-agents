@@ -149,6 +149,10 @@ export interface UserDataStorageConnector {
     update: SkillOptimizationClusterUpdateParams,
   ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
   deleteSkillOptimizationCluster(id: string): Promise<void> | void;
+  // Atomic operation: increment total_steps by 1
+  incrementClusterTotalSteps(
+    clusterId: string,
+  ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
 
   // Skill Optimization Arms
   getSkillOptimizationArms(

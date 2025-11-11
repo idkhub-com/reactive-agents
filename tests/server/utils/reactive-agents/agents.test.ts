@@ -34,6 +34,7 @@ describe('getAgent', () => {
       createSkillOptimizationClusters: vi.fn(),
       updateSkillOptimizationCluster: vi.fn(),
       deleteSkillOptimizationCluster: vi.fn(),
+      incrementClusterTotalSteps: vi.fn(),
 
       // Feedback methods
       getFeedback: vi.fn(),

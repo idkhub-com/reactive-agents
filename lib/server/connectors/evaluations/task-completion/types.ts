@@ -121,7 +121,11 @@ export interface TaskCompletionAverageResult {
 // Parameters for task completion evaluation using Zod schema validation
 export const TaskCompletionEvaluationParameters = z.object({
   threshold: z.number().min(0).max(1).default(0.7),
-  task: z.string(),
+  task: z
+    .string()
+    .describe(
+      'The expected task that the model should complete. The evaluation score will be based on how well the model completes the task.',
+    ),
   model: z.string().default('gpt-4o'),
   include_reason: z.boolean().default(true),
   strict_mode: z.boolean().default(false),

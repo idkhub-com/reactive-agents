@@ -31,9 +31,14 @@ CREATE TABLE if not exists skills (
   metadata JSONB NOT NULL DEFAULT '{}',
   optimize BOOLEAN NOT NULL DEFAULT TRUE,
   configuration_count INTEGER NOT NULL DEFAULT 3,
-  system_prompt_count INTEGER NOT NULL DEFAULT 3,
   clustering_interval INTEGER NOT NULL DEFAULT 15,
-  reflection_min_requests_per_arm INTEGER NOT NULL DEFAULT 3,
+  reflection_min_requests_per_arm INTEGER NOT NULL DEFAULT 2,
+  exploration_temperature FLOAT NOT NULL DEFAULT 1.0,
+  last_clustering_at TIMESTAMPTZ,
+  last_clustering_log_start_time BIGINT,
+  evaluations_regenerated_at TIMESTAMPTZ,
+  evaluation_lock_acquired_at TIMESTAMPTZ,
+  reflection_lock_acquired_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -45,14 +50,25 @@ CREATE TRIGGER update_skills_updated_at BEFORE UPDATE ON skills
 
 CREATE INDEX idx_skills_agent_id ON skills(agent_id);
 CREATE INDEX idx_skills_name ON skills(name);
+CREATE INDEX idx_skills_evaluation_lock ON skills(evaluation_lock_acquired_at)
+  WHERE evaluation_lock_acquired_at IS NOT NULL;
+CREATE INDEX idx_skills_reflection_lock ON skills(reflection_lock_acquired_at)
+  WHERE reflection_lock_acquired_at IS NOT NULL;
+CREATE INDEX idx_skills_last_clustering ON skills(last_clustering_at)
+  WHERE last_clustering_at IS NOT NULL;
 
 COMMENT ON TABLE skills IS 'Table to store skills that an agent possesses.';
 COMMENT ON COLUMN skills.description IS 'Description of the skill. Used to generate system prompts and evaluations';
 COMMENT ON COLUMN skills.optimize IS 'Whether to optimize the skill';
 COMMENT ON COLUMN skills.configuration_count IS 'Number of configurations (clusters)';
-COMMENT ON COLUMN skills.system_prompt_count IS 'Number of system prompts to generate for the skill';
 COMMENT ON COLUMN skills.clustering_interval IS 'Recompute the centroid of the clusters every N requests so that they can better represent the last N requests.';
 COMMENT ON COLUMN skills.reflection_min_requests_per_arm IS 'Minimum number of requests per arm in a configuration (cluster) to trigger reflection. This is to ensure that the arms for the cluster have convergence.';
+COMMENT ON COLUMN skills.exploration_temperature IS 'Temperature for exploration. Higher values lead to more exploration.';
+COMMENT ON COLUMN skills.last_clustering_at IS 'Timestamp when clustering was last performed for this skill';
+COMMENT ON COLUMN skills.last_clustering_log_start_time IS 'Unix timestamp of the most recent log used in the last clustering batch';
+COMMENT ON COLUMN skills.evaluations_regenerated_at IS 'Timestamp when evaluations were first regenerated with real examples (after 5 requests)';
+COMMENT ON COLUMN skills.evaluation_lock_acquired_at IS 'Lock timestamp to prevent concurrent evaluation regeneration (5 minute timeout)';
+COMMENT ON COLUMN skills.reflection_lock_acquired_at IS 'Lock timestamp to prevent concurrent system prompt reflection (10 minute timeout)';
 
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skills FOR ALL TO service_role USING (true) WITH CHECK (true);

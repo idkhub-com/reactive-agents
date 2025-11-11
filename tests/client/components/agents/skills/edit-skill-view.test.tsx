@@ -45,11 +45,16 @@ const mockSkill = {
   metadata: {},
   optimize: true,
   configuration_count: 15,
-  system_prompt_count: 5,
   created_at: '2023-01-01T10:30:00Z',
   updated_at: '2023-01-01T10:30:00Z',
   clustering_interval: 15,
   reflection_min_requests_per_arm: 3,
+  exploration_temperature: 1.0,
+  last_clustering_at: null,
+  last_clustering_log_start_time: null,
+  evaluations_regenerated_at: null,
+  evaluation_lock_acquired_at: null,
+  reflection_lock_acquired_at: null,
 };
 
 // Mock the navigation provider with proper state

@@ -138,11 +138,10 @@ export function ClustersView(): ReactElement {
                 key={cluster.id}
                 className="hover:shadow-lg transition-shadow"
               >
-                <CardHeader>
-                  <CardTitle className="text-lg">{cluster.name}</CardTitle>
-                  <CardDescription>
-                    ID: {cluster.id.slice(0, 8)}...
-                  </CardDescription>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg leading-none mb-2">
+                    {cluster.name}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -152,14 +151,6 @@ export function ClustersView(): ReactElement {
                       </span>
                       <Badge variant="secondary">
                         {cluster.total_steps.toString()}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Dimensions
-                      </span>
-                      <Badge variant="outline">
-                        {cluster.centroid.length}D
                       </Badge>
                     </div>
                     <div className="pt-2 border-t">

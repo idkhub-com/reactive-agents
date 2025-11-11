@@ -56,6 +56,42 @@
   - `SkillStatusIndicator` (`lib/client/components/agents/skills/skill-status-indicator.tsx`)
 - **User Experience**: Guide users to add required components when viewing incomplete agents/skills
 
+## Skill Optimization System
+
+### System Prompt Evolution
+System prompts evolve through two distinct phases:
+
+1. **Early Regeneration (after 5 skill requests)**:
+   - Triggered once per skill when `evaluations_regenerated_at` is undefined
+   - Regenerates evaluations with real examples from the first 5 requests
+   - Generates new system prompts for ALL arms using `generateSeedSystemPromptWithContext()`
+   - Includes actual JSON schemas from `response_format` and real example conversations
+   - Deletes all existing arms and recreates with new prompts and reset stats
+   - Resets all cluster `total_steps` to 0 (soft reset)
+   - Sets `skill.metadata.evaluations_regenerated_at` to mark completion
+
+2. **Reflection-based Regeneration (ongoing per cluster)**:
+   - Triggered when all arms in a cluster meet the minimum request threshold
+   - Uses `generateReflectiveSystemPromptForSkill()` to improve the best-performing prompt
+   - Removes the worst-performing arm and creates new variations
+   - Per-cluster process: each cluster evolves independently
+
+### Key Design Decisions
+- **Skill-level early regeneration**: All clusters regenerate together after 5 skill requests (not per-cluster)
+- **Arm immutability**: Arms cannot have their `system_prompt` updated after creation - they must be deleted and recreated
+- **Stats comparability**: When system prompts change, ALL arm stats reset to 0 to ensure fair comparison
+- **Description changes**: Updating a skill's description resets `evaluations_regenerated_at` to trigger early regeneration again
+
+### Internal Skills
+The system uses special auto-generated skills in the `reactive-agents` agent (defined in `RA_SKILLS` constant):
+- `system-prompt-seeding`: Initial prompt generation without context
+- `system-prompt-seeding-with-context`: Context-aware generation with examples and schemas
+- `system-prompt-reflection`: Reflection-based improvements
+- `create-evaluations`: Evaluation method generation
+- `judge`: Evaluation scoring
+- `extract-task-and-outcome`: Task/outcome extraction
+- `embedding`: Text embedding generation
+
 ## Security & Configuration Tips
 - Secrets: never commit; use `.env` for local. Regenerate CF types with `pnpm cf-typegen` when env changes.
 - Supabase: start/stop with `supabase start|stop`; migrations in `supabase/migrations` and seed via `supabase/seed.sql`.

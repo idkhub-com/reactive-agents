@@ -25,14 +25,18 @@ import type { ReactElement } from 'react';
 import { useCallback, useEffect } from 'react';
 
 export function ClusterArmsView(): ReactElement {
-  const { navigateToArmDetail } = useNavigation();
+  const { navigateToArmDetail, navigationState } = useNavigation();
   const { selectedAgent } = useAgents();
   const { selectedSkill } = useSkills();
   const goBack = useSmartBack();
 
   const { arms, isLoading, error, refetch, setSkillId, setClusterId } =
     useSkillOptimizationArms();
-  const { selectedCluster } = useSkillOptimizationClusters();
+  const {
+    selectedCluster,
+    isLoading: clustersLoading,
+    setSkillId: setClustersSkillId,
+  } = useSkillOptimizationClusters();
   const { skillModels, setSkillId: setModelsSkillId } = useModels();
   const { getAPIKeyById } = useAIProviderAPIKeys();
 
@@ -58,11 +62,13 @@ export function ClusterArmsView(): ReactElement {
     if (!selectedSkill) {
       setSkillId(null);
       setModelsSkillId(null);
+      setClustersSkillId(null);
       return;
     }
     setSkillId(selectedSkill.id);
     setModelsSkillId(selectedSkill.id);
-  }, [selectedSkill, setSkillId, setModelsSkillId]);
+    setClustersSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillId, setModelsSkillId, setClustersSkillId]);
 
   useEffect(() => {
     if (!clusterId) {
@@ -72,8 +78,8 @@ export function ClusterArmsView(): ReactElement {
     setClusterId(clusterId);
   }, [clusterId, setClusterId]);
 
-  // Early return if no skill or agent or cluster selected
-  if (!selectedSkill || !selectedAgent || !selectedCluster) {
+  // Early return if no skill or agent selected
+  if (!selectedSkill || !selectedAgent) {
     return (
       <>
         <PageHeader
@@ -84,6 +90,62 @@ export function ClusterArmsView(): ReactElement {
           <div className="text-center text-muted-foreground">
             No partition selected. Please select a partition to view its
             configurations.
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Show loading state if we have a cluster name in URL but clusters are still loading
+  if (
+    navigationState.selectedClusterName &&
+    !selectedCluster &&
+    clustersLoading
+  ) {
+    return (
+      <>
+        <PageHeader
+          title="Partition Configurations"
+          description="Loading partition data..."
+          showBackButton={true}
+          onBack={goBack}
+        />
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 6 }).map(() => (
+              <Card key={nanoid()}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-32 mb-2" />
+                  <Skeleton className="h-4 w-28" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Show error if cluster name is in URL but not found after loading
+  if (
+    navigationState.selectedClusterName &&
+    !selectedCluster &&
+    !clustersLoading
+  ) {
+    return (
+      <>
+        <PageHeader
+          title="Partition Not Found"
+          description="The requested partition could not be found."
+          showBackButton={true}
+          onBack={goBack}
+        />
+        <div className="p-6">
+          <div className="text-center text-muted-foreground">
+            Partition "{navigationState.selectedClusterName}" not found.
           </div>
         </div>
       </>
@@ -189,9 +251,11 @@ export function ClusterArmsView(): ReactElement {
                     }
                   >
                     <CardHeader>
-                      <CardTitle className="text-lg">{arm.name}</CardTitle>
-                      <CardDescription>
-                        Rank: {index + 1} | ID: {arm.id.slice(0, 8)}...
+                      <CardTitle className="text-lg leading-none mb-2">
+                        {arm.name}
+                      </CardTitle>
+                      <CardDescription className="leading-none m-0">
+                        Rank: {index + 1}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -254,11 +318,11 @@ export function ClusterArmsView(): ReactElement {
                             </div>
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">
-                                Top P
+                                Reasoning Effort
                               </span>
                               <span>
-                                {arm.params.top_p_min.toFixed(2)}-
-                                {arm.params.top_p_max.toFixed(2)}
+                                {arm.params.thinking_min.toFixed(2)}-
+                                {arm.params.thinking_max.toFixed(2)}
                               </span>
                             </div>
                           </div>

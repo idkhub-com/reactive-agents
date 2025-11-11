@@ -97,10 +97,11 @@ export const retryRequest = async (
           }
 
           if (statusCodesToRetry.includes(response.status)) {
-            const errorObj = new HttpError(await response.text(), {
+            const responseText = await response.text();
+            const errorObj = new HttpError(responseText, {
               status: response.status,
               statusText: response.statusText,
-              body: await response.text(),
+              body: responseText,
             });
 
             if (response.status === 429 && followProviderRetry) {
@@ -150,15 +151,15 @@ export const retryRequest = async (
             // do nothing
           } else {
             // All error codes that aren't retried need to be propagated up
-            const errorBody = await response.clone().text();
+            const responseText = await response.text();
             console.error(
               `[HTTP ${response.status}] Request to ${url} failed:`,
-              errorBody,
+              responseText,
             );
-            const errorObj = new HttpError(errorBody, {
+            const errorObj = new HttpError(responseText, {
               status: response.status,
               statusText: response.statusText,
-              body: await response.text(),
+              body: responseText,
             });
             bail(errorObj);
             return;

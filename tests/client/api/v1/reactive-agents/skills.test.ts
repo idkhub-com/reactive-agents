@@ -87,17 +87,19 @@ describe('Skills API functions', () => {
     agent_id: 'agent-456',
     name: 'test-skill',
     description: 'Test skill description',
-    metadata: {
-      last_clustering_at: '2023-01-01T00:00:00Z',
-      last_clustering_log_start_time: 1234567890,
-    },
+    metadata: {},
     optimize: false,
     configuration_count: 10,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
-    system_prompt_count: 0,
     clustering_interval: 0,
     reflection_min_requests_per_arm: 0,
+    exploration_temperature: 1.0,
+    last_clustering_at: null,
+    last_clustering_log_start_time: null,
+    evaluations_regenerated_at: null,
+    evaluation_lock_acquired_at: null,
+    reflection_lock_acquired_at: null,
   };
 
   beforeEach(() => {
@@ -116,15 +118,12 @@ describe('Skills API functions', () => {
         agent_id: 'agent-456',
         name: 'test-skill',
         description: 'Test skill description',
-        metadata: {
-          last_clustering_at: '2023-01-01T00:00:00Z',
-          last_clustering_log_start_time: 1234567890,
-        },
+        metadata: {},
         optimize: false,
         configuration_count: 10,
-        system_prompt_count: 0,
         clustering_interval: 0,
         reflection_min_requests_per_arm: 0,
+        exploration_temperature: 1.0,
       };
 
       const result = await createSkill(params);
@@ -149,9 +148,9 @@ describe('Skills API functions', () => {
           optimize: false,
           configuration_count: 10,
           description: '',
-          system_prompt_count: 0,
           clustering_interval: 0,
           reflection_min_requests_per_arm: 0,
+          exploration_temperature: 1.0,
         }),
       ).rejects.toThrow('Failed to create skill');
     });

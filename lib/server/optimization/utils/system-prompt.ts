@@ -1,4 +1,5 @@
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import { debug } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
@@ -23,6 +24,54 @@ Given the following description of an AI agent, generate a system prompt for the
 
 ${description}
 `;
+
+  return firstMessage;
+}
+
+function getSeederWithContextFirstMessage(
+  agentDescription: string,
+  skillDescription: string,
+  examples: string[],
+  responseFormat?: unknown,
+) {
+  let responseFormatSection = '';
+  if (responseFormat) {
+    responseFormatSection = `
+
+CRITICAL: This agent must produce output conforming to the following JSON schema:
+
+${JSON.stringify(responseFormat, null, 2)}
+
+The system prompt MUST be designed around this schema. Include explicit instructions for every required field, specify exact data types and formats, explain constraints, and guide the assistant on how to structure its output to match this schema perfectly.`;
+  }
+
+  let examplesSection = '';
+  if (examples.length > 0) {
+    examplesSection = `
+
+Here are real examples of inputs and outputs to inform the system prompt:
+
+${examples.join('\n\n---\n\n')}
+
+Analyze these examples to understand the task better and incorporate any patterns or domain-specific knowledge into the system prompt.`;
+  }
+
+  const firstMessage = `
+I am building an AI agent with the following purpose:
+
+Agent Description:
+${agentDescription}
+
+The agent has a specific skill it needs to perform:
+
+Skill Description:
+${skillDescription}
+${responseFormatSection}
+${examplesSection}
+
+Generate a comprehensive system prompt that will enable the assistant to perform this skill effectively. The system prompt should be clear, detailed, and actionable.
+
+Return the system prompt in a JSON object.`;
 
   return firstMessage;
 }
@@ -93,6 +142,88 @@ export async function generateSeedSystemPromptForSkill(skill: Skill) {
   return structuredOutputResponse.system_prompt;
 }
 
+export async function generateSeedSystemPromptWithContext(
+  agentDescription: string,
+  skillDescription: string,
+  examples: string[],
+  responseFormat?: unknown,
+) {
+  // Check if OpenAI API key is available
+  const apiKey = OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      `[OPTIMIZER] can't generate seed system prompt - No OPENAI_API_KEY found`,
+    );
+  }
+
+  const client = new OpenAI({
+    apiKey: BEARER_TOKEN,
+    baseURL: `${API_URL}/v1`,
+  });
+
+  const raConfig = {
+    targets: [
+      {
+        provider: 'openai',
+        model: 'gpt-5',
+        api_key: apiKey,
+      },
+    ],
+    agent_name: 'reactive-agents',
+    skill_name: 'system-prompt-seeding-with-context',
+  };
+
+  const systemPrompt = getSeederSystemPrompt();
+  const firstMessage = getSeederWithContextFirstMessage(
+    agentDescription,
+    skillDescription,
+    examples,
+    responseFormat,
+  );
+
+  debug('[SEED_WITH_CONTEXT] Generating system prompt with context');
+  debug('[SEED_WITH_CONTEXT] Examples count:', examples.length);
+  debug(
+    '[SEED_WITH_CONTEXT] Has response format:',
+    responseFormat !== undefined,
+  );
+
+  const response: ParsedChatCompletion<StructuredOutputResponse> = await client
+    .withOptions({
+      defaultHeaders: {
+        'ra-config': JSON.stringify(raConfig),
+      },
+    })
+    .chat.completions.parse({
+      model: 'gpt-5',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: firstMessage,
+        },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'system_prompt_generator',
+          strict: true,
+          schema: z.toJSONSchema(StructuredOutputResponse),
+        },
+      },
+    });
+
+  const structuredOutputResponse = response.choices[0].message.parsed;
+
+  if (!structuredOutputResponse) {
+    throw new Error(
+      `[OPTIMIZER] can't generate seed system prompt with context - No response found`,
+    );
+  }
+
+  return structuredOutputResponse.system_prompt;
+}
+
 function getReflectorSystemPrompt() {
   const systemPrompt = `
 You are an expert in generating system prompts for AI assistants.
@@ -147,18 +278,21 @@ assistant must achieve.
 Then, read the inputs carefully and identify the input format and infer detailed task
 description about the task I wish to solve with the assistant.
 
-IMPORTANT: Pay special attention to any "Request Constraints" sections in the examples above.
+CRITICAL: The new system prompt MUST be heavily based on the expected output format.
+
+Pay special attention to any "Request Constraints" sections in the examples above.
 These constraints specify critical requirements such as:
 - Response format (e.g., JSON schema, structured outputs)
 - Available tools/functions the assistant can call
 - Tool choice constraints (which tools must/can be used)
-- Sampling parameters (temperature, max tokens)
-- Reasoning effort requirements
-- Stop sequences and other output constraints
 
-If the examples include structured output requirements (response_format, text config, or JSON schemas),
-make sure the new instruction explicitly guides the assistant on how to produce outputs that conform
-to these schemas. Include specific guidance about required fields, data types, and output structure.
+If the examples include structured output requirements (response_format, text config, or JSON schemas):
+- The new system prompt MUST be designed around conforming to these exact schemas
+- Include explicit instructions for EVERY required field in the schema
+- Specify the exact data types and formats expected for each field
+- Provide clear guidance on any constraints (e.g., enums, min/max values, array items)
+- Explain the purpose and meaning of each field in the output structure
+- The schema defines the core task - the system prompt should be structured to fulfill it
 
 If the examples include tool/function definitions, ensure the instruction helps the assistant understand:
 - When to use each tool
@@ -214,6 +348,12 @@ export async function generateReflectiveSystemPromptForSkill(
     agentDescription,
     skillDescription,
   );
+
+  debug(
+    '[REFLECTION] System prompt for reflection:',
+    JSON.stringify(systemPrompt, null, 2),
+  );
+  debug('[REFLECTION] User message for reflection:', firstMessage);
 
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({

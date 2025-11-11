@@ -73,6 +73,7 @@ import { z } from 'zod';
 import {
   deleteFromSupabase,
   insertIntoSupabase,
+  rpcFunctionWithResponse,
   selectFromSupabase,
   updateInSupabase,
 } from './base';
@@ -630,6 +631,17 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     });
   },
 
+  incrementClusterTotalSteps: async (
+    clusterId: string,
+  ): Promise<SkillOptimizationCluster> => {
+    const result = await rpcFunctionWithResponse(
+      'increment_cluster_total_steps',
+      { p_cluster_id: clusterId },
+      z.array(SkillOptimizationCluster),
+    );
+    return result[0];
+  },
+
   //SkillOptimizationArm
   getSkillOptimizationArms: async (
     queryParams: SkillOptimizationArmQueryParams,
@@ -646,6 +658,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
     if (queryParams.skill_id) {
       postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    if (queryParams.cluster_id) {
+      postgRESTParams.cluster_id = `eq.${queryParams.cluster_id}`;
     }
     if (queryParams.limit) {
       postgRESTParams.limit = queryParams.limit.toString();

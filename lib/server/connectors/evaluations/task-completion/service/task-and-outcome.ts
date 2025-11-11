@@ -1,5 +1,6 @@
 import type { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
 import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import { debug } from '@shared/console-logging';
 
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
@@ -69,6 +70,7 @@ export async function extractTaskAndOutcome(
   };
 
   const systemPrompt = getSystemPrompt(params.task);
+  debug('systemPrompt', systemPrompt);
 
   const firstMessage = getFirstMessage(input, output);
 

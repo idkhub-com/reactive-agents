@@ -2,7 +2,10 @@ import {
   autoClusterSkill,
   updateClusterState,
 } from '@server/middlewares/optimizer/clusters';
-import { addSkillOptimizationEvaluationRun } from '@server/middlewares/optimizer/evaluations';
+import {
+  addSkillOptimizationEvaluationRun,
+  checkAndRegenerateEvaluationsEarly,
+} from '@server/middlewares/optimizer/evaluations';
 import { updatePulledArm } from '@server/middlewares/optimizer/hyperparameters';
 import { autoGenerateSystemPromptsForSkill } from '@server/middlewares/optimizer/system-prompt';
 import type {
@@ -250,6 +253,22 @@ async function processLogsAndOptimizeSkill(
       processLogsParams.pulledArm,
       evaluationResults,
     );
+
+    // Check if we should regenerate evaluations early (after first 5 requests)
+    if (processLogsParams.evaluationConnectorsMap) {
+      await checkAndRegenerateEvaluationsEarly(
+        processLogsParams.functionName,
+        processLogsParams.userDataStorageConnector,
+        processLogsParams.logsStorageConnector,
+        processLogsParams.skill,
+        processLogsParams.agent.description,
+        processLogsParams.evaluationConnectorsMap as Record<
+          string,
+          EvaluationMethodConnector
+        >,
+      );
+    }
+
     await updateClusterState(
       processLogsParams.userDataStorageConnector,
       processLogsParams.pulledArm,

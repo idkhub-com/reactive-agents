@@ -55,44 +55,37 @@ export async function handleGenerateArms(
     return c.json({ createdArms: [] }, 200);
   }
 
-  const numberOfSystemPrompts = skill.system_prompt_count;
-
-  const systemPrompts = await Promise.all(
-    Array.from({ length: numberOfSystemPrompts }, () =>
-      generateSeedSystemPromptForSkill(skill),
-    ),
-  );
+  // Generate one system prompt for all clusters
+  const systemPrompt = await generateSeedSystemPromptForSkill(skill);
 
   const createParamsList: SkillOptimizationArmCreateParams[] = [];
 
-  // Used to give arms a human-readable name
-  let humanArmIndex = 1;
   for (const cluster of skillClusters) {
+    // Used to give arms a human-readable name
+    let humanArmIndex = 1;
     for (const model of skillModels) {
-      for (const systemPrompt of systemPrompts) {
-        for (const baseArm of BaseArmsParams) {
-          const armParams: SkillOptimizationArmParams = {
-            ...baseArm,
-            model_id: model.id,
-            system_prompt: systemPrompt,
-          };
-          const stats: SkillOptimizationArmStats = {
-            n: 0,
-            mean: 0,
-            n2: 0,
-            total_reward: 0,
-          };
-          const createParams: SkillOptimizationArmCreateParams = {
-            agent_id: skill.agent_id,
-            skill_id: skill.id,
-            cluster_id: cluster.id,
-            name: `Configuration ${humanArmIndex}`,
-            params: armParams,
-            stats: stats,
-          };
-          createParamsList.push(createParams);
-          humanArmIndex++;
-        }
+      for (const baseArm of BaseArmsParams) {
+        const armParams: SkillOptimizationArmParams = {
+          ...baseArm,
+          model_id: model.id,
+          system_prompt: systemPrompt,
+        };
+        const stats: SkillOptimizationArmStats = {
+          n: 0,
+          mean: 0,
+          n2: 0,
+          total_reward: 0,
+        };
+        const createParams: SkillOptimizationArmCreateParams = {
+          agent_id: skill.agent_id,
+          skill_id: skill.id,
+          cluster_id: cluster.id,
+          name: `Configuration ${humanArmIndex}`,
+          params: armParams,
+          stats: stats,
+        };
+        createParamsList.push(createParams);
+        humanArmIndex++;
       }
     }
   }
