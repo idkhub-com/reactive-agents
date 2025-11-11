@@ -1,7 +1,7 @@
 import { clientAuthenticatedMiddleware } from '@server/middlewares/auth';
 import { type NextRequest, NextResponse } from 'next/server';
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const cspHeader = `
     default-src 'self' ${process.env.NEXT_PUBLIC_API_URL};
