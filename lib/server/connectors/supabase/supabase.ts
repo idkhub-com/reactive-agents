@@ -573,7 +573,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     queryParams: SkillOptimizationClusterQueryParams,
   ): Promise<SkillOptimizationCluster[]> => {
     const postgRESTParams: Record<string, string> = {
-      order: 'created_at.desc',
+      order: 'name.asc',
     };
 
     if (queryParams.id) {
@@ -842,7 +842,7 @@ export const supabaseCacheStorageConnector: CacheStorageConnector = {
   getCache: async (key: string) => {
     const cachedValues = await selectFromSupabase(
       'cache',
-      { key: `eq.${key}`, expires_at: `lte.${new Date().toISOString()}` },
+      { key: `eq.${key}`, expires_at: `gte.${new Date().toISOString()}` },
       z.array(CachedValue),
     );
 

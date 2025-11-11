@@ -109,7 +109,7 @@ export function createLLMJudge(
   openaiClient?: OpenAI,
 ): LLMJudge {
   const judgeConfig = {
-    model: config.model || 'gpt-4o-mini',
+    model: config.model || 'gpt-5-mini',
     temperature: config.temperature || 0.1,
     max_tokens: config.max_tokens || 1000,
     timeout: config.timeout || 30000,
@@ -250,9 +250,6 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         lastError = error;
         if (i < LLM_JUDGE_MAX_RETRIES - 1 && isRetryableLLMJudgeError(error)) {
           const delay = LLM_JUDGE_RETRY_DELAY_BASE * 2 ** i;
-          console.warn(
-            `LLM Judge evaluation failed (attempt ${i + 1}/${LLM_JUDGE_MAX_RETRIES}). Retrying in ${delay}ms...`,
-          );
           await new Promise((resolve) => setTimeout(resolve, delay));
           retryCount++;
         } else {
@@ -260,11 +257,6 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         }
       }
     }
-
-    console.error(
-      'LLM Judge evaluation failed after multiple retries:',
-      lastError,
-    );
 
     // Categorize error type for better fallback messaging
     const retryInfo = {

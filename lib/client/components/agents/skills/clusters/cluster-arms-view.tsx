@@ -18,11 +18,13 @@ import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
+import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@client/providers/skills';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect } from 'react';
+import { ClusterPerformanceChart } from './cluster-performance-chart';
 
 export function ClusterArmsView(): ReactElement {
   const { navigateToArmDetail, navigationState } = useNavigation();
@@ -39,6 +41,8 @@ export function ClusterArmsView(): ReactElement {
   } = useSkillOptimizationClusters();
   const { skillModels, setSkillId: setModelsSkillId } = useModels();
   const { getAPIKeyById } = useAIProviderAPIKeys();
+  const { getEvaluationRunsByClusterId, setSkillId: setEvaluationRunsSkillId } =
+    useSkillOptimizationEvaluationRuns();
 
   const clusterId = selectedCluster?.id;
 
@@ -63,12 +67,20 @@ export function ClusterArmsView(): ReactElement {
       setSkillId(null);
       setModelsSkillId(null);
       setClustersSkillId(null);
+      setEvaluationRunsSkillId(null);
       return;
     }
     setSkillId(selectedSkill.id);
     setModelsSkillId(selectedSkill.id);
     setClustersSkillId(selectedSkill.id);
-  }, [selectedSkill, setSkillId, setModelsSkillId, setClustersSkillId]);
+    setEvaluationRunsSkillId(selectedSkill.id);
+  }, [
+    selectedSkill,
+    setSkillId,
+    setModelsSkillId,
+    setClustersSkillId,
+    setEvaluationRunsSkillId,
+  ]);
 
   useEffect(() => {
     if (!clusterId) {
@@ -181,6 +193,16 @@ export function ClusterArmsView(): ReactElement {
                 {selectedCluster.total_steps.toString()}
               </CardDescription>
             </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Performance Over Time</div>
+                <ClusterPerformanceChart
+                  evaluationRuns={getEvaluationRunsByClusterId(
+                    selectedCluster.id,
+                  )}
+                />
+              </div>
+            </CardContent>
           </Card>
         )}
 

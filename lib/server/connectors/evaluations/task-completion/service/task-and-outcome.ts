@@ -60,7 +60,7 @@ export async function extractTaskAndOutcome(
     targets: [
       {
         provider: 'openai',
-        model: 'gpt-5',
+        model: 'gpt-5-mini',
         api_key: apiKey,
       },
     ],
@@ -78,7 +78,7 @@ export async function extractTaskAndOutcome(
       },
     })
     .chat.completions.parse({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         {

@@ -666,7 +666,6 @@ export async function tryTargets(
               statusText: e.response.statusText,
             });
           }
-          console.error(e);
         }
       }
       break;

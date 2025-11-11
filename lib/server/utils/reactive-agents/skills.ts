@@ -17,18 +17,32 @@ export async function getSkill(
   } else {
     // Auto create internal skills
     if (agentName === 'reactive-agents' && RA_SKILLS.includes(skillName)) {
-      const newSkill = await userDataStorageConnector.createSkill({
-        agent_id: agentId,
-        name: skillName,
-        description: 'An Reactive Agents internal skill',
-        metadata: {},
-        configuration_count: 0,
-        optimize: false,
-        clustering_interval: 0,
-        reflection_min_requests_per_arm: 0,
-        exploration_temperature: 1.0,
-      });
-      return newSkill;
+      try {
+        const newSkill = await userDataStorageConnector.createSkill({
+          agent_id: agentId,
+          name: skillName,
+          description: 'An Reactive Agents internal skill',
+          metadata: {},
+          configuration_count: 0,
+          optimize: false,
+          clustering_interval: 0,
+          reflection_min_requests_per_arm: 0,
+          exploration_temperature: 1.0,
+        });
+        return newSkill;
+      } catch (_error) {
+        // If skill creation fails (e.g., duplicate key from concurrent request),
+        // try to fetch the existing skill instead
+        const existingSkills = await userDataStorageConnector.getSkills({
+          name: skillName,
+          agent_id: agentId,
+        });
+        if (existingSkills.length > 0) {
+          return existingSkills[0];
+        }
+        // If we still can't find it, throw the original error
+        throw _error;
+      }
     }
     return null;
   }

@@ -34,11 +34,7 @@ export async function runEvaluationsForLog(
 
         // Use the evaluation ID for skill optimization evaluations
         return await connector.evaluateLog(evaluation, log);
-      } catch (error) {
-        console.error(
-          `Error in skill optimization evaluation ${evaluation.evaluation_method} for log ${log.id}:`,
-          error,
-        );
+      } catch (_error) {
         // Don't throw - we want other evaluations to continue even if one fails
       }
     },

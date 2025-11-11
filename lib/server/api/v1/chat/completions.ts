@@ -16,11 +16,6 @@ export const completionsRouter = new Hono<AppEnv>()
 
       return tryTargetsResponse;
     } catch (err) {
-      if (err instanceof Error) {
-        console.error(`chatCompletion error: ${err.message}`);
-      } else {
-        console.error(`chatCompletion error: ${err}`);
-      }
       let statusCode = 500;
       let errorMessage = 'Something went wrong';
 
