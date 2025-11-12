@@ -70,3 +70,9 @@ export const RA_SKILLS = [
 ];
 
 export const EMBEDDINGS_DIMENSIONS = 1536;
+
+export const SUPABASE_JWT_SECRET =
+  process.env.SUPABASE_JWT_SECRET ??
+  (process.env.NODE_ENV === 'development'
+    ? 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz'
+    : '');

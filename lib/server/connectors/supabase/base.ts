@@ -21,10 +21,59 @@ export const selectFromSupabase = async <T extends z.ZodType>(
 ): Promise<z.infer<T>> => {
   checkEnvironmentVariables();
 
+  // Validate table name to prevent common typos and routing errors
+  // Common valid table names in the schema
+  const _validTables = [
+    'agents',
+    'skills',
+    'tools',
+    'models',
+    'logs',
+    'feedbacks',
+    'improved_responses',
+    'ai_providers',
+    'skill_models',
+    'skill_optimization_clusters',
+    'skill_optimization_arms',
+    'skill_optimization_evaluations',
+    'skill_optimization_evaluation_runs',
+    'cache',
+  ];
+
+  // Check for common typos
+  if (table === 'login') {
+    console.error(
+      `Invalid table name: "${table}". Did you mean "logs"? This might indicate a routing issue where a request path is being used as a table name.`,
+    );
+    throw new Error(
+      `Invalid table name: "${table}". Did you mean "logs"? Check that requests are not being incorrectly routed to PostgREST.`,
+    );
+  }
+
   const url = new URL(`${POSTGREST_URL}/${table}`);
 
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
+      // Validate that filter values start with an operator (eq., ne., gt., etc.)
+      // unless it's a special PostgREST parameter like 'select', 'order', 'limit', 'offset', 'and', 'or'
+      const specialParams = ['select', 'order', 'limit', 'offset', 'and', 'or'];
+      if (!specialParams.includes(key)) {
+        // Check for PostgREST filter operators
+        // Operators can be: eq, ne, gt, gte, lt, lte, like, ilike, is, in, cs, cd, sl, sr, nxr, nxl, adj, ov, fts, plfts, phfts, wfts
+        // Special cases: not.is.null, not.is.true, etc.
+        const isValidFilter =
+          value.match(
+            /^(eq|ne|gt|gte|lt|lte|like|ilike|is|in|cs|cd|sl|sr|nxr|nxl|adj|ov|fts|plfts|phfts|wfts)\./,
+          ) || value.match(/^not\.is\./);
+        if (!isValidFilter) {
+          console.error(
+            `Invalid PostgREST filter format for ${key}: ${value}. Filters must start with an operator (eq., ne., not.is., etc.)`,
+          );
+          throw new Error(
+            `Invalid PostgREST filter format for ${key}: ${value}. Filters must start with an operator (eq., ne., not.is., etc.)`,
+          );
+        }
+      }
       url.searchParams.set(key, value);
     }
   }

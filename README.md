@@ -28,7 +28,20 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 1. Create a `.env` file:
    ```bash
    OPENAI_API_KEY=your-openai-key
+   
+   # WorkOS AuthKit Configuration (required for authentication)
+   WORKOS_API_KEY=your_workos_api_key
+   WORKOS_CLIENT_ID=your_workos_client_id
+   WORKOS_COOKIE_PASSWORD=your_32_character_cookie_password
+   SUPABASE_JWT_SECRET=your_supabase_jwt_secret
    ```
+   
+   **Generate a secure cookie password:**
+   ```bash
+   openssl rand -base64 24
+   ```
+   
+   This will generate a 32+ character password. Copy it to `WORKOS_COOKIE_PASSWORD` in your `.env` file.
 
 2. Start the application:
    ```bash

@@ -109,41 +109,43 @@ export function NavMain({
         {/* Agents Section */}
         <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={'Agents'}
-              className="cursor-pointer"
-              asChild
-            >
-              <Link
-                href="/agents"
-                onClick={(e) => {
-                  // Only toggle collapse if we're already on /agents
-                  if (pathname === '/agents') {
-                    e.preventDefault();
-                    setIsAgentsOpen(!isAgentsOpen);
-                  }
-                }}
+            <div className="flex items-center gap-1">
+              <SidebarMenuButton
+                tooltip={'Agents'}
+                className="cursor-pointer flex-1"
+                asChild
               >
-                <BotIcon size={16} className="shrink-0" />
-                <span>Agents</span>
-                {!isLoading && (
-                  <>
+                <Link
+                  href="/agents"
+                  onClick={(e) => {
+                    // Only toggle collapse if we're already on /agents
+                    if (pathname === '/agents') {
+                      e.preventDefault();
+                      setIsAgentsOpen(!isAgentsOpen);
+                    }
+                  }}
+                >
+                  <BotIcon size={16} className="shrink-0" />
+                  <span>Agents</span>
+                  {!isLoading && (
                     <span className="ml-auto text-xs text-muted-foreground">
                       {agents.length}
                     </span>
-                    <Link
-                      href="/agents/create"
-                      className="ml-1 size-4 cursor-pointer hover:opacity-70 flex items-center justify-center"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <Plus className="size-4" />
-                    </Link>
-                  </>
-                )}
-              </Link>
-            </SidebarMenuButton>
+                  )}
+                </Link>
+              </SidebarMenuButton>
+              {!isLoading && (
+                <Link
+                  href="/agents/create"
+                  className="size-8 cursor-pointer hover:opacity-70 flex items-center justify-center rounded-md hover:bg-sidebar-accent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <Plus className="size-4" />
+                </Link>
+              )}
+            </div>
             <CollapsibleContent>
               <SidebarMenuSub>
                 {isLoading ? (

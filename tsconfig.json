@@ -1,8 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "types": ["@cloudflare/workers-types", "node"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "types": [
+      "@cloudflare/workers-types",
+      "node"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,9 +27,15 @@
       }
     ],
     "paths": {
-      "@client/*": ["./lib/client/*"],
-      "@server/*": ["./lib/server/*"],
-      "@shared/*": ["./lib/shared/*"]
+      "@client/*": [
+        "./lib/client/*"
+      ],
+      "@server/*": [
+        "./lib/server/*"
+      ],
+      "@shared/*": [
+        "./lib/shared/*"
+      ]
     }
   },
   "include": [
@@ -36,5 +49,11 @@
     "examples/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "dist", "turbo", ".open-next"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "turbo",
+    ".open-next"
+  ]
 }

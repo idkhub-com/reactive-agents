@@ -17,7 +17,12 @@ export function NavUser(): React.ReactElement {
       method: 'POST',
     });
     if (response.ok) {
-      router.push('/login');
+      const data = (await response.json()) as { signOutUrl?: string };
+      if (data.signOutUrl) {
+        window.location.href = data.signOutUrl;
+      } else {
+        router.push('/login');
+      }
     }
   }
 

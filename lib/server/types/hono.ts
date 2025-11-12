@@ -11,6 +11,7 @@ import type {
   ReactiveAgentsConfigPreProcessed,
 } from '@shared/types/api/request/headers';
 import type { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import type { AuthenticatedSubject, AuthInfo } from '@shared/types/auth';
 import type { SkillOptimizationArm } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
 import type {
@@ -49,6 +50,10 @@ export interface AppEnv {
       EvaluationMethodName,
       EvaluationMethodConnector
     >;
+    auth_info?: AuthInfo;
+    authenticated_subject?: AuthenticatedSubject;
+    workspace_id?: string;
+    access_token?: string;
 
     executeHooks: (
       c: AppContext,

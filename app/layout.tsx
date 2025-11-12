@@ -1,4 +1,5 @@
 import { Toaster } from '@client/components/ui/toaster';
+import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
 import type { Metadata, Viewport } from 'next';
 import { Lato, Ubuntu } from 'next/font/google';
 import { headers } from 'next/headers';
@@ -68,9 +69,11 @@ async function LayoutContent({
         enableSystem
         disableTransitionOnChange
       >
-        <DevToolsInit />
-        <SidebarProvider>{children}</SidebarProvider>
-        <Toaster />
+        <AuthKitProvider>
+          <DevToolsInit />
+          <SidebarProvider>{children}</SidebarProvider>
+          <Toaster />
+        </AuthKitProvider>
       </ThemeProvider>
     </>
   );
