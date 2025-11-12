@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Lato, Ubuntu } from 'next/font/google';
 import { headers } from 'next/headers';
 import Script from 'next/script';
+import { Suspense } from 'react';
 
 import '@client/styles/globals.css';
 import '@client/styles/editor.css';
@@ -41,13 +42,45 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default async function RootLayout({
+// MIGRATED: Wrapped layout content in Suspense for Cache Components compatibility
+// The headers() call for CSP nonce makes this route dynamic
+// Suspense boundary ensures proper rendering with Cache Components enabled
+async function LayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
   const nonceScriptId = useId();
   const nonce = (await headers()).get('X-Nonce');
+
+  return (
+    <>
+      <Script
+        strategy="afterInteractive"
+        id={nonceScriptId}
+        nonce={nonce ?? undefined}
+      >
+        {`__webpack_nonce__ = ${JSON.stringify(nonce)}`}
+      </Script>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <DevToolsInit />
+        <SidebarProvider>{children}</SidebarProvider>
+        <Toaster />
+      </ThemeProvider>
+    </>
+  );
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   return (
     <html
       lang="en"
@@ -55,23 +88,17 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex flex-col overflow-hidden overscroll-none w-screen h-screen">
-        <Script
-          strategy="afterInteractive"
-          id={nonceScriptId}
-          nonce={nonce ?? undefined}
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-screen">
+              <div className="text-center">
+                <p className="text-lg">Loading...</p>
+              </div>
+            </div>
+          }
         >
-          {`__webpack_nonce__ = ${JSON.stringify(nonce)}`}
-        </Script>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <DevToolsInit />
-          <SidebarProvider>{children}</SidebarProvider>
-          <Toaster />
-        </ThemeProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </Suspense>
       </body>
     </html>
   );
