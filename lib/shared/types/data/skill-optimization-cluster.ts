@@ -15,14 +15,26 @@ export const SkillOptimizationCluster = z.object({
 
   /**
    * The total number of requests that have been processed by the algorithm
-   * in this cluster.
+   * in this cluster since the last optimization cycle.
+   * This counter resets to 0 during reflection and evaluation regeneration.
+   * Used by Thompson Sampling algorithm to decide when to trigger optimization.
    */
   total_steps: z.number().min(0),
+
+  /**
+   * The total number of requests routed to this cluster for observability.
+   * This counter never resets and provides historical tracking of cluster usage.
+   */
+  observability_total_requests: z.number().min(0),
 
   /** An array representing the center of the cluster of the logs in
    * n-dimensional space.
    */
   centroid: z.array(z.number()),
+
+  /** Lock timestamp to prevent concurrent system prompt reflection for this cluster.
+   * If set and recent (< 10 minutes old), reflection is in progress. */
+  reflection_lock_acquired_at: z.iso.datetime({ offset: true }).nullable(),
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -50,6 +62,7 @@ export const SkillOptimizationClusterCreateParams = z
     skill_id: z.uuid(),
     name: z.string(),
     total_steps: z.number().min(0),
+    observability_total_requests: z.number().min(0).default(0),
     centroid: z.array(z.number()),
   })
   .strict();
@@ -62,7 +75,12 @@ export type SkillOptimizationClusterCreateParams = z.infer<
 export const SkillOptimizationClusterUpdateParams = z
   .object({
     total_steps: z.number().min(0).optional(),
+    observability_total_requests: z.number().min(0).optional(),
     centroid: z.array(z.number()).optional(),
+    reflection_lock_acquired_at: z.iso
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
   })
   .strict();
 

@@ -25,6 +25,8 @@ const mockUserDataStorageConnector = {
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
+  incrementSkillTotalRequests: vi.fn(),
+  tryAcquireReclusteringLock: vi.fn(),
   // System prompt methods
   getSystemPrompts: vi.fn(),
   createSystemPrompt: vi.fn(),
@@ -35,11 +37,14 @@ const mockUserDataStorageConnector = {
   createSkillOptimizationClusters: vi.fn(),
   updateSkillOptimizationCluster: vi.fn(),
   deleteSkillOptimizationCluster: vi.fn(),
-  incrementClusterTotalSteps: vi.fn(),
+  incrementClusterCounters: vi.fn(),
   // Skill Optimization Arm methods
   getSkillOptimizationArms: vi.fn(),
+  getSkillOptimizationArmStats: vi.fn(),
+  deleteSkillOptimizationArmStats: vi.fn(),
   createSkillOptimizationArms: vi.fn(),
   updateSkillOptimizationArm: vi.fn(),
+  updateArmAndIncrementCounters: vi.fn(),
   deleteSkillOptimizationArm: vi.fn(),
   deleteSkillOptimizationArmsForSkill: vi.fn(),
   deleteSkillOptimizationArmsForCluster: vi.fn(),
@@ -47,11 +52,15 @@ const mockUserDataStorageConnector = {
   getSkillOptimizationEvaluations: vi.fn(),
   createSkillOptimizationEvaluations: vi.fn(),
   deleteSkillOptimizationEvaluation: vi.fn(),
+  updateSkillOptimizationEvaluation: vi.fn(),
   deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
   // Skill Optimization Evaluation Run methods
   getSkillOptimizationEvaluationRuns: vi.fn(),
+  getEvaluationScoresByTimeBucket: vi.fn(),
   createSkillOptimizationEvaluationRun: vi.fn(),
   deleteSkillOptimizationEvaluationRun: vi.fn(),
+  getSkillEvents: vi.fn(),
+  createSkillEvent: vi.fn(),
   // Tool methods
   getTools: vi.fn(),
   createTool: vi.fn(),
@@ -91,6 +100,7 @@ const mockUserDataStorageConnector = {
   deleteModel: vi.fn(),
   // Skill-Model relationship methods
   getSkillModels: vi.fn(),
+  getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
 };

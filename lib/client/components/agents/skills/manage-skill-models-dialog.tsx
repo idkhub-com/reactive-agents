@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from '@client/components/ui/dialog';
 import { useToast } from '@client/hooks/use-toast';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { Model } from '@shared/types/data/model';
@@ -39,7 +39,7 @@ export function ManageSkillModelsDialog({
 }: ManageSkillModelsDialogProps): ReactElement {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { apiKeys } = useAIProviderAPIKeys();
+  const { aiProviderConfigs: apiKeys } = useAIProviders();
   const {
     models,
     isLoading: isLoadingAllModels,

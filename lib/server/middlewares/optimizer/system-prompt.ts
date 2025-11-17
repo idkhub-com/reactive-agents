@@ -6,6 +6,7 @@ import type {
 import { formatMessagesForExtraction } from '@server/utils/messages';
 import { extractMessagesFromRequestData } from '@server/utils/reactive-agents/requests';
 import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import { error } from '@shared/console-logging';
 import {
   type ChatCompletionRequestData,
@@ -14,12 +15,8 @@ import {
   type StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
 import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
-import type {
-  Log,
-  Skill,
-  SkillOptimizationArmCreateParams,
-  SkillOptimizationCluster,
-} from '@shared/types/data';
+import type { Log, Skill, SkillOptimizationCluster } from '@shared/types/data';
+import { SkillEventType } from '@shared/types/data/skill-event';
 import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 
 /**
@@ -83,6 +80,329 @@ function extractRequestConstraints(
 }
 
 /**
+ * Attempts to acquire a reflection lock for a cluster
+ * Returns the lock timestamp if successful, null otherwise
+ */
+async function acquireReflectionLock(
+  userDataStorageConnector: UserDataStorageConnector,
+  _skill: Skill,
+  clusterId: string,
+): Promise<string | null> {
+  // Re-fetch cluster to get latest state (critical for lock check)
+  const latestClusters =
+    await userDataStorageConnector.getSkillOptimizationClusters({
+      id: clusterId,
+    });
+
+  if (latestClusters.length === 0) {
+    return null;
+  }
+
+  const latestCluster = latestClusters[0];
+
+  // Check if reflection lock exists and is recent (< 10 minutes old)
+  const lockTimestamp = latestCluster.reflection_lock_acquired_at;
+  if (lockTimestamp) {
+    const lockAge = Date.now() - new Date(lockTimestamp).getTime();
+    const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+    if (lockAge < LOCK_TIMEOUT_MS) {
+      return null;
+    }
+  }
+
+  // Try to acquire lock by updating the cluster
+  const lockTime = new Date().toISOString();
+  try {
+    await userDataStorageConnector.updateSkillOptimizationCluster(clusterId, {
+      reflection_lock_acquired_at: lockTime,
+    });
+  } catch (_error) {
+    return null;
+  }
+
+  // CRITICAL: Double-check the lock after acquisition to detect race conditions
+  const postLockClusters =
+    await userDataStorageConnector.getSkillOptimizationClusters({
+      id: clusterId,
+    });
+
+  if (postLockClusters.length === 0) {
+    return null;
+  }
+
+  const postLockCluster = postLockClusters[0];
+
+  // Check if our lock is still there (not overwritten by another process)
+  const postLockTime = postLockCluster.reflection_lock_acquired_at
+    ? new Date(postLockCluster.reflection_lock_acquired_at).getTime()
+    : null;
+  const expectedLockTime = new Date(lockTime).getTime();
+
+  if (postLockTime !== expectedLockTime) {
+    return null;
+  }
+
+  return lockTime;
+}
+
+/**
+ * Releases the reflection lock for a cluster
+ */
+async function releaseReflectionLock(
+  userDataStorageConnector: UserDataStorageConnector,
+  clusterId: string,
+) {
+  await userDataStorageConnector.updateSkillOptimizationCluster(clusterId, {
+    reflection_lock_acquired_at: null,
+  });
+}
+
+/**
+ * Calculates weighted stats for all arms in a cluster efficiently
+ */
+async function calculateClusterArmStats(
+  userDataStorageConnector: UserDataStorageConnector,
+  cluster: SkillOptimizationCluster,
+  clusterArms: Awaited<
+    ReturnType<UserDataStorageConnector['getSkillOptimizationArms']>
+  >,
+) {
+  // Fetch evaluations to get weights (once for the whole cluster)
+  const evaluations =
+    await userDataStorageConnector.getSkillOptimizationEvaluations({
+      skill_id: cluster.skill_id,
+    });
+
+  // Create a map of evaluation_id -> weight
+  const evaluationWeights = new Map<string, number>();
+  for (const evaluation of evaluations) {
+    evaluationWeights.set(evaluation.id, evaluation.weight);
+  }
+
+  // Fetch ALL arm_stats for the cluster in one query (efficient!)
+  const allArmStats =
+    await userDataStorageConnector.getSkillOptimizationArmStats({
+      cluster_id: cluster.id,
+    });
+
+  // Group arm_stats by arm_id
+  const armStatsGrouped = new Map<string, typeof allArmStats>();
+  for (const stat of allArmStats) {
+    const existing = armStatsGrouped.get(stat.arm_id) || [];
+    existing.push(stat);
+    armStatsGrouped.set(stat.arm_id, existing);
+  }
+
+  // Calculate weighted stats for all arms
+  const armStatsMap = new Map<
+    string,
+    { n: number; weighted_mean: number; arm: (typeof clusterArms)[0] }
+  >();
+
+  for (const arm of clusterArms) {
+    const armStats = armStatsGrouped.get(arm.id) || [];
+
+    // Calculate weighted average mean
+    let weightedMeanSum = 0;
+    let totalWeight = 0;
+    let totalRequests = 0;
+
+    for (const stat of armStats) {
+      const weight = evaluationWeights.get(stat.evaluation_id) || 1.0;
+      weightedMeanSum += stat.mean * weight;
+      totalWeight += weight;
+      // Use max n across all evaluations as the request count
+      if (stat.n > totalRequests) {
+        totalRequests = stat.n;
+      }
+    }
+
+    // Calculate weighted mean (0 if no stats yet)
+    const weightedMean = totalWeight > 0 ? weightedMeanSum / totalWeight : 0;
+
+    armStatsMap.set(arm.id, {
+      n: totalRequests,
+      weighted_mean: weightedMean,
+      arm,
+    });
+  }
+
+  return { armStatsMap, evaluationWeights };
+}
+
+/**
+ * Fetches example logs for reflection (best and worst performing)
+ * - Best: Single best log from all time
+ * - Worst: Worst logs since last reflection only
+ */
+async function fetchReflectionExamples(
+  userDataStorageConnector: UserDataStorageConnector,
+  logsStorageConnector: LogsStorageConnector,
+  cluster: SkillOptimizationCluster,
+) {
+  // Find the last reflection event for this cluster
+  const lastReflectionEvents = await userDataStorageConnector.getSkillEvents({
+    cluster_id: cluster.id,
+    event_type: SkillEventType.REFLECTION,
+    limit: 1,
+  });
+
+  const lastReflectionTime = lastReflectionEvents[0]?.created_at;
+
+  // Fetch best log from all time (no time filter)
+  const allTimeLogs = await logsStorageConnector.getLogs({
+    skill_id: cluster.skill_id,
+    cluster_id: cluster.id,
+    embedding_not_null: true,
+    limit: 50, // Get more logs to find the absolute best
+  });
+
+  // Sort by score and take the single best log from all time
+  const bestLog = allTimeLogs
+    .map((log) => ({
+      log,
+      score: log.avg_eval_score ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score)[0]?.log;
+
+  const bestExamples = bestLog ? generateExampleConversations([bestLog]) : [];
+
+  // Fetch worst logs since last reflection (or all time if no reflection yet)
+  const recentLogs = await logsStorageConnector.getLogs({
+    skill_id: cluster.skill_id,
+    cluster_id: cluster.id,
+    embedding_not_null: true,
+    after: lastReflectionTime
+      ? new Date(lastReflectionTime).getTime()
+      : undefined, // Will be undefined if no reflection yet, which fetches all logs
+    limit: 15, // Get enough logs to find worst ones
+  });
+
+  // Sort by score and take bottom 5 worst logs
+  const worstLogs = recentLogs
+    .map((log) => ({
+      log,
+      score: log.avg_eval_score ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(-5)
+    .map((l) => l.log);
+
+  // For worst examples, include evaluation information
+  const worstExamples = await generateExampleConversationsWithEvaluations(
+    userDataStorageConnector,
+    worstLogs,
+  );
+
+  return { bestExamples, worstExamples };
+}
+
+/**
+ * Performs reflection: updates arms with new prompt and resets stats
+ */
+async function performReflection(
+  userDataStorageConnector: UserDataStorageConnector,
+  cluster: SkillOptimizationCluster,
+  skill: Skill,
+  clusterArms: Awaited<
+    ReturnType<UserDataStorageConnector['getSkillOptimizationArms']>
+  >,
+  armStatsMap: Map<
+    string,
+    {
+      n: number;
+      weighted_mean: number;
+      arm: Awaited<
+        ReturnType<UserDataStorageConnector['getSkillOptimizationArms']>
+      >[0];
+    }
+  >,
+  newPrompt: string,
+  bestArm: Awaited<
+    ReturnType<UserDataStorageConnector['getSkillOptimizationArms']>
+  >[0],
+) {
+  // Sort arms by performance (weighted mean reward, descending)
+  const sortedArms = [...clusterArms].sort((a, b) => {
+    const aStats = armStatsMap.get(a.id);
+    const bStats = armStatsMap.get(b.id);
+    return (bStats?.weighted_mean ?? 0) - (aStats?.weighted_mean ?? 0);
+  });
+
+  const bestArmStats = armStatsMap.get(bestArm.id);
+  const updatePromises = [];
+
+  for (let i = 0; i < sortedArms.length; i++) {
+    const arm = sortedArms[i];
+    const isBest = i === 0;
+    const isWorst = i === sortedArms.length - 1;
+
+    if (isBest) {
+      // Best arm: Keep completely intact (no update)
+      continue;
+    }
+
+    if (isWorst) {
+      // Worst arm: Gets best config + new prompt
+      updatePromises.push(
+        userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+          params: {
+            ...bestArm.params,
+            system_prompt: newPrompt,
+          },
+        }),
+      );
+      // Delete all arm_stats for this arm to reset its performance history
+      updatePromises.push(
+        userDataStorageConnector.deleteSkillOptimizationArmStats({
+          arm_id: arm.id,
+        }),
+      );
+    } else {
+      // Middle arms: Get new prompt only
+      updatePromises.push(
+        userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+          params: {
+            ...arm.params,
+            system_prompt: newPrompt,
+          },
+        }),
+      );
+      // Delete all arm_stats for this arm to reset its performance history
+      updatePromises.push(
+        userDataStorageConnector.deleteSkillOptimizationArmStats({
+          arm_id: arm.id,
+        }),
+      );
+    }
+  }
+
+  await Promise.all(updatePromises);
+
+  // Reset cluster total_steps to match the best arm's request count
+  await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
+    total_steps: bestArmStats?.n ?? 0,
+  });
+
+  // Create skill event for reflection
+  await userDataStorageConnector.createSkillEvent({
+    agent_id: skill.agent_id,
+    skill_id: skill.id,
+    cluster_id: cluster.id,
+    event_type: SkillEventType.REFLECTION,
+    metadata: {},
+  });
+
+  // Emit SSE event for real-time updates
+  emitSSEEvent('skill-optimization:event-created', {
+    skillId: skill.id,
+    clusterId: cluster.id,
+    bestArmId: bestArm.id,
+  });
+}
+
+/**
  * Converts a log into a conversation string with input, output, and request constraints
  */
 export function generateExampleConversations(logs: Log[]): string[] {
@@ -129,6 +449,107 @@ export function generateExampleConversations(logs: Log[]): string[] {
     .filter((conversation) => conversation !== '');
 }
 
+/**
+ * Converts logs into conversation strings with evaluation information appended
+ */
+async function generateExampleConversationsWithEvaluations(
+  userDataStorageConnector: UserDataStorageConnector,
+  logs: Log[],
+): Promise<string[]> {
+  const conversations: string[] = [];
+
+  for (const log of logs) {
+    try {
+      const raRequestData = produceReactiveAgentsRequestData(
+        log.ai_provider_request_log.method,
+        log.ai_provider_request_log.request_url,
+        {},
+        log.ai_provider_request_log.request_body,
+      );
+      const responseBody = ReactiveAgentsResponseBody.parse(
+        log.ai_provider_request_log.response_body,
+      );
+
+      const messages = extractMessagesFromRequestData(
+        raRequestData as
+          | ChatCompletionRequestData
+          | StreamChatCompletionRequestData
+          | ResponsesRequestData,
+      );
+      const input = formatMessagesForExtraction(messages);
+      const output = extractOutputFromResponseBody(responseBody);
+
+      const constraints = extractRequestConstraints(
+        log.ai_provider_request_log.request_body as
+          | ChatCompletionRequestData
+          | StreamChatCompletionRequestData
+          | ResponsesRequestData,
+      );
+
+      let conversation = `${input}${constraints}\n\nAssistant: ${output}`;
+
+      // Fetch evaluation runs for this log
+      const evaluationRuns =
+        await userDataStorageConnector.getSkillOptimizationEvaluationRuns({
+          log_id: log.id,
+        });
+
+      console.log(
+        `[REFLECTION] Log ${log.id}: Found ${evaluationRuns.length} evaluation runs`,
+      );
+
+      if (evaluationRuns.length > 0) {
+        const evaluationRun = evaluationRuns[0];
+        console.log(
+          `[REFLECTION] Evaluation run has ${evaluationRun.results.length} results`,
+        );
+        const evaluationInfo: string[] = [];
+
+        for (const result of evaluationRun.results) {
+          console.log(
+            `[REFLECTION] Processing result for method: ${result.method}, score: ${result.score}`,
+          );
+          console.log(
+            `[REFLECTION] Display info:`,
+            JSON.stringify(result.display_info, null, 2),
+          );
+
+          evaluationInfo.push(`\n## Evaluation: ${result.method}`);
+          evaluationInfo.push(`Score: ${result.score.toFixed(2)}`);
+
+          if (result.display_info && result.display_info.length > 0) {
+            for (const displayItem of result.display_info) {
+              evaluationInfo.push(
+                `${displayItem.label}: ${displayItem.content}`,
+              );
+            }
+          }
+        }
+
+        console.log(
+          `[REFLECTION] Evaluation info array length: ${evaluationInfo.length}`,
+        );
+        console.log(`[REFLECTION] Evaluation info:`, evaluationInfo.join('\n'));
+
+        if (evaluationInfo.length > 0) {
+          conversation += `\n\n---\n## Evaluation Results:${evaluationInfo.join('\n')}`;
+        }
+      } else {
+        console.log(`[REFLECTION] No evaluation runs found for log ${log.id}`);
+      }
+
+      conversations.push(conversation);
+    } catch (e) {
+      error(
+        `[REFLECTION] Failed to extract conversation with evaluations from log ${log.id}:`,
+        e,
+      );
+    }
+  }
+
+  return conversations.filter((conversation) => conversation !== '');
+}
+
 async function autoGenerateSystemPromptsForCluster(
   userDataStorageConnector: UserDataStorageConnector,
   logsStorageConnector: LogsStorageConnector,
@@ -138,63 +559,19 @@ async function autoGenerateSystemPromptsForCluster(
   skill: Skill,
   agentDescription: string,
 ) {
-  // Re-fetch skill to get latest metadata state (critical for lock check)
-  // This ensures we see any locks set by concurrent requests
-  const latestSkills = await userDataStorageConnector.getSkills({
-    id: skill.id,
-  });
+  // Attempt to acquire reflection lock
+  const lockTime = await acquireReflectionLock(
+    userDataStorageConnector,
+    skill,
+    cluster.id,
+  );
 
-  if (latestSkills.length === 0) {
-    return;
-  }
-
-  const latestSkill = latestSkills[0];
-
-  // Check if reflection lock exists and is recent (< 10 minutes old)
-  const lockTimestamp = latestSkill.reflection_lock_acquired_at;
-  if (lockTimestamp) {
-    const lockAge = Date.now() - new Date(lockTimestamp).getTime();
-    const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-
-    if (lockAge < LOCK_TIMEOUT_MS) {
-      return;
-    }
-  }
-
-  // Try to acquire lock by updating the skill
-  const lockTime = new Date().toISOString();
-  try {
-    await userDataStorageConnector.updateSkill(skill.id, {
-      reflection_lock_acquired_at: lockTime,
-    });
-  } catch (_error) {
-    return;
-  }
-
-  // CRITICAL: Double-check the lock after acquisition to detect race conditions
-  // Re-fetch the skill and verify our exact lock timestamp is still there
-  const postLockSkills = await userDataStorageConnector.getSkills({
-    id: skill.id,
-  });
-
-  if (postLockSkills.length === 0) {
-    return;
-  }
-
-  const postLockSkill = postLockSkills[0];
-
-  // Check if our lock is still there (not overwritten by another process)
-  // Compare as Date objects to handle different ISO string formats (Z vs +00:00)
-  const postLockTime = postLockSkill.reflection_lock_acquired_at
-    ? new Date(postLockSkill.reflection_lock_acquired_at).getTime()
-    : null;
-  const expectedLockTime = new Date(lockTime).getTime();
-
-  if (postLockTime !== expectedLockTime) {
-    return;
+  if (!lockTime) {
+    return; // Lock acquisition failed, skip reflection
   }
 
   try {
+    // Fetch cluster arms
     const clusterArms = await userDataStorageConnector.getSkillOptimizationArms(
       {
         skill_id: cluster.skill_id,
@@ -202,54 +579,61 @@ async function autoGenerateSystemPromptsForCluster(
       },
     );
 
+    // Early exit conditions
     if (clusterArms.length === 0) {
-      throw new Error(`No arms found for cluster ${cluster.id}`);
-    }
-
-    // We have already optimized this cluster as much as possible
-    if (clusterArms.length === 1) {
-      await userDataStorageConnector.updateSkill(skill.id, {
-        reflection_lock_acquired_at: null,
-      });
+      console.warn(
+        `[REFLECTION] No arms found for cluster ${cluster.id}. Skipping reflection and releasing lock.`,
+      );
+      await releaseReflectionLock(userDataStorageConnector, cluster.id);
       return;
     }
 
-    // Check that all arms have been used at least minRequestsPerArm times
-    const thresholdMetArms = clusterArms.every(
-      (arm) => arm.stats.n >= minRequestsPerArm,
+    if (clusterArms.length === 1) {
+      await releaseReflectionLock(userDataStorageConnector, cluster.id);
+      return;
+    }
+
+    // Calculate weighted stats for all arms
+    const { armStatsMap, evaluationWeights } = await calculateClusterArmStats(
+      userDataStorageConnector,
+      cluster,
+      clusterArms,
     );
 
-    // Minimum number of requests per arm not yet met for all arms
+    // Check threshold
+    const thresholdMetArms = Array.from(armStatsMap.values()).every(
+      (armData) => armData.n >= minRequestsPerArm,
+    );
     if (!thresholdMetArms) {
-      await userDataStorageConnector.updateSkill(skill.id, {
-        reflection_lock_acquired_at: null,
-      });
+      await releaseReflectionLock(userDataStorageConnector, cluster.id);
       return;
     }
 
-    const logExampleCount = 7;
-    const logs = await logsStorageConnector.getLogs({
-      skill_id: cluster.skill_id,
-      cluster_id: cluster.id,
-      // Since the embedding is not null, we can assume that the logs are valid
-      // and are for one of the allowed function names
-      embedding_not_null: true,
-      limit: logExampleCount,
-    });
-
-    const examplesConversations = generateExampleConversations(logs);
-
     // Find best and worst performing arms
-    const bestArm = clusterArms.reduce((best, current) => {
-      return current.stats.mean > best.stats.mean ? current : best;
-    });
+    let bestArm = clusterArms[0];
+    let bestMean = -Infinity;
+    let worstArm = clusterArms[0];
+    let worstMean = Infinity;
 
-    const worstArm = clusterArms.reduce((worst, current) => {
-      return current.stats.mean < worst.stats.mean ? current : worst;
-    });
+    for (const [_armId, armData] of armStatsMap) {
+      if (armData.weighted_mean > bestMean) {
+        bestMean = armData.weighted_mean;
+        bestArm = armData.arm;
+      }
+      if (armData.weighted_mean < worstMean) {
+        worstMean = armData.weighted_mean;
+        worstArm = armData.arm;
+      }
+    }
 
-    // SAFETY CHECK: Re-fetch arms and verify best/worst still have sufficient requests
-    // This prevents race conditions where arms were updated during reflection
+    // Fetch reflection examples (best and worst logs)
+    const { bestExamples, worstExamples } = await fetchReflectionExamples(
+      userDataStorageConnector,
+      logsStorageConnector,
+      cluster,
+    );
+
+    // SAFETY CHECK: Revalidate arms haven't changed during reflection
     const revalidatedArms =
       await userDataStorageConnector.getSkillOptimizationArms({
         skill_id: cluster.skill_id,
@@ -263,115 +647,86 @@ async function autoGenerateSystemPromptsForCluster(
       (arm) => arm.id === worstArm.id,
     );
 
-    // Verify arms still exist and have sufficient requests
+    // Re-fetch arm stats for revalidation
+    const revalidatedArmStats =
+      await userDataStorageConnector.getSkillOptimizationArmStats({
+        cluster_id: cluster.id,
+      });
+
+    const revalidatedStatsGrouped = new Map<
+      string,
+      typeof revalidatedArmStats
+    >();
+    for (const stat of revalidatedArmStats) {
+      const existing = revalidatedStatsGrouped.get(stat.arm_id) || [];
+      existing.push(stat);
+      revalidatedStatsGrouped.set(stat.arm_id, existing);
+    }
+
+    const calculateArmWeightedStats = (armId: string) => {
+      const armStats = revalidatedStatsGrouped.get(armId) || [];
+      let weightedMeanSum = 0;
+      let totalWeight = 0;
+      let totalRequests = 0;
+
+      for (const stat of armStats) {
+        const weight = evaluationWeights.get(stat.evaluation_id) || 1.0;
+        weightedMeanSum += stat.mean * weight;
+        totalWeight += weight;
+        if (stat.n > totalRequests) {
+          totalRequests = stat.n;
+        }
+      }
+
+      return {
+        n: totalRequests,
+        weighted_mean: totalWeight > 0 ? weightedMeanSum / totalWeight : 0,
+      };
+    };
+
+    const revalidatedBestStats = revalidatedBestArm
+      ? calculateArmWeightedStats(revalidatedBestArm.id)
+      : null;
+    const revalidatedWorstStats = revalidatedWorstArm
+      ? calculateArmWeightedStats(revalidatedWorstArm.id)
+      : null;
+
     if (
       !revalidatedBestArm ||
       !revalidatedWorstArm ||
-      revalidatedBestArm.stats.n < minRequestsPerArm ||
-      revalidatedWorstArm.stats.n < minRequestsPerArm
+      !revalidatedBestStats ||
+      !revalidatedWorstStats ||
+      revalidatedBestStats.n < minRequestsPerArm ||
+      revalidatedWorstStats.n < minRequestsPerArm
     ) {
-      await userDataStorageConnector.updateSkill(skill.id, {
-        reflection_lock_acquired_at: null,
-      });
+      await releaseReflectionLock(userDataStorageConnector, cluster.id);
       return;
     }
 
-    // Sort arms by performance (mean reward, descending)
-    const sortedArms = [...clusterArms].sort(
-      (a, b) => b.stats.mean - a.stats.mean,
+    // Generate new prompt based on reflection
+
+    const newPrompt = await generateReflectiveSystemPromptForSkill(
+      bestArm.params.system_prompt,
+      bestExamples,
+      worstExamples,
+      agentDescription,
+      skill.description,
+      skill.allowed_template_variables,
     );
 
-    // Remove the worst performing arm to reduce search space over time
-    const armsToKeep = sortedArms.slice(0, -1); // Remove last (worst) arm
-
-    // Keep top 50% of remaining arms
-    const halfPoint = Math.ceil(armsToKeep.length / 2);
-    const topHalfArms = armsToKeep.slice(0, halfPoint);
-    const bottomHalfCount = armsToKeep.length - halfPoint;
-
-    // Extract unique system prompts from top performers (memory efficient - just the prompts)
-    const topPrompts = Array.from(
-      new Set(topHalfArms.map((arm) => arm.params.system_prompt)),
+    // Perform reflection: update arms with new prompt and reset stats
+    await performReflection(
+      userDataStorageConnector,
+      cluster,
+      skill,
+      clusterArms,
+      armStatsMap,
+      newPrompt,
+      bestArm,
     );
-
-    const reflectedPromptPromises = [];
-    for (let i = 0; i < bottomHalfCount; i++) {
-      reflectedPromptPromises.push(
-        generateReflectiveSystemPromptForSkill(
-          bestArm.params.system_prompt,
-          examplesConversations,
-          agentDescription,
-          skill.description,
-        ),
-      );
-    }
-
-    const reflectedPrompts = await Promise.all(reflectedPromptPromises);
-
-    // Combine top prompts with new reflected prompts
-    const allPrompts = [...topPrompts, ...reflectedPrompts];
-
-    // Shuffle the combined pool for random assignment
-    // Fisher-Yates shuffle (memory efficient - in-place)
-    for (let i = allPrompts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [allPrompts[i], allPrompts[j]] = [allPrompts[j], allPrompts[i]];
-    }
-
-    // Create new arms with randomly assigned prompts from the pool
-    // Note: Using armsToKeep (which excludes the worst arm)
-    const createParamsList: SkillOptimizationArmCreateParams[] = armsToKeep.map(
-      (arm, index) => {
-        const promptIndex = index % allPrompts.length;
-        const assignedPrompt = allPrompts[promptIndex];
-
-        return {
-          agent_id: arm.agent_id,
-          skill_id: arm.skill_id,
-          cluster_id: arm.cluster_id,
-          name: arm.name,
-          params: {
-            ...arm.params,
-            system_prompt: assignedPrompt,
-          },
-          stats: {
-            n: 0,
-            mean: 0,
-            n2: 0,
-            total_reward: 0,
-          },
-        };
-      },
-    );
-
-    // Delete old arms for this cluster only
-    await userDataStorageConnector.deleteSkillOptimizationArmsForCluster(
-      cluster.id,
-    );
-
-    await userDataStorageConnector.createSkillOptimizationArms(
-      createParamsList,
-    );
-
-    // Fetch latest cluster data and reset total_steps to 0
-    // We do this AFTER creating new arms so the reset happens immediately
-    // This prevents the counter from accumulating during the long LLM calls above
-    const latestClusters =
-      await userDataStorageConnector.getSkillOptimizationClusters({
-        id: cluster.id,
-      });
-    if (latestClusters.length === 0) {
-      throw new Error(`Cluster ${cluster.id} not found during reset`);
-    }
-
-    await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
-      total_steps: 0,
-    });
 
     // Release lock on successful completion
-    await userDataStorageConnector.updateSkill(skill.id, {
-      reflection_lock_acquired_at: null,
-    });
+    await releaseReflectionLock(userDataStorageConnector, cluster.id);
   } catch (reflectionError) {
     console.error(
       `[REFLECTION] Error during reflection for skill ${skill.id}, cluster ${cluster.id}:`,
@@ -379,9 +734,7 @@ async function autoGenerateSystemPromptsForCluster(
     );
     // Release lock on error
     try {
-      await userDataStorageConnector.updateSkill(skill.id, {
-        reflection_lock_acquired_at: null,
-      });
+      await releaseReflectionLock(userDataStorageConnector, cluster.id);
     } catch (unlockError) {
       console.error('[REFLECTION] Failed to release lock:', unlockError);
     }

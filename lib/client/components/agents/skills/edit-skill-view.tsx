@@ -27,7 +27,7 @@ import { useSkills } from '@client/providers/skills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { SkillUpdateParams } from '@shared/types/data/skill';
 import { sanitizeUserInput } from '@shared/utils/security';
-import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Settings, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
@@ -41,6 +41,22 @@ const CONSTRAINTS = {
   reflection_min_requests_per_arm: { min: 1, max: 1000 },
   exploration_temperature: { min: 0.1, max: 10.0 },
 } as const;
+
+// Common template variable suggestions
+const SUGGESTED_TEMPLATE_VARIABLES = [
+  {
+    value: 'datetime',
+    description: 'Current date/time',
+  },
+  {
+    value: 'user_id',
+    description: 'User identifier',
+  },
+  {
+    value: 'context',
+    description: 'Additional context',
+  },
+] as const;
 
 const EditSkillFormSchema = z
   .object({
@@ -99,6 +115,7 @@ const EditSkillFormSchema = z
         CONSTRAINTS.exploration_temperature.max,
         'Exploration temperature cannot exceed 10.0',
       ),
+    allowed_template_variables: z.array(z.string()),
   })
   .strict();
 
@@ -113,6 +130,7 @@ export function EditSkillView(): React.ReactElement {
   const skillName = params.skillName as string;
 
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [newVariableName, setNewVariableName] = React.useState('');
 
   const form = useForm<EditSkillFormData>({
     resolver: zodResolver(EditSkillFormSchema),
@@ -121,9 +139,10 @@ export function EditSkillView(): React.ReactElement {
       description: '',
       optimize: true,
       configuration_count: 3,
-      clustering_interval: 15,
-      reflection_min_requests_per_arm: 3,
-      exploration_temperature: 1.0,
+      clustering_interval: 100,
+      reflection_min_requests_per_arm: 8,
+      exploration_temperature: 3.0,
+      allowed_template_variables: [],
     },
   });
 
@@ -141,6 +160,7 @@ export function EditSkillView(): React.ReactElement {
         reflection_min_requests_per_arm:
           selectedSkill.reflection_min_requests_per_arm,
         exploration_temperature: selectedSkill.exploration_temperature,
+        allowed_template_variables: selectedSkill.allowed_template_variables,
       });
     }
   }, [selectedSkill, form]);
@@ -159,6 +179,7 @@ export function EditSkillView(): React.ReactElement {
         clustering_interval: data.clustering_interval,
         reflection_min_requests_per_arm: data.reflection_min_requests_per_arm,
         exploration_temperature: data.exploration_temperature,
+        allowed_template_variables: data.allowed_template_variables,
       };
 
       await updateSkill(selectedSkill.id, updateParams);
@@ -166,7 +187,7 @@ export function EditSkillView(): React.ReactElement {
       // Navigate back to skill dashboard
       if (agentName && skillName) {
         router.push(
-          `/agents/${encodeURIComponent(agentName)}/${encodeURIComponent(skillName)}`,
+          `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
         );
       } else {
         router.push('/agents');
@@ -451,11 +472,10 @@ export function EditSkillView(): React.ReactElement {
                           </div>
                           <FormDescription>
                             Controls how aggressively the system explores
-                            different configurations. Higher values (above 1.0)
-                            make the system take more risks and try suboptimal
-                            configurations more often. Lower values (below 1.0)
-                            make it stick to known good configurations.
-                            Recommended range: 0.5 to 3.0
+                            different configurations. Higher values make the
+                            system take more risks and try suboptimal
+                            configurations more often. Lower values make it
+                            stick to known good configurations.
                           </FormDescription>
                           <FormControl>
                             <Slider
@@ -470,6 +490,151 @@ export function EditSkillView(): React.ReactElement {
                               className="mt-2"
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="allowed_template_variables"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-medium">
+                            Template Variables
+                          </FormLabel>
+                          <FormDescription>
+                            Define variable names that can be used in system
+                            prompts. Provide values via{' '}
+                            <code className="text-xs">
+                              system_prompt_variables
+                            </code>
+                            .
+                          </FormDescription>
+
+                          {/* Current variables */}
+                          {field.value && field.value.length > 0 && (
+                            <div className="space-y-2 pt-2">
+                              {field.value.map((varName) => (
+                                <div
+                                  key={varName}
+                                  className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2"
+                                >
+                                  <code className="text-sm font-mono">
+                                    {varName}
+                                  </code>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      field.onChange(
+                                        field.value.filter(
+                                          (v) => v !== varName,
+                                        ),
+                                      );
+                                    }}
+                                    disabled={isUpdating || !optimizeEnabled}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Add new variable */}
+                          <div className="flex gap-2 pt-2">
+                            <Input
+                              placeholder="variable_name"
+                              value={newVariableName}
+                              onChange={(e) =>
+                                setNewVariableName(
+                                  e.target.value
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9_]/g, ''),
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (
+                                    newVariableName &&
+                                    !field.value.includes(newVariableName)
+                                  ) {
+                                    field.onChange([
+                                      ...field.value,
+                                      newVariableName,
+                                    ]);
+                                    setNewVariableName('');
+                                  }
+                                }
+                              }}
+                              disabled={isUpdating || !optimizeEnabled}
+                              className="flex-1 font-mono text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (
+                                  newVariableName &&
+                                  !field.value.includes(newVariableName)
+                                ) {
+                                  field.onChange([
+                                    ...field.value,
+                                    newVariableName,
+                                  ]);
+                                  setNewVariableName('');
+                                }
+                              }}
+                              disabled={
+                                isUpdating ||
+                                !optimizeEnabled ||
+                                !newVariableName ||
+                                field.value.includes(newVariableName)
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {/* Suggestions */}
+                          {SUGGESTED_TEMPLATE_VARIABLES.some(
+                            (v) => !field.value.includes(v.value),
+                          ) && (
+                            <div className="pt-2">
+                              <p className="text-xs text-muted-foreground mb-2">
+                                Quick add:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {SUGGESTED_TEMPLATE_VARIABLES.filter(
+                                  (v) => !field.value.includes(v.value),
+                                ).map((variable) => (
+                                  <Button
+                                    key={variable.value}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      field.onChange([
+                                        ...field.value,
+                                        variable.value,
+                                      ]);
+                                    }}
+                                    disabled={isUpdating || !optimizeEnabled}
+                                    className="h-7 text-xs"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    {variable.value}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           <FormMessage />
                         </FormItem>
                       )}

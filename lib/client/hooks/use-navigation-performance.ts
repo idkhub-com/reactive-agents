@@ -40,12 +40,18 @@ export function useNavigationPerformance() {
 
     try {
       const stored = localStorage.getItem(METRICS_STORAGE_KEY);
-      if (stored) {
+      if (stored && stored.trim() !== '') {
         const parsedMetrics = JSON.parse(stored);
         setMetrics(parsedMetrics.slice(-MAX_STORED_METRICS));
       }
     } catch (error) {
       console.warn('Failed to load navigation metrics:', error);
+      // Clear corrupted data
+      try {
+        localStorage.removeItem(METRICS_STORAGE_KEY);
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }, []);
 

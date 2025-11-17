@@ -1,5 +1,8 @@
 import { evaluateLog } from '@server/connectors/evaluations/role-adherence/service/evaluate';
-import { RoleAdherenceEvaluationParameters } from '@server/connectors/evaluations/role-adherence/types';
+import {
+  RoleAdherenceEvaluationAIParameters,
+  RoleAdherenceEvaluationParameters,
+} from '@server/connectors/evaluations/role-adherence/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import {
   type EvaluationMethodDetails,
@@ -17,4 +20,5 @@ export const roleAdherenceEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => roleAdherenceMethodConfig,
   evaluateLog,
   getParameterSchema: RoleAdherenceEvaluationParameters,
+  getAIParameterSchema: RoleAdherenceEvaluationAIParameters,
 };

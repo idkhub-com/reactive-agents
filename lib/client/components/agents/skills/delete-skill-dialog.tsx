@@ -99,7 +99,7 @@ export function DeleteSkillDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isConfirmDisabled}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant={'destructive'}
           >
             {isDeleting ? 'Deleting...' : 'Delete Skill'}
           </AlertDialogAction>

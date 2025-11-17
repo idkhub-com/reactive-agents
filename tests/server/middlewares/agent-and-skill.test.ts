@@ -37,6 +37,7 @@ describe('agentAndSkillMiddleware', () => {
     createSkill: vi.fn(),
     updateSkill: vi.fn(),
     deleteSkill: vi.fn(),
+    incrementSkillTotalRequests: vi.fn(),
     // Tool methods (required by interface)
     getTools: vi.fn(),
     createTool: vi.fn(),
@@ -108,7 +109,8 @@ describe('agentAndSkillMiddleware', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: ['datetime'],
       };
 
       vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
@@ -192,7 +194,8 @@ describe('agentAndSkillMiddleware', () => {
           last_clustering_log_start_time: null,
           evaluations_regenerated_at: null,
           evaluation_lock_acquired_at: null,
-          reflection_lock_acquired_at: null,
+          total_requests: 0,
+          allowed_template_variables: ['datetime'],
         };
 
         vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);

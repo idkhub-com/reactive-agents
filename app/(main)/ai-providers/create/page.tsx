@@ -1,13 +1,14 @@
 'use client';
 
 import { APIKeyForm } from '@client/components/ai-providers';
-import { AIProviderAPIKeysProvider } from '@client/providers/ai-provider-api-keys';
+import { AIProvidersProvider } from '@client/providers/ai-providers';
+
 import type { ReactElement } from 'react';
 
 export default function CreateAPIKeyPage(): ReactElement {
   return (
-    <AIProviderAPIKeysProvider>
+    <AIProvidersProvider>
       <APIKeyForm mode="create" />
-    </AIProviderAPIKeysProvider>
+    </AIProvidersProvider>
   );
 }

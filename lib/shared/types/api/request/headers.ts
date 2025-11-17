@@ -181,14 +181,6 @@ export const ReactiveAgentsTargetPreProcessed = ReactiveAgentsTargetBase.extend(
       .optional()
       .describe('The version of the Reactive Agents configuration to use'),
 
-    /** Variables for the system prompt template in the Reactive Agents configuration */
-    system_prompt_variables: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe(
-        'The variables for the system prompt template in the Reactive Agents configuration',
-      ),
-
     /** The AI provider to use if no configuration is provided */
     provider: z
       .enum(AIProvider, {
@@ -296,6 +288,14 @@ export const NonPrivateReactiveAgentsConfig = z.object({
   force_hook_refresh: z.boolean().optional(),
   strict_open_ai_compliance: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+
+  /** Variables for the system prompt template in the Reactive Agents configuration */
+  system_prompt_variables: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'The variables for the system prompt template in the Reactive Agents configuration',
+    ),
 });
 
 export type NonPrivateReactiveAgentsConfig = z.infer<

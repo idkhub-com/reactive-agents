@@ -119,7 +119,20 @@ export async function generateEvaluationCreateParams(
     skill_name: 'create-evaluations',
   };
 
-  const schema = evaluationConnector.getParameterSchema;
+  const schema = evaluationConnector.getAIParameterSchema;
+
+  // If the evaluation method doesn't use AI for parameter generation,
+  // use default parameters from the parameter schema
+  if (!schema) {
+    const params: SkillOptimizationEvaluationCreateParams = {
+      agent_id: skill.agent_id,
+      skill_id: skill.id,
+      evaluation_method: method,
+      params: {}, // Use default parameters from schema
+      weight: 1.0,
+    };
+    return params;
+  }
 
   const jsonSchema = z.toJSONSchema(schema);
 
@@ -170,6 +183,7 @@ export async function generateEvaluationCreateParams(
     skill_id: skill.id,
     evaluation_method: method,
     params: structuredOutputResponse as unknown as Record<string, unknown>,
+    weight: 1.0, // Default weight - can be adjusted by user
   };
 
   return params;

@@ -1,5 +1,5 @@
 import { AddModelsView } from '@client/components/models';
-import { AIProviderAPIKeysProvider } from '@client/providers/ai-provider-api-keys';
+import { AIProvidersProvider } from '@client/providers/ai-providers';
 import { ModelsProvider } from '@client/providers/models';
 import type { ReactElement } from 'react';
 
@@ -15,10 +15,10 @@ export default async function AddModelsPage({
   const { id } = await params;
 
   return (
-    <AIProviderAPIKeysProvider>
+    <AIProvidersProvider>
       <ModelsProvider>
         <AddModelsView providerId={id} />
       </ModelsProvider>
-    </AIProviderAPIKeysProvider>
+    </AIProvidersProvider>
   );
 }

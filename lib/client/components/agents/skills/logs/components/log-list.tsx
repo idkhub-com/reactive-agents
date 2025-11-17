@@ -27,12 +27,15 @@ export function LogsList({ logs }: LogListProps): ReactElement {
         )}
         <TableHeader className="bg-card-header">
           <TableRow>
-            <TableHead className="w-[96px] text-right"></TableHead>
+            <TableHead className="w-[96px] text-right">Eval</TableHead>
             <TableHead className="w-[160px] text-right border-r">
               Time
             </TableHead>
             <TableHead>Path</TableHead>
             <TableHead>Model</TableHead>
+            <TableHead>Partition</TableHead>
+            <TableHead className="w-[80px]">Temp</TableHead>
+            <TableHead className="w-[100px]">Reasoning</TableHead>
             <TableHead>User</TableHead>
           </TableRow>
         </TableHeader>

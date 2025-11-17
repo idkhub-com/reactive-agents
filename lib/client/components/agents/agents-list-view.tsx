@@ -1,12 +1,9 @@
 'use client';
 
-import { getAgentEvaluationRuns } from '@client/api/v1/reactive-agents/agents';
 import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
-import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -18,14 +15,12 @@ import { useAgents } from '@client/providers/agents';
 import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import type { Agent } from '@shared/types/data';
-import { useQuery } from '@tanstack/react-query';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
-import { AgentPerformanceChart } from './skills/agent-performance-chart';
 
 const createAgentAvatar = (agentName: string) => {
   return `data:image/svg+xml;base64,${Buffer.from(
@@ -62,26 +57,6 @@ export function AgentsListView(): ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const { agents, isLoading } = useAgents();
 
-  // Fetch evaluation runs for all agents
-  const { data: allEvaluationRuns = [], isLoading: isLoadingEvaluationRuns } =
-    useQuery({
-      queryKey: ['allAgentEvaluationRuns', agents.map((a) => a.id).join(',')],
-      queryFn: async () => {
-        if (agents.length === 0) return [];
-
-        // Fetch evaluation runs for all agents in parallel
-        const evaluationRunsPromises = agents.map((agent) =>
-          getAgentEvaluationRuns(agent.id).catch(() => []),
-        );
-
-        const evaluationRunsArrays = await Promise.all(evaluationRunsPromises);
-
-        // Flatten all evaluation runs into a single array
-        return evaluationRunsArrays.flat();
-      },
-      enabled: agents.length > 0,
-    });
-
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return agents;
     return agents.filter(
@@ -113,22 +88,6 @@ export function AgentsListView(): ReactElement {
         }
       />
       <div className="p-6 space-y-6">
-        {/* Performance Chart - Full Width */}
-        <Card>
-          <CardContent className="pt-6">
-            {isLoadingEvaluationRuns ? (
-              <div className="h-64 flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : (
-              <AgentPerformanceChart
-                evaluationRuns={allEvaluationRuns}
-                title="All Agents Performance Over Time"
-              />
-            )}
-          </CardContent>
-        </Card>
-
         <div className="relative">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
@@ -140,18 +99,14 @@ export function AgentsListView(): ReactElement {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
             {Array.from({ length: 6 }).map(() => (
               <Card key={nanoid()}>
                 <CardHeader>
+                  <Skeleton className="h-12 w-12 rounded-lg" />
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-4 w-full" />
                 </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                </CardContent>
               </Card>
             ))}
           </div>
@@ -171,16 +126,16 @@ export function AgentsListView(): ReactElement {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
             {filteredAgents.map((agent) => {
               return (
                 <Card
                   key={agent.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow relative group"
+                  className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
                   onClick={() => handleAgentSelect(agent)}
                 >
-                  <CardHeader>
-                    <div className="flex items-start gap-3">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start gap-3 mb-2">
                       <Image
                         src={createAgentAvatar(agent.name)}
                         alt={`${agent.name} avatar`}
@@ -189,25 +144,20 @@ export function AgentsListView(): ReactElement {
                         className="rounded-lg shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="truncate leading-normal">
+                        <CardTitle className="text-base truncate leading-normal mb-1">
                           {agent.name}
                         </CardTitle>
-                        <CardDescription className="line-clamp-2 mt-1">
-                          {agent.description || 'No description available'}
-                        </CardDescription>
+                        <AgentStatusIndicator
+                          agent={agent}
+                          variant="badge"
+                          tooltipSide="top"
+                        />
                       </div>
                     </div>
+                    <CardDescription className="line-clamp-3 text-sm">
+                      {agent.description || 'No description available'}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2 flex-wrap">
-                      <Badge variant="secondary">Agent</Badge>
-                      <AgentStatusIndicator
-                        agent={agent}
-                        variant="badge"
-                        tooltipSide="top"
-                      />
-                    </div>
-                  </CardContent>
                 </Card>
               );
             })}

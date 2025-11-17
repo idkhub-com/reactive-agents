@@ -1,5 +1,5 @@
 import { ModelsListView } from '@client/components/models/models-list';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { render, screen } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
@@ -11,8 +11,9 @@ vi.mock('@client/api/v1/reactive-agents/models', () => ({
   deleteModel: vi.fn(),
 }));
 
-vi.mock('@client/providers/ai-provider-api-keys', () => ({
+vi.mock('@client/providers/ai-providers', () => ({
   useAIProviderAPIKeys: vi.fn(),
+  useAIProviders: vi.fn(),
 }));
 
 vi.mock('@client/providers/models', () => ({
@@ -196,8 +197,8 @@ describe('ModelsListView', () => {
       push: mockPush,
     });
 
-    (useAIProviderAPIKeys as Mock).mockReturnValue({
-      apiKeys: mockAPIKeys,
+    (useAIProviders as Mock).mockReturnValue({
+      aiProviderConfigs: mockAPIKeys,
       isLoading: false,
       error: null,
     });
@@ -268,8 +269,8 @@ describe('ModelsListView', () => {
 
   describe('Provider Integration', () => {
     it('should handle API keys loading state', () => {
-      (useAIProviderAPIKeys as Mock).mockReturnValue({
-        apiKeys: [],
+      (useAIProviders as Mock).mockReturnValue({
+        aiProviderConfigs: [],
         isLoading: true,
         error: null,
       });
@@ -279,8 +280,8 @@ describe('ModelsListView', () => {
     });
 
     it('should handle API keys error state', () => {
-      (useAIProviderAPIKeys as Mock).mockReturnValue({
-        apiKeys: [],
+      (useAIProviders as Mock).mockReturnValue({
+        aiProviderConfigs: [],
         isLoading: false,
         error: 'Failed to load API keys',
       });

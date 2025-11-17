@@ -54,6 +54,7 @@ export const Log = z.object({
   function_name: z.enum(FunctionName),
   status: z.number(),
   start_time: z.number(),
+  first_token_time: z.number().nullable(),
   end_time: z.number(),
   duration: z.number(),
   base_ra_config: z.record(z.string(), z.unknown()),
@@ -82,6 +83,10 @@ export const Log = z.object({
   external_user_id: z.string().nullable(),
   external_user_human_name: z.string().nullable(),
   user_metadata: z.record(z.string(), z.unknown()).nullable(),
+
+  // Computed fields from logs_with_eval_scores view (optional)
+  avg_eval_score: z.number().nullable().optional(),
+  eval_run_count: z.number().int().nullable().optional(),
 });
 
 export type Log = z.infer<typeof Log>;
@@ -102,6 +107,7 @@ export const LogsQueryParams = z.object({
   agent_id: z.uuid().optional(),
   skill_id: z.uuid().optional(),
   cluster_id: z.uuid().optional(),
+  arm_id: z.uuid().optional(),
   app_id: z.uuid().optional(),
   after: z
     .string()
@@ -135,6 +141,7 @@ export const LogCreateParams = z.object({
   function_name: z.enum(FunctionName),
   status: z.int(),
   start_time: z.number(),
+  first_token_time: z.number().optional(),
   end_time: z.number(),
   duration: z.number(),
   base_ra_config: z.record(z.string(), z.unknown()),

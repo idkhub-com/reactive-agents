@@ -80,6 +80,7 @@ export async function evaluateLog(
   const execution_time = Date.now() - start_time;
 
   const evaluationResult: SkillOptimizationEvaluationResult = {
+    evaluation_id: evaluation.id,
     method: EvaluationMethodName.ROLE_ADHERENCE,
     score: final_score,
     extra_data: {
@@ -93,6 +94,28 @@ export async function evaluateLog(
       execution_time_ms: execution_time,
       evaluated_at: new Date().toISOString(),
     },
+    display_info: [
+      {
+        label: 'Reasoning',
+        content: judgeResult.reasoning,
+      },
+      {
+        label: 'Role Definition',
+        content: role_definition,
+      },
+      ...(instructions
+        ? [
+            {
+              label: 'Additional Instructions',
+              content: instructions,
+            },
+          ]
+        : []),
+      {
+        label: 'Assistant Output',
+        content: assistant_output,
+      },
+    ],
   };
 
   return evaluationResult;

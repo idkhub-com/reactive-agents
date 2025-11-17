@@ -95,6 +95,7 @@ export async function evaluateLog(
   const execution_time = Date.now() - start_time;
 
   const evaluationResult: SkillOptimizationEvaluationResult = {
+    evaluation_id: evaluation.id,
     method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
     score: result.score,
     extra_data: {
@@ -104,6 +105,20 @@ export async function evaluateLog(
       execution_time_ms: execution_time,
       evaluated_at: new Date().toISOString(),
     },
+    display_info: [
+      {
+        label: 'Reasoning',
+        content: result.reasoning,
+      },
+      ...(result.metadata
+        ? [
+            {
+              label: 'Analysis Details',
+              content: JSON.stringify(result.metadata, null, 2),
+            },
+          ]
+        : []),
+    ],
   };
 
   return evaluationResult;

@@ -28,6 +28,7 @@ export async function getSkill(
           clustering_interval: 0,
           reflection_min_requests_per_arm: 0,
           exploration_temperature: 1.0,
+          allowed_template_variables: [],
         });
         return newSkill;
       } catch (_error) {

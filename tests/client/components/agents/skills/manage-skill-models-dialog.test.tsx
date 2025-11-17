@@ -1,5 +1,5 @@
 import { ManageSkillModelsDialog } from '@client/components/agents/skills/manage-skill-models-dialog';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
@@ -12,8 +12,9 @@ vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   removeModelsFromSkill: vi.fn(),
 }));
 
-vi.mock('@client/providers/ai-provider-api-keys', () => ({
+vi.mock('@client/providers/ai-providers', () => ({
   useAIProviderAPIKeys: vi.fn(),
+  useAIProviders: vi.fn(),
 }));
 
 vi.mock('@client/providers/models', () => ({
@@ -104,8 +105,8 @@ describe('ManageSkillModelsDialog', () => {
     vi.clearAllMocks();
 
     // Default mock implementations
-    (useAIProviderAPIKeys as ReturnType<typeof vi.fn>).mockReturnValue({
-      apiKeys: [
+    (useAIProviders as ReturnType<typeof vi.fn>).mockReturnValue({
+      aiProviderConfigs: [
         {
           id: 'provider-1',
           ai_provider: 'openai',

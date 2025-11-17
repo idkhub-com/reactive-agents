@@ -39,6 +39,9 @@ export const SSEEventType = z.enum([
   'skill-optimization:evaluation-run-created',
   'skill-optimization:evaluation-run-updated',
   'skill-optimization:evaluations-regenerated',
+  'skill-optimization:event-created',
+  'cluster:reset',
+  'skill:reset',
 
   // Feedback events
   'feedback:created',

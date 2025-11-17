@@ -110,6 +110,7 @@ describe('createResponse', () => {
         mockOptions.raRequestData,
         true,
         true,
+        undefined, // onFirstChunk callback (undefined for non-streaming)
       );
       expect(mockContext.set).toHaveBeenCalledWith(
         'ai_provider_log',
@@ -149,6 +150,7 @@ describe('createResponse', () => {
         mockOptions.raRequestData,
         true,
         true,
+        expect.any(Function), // onFirstChunk callback (function for streaming)
       );
     });
 
@@ -167,6 +169,7 @@ describe('createResponse', () => {
         mockOptions.raRequestData,
         true,
         true,
+        undefined, // onFirstChunk callback (undefined for non-streaming)
       );
     });
 

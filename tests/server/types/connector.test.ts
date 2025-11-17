@@ -30,6 +30,8 @@ describe('Connector Interfaces', () => {
           threshold: z.number().min(0).max(1),
           model: z.string(),
         }),
+
+        getAIParameterSchema: z.object({}),
       });
 
     it('should have all required methods', () => {
@@ -60,6 +62,7 @@ describe('Connector Interfaces', () => {
         skill_id: 'test-skill',
         evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
         params: { threshold: 0.5 },
+        weight: 1.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -104,6 +107,7 @@ describe('Connector Interfaces', () => {
           skill_id: 'test-skill',
           evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           params: {},
+          weight: 1.0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -132,6 +136,7 @@ describe('Connector Interfaces', () => {
           skill_id: 'test-skill',
           evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           params: {},
+          weight: 1.0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -160,6 +165,7 @@ describe('Connector Interfaces', () => {
           skill_id: 'test-skill',
           evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           params: {},
+          weight: 1.0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -203,18 +209,22 @@ describe('Connector Interfaces', () => {
           name: 'Test',
           description: 'Test method',
         }),
-        evaluateLog: async (_evaluation, _log) => ({
+        evaluateLog: async (evaluation, _log) => ({
+          evaluation_id: evaluation.id,
           method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           score: 0.5,
           extra_data: {},
+          display_info: [],
         }),
         getParameterSchema: z.object({}),
+        getAIParameterSchema: z.object({}),
       };
 
       // Verify all methods exist and have correct types
       expect(typeof connector.getDetails).toBe('function');
       expect(typeof connector.evaluateLog).toBe('function');
       expect(connector.getParameterSchema).toBeDefined();
+      expect(connector.getAIParameterSchema).toBeDefined();
     });
   });
 });

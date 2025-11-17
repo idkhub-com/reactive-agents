@@ -4,15 +4,25 @@ import { handleGenerateArms } from '@server/optimization/skill-optimizations';
 import { generateEvaluationCreateParams } from '@server/optimization/utils/evaluations';
 import type { AppEnv } from '@server/types/hono';
 import { getInitialClusterCentroids } from '@server/utils/math';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import type { SkillOptimizationClusterCreateParams } from '@shared/types/data';
 import {
   SkillCreateParams,
   SkillQueryParams,
   SkillUpdateParams,
 } from '@shared/types/data/skill';
+import { SkillEventType } from '@shared/types/data/skill-event';
+import { SkillOptimizationEvaluationUpdateParams } from '@shared/types/data/skill-optimization-evaluation';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { Hono } from 'hono';
 import { z } from 'zod';
+
+const ResetQuerySchema = z.object({
+  clearObservabilityCount: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true'),
+});
 
 export const skillsRouter = new Hono<AppEnv>()
   .post('/', zValidator('json', SkillCreateParams), async (c) => {
@@ -30,8 +40,9 @@ export const skillsRouter = new Hono<AppEnv>()
         initialCentroids.map((centroid, index) => ({
           agent_id: newSkill.agent_id,
           skill_id: newSkill.id,
-          name: `Partition ${index + 1}`,
+          name: `${index + 1}`,
           total_steps: 0,
+          observability_total_requests: 0,
           centroid,
         }));
 
@@ -68,11 +79,49 @@ export const skillsRouter = new Hono<AppEnv>()
         const data = c.req.valid('json');
         const userDataStorageConnector = c.get('user_data_storage_connector');
 
-        // If description changes, reset evaluation regeneration
+        // Get the current skill for comparison
+        const currentSkill = await userDataStorageConnector.getSkills({
+          id: skillId,
+        });
+        if (currentSkill.length === 0) {
+          return c.json({ error: 'Skill not found' }, 404);
+        }
+        const skill = currentSkill[0];
+
+        // If description actually changes, reset evaluation regeneration
         // so that early regeneration happens again with the new description
-        if (data.description) {
+        const descriptionChanged =
+          data.description !== undefined &&
+          data.description !== skill.description;
+
+        if (descriptionChanged) {
           await userDataStorageConnector.updateSkill(skillId, {
             evaluations_regenerated_at: null,
+          });
+
+          // Create event for description update
+          await userDataStorageConnector.createSkillEvent({
+            agent_id: skill.agent_id,
+            skill_id: skillId,
+            cluster_id: null, // Skill-wide event
+            event_type: SkillEventType.DESCRIPTION_UPDATED,
+            metadata: {
+              old_description: skill.description || '',
+              new_description: data.description,
+            },
+          });
+        }
+
+        // If optimization status changes, create event
+        if (data.optimize !== undefined && data.optimize !== skill.optimize) {
+          await userDataStorageConnector.createSkillEvent({
+            agent_id: skill.agent_id,
+            skill_id: skillId,
+            cluster_id: null, // Skill-wide event
+            event_type: data.optimize
+              ? SkillEventType.OPTIMIZATION_ENABLED
+              : SkillEventType.OPTIMIZATION_DISABLED,
+            metadata: {},
           });
         }
 
@@ -81,19 +130,26 @@ export const skillsRouter = new Hono<AppEnv>()
           data,
         );
 
-        if (data.configuration_count) {
+        // Only reset clusters if configuration_count (partition count) actually changed
+        const configurationCountChanged =
+          data.configuration_count !== undefined &&
+          data.configuration_count !== skill.configuration_count;
+
+        if (configurationCountChanged) {
           const currentClusters =
             await userDataStorageConnector.getSkillOptimizationClusters({
               skill_id: updatedSkill.id,
             });
 
+          // Delete old clusters (observability counts will reset since the cluster definitions changed)
+          // Skill-level total_requests counter preserves lifetime statistics
           for (const cluster of currentClusters) {
             await userDataStorageConnector.deleteSkillOptimizationCluster(
               cluster.id,
             );
           }
 
-          // Create initial clusters with equally spaced centroids
+          // Create new clusters with fresh counters
           const initialCentroids = getInitialClusterCentroids(
             updatedSkill.configuration_count,
           );
@@ -101,19 +157,42 @@ export const skillsRouter = new Hono<AppEnv>()
             initialCentroids.map((centroid, index) => ({
               agent_id: updatedSkill.agent_id,
               skill_id: updatedSkill.id,
-              name: `Partition ${index + 1}`,
+              name: `${index + 1}`,
               total_steps: 0,
+              observability_total_requests: 0, // Reset to 0 since this is a new cluster configuration
               centroid,
             }));
 
           await userDataStorageConnector.createSkillOptimizationClusters(
             clusterParams,
           );
+
+          // Create event for partition reclustering
+          await userDataStorageConnector.createSkillEvent({
+            agent_id: updatedSkill.agent_id,
+            skill_id: skillId,
+            cluster_id: null, // Skill-wide event
+            event_type: SkillEventType.PARTITIONS_RECLUSTERED,
+            metadata: {
+              old_count: skill.configuration_count,
+              new_count: data.configuration_count,
+            },
+          });
         }
 
-        if (data.description || data.configuration_count) {
+        // Regenerate arms if description or partition count changed
+        const shouldRegenerateArms =
+          descriptionChanged || configurationCountChanged;
+
+        if (shouldRegenerateArms) {
           await handleGenerateArms(c, userDataStorageConnector, skillId);
         }
+
+        // Emit SSE event for skill update
+        emitSSEEvent('skill:updated', {
+          skillId: updatedSkill.id,
+          agentId: updatedSkill.agent_id,
+        });
 
         return c.json(updatedSkill, 200);
       } catch (error) {
@@ -166,7 +245,33 @@ export const skillsRouter = new Hono<AppEnv>()
         const { modelIds } = c.req.valid('json');
         const connector = c.get('user_data_storage_connector');
 
+        // Get skill to get agent_id
+        const skills = await connector.getSkills({ id: skillId });
+        if (skills.length === 0) {
+          return c.json({ error: 'Skill not found' }, 404);
+        }
+        const skill = skills[0];
+
         await connector.addModelsToSkill(skillId, modelIds);
+
+        // Create events for each model added
+        // Get model details after adding
+        for (const modelId of modelIds) {
+          const models = await connector.getModels({ id: modelId });
+          if (models.length > 0) {
+            const model = models[0];
+            await connector.createSkillEvent({
+              agent_id: skill.agent_id,
+              skill_id: skillId,
+              cluster_id: null, // Skill-wide event
+              event_type: SkillEventType.MODEL_ADDED,
+              metadata: {
+                model_id: model.id,
+                model_name: model.model_name,
+              },
+            });
+          }
+        }
 
         await handleGenerateArms(c, connector, skillId);
 
@@ -202,7 +307,32 @@ export const skillsRouter = new Hono<AppEnv>()
         const { ids } = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
+        // Get skill to get agent_id
+        const skills = await connector.getSkills({ id: skillId });
+        if (skills.length === 0) {
+          return c.json({ error: 'Skill not found' }, 404);
+        }
+        const skill = skills[0];
+
+        // Get model details before removing for event metadata
+        const models = await connector.getSkillModels(skillId);
+        const removedModels = models.filter((m) => ids.includes(m.id));
+
         await connector.removeModelsFromSkill(skillId, ids);
+
+        // Create events for each model removed
+        for (const model of removedModels) {
+          await connector.createSkillEvent({
+            agent_id: skill.agent_id,
+            skill_id: skillId,
+            cluster_id: null, // Skill-wide event
+            event_type: SkillEventType.MODEL_REMOVED,
+            metadata: {
+              model_id: model.id,
+              model_name: model.model_name,
+            },
+          });
+        }
 
         await handleGenerateArms(c, connector, skillId);
 
@@ -251,6 +381,25 @@ export const skillsRouter = new Hono<AppEnv>()
       }
     },
   )
+  .get(
+    '/:skillId/arm-stats',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const armStats = await connector.getSkillOptimizationArmStats({
+          skill_id: skillId,
+        });
+
+        return c.json(armStats);
+      } catch (error) {
+        console.error('Error getting arm stats for skill:', error);
+        return c.json({ error: 'Failed to get arm stats for skill' }, 500);
+      }
+    },
+  )
   .post(
     '/:skillId/generate-arms',
     zValidator('param', z.object({ skillId: z.uuid() })),
@@ -269,19 +418,68 @@ export const skillsRouter = new Hono<AppEnv>()
   .get(
     '/:skillId/evaluation-runs',
     zValidator('param', z.object({ skillId: z.uuid() })),
+    zValidator(
+      'query',
+      z.object({
+        log_id: z.uuid().optional(),
+        created_after: z.string().datetime().optional(),
+        created_before: z.string().datetime().optional(),
+      }),
+    ),
     async (c) => {
       try {
         const { skillId } = c.req.valid('param');
+        const { log_id, created_after, created_before } = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
         const arms = await connector.getSkillOptimizationEvaluationRuns({
           skill_id: skillId,
+          ...(log_id && { log_id }),
+          ...(created_after && { created_after }),
+          ...(created_before && { created_before }),
         });
 
         return c.json(arms);
       } catch (error) {
         console.error('Error getting evaluation runs:', error);
         return c.json({ error: 'Failed to get evaluation runs' }, 500);
+      }
+    },
+  )
+  .post(
+    '/:skillId/evaluation-scores-by-time-bucket',
+    zValidator('param', z.object({ skillId: z.uuid() })),
+    zValidator(
+      'json',
+      z.object({
+        cluster_id: z.uuid().optional(),
+        interval_minutes: z.number().min(1).max(1440),
+        start_time: z.string().datetime(),
+        end_time: z.string().datetime(),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { skillId } = c.req.valid('param');
+        const { cluster_id, interval_minutes, start_time, end_time } =
+          c.req.valid('json');
+        const connector = c.get('user_data_storage_connector');
+
+        const scores = await connector.getEvaluationScoresByTimeBucket({
+          skill_id: skillId,
+          ...(cluster_id && { cluster_id }),
+          interval_minutes,
+          start_time,
+          end_time,
+        });
+
+        return c.json(scores);
+      } catch (error) {
+        console.error('Error getting evaluation scores by time bucket:', error);
+        return c.json(
+          { error: 'Failed to get evaluation scores by time bucket' },
+          500,
+        );
       }
     },
   )
@@ -366,10 +564,88 @@ export const skillsRouter = new Hono<AppEnv>()
             createParamsList,
           );
 
+        // Create event for each evaluation added
+        for (const evaluation of createdEvaluations) {
+          await userDataStorageConnector.createSkillEvent({
+            agent_id: skill.agent_id,
+            skill_id: skillId,
+            cluster_id: null, // Skill-wide event
+            event_type: SkillEventType.EVALUATION_ADDED,
+            metadata: {
+              evaluation_method: evaluation.evaluation_method,
+            },
+          });
+        }
+
         return c.json(createdEvaluations, 200);
       } catch (error) {
         console.error('Error generating evaluations:', error);
         return c.json({ error: 'Failed to generate evaluations' }, 500);
+      }
+    },
+  )
+  .patch(
+    '/:skillId/evaluations/:evaluationId',
+    zValidator(
+      'param',
+      z.object({ skillId: z.uuid(), evaluationId: z.uuid() }),
+    ),
+    zValidator('json', SkillOptimizationEvaluationUpdateParams),
+    async (c) => {
+      try {
+        const { skillId, evaluationId } = c.req.valid('param');
+        const updateParams = c.req.valid('json');
+        const userDataStorageConnector = c.get('user_data_storage_connector');
+
+        // Get evaluation to verify it exists and belongs to this skill
+        const evaluations =
+          await userDataStorageConnector.getSkillOptimizationEvaluations({
+            id: evaluationId,
+            skill_id: skillId,
+          });
+
+        if (evaluations.length === 0) {
+          return c.json({ error: 'Evaluation not found' }, 404);
+        }
+
+        const evaluation = evaluations[0];
+
+        // Validate params against the evaluation method's schema if params are being updated
+        if (updateParams.params) {
+          const evaluationConnectorsMap = c.get('evaluation_connectors_map');
+          const connector =
+            evaluationConnectorsMap[evaluation.evaluation_method];
+
+          if (connector) {
+            const paramSchema = connector.getParameterSchema;
+            const validationResult = paramSchema.safeParse(updateParams.params);
+
+            if (!validationResult.success) {
+              const errorMessage = validationResult.error.issues
+                .map((e) => `${String(e.path.join('.'))}: ${e.message}`)
+                .join(', ');
+              return c.json(
+                {
+                  error: 'Invalid parameters',
+                  details: errorMessage,
+                },
+                400,
+              );
+            }
+          }
+        }
+
+        // Update evaluation
+        const updatedEvaluation =
+          await userDataStorageConnector.updateSkillOptimizationEvaluation(
+            evaluationId,
+            updateParams,
+          );
+
+        return c.json(updatedEvaluation);
+      } catch (error) {
+        console.error('Error updating evaluation:', error);
+        return c.json({ error: 'Failed to update evaluation' }, 500);
       }
     },
   )
@@ -381,12 +657,35 @@ export const skillsRouter = new Hono<AppEnv>()
     ),
     async (c) => {
       try {
-        const { evaluationId } = c.req.valid('param');
+        const { skillId, evaluationId } = c.req.valid('param');
         const userDataStorageConnector = c.get('user_data_storage_connector');
+
+        // Get evaluation details before deleting
+        const evaluations =
+          await userDataStorageConnector.getSkillOptimizationEvaluations({
+            id: evaluationId,
+          });
+
+        if (evaluations.length === 0) {
+          return c.json({ error: 'Evaluation not found' }, 404);
+        }
+
+        const evaluation = evaluations[0];
 
         await userDataStorageConnector.deleteSkillOptimizationEvaluation(
           evaluationId,
         );
+
+        // Create event for evaluation removed
+        await userDataStorageConnector.createSkillEvent({
+          agent_id: evaluation.agent_id,
+          skill_id: skillId,
+          cluster_id: null, // Skill-wide event
+          event_type: SkillEventType.EVALUATION_REMOVED,
+          metadata: {
+            evaluation_method: evaluation.evaluation_method,
+          },
+        });
 
         return c.json({ message: 'Evaluations deleted successfully' }, 200);
       } catch (error) {
@@ -394,4 +693,208 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ error: 'Failed to delete evaluations' }, 500);
       }
     },
-  );
+  )
+  // Reset a specific cluster (regenerate arms with context, optionally clear observability count)
+  .post(
+    '/:skillId/clusters/:clusterId/reset',
+    zValidator('query', ResetQuerySchema),
+    async (c) => {
+      try {
+        const skillId = c.req.param('skillId');
+        const clusterId = c.req.param('clusterId');
+        const connector = c.get('user_data_storage_connector');
+        const { clearObservabilityCount } = c.req.valid('query');
+
+        // Verify skill exists
+        const skills = await connector.getSkills({ id: skillId });
+        if (skills.length === 0) {
+          return c.json({ error: 'Skill not found' }, 404);
+        }
+        const skill = skills[0];
+
+        // Verify cluster exists
+        const clusters = await connector.getSkillOptimizationClusters({
+          id: clusterId,
+        });
+        if (clusters.length === 0) {
+          return c.json({ error: 'Cluster not found' }, 404);
+        }
+
+        // Get all arms for this cluster before reset (for event metadata)
+        const arms = await connector.getSkillOptimizationArms({
+          cluster_id: clusterId,
+        });
+
+        // Reset cluster stats (optionally clear observability_total_requests)
+        await connector.updateSkillOptimizationCluster(clusterId, {
+          total_steps: 0,
+          ...(clearObservabilityCount && { observability_total_requests: 0 }),
+        });
+
+        // Update arms in-place with fresh params and reset stats
+        // Note: System prompts will be regenerated during next context generation
+        await handleGenerateArms(c, connector, skillId, clusterId);
+
+        // Create event for cluster reset
+        await connector.createSkillEvent({
+          agent_id: skill.agent_id,
+          skill_id: skillId,
+          cluster_id: clusterId, // Cluster-specific event
+          event_type: SkillEventType.PARTITION_RESET,
+          metadata: {
+            arm_count: arms.length,
+          },
+        });
+
+        // Emit SSE event for cluster reset
+        emitSSEEvent('cluster:reset', {
+          skillId,
+          clusterId,
+          armCount: arms.length,
+        });
+
+        return c.json({ message: 'Cluster reset successfully' }, 200);
+      } catch (error) {
+        console.error('Error resetting cluster:', error);
+        return c.json({ error: 'Failed to reset cluster' }, 500);
+      }
+    },
+  )
+  // Reset entire skill optimization (delete and recreate everything, optionally clear skill total_requests)
+  .post('/:skillId/reset', zValidator('query', ResetQuerySchema), async (c) => {
+    try {
+      const skillId = c.req.param('skillId');
+      const connector = c.get('user_data_storage_connector');
+      const { clearObservabilityCount } = c.req.valid('query');
+
+      // Verify skill exists
+      const skills = await connector.getSkills({ id: skillId });
+      if (skills.length === 0) {
+        return c.json({ error: 'Skill not found' }, 404);
+      }
+      const skill = skills[0];
+
+      // Get existing evaluations to regenerate them
+      const existingEvaluations =
+        await connector.getSkillOptimizationEvaluations({
+          skill_id: skillId,
+        });
+
+      // Get existing clusters to update them
+      const existingClusters = await connector.getSkillOptimizationClusters({
+        skill_id: skillId,
+      });
+
+      // Update clusters in-place with fresh centroids
+      const initialCentroids = getInitialClusterCentroids(
+        skill.configuration_count,
+      );
+
+      // Match existing clusters to new centroids
+      for (let i = 0; i < initialCentroids.length; i++) {
+        const centroid = initialCentroids[i];
+        if (i < existingClusters.length) {
+          // Update existing cluster
+          await connector.updateSkillOptimizationCluster(
+            existingClusters[i].id,
+            {
+              centroid,
+              total_steps: 0,
+              observability_total_requests: clearObservabilityCount
+                ? 0
+                : existingClusters[i].observability_total_requests,
+            },
+          );
+        } else {
+          // Create new cluster if configuration_count increased
+          const clusterParams: SkillOptimizationClusterCreateParams = {
+            agent_id: skill.agent_id,
+            skill_id: skillId,
+            name: `${i + 1}`,
+            total_steps: 0,
+            observability_total_requests: 0,
+            centroid,
+          };
+          await connector.createSkillOptimizationClusters([clusterParams]);
+        }
+      }
+
+      // Delete extra clusters if configuration_count decreased
+      for (let i = initialCentroids.length; i < existingClusters.length; i++) {
+        await connector.deleteSkillOptimizationCluster(existingClusters[i].id);
+      }
+
+      // Regenerate evaluations with the same methods in-place
+      if (existingEvaluations.length > 0) {
+        // Get agent for evaluation generation
+        const agents = await connector.getAgents({ id: skill.agent_id });
+        if (agents.length === 0) {
+          return c.json({ error: 'Agent not found' }, 404);
+        }
+        const agent = agents[0];
+
+        // Generate evaluation create params for existing evaluation methods
+        const evaluationConnectorsMap = c.get('evaluation_connectors_map');
+
+        for (const existingEval of existingEvaluations) {
+          const method = existingEval.evaluation_method;
+          const evaluationConnector = evaluationConnectorsMap[method];
+          if (!evaluationConnector) {
+            throw new Error(
+              `Evaluation connector not found for method ${method}`,
+            );
+          }
+
+          const newParams = await generateEvaluationCreateParams(
+            skill,
+            evaluationConnector,
+            method,
+            agent.description,
+            undefined, // No examples on reset
+          );
+
+          // Update evaluation in-place
+          await connector.updateSkillOptimizationEvaluation(existingEval.id, {
+            params: newParams.params,
+            weight: newParams.weight,
+          });
+        }
+      }
+
+      // Update arms in-place for all clusters (preserving arm IDs)
+      await handleGenerateArms(c, connector, skillId);
+
+      // Reset skill metadata (and optionally total_requests)
+      await connector.updateSkill(skillId, {
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        ...(clearObservabilityCount && { total_requests: 0 }),
+      });
+
+      // Create event for skill reset
+      await connector.createSkillEvent({
+        agent_id: skill.agent_id,
+        skill_id: skillId,
+        cluster_id: null, // Skill-wide event
+        event_type: SkillEventType.PARTITION_RESET,
+        metadata: {
+          cluster_count: initialCentroids.length,
+          evaluation_count: existingEvaluations.length,
+        },
+      });
+
+      // Emit SSE event for skill reset
+      emitSSEEvent('skill:reset', {
+        skillId,
+        clusterCount: initialCentroids.length,
+        evaluationCount: existingEvaluations.length,
+      });
+
+      return c.json({ message: 'Skill reset successfully' }, 200);
+    } catch (error) {
+      console.error('Error resetting skill:', error);
+      return c.json({ error: 'Failed to reset skill' }, 500);
+    }
+  });

@@ -27,11 +27,13 @@ import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/sk
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
-function getOptimalArm(
+async function getOptimalArm(
   arms: SkillOptimizationArm[],
+  skillId: string,
+  userDataStorageConnector: UserDataStorageConnector,
   explorationTemperature = 1.0,
-): SkillOptimizationArm {
-  // Implement Thompson Sampling algorithm for multi-armed bandit
+): Promise<SkillOptimizationArm> {
+  // Implement Thompson Sampling algorithm for multi-armed bandit with weighted evaluations
   // Thompson Sampling uses Bayesian approach: sample from posterior Beta distribution
   // and select the arm with highest sampled value
   //
@@ -40,11 +42,24 @@ function getOptimalArm(
   // - temperature > 1.0: More exploration (flattens distribution, takes more risks)
   // - temperature < 1.0: More exploitation (sharpens distribution, sticks to known good arms)
 
+  // Fetch evaluations to get weights
+  const evaluations =
+    await userDataStorageConnector.getSkillOptimizationEvaluations({
+      skill_id: skillId,
+    });
+
+  // Create a map of evaluation_id -> weight
+  const evaluationWeights = new Map<string, number>();
+  for (const evaluation of evaluations) {
+    evaluationWeights.set(evaluation.id, evaluation.weight);
+  }
+
   let optimalArm = arms[0];
   let maxSample = -Infinity;
   const samples: {
     armId: string;
     n: number;
+    weighted_mean: number;
     total_reward: number;
     alpha: number;
     beta: number;
@@ -55,10 +70,38 @@ function getOptimalArm(
   }[] = [];
 
   for (const arm of arms) {
+    // Fetch arm stats for this arm
+    const armStats =
+      await userDataStorageConnector.getSkillOptimizationArmStats({
+        arm_id: arm.id,
+      });
+
+    // Calculate weighted average mean and total reward
+    let weightedMeanSum = 0;
+    let totalWeight = 0;
+    let totalRequests = 0;
+    let weightedTotalReward = 0;
+
+    for (const stat of armStats) {
+      const weight = evaluationWeights.get(stat.evaluation_id) || 1.0;
+      weightedMeanSum += stat.mean * weight;
+      weightedTotalReward += stat.total_reward * weight;
+      totalWeight += weight;
+      // Use max n across all evaluations as the request count
+      if (stat.n > totalRequests) {
+        totalRequests = stat.n;
+      }
+    }
+
+    // Calculate weighted mean (0 if no stats yet)
+    const weightedMean = totalWeight > 0 ? weightedMeanSum / totalWeight : 0;
+    const weightedReward =
+      totalWeight > 0 ? weightedTotalReward / totalWeight : 0;
+
     // Beta distribution parameters with uniform prior (Beta(1,1))
     // alpha = successes + 1, beta = failures + 1
-    const successes = arm.stats.total_reward;
-    const failures = arm.stats.n - arm.stats.total_reward;
+    const successes = weightedReward;
+    const failures = totalRequests - weightedReward;
     const baseAlpha = successes + 1;
     const baseBeta = failures + 1;
 
@@ -74,8 +117,9 @@ function getOptimalArm(
 
     samples.push({
       armId: arm.id,
-      n: arm.stats.n,
-      total_reward: arm.stats.total_reward,
+      n: totalRequests,
+      weighted_mean: weightedMean,
+      total_reward: weightedReward,
       alpha: baseAlpha,
       beta: baseBeta,
       alpha_adjusted: alpha,
@@ -145,6 +189,7 @@ async function validateTargetConfiguration(
   userDataStorageConnector: UserDataStorageConnector,
   raTargetPreProcessed: ReactiveAgentsTargetPreProcessed,
   embedding: number[] | null,
+  systemPromptVariables?: Record<string, unknown>,
 ): Promise<ReactiveAgentsTarget | Response> {
   let raTargetConfiguration: TargetConfigurationParams;
   let resolvedApiKey: string | undefined;
@@ -174,8 +219,9 @@ async function validateTargetConfiguration(
             initialCentroids.map((centroid, index) => ({
               agent_id: skill.agent_id,
               skill_id: skill.id,
-              name: `Partition ${index + 1}`,
+              name: `${index + 1}`,
               total_steps: 0,
+              observability_total_requests: 0,
               centroid,
             }));
 
@@ -206,13 +252,19 @@ async function validateTargetConfiguration(
         cluster_id: optimalCluster.id,
       });
 
-      const optimalArm = getOptimalArm(arms, skill.exploration_temperature);
+      const optimalArm = await getOptimalArm(
+        arms,
+        skill.id,
+        userDataStorageConnector,
+        skill.exploration_temperature,
+      );
 
       c.set('pulled_arm', optimalArm);
 
       const renderedSystemPrompt = renderTemplate(
         optimalArm.params.system_prompt!,
-        raTargetPreProcessed.system_prompt_variables || {},
+        systemPromptVariables || {},
+        skill.allowed_template_variables,
       );
 
       // Resolve model_id to get model name and provider
@@ -395,6 +447,7 @@ export const raConfigurationInjectorMiddleware = createMiddleware(
               c.get('user_data_storage_connector'),
               target,
               embedding,
+              raConfigPreProcessed.system_prompt_variables,
             ),
           ),
         );
