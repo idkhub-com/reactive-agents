@@ -1,3 +1,5 @@
+![./.github/assets/screenshot.png](./.github/assets/screenshot.png)
+
 # Reactive Agents
 
 > Automatically optimize your AI agents based on performance with OpenAI API compatibility.
@@ -35,8 +37,9 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
    ```bash
    docker-compose up
    ```
+   The application will be available at `http://localhost:3000`.
 
-That's it! The application will be available at `http://localhost:3000`.
+3. See [examples/openai-lib/chat-complete-api-structured-output.ts](examples/openai-lib/chat-complete-api-structured-output.ts) for a detailed example of how to use Reactive Agents with OpenAI's Chat Completion API. You will need to set up a `calendar_event_planner` agent with a `generate` skill in the UI.
 
 **What's included:**
 - Complete backend infrastructure
@@ -51,14 +54,6 @@ That's it! The application will be available at `http://localhost:3000`.
 > **Experimental Project** - Reactive Agents is currently in active development and is **not production-ready**. We are working on critical features including authorization, performance optimizations, and stability improvements. Use this project for experimentation and development only.
 
 For future production deployment guides and best practices, visit our [documentation](https://docs.reactiveagents.ai).
-
----
-
-## 🔑 Default Password
-
-```
-reactive-agents
-```
 
 ---
 
