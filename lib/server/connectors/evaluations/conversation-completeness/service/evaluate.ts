@@ -60,7 +60,6 @@ export async function evaluateConversationCompleteness(
   // Evaluate using LLM judge with conversation completeness criteria
   const result = await llmJudge.evaluate({
     text: evaluationText,
-    outputFormat: 'json',
     evaluationCriteria: {
       criteria: [
         'Extract all user intentions from the conversation',

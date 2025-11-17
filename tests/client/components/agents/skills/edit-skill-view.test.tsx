@@ -5,19 +5,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock Next.js router and params before importing component
 const mockPush = vi.fn();
 const mockBack = vi.fn();
+const mockReplace = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
     back: mockBack,
-    replace: vi.fn(),
+    replace: mockReplace,
     refresh: vi.fn(),
     forward: vi.fn(),
     prefetch: vi.fn().mockResolvedValue(undefined),
   }),
   useParams: () => ({
-    agentName: 'Test%20Agent%201',
-    skillName: 'Test%20Skill%201',
+    agentName: 'Test Agent 1',
+    skillName: 'Test Skill 1',
   }),
   usePathname: () => '/agents/Test%20Agent%201/Test%20Skill%201/edit',
 }));
@@ -130,6 +131,7 @@ describe('EditSkillView', () => {
     vi.clearAllMocks();
     mockPush.mockClear();
     mockBack.mockClear();
+    mockReplace.mockClear();
     mockUpdateSkill.mockClear();
 
     // Set default mock implementation for useNavigation
@@ -139,7 +141,7 @@ describe('EditSkillView', () => {
       router: {
         push: mockPush,
         back: mockBack,
-        replace: vi.fn(),
+        replace: mockReplace,
         refresh: vi.fn(),
         forward: vi.fn(),
         prefetch: vi.fn().mockResolvedValue(undefined),
@@ -375,7 +377,10 @@ describe('EditSkillView', () => {
 
       fireEvent.click(cancelButton);
 
-      expect(mockBack).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith(
+        '/agents/Test%20Agent%201/skills/Test%20Skill%201',
+      );
     });
   });
 
@@ -397,7 +402,10 @@ describe('EditSkillView', () => {
       expect(cancelButton).toBeInTheDocument();
 
       fireEvent.click(cancelButton);
-      expect(mockBack).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith(
+        '/agents/Test%20Agent%201/skills/Test%20Skill%201',
+      );
     });
 
     it('displays form with current skill data', () => {

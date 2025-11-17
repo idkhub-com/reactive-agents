@@ -39,6 +39,7 @@ interface SkillPerformanceChartProps {
   }>;
   events?: SkillEvent[];
   clusters?: Array<{ id: string; name: string }>; // For cluster name lookup
+  size?: 'small' | 'large';
   intervalMinutes?: number; // Bucket size in minutes
   windowHours?: number; // Total time window in hours
   endTime?: Date; // End time for the chart (rightmost bucket)
@@ -61,6 +62,7 @@ export function SkillPerformanceChart({
   evaluationScores,
   events = [],
   clusters = [],
+  size = 'large',
   intervalMinutes = 60,
   windowHours = 24,
   endTime = new Date(),
@@ -90,9 +92,12 @@ export function SkillPerformanceChart({
     bucketTime.setMinutes(startMinutes, 0, 0);
 
     while (bucketTime <= now) {
-      // Format label based on interval size
+      // Format label based on interval size and chart size
       let label: string;
-      if (intervalMinutes >= 1440) {
+      if (size === 'small') {
+        // For small charts, show only time
+        label = format(bucketTime, 'h:mm a');
+      } else if (intervalMinutes >= 1440) {
         // 1 day or more: show only date
         label = format(bucketTime, 'MMM d');
       } else if (intervalMinutes >= 60) {
@@ -255,7 +260,7 @@ export function SkillPerformanceChart({
       datasets,
       buckets, // Include for event annotation calculation
     };
-  }, [evaluationScores, events, intervalMinutes, windowHours, endTime]);
+  }, [evaluationScores, events, intervalMinutes, windowHours, endTime, size]);
 
   // Create event annotations
   const eventAnnotations = useMemo(() => {
@@ -290,7 +295,7 @@ export function SkillPerformanceChart({
           borderWidth: 2,
           borderDash: [5, 5],
           label: {
-            display: true,
+            display: size === 'large',
             content: label,
             position: 'start',
             rotation: 270,
@@ -307,14 +312,14 @@ export function SkillPerformanceChart({
     }
 
     return annotations;
-  }, [events, chartData, intervalMinutes]);
+  }, [events, chartData, intervalMinutes, size]);
 
   // Combine event annotations with hover line
   const allAnnotations = useMemo(() => {
     const combined = { ...eventAnnotations };
 
-    // Add vertical hover line
-    if (hoveredIndex !== null) {
+    // Add vertical hover line (only for large charts)
+    if (hoveredIndex !== null && size === 'large') {
       combined.hoverLine = {
         type: 'line',
         xMin: hoveredIndex,
@@ -326,7 +331,7 @@ export function SkillPerformanceChart({
     }
 
     return combined;
-  }, [eventAnnotations, hoveredIndex]);
+  }, [eventAnnotations, hoveredIndex, size]);
 
   const options: ChartOptions<'line'> = {
     responsive: true,
@@ -334,17 +339,21 @@ export function SkillPerformanceChart({
     animation: {
       duration: 150, // Faster animation (default is 1000ms)
     },
+    events: size === 'large' ? undefined : [], // Disable all events for small charts
     interaction: {
-      mode: 'index',
+      mode: size === 'large' ? 'index' : undefined,
       intersect: false,
     },
-    onHover: (_event, activeElements) => {
-      if (activeElements.length > 0) {
-        setHoveredIndex(activeElements[0].index);
-      } else {
-        setHoveredIndex(null);
-      }
-    },
+    onHover:
+      size === 'large'
+        ? (_event, activeElements) => {
+            if (activeElements.length > 0) {
+              setHoveredIndex(activeElements[0].index);
+            } else {
+              setHoveredIndex(null);
+            }
+          }
+        : undefined,
     plugins: {
       annotation: {
         // biome-ignore lint/suspicious/noExplicitAny: chartjs-plugin-annotation has complex types
@@ -353,18 +362,20 @@ export function SkillPerformanceChart({
       legend: {
         display: true,
         position: 'bottom',
+        onClick: size === 'large' ? undefined : () => false, // Disable legend click for small charts
         labels: {
-          boxWidth: 12,
-          boxHeight: 12,
-          padding: 12,
+          boxWidth: size === 'large' ? 12 : 8,
+          boxHeight: size === 'large' ? 12 : 8,
+          padding: size === 'large' ? 12 : 8,
           font: {
-            size: 11,
+            size: size === 'large' ? 11 : 9,
           },
           color: 'rgb(115, 115, 115)',
           filter: (item) => item.text !== 'Events', // Hide Events from legend
         },
       },
       tooltip: {
+        enabled: size === 'large',
         mode: 'index',
         intersect: false,
         displayColors: true,
@@ -422,10 +433,10 @@ export function SkillPerformanceChart({
         },
       },
       title: {
-        display: true,
+        display: size === 'large',
         text: 'Skill Performance Over Time',
         font: {
-          size: 12,
+          size: size === 'large' ? 12 : 11,
         },
         color: 'rgb(115, 115, 115)',
         padding: {
@@ -442,13 +453,13 @@ export function SkillPerformanceChart({
         },
         ticks: {
           font: {
-            size: 10,
+            size: size === 'large' ? 10 : 9,
           },
           color: 'rgb(115, 115, 115)',
           maxRotation: 45,
           minRotation: 45,
           autoSkip: true,
-          maxTicksLimit: 10,
+          maxTicksLimit: size === 'large' ? 10 : 5,
         },
       },
       y: {
@@ -458,10 +469,10 @@ export function SkillPerformanceChart({
         },
         ticks: {
           font: {
-            size: 10,
+            size: size === 'large' ? 10 : 9,
           },
           color: 'rgb(115, 115, 115)',
-          maxTicksLimit: 6,
+          maxTicksLimit: size === 'large' ? 6 : 4,
           callback: (value) => {
             return Number(value).toFixed(2);
           },
@@ -475,7 +486,7 @@ export function SkillPerformanceChart({
   return (
     <div className="w-full space-y-2">
       {/* Chart */}
-      <div className="w-full h-64">
+      <div className={`w-full ${size === 'large' ? 'h-64' : 'h-40'}`}>
         <Line data={chartData} options={options} />
       </div>
     </div>

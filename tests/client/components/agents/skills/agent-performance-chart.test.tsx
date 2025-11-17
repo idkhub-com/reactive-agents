@@ -29,19 +29,23 @@ vi.mock('chart.js', () => ({
 }));
 
 describe('AgentPerformanceChart', () => {
+  const mockSkillId = '123e4567-e89b-12d3-a456-426614174000';
   const mockEvaluationScores = [
     {
       time_bucket: '2025-01-15T10:00:00Z',
+      skill_id: mockSkillId,
       avg_score: 0.875,
       count: 2,
     },
     {
       time_bucket: '2025-01-15T11:00:00Z',
+      skill_id: mockSkillId,
       avg_score: 0.9,
       count: 2,
     },
     {
       time_bucket: '2025-01-15T12:00:00Z',
+      skill_id: mockSkillId,
       avg_score: 0.925,
       count: 2,
     },

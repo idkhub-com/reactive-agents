@@ -33,6 +33,7 @@ ChartJS.register(
 interface AgentPerformanceChartProps {
   evaluationScores: Array<{
     time_bucket: string;
+    skill_id: string;
     avg_score: number | null;
     count: number;
   }>;
@@ -43,6 +44,20 @@ interface AgentPerformanceChartProps {
   windowHours?: number;
   endTime?: Date; // End time for the chart (rightmost bucket)
 }
+
+// Color palette for skill lines
+const SKILL_COLORS = [
+  'rgb(59, 130, 246)', // blue
+  'rgb(168, 85, 247)', // purple
+  'rgb(34, 197, 94)', // green
+  'rgb(251, 146, 60)', // orange
+  'rgb(236, 72, 153)', // pink
+  'rgb(14, 165, 233)', // sky
+  'rgb(6, 182, 212)', // cyan
+  'rgb(245, 158, 11)', // amber
+  'rgb(239, 68, 68)', // red
+  'rgb(99, 102, 241)', // indigo
+];
 
 export function AgentPerformanceChart({
   evaluationScores,
@@ -95,39 +110,60 @@ export function AgentPerformanceChart({
       bucketTime = new Date(bucketTime.getTime() + intervalMinutes * 60 * 1000);
     }
 
-    // Create a map of time bucket to score
-    const scoreMap = new Map<string, number | null>();
+    // Group scores by skill_id
+    const skillScoreMap = new Map<string, Map<string, number | null>>();
+
     for (const score of evaluationScores) {
+      if (!skillScoreMap.has(score.skill_id)) {
+        skillScoreMap.set(score.skill_id, new Map());
+      }
       const bucketTime = new Date(score.time_bucket).getTime();
-      scoreMap.set(
-        bucketTime.toString(),
-        score.avg_score !== null ? score.avg_score * 100 : null,
-      );
+      skillScoreMap
+        .get(score.skill_id)!
+        .set(
+          bucketTime.toString(),
+          score.avg_score !== null ? score.avg_score * 100 : null,
+        );
     }
 
     // Fill in data for all buckets
     const labels = buckets.map((b) => b.label);
-    const data = buckets.map((b) => {
-      const score = scoreMap.get(b.time.getTime().toString());
-      return score !== undefined ? score : null;
-    });
 
-    const hasOnlyOnePoint = data.filter((d) => d !== null).length === 1;
+    // Create datasets for each skill
+    const skillDatasets: Array<{
+      label: string;
+      data: (number | null)[];
+      [key: string]: unknown;
+    }> = [];
 
-    const weightedAvgDataset = {
-      label: 'Weighted Average',
-      data,
-      borderColor: 'rgb(115, 115, 115)',
-      backgroundColor: 'rgb(115, 115, 115)',
-      borderWidth: 3,
-      pointRadius: hasOnlyOnePoint ? 3 : 0,
-      pointHoverRadius: 8,
-      pointHoverBorderWidth: 2,
-      pointHoverBackgroundColor: 'rgb(115, 115, 115)',
-      pointHoverBorderColor: 'white',
-      tension: 0.3,
-      spanGaps: true,
-    };
+    let colorIndex = 0;
+    for (const [skillId, scoreMap] of Array.from(skillScoreMap.entries())) {
+      const skillName = skillNameMap.get(skillId) || 'Unknown Skill';
+      const color = SKILL_COLORS[colorIndex % SKILL_COLORS.length];
+      colorIndex++;
+
+      const data = buckets.map((b) => {
+        const score = scoreMap.get(b.time.getTime().toString());
+        return score !== undefined ? score : null;
+      });
+
+      const hasOnlyOnePoint = data.filter((d) => d !== null).length === 1;
+
+      skillDatasets.push({
+        label: skillName,
+        data,
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: 2,
+        pointRadius: hasOnlyOnePoint ? 2 : 0,
+        pointHoverRadius: 8,
+        pointHoverBorderWidth: 2,
+        pointHoverBackgroundColor: color,
+        pointHoverBorderColor: 'white',
+        tension: 0.3,
+        spanGaps: true,
+      });
+    }
 
     // Create event markers dataset for all buckets (invisible, for tooltips only)
     const eventData = buckets.map((bucket) => {
@@ -160,10 +196,17 @@ export function AgentPerformanceChart({
 
     return {
       labels,
-      datasets: [weightedAvgDataset, eventsDataset],
+      datasets: [...skillDatasets, eventsDataset],
       buckets, // Include for event annotation calculation
     };
-  }, [evaluationScores, events, intervalMinutes, windowHours, endTime]);
+  }, [
+    evaluationScores,
+    events,
+    intervalMinutes,
+    windowHours,
+    endTime,
+    skillNameMap,
+  ]);
 
   // Create event annotations
   const eventAnnotations = useMemo(() => {
