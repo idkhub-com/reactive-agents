@@ -99,7 +99,8 @@ describe('Skills API functions', () => {
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   };
 
   beforeEach(() => {
@@ -124,6 +125,7 @@ describe('Skills API functions', () => {
         clustering_interval: 0,
         reflection_min_requests_per_arm: 0,
         exploration_temperature: 1.0,
+        allowed_template_variables: ['datetime'],
       };
 
       const result = await createSkill(params);
@@ -151,6 +153,7 @@ describe('Skills API functions', () => {
           clustering_interval: 0,
           reflection_min_requests_per_arm: 0,
           exploration_temperature: 1.0,
+          allowed_template_variables: ['datetime'],
         }),
       ).rejects.toThrow('Failed to create skill');
     });

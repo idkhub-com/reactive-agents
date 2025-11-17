@@ -27,6 +27,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 
 1. Create a `.env` file:
    ```bash
+   # For now, we use GPT-5 for the system prompt reflection and GPT-5-mini for evaluations.
    OPENAI_API_KEY=your-openai-key
    ```
 

@@ -38,6 +38,7 @@ export async function responseHandler(
   raRequestData: ReactiveAgentsRequestData,
   strictOpenAiCompliance: boolean,
   areSyncHooksAvailable: boolean,
+  onFirstChunk?: () => void,
 ): Promise<{
   response: Response;
   raResponseBody: ReactiveAgentsResponseBody | null;
@@ -118,6 +119,7 @@ export async function responseHandler(
         aiProviderRequestURL,
         raRequestData,
         strictOpenAiCompliance,
+        onFirstChunk,
       ),
       raResponseBody: null,
     };

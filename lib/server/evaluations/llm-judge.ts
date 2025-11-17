@@ -9,6 +9,7 @@ import {
   type LLMJudgeConfig,
   LLMJudgeResult,
 } from '@server/types/evaluations/llm-judge';
+import { error, warn } from '@shared/console-logging';
 import { AIProvider } from '@shared/types/constants';
 import { CacheMode } from '@shared/types/middleware/cache';
 import OpenAI from 'openai';
@@ -17,6 +18,28 @@ import { z } from 'zod';
 // Constants for retry logic
 const LLM_JUDGE_MAX_RETRIES = 3;
 const LLM_JUDGE_RETRY_DELAY_BASE = 1000; // 1 second base delay
+
+/**
+ * Models that support strict structured outputs (json_schema with strict: true)
+ * See: https://platform.openai.com/docs/guides/structured-outputs
+ */
+const MODELS_WITH_STRUCTURED_OUTPUT_SUPPORT = new Set([
+  'gpt-4o',
+  'gpt-4o-mini',
+  'gpt-4o-2024-08-06',
+  'gpt-4o-2024-11-20',
+  'gpt-4o-mini-2024-07-18',
+  'gpt-5-mini',
+  'gpt-5-turbo',
+  'chatgpt-4o-latest',
+]);
+
+/**
+ * Check if a model supports strict structured outputs
+ */
+function supportsStructuredOutputs(model: string): boolean {
+  return MODELS_WITH_STRUCTURED_OUTPUT_SUPPORT.has(model);
+}
 
 /**
  * Check if an error is retryable for LLM judge requests
@@ -181,7 +204,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
     const api_key = OPENAI_API_KEY;
 
     if (!api_key || api_key === 'demo-key' || api_key.trim() === '') {
-      console.warn('⚠️ OpenAI API key not configured for LLM Judge');
+      warn('[LLM_JUDGE] OpenAI API key not configured');
       return getFallbackResult('no_api_key', undefined, {
         retryCount: 0,
         maxRetries: LLM_JUDGE_MAX_RETRIES,
@@ -208,13 +231,22 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
     for (let i = 0; i < LLM_JUDGE_MAX_RETRIES; i++) {
       try {
         const prompt = generateEvaluationPrompt(input);
-        const response = await client
-          .withOptions({
-            defaultHeaders: {
-              'ra-config': JSON.stringify(raConfig),
-            },
-          })
-          .chat.completions.parse({
+        const clientWithHeaders = client.withOptions({
+          defaultHeaders: {
+            'ra-config': JSON.stringify(raConfig),
+          },
+        });
+
+        // Check if model supports structured outputs
+        const useStructuredOutput = supportsStructuredOutputs(
+          judgeConfig.model,
+        );
+
+        let parsed: unknown;
+
+        if (useStructuredOutput) {
+          // Use strict structured outputs for supported models
+          const response = await clientWithHeaders.chat.completions.parse({
             model: judgeConfig.model,
             messages: [
               { role: 'system', content: prompt.systemPrompt },
@@ -230,9 +262,33 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
             },
           });
 
-        const parsed = response.choices[0].message.parsed;
-        if (!parsed) {
-          throw new Error('No parsed response from OpenAI');
+          parsed = response.choices[0].message.parsed;
+          if (!parsed) {
+            throw new Error('No parsed response from OpenAI');
+          }
+        } else {
+          // Fall back to JSON mode for older models
+          const response = await clientWithHeaders.chat.completions.create({
+            model: judgeConfig.model,
+            messages: [
+              { role: 'system', content: prompt.systemPrompt },
+              { role: 'user', content: prompt.userPrompt },
+            ],
+            response_format: { type: 'json_object' },
+          });
+
+          const content = response.choices[0].message.content;
+          if (!content) {
+            throw new Error('No content in response from OpenAI');
+          }
+
+          try {
+            parsed = JSON.parse(content);
+          } catch (parseError) {
+            throw new Error(
+              `Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+            );
+          }
         }
 
         // For structured output (like task/outcome extraction), return as metadata
@@ -240,16 +296,20 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           return {
             score: 1.0, // Default score for successful extraction
             reasoning: 'Structured data extracted successfully',
-            metadata: parsed,
+            metadata: parsed as Record<string, unknown>,
           };
         }
 
         // For regular evaluation, validate and return
         return LLMJudgeResult.parse(parsed);
-      } catch (error) {
-        lastError = error;
-        if (i < LLM_JUDGE_MAX_RETRIES - 1 && isRetryableLLMJudgeError(error)) {
+      } catch (err) {
+        lastError = err;
+        if (i < LLM_JUDGE_MAX_RETRIES - 1 && isRetryableLLMJudgeError(err)) {
           const delay = LLM_JUDGE_RETRY_DELAY_BASE * 2 ** i;
+          warn(
+            `[LLM_JUDGE] Retrying evaluation (${i + 1}/${LLM_JUDGE_MAX_RETRIES}) after ${delay}ms:`,
+            err instanceof Error ? err.message : String(err),
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
           retryCount++;
         } else {
@@ -265,6 +325,13 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
     };
 
     if (lastError instanceof Error) {
+      error('[LLM_JUDGE] Evaluation failed:', {
+        errorMessage: lastError.message,
+        errorStack: lastError.stack,
+        retryCount,
+        model: judgeConfig.model,
+      });
+
       if (
         lastError.message.includes('fetch') ||
         lastError.message.includes('network')
@@ -293,6 +360,12 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
       }
       return getFallbackResult('api_error', lastError.message, retryInfo);
     }
+
+    error('[LLM_JUDGE] Evaluation failed with unknown error:', {
+      error: String(lastError),
+      retryCount,
+      model: judgeConfig.model,
+    });
 
     return getFallbackResult('unknown_error', String(lastError), retryInfo);
   }

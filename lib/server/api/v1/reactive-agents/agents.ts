@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import {
   AgentCreateParams,
   AgentQueryParams,
@@ -46,6 +47,11 @@ export const agentsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         const updatedAgent = await connector.updateAgent(agentId, data);
+
+        // Emit SSE event for agent update
+        emitSSEEvent('agent:updated', {
+          agentId: updatedAgent.id,
+        });
 
         return c.json(updatedAgent, 200);
       } catch (error) {
@@ -96,20 +102,66 @@ export const agentsRouter = new Hono<AppEnv>()
   .get(
     '/:agentId/evaluation-runs',
     zValidator('param', z.object({ agentId: z.uuid() })),
+    zValidator(
+      'query',
+      z.object({
+        log_id: z.uuid().optional(),
+        created_after: z.string().datetime().optional(),
+        created_before: z.string().datetime().optional(),
+      }),
+    ),
     async (c) => {
       try {
         const { agentId } = c.req.valid('param');
+        const { log_id, created_after, created_before } = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
         const evaluationRuns =
           await connector.getSkillOptimizationEvaluationRuns({
             agent_id: agentId,
+            ...(log_id && { log_id }),
+            ...(created_after && { created_after }),
+            ...(created_before && { created_before }),
           });
 
         return c.json(evaluationRuns);
       } catch (error) {
         console.error('Error getting evaluation runs:', error);
         return c.json({ error: 'Failed to get evaluation runs' }, 500);
+      }
+    },
+  )
+  .post(
+    '/:agentId/evaluation-scores-by-time-bucket',
+    zValidator('param', z.object({ agentId: z.uuid() })),
+    zValidator(
+      'json',
+      z.object({
+        interval_minutes: z.number().min(1).max(1440),
+        start_time: z.string().datetime(),
+        end_time: z.string().datetime(),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { agentId } = c.req.valid('param');
+        const { interval_minutes, start_time, end_time } = c.req.valid('json');
+        const connector = c.get('user_data_storage_connector');
+
+        const scores = await connector.getEvaluationScoresByTimeBucket({
+          agent_id: agentId,
+          interval_minutes,
+          start_time,
+          end_time,
+        });
+
+        return c.json(scores);
+      } catch (error) {
+        console.error('Error getting evaluation scores by time bucket:', error);
+        return c.json(
+          { error: 'Failed to get evaluation scores by time bucket' },
+          500,
+        );
       }
     },
   );

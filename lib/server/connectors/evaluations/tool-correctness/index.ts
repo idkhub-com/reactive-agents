@@ -9,7 +9,11 @@ import {
   type EvaluationMethodDetails,
   EvaluationMethodName,
 } from '@shared/types/evaluations';
-import { type ToolCall, ToolCorrectnessEvaluationParameters } from './types';
+import {
+  type ToolCall,
+  ToolCorrectnessEvaluationAIParameters,
+  ToolCorrectnessEvaluationParameters,
+} from './types';
 
 // Pure functions for tool evaluation logic
 const extractToolsCalled = (log: Log): ToolCall[] => {
@@ -481,7 +485,6 @@ const evaluateLogInternal = (
     }
   }
 
-  // Use structured logging instead of console.log
   if (parameters.verbose_mode) {
     info(`Evaluating log ${log.id}`, {
       tools_called,
@@ -523,7 +526,50 @@ export function evaluateLog(
 
   const execution_time = Date.now() - start_time;
 
+  // Format display info
+  const displayInfoSections = [];
+
+  if (logResult.reason) {
+    displayInfoSections.push({
+      label: 'Reasoning',
+      content: logResult.reason,
+    });
+  }
+
+  if (logResult.tools_called.length > 0) {
+    const toolsSummary = logResult.tools_called
+      .map((tool) => {
+        const params = tool.input_parameters
+          ? JSON.stringify(tool.input_parameters, null, 2)
+          : 'No parameters';
+        return `${tool.name}:\nParameters: ${params}`;
+      })
+      .join('\n\n');
+
+    displayInfoSections.push({
+      label: 'Tools Called',
+      content: toolsSummary,
+    });
+  }
+
+  if (logResult.expected_tools.length > 0) {
+    const expectedSummary = logResult.expected_tools
+      .map((tool) => {
+        const params = tool.input_parameters
+          ? JSON.stringify(tool.input_parameters, null, 2)
+          : 'No parameters';
+        return `${tool.name}:\nParameters: ${params}`;
+      })
+      .join('\n\n');
+
+    displayInfoSections.push({
+      label: 'Expected Tools',
+      content: expectedSummary,
+    });
+  }
+
   const evaluationResult: SkillOptimizationEvaluationResult = {
+    evaluation_id: evaluation.id,
     method: EvaluationMethodName.TOOL_CORRECTNESS,
     score: logResult.score,
     extra_data: {
@@ -534,6 +580,7 @@ export function evaluateLog(
       execution_time_ms: execution_time,
       evaluated_at: new Date().toISOString(),
     },
+    display_info: displayInfoSections,
   };
 
   return Promise.resolve(evaluationResult);
@@ -550,4 +597,5 @@ export const toolCorrectnessEvaluationConnector: EvaluationMethodConnector = {
   },
   evaluateLog,
   getParameterSchema: ToolCorrectnessEvaluationParameters,
+  getAIParameterSchema: ToolCorrectnessEvaluationAIParameters,
 };

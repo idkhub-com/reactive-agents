@@ -10,37 +10,32 @@ export async function updatePulledArm(
   arm: SkillOptimizationArm,
   evaluationResults: SkillOptimizationEvaluationResult[],
 ) {
-  // Calculate average score from all evaluations (normalized 0-1)
-  const scores = evaluationResults.map((result) => result.score);
+  // Extract evaluation_id and score pairs for atomic update
+  const evaluationScores = evaluationResults.map((result) => ({
+    evaluation_id: result.evaluation_id,
+    score: result.score,
+  }));
 
-  const reward = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  await updateArmStats(userDataStorageConnector, arm, reward);
+  await updateArmStats(userDataStorageConnector, arm, evaluationScores);
 }
 
 export async function updateArmStats(
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
-  reward: number,
+  evaluationResults: Array<{ evaluation_id: string; score: number }>,
 ) {
-  // Update arm statistics using incremental update formulas for Thompson Sampling
-  const newN = arm.stats.n + 1;
-  const newTotalReward = arm.stats.total_reward + reward;
-  const newMean = newTotalReward / newN;
-  const newN2 = arm.stats.n2 + reward * reward;
+  // Atomically update arm stats for each evaluation AND increment cluster/skill counters
+  // PostgreSQL calculates new stats (n, mean, n2, total_reward) per evaluation internally
+  // This ensures proper tracking of each evaluation method's performance
+  const result = await userDataStorageConnector.updateArmAndIncrementCounters(
+    arm.id,
+    evaluationResults,
+  );
 
-  await userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
-    stats: {
-      n: newN,
-      mean: newMean,
-      n2: newN2,
-      total_reward: newTotalReward,
-    },
-  });
-
-  // Emit SSE event for arm updates
+  // Emit SSE event with all updated data (arm, cluster, skill)
   emitSSEEvent('skill-optimization:arm-updated', {
-    armId: arm.id,
-    skillId: arm.skill_id,
-    clusterId: arm.cluster_id,
+    arm: result.arm,
+    cluster: result.cluster,
+    skill: result.skill,
   });
 }

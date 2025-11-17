@@ -1,5 +1,6 @@
 'use client';
 
+import { AgentView } from '@client/components/agents/agent-view';
 import { useNavigationPerformance } from '@client/hooks/use-navigation-performance';
 import { useNavigation } from '@client/providers/navigation';
 import type { ReactElement } from 'react';
@@ -7,10 +8,12 @@ import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';
 import { AgentsListView } from './agents-list-view';
 import { EditAgentView } from './edit-agent-view';
-import { EditSkillView, SkillDashboardView, SkillsListView } from './skills';
+import { EditSkillView, SkillDashboardView } from './skills';
 import { ArmDetailView } from './skills/arms/arm-detail-view';
 import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
-import { ClustersView } from './skills/clusters/clusters-view';
+import { EvaluationEditView } from './skills/evaluations/evaluation-edit-view';
+import { EvaluationsListView } from './skills/evaluations/evaluations-list-view';
+import { SkillEventsView } from './skills/events/skill-events-view';
 import { LogDetailsView, LogsView } from './skills/logs';
 
 export function AgentsView(): ReactElement {
@@ -48,10 +51,10 @@ export function AgentsView(): ReactElement {
             <EditAgentView />
           </AgentErrorBoundary>
         );
-      case 'skills-list':
+      case 'agent-view':
         return (
           <AgentErrorBoundary sectionName="Skills List">
-            <SkillsListView />
+            <AgentView />
           </AgentErrorBoundary>
         );
       case 'skill-dashboard':
@@ -78,12 +81,6 @@ export function AgentsView(): ReactElement {
             <LogDetailsView />
           </AgentErrorBoundary>
         );
-      case 'clusters':
-        return (
-          <AgentErrorBoundary sectionName="Partitions">
-            <ClustersView />
-          </AgentErrorBoundary>
-        );
       case 'cluster-arms':
         return (
           <AgentErrorBoundary sectionName="Partition Arms">
@@ -94,6 +91,24 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Arm Detail">
             <ArmDetailView />
+          </AgentErrorBoundary>
+        );
+      case 'skill-events':
+        return (
+          <AgentErrorBoundary sectionName="Events">
+            <SkillEventsView />
+          </AgentErrorBoundary>
+        );
+      case 'evaluations':
+        return (
+          <AgentErrorBoundary sectionName="Evaluations">
+            <EvaluationsListView />
+          </AgentErrorBoundary>
+        );
+      case 'edit-evaluation':
+        return (
+          <AgentErrorBoundary sectionName="Edit Evaluation">
+            <EvaluationEditView />
           </AgentErrorBoundary>
         );
       default:

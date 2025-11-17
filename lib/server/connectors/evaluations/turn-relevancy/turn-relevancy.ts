@@ -1,4 +1,7 @@
-import { TurnRelevancyEvaluationParameters } from '@server/connectors/evaluations/turn-relevancy/types';
+import {
+  TurnRelevancyEvaluationAIParameters,
+  TurnRelevancyEvaluationParameters,
+} from '@server/connectors/evaluations/turn-relevancy/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import {
   type EvaluationMethodDetails,
@@ -17,4 +20,5 @@ export const turnRelevancyEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => methodConfig,
   evaluateLog,
   getParameterSchema: TurnRelevancyEvaluationParameters,
+  getAIParameterSchema: TurnRelevancyEvaluationAIParameters,
 };

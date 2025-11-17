@@ -451,7 +451,7 @@ function SkillDropdownBreadcrumb(): ReactElement {
     // Navigate to skill - NavigationProvider will update selection from URL
     if (navigationState.selectedAgentName) {
       router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/${encodeURIComponent(skill.name)}`,
+        `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/skills/${encodeURIComponent(skill.name)}`,
       );
     }
     setComboboxOpen(false);

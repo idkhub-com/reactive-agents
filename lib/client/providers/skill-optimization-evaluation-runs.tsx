@@ -22,9 +22,11 @@ interface SkillOptimizationEvaluationRunsContextType {
   error: Error | null;
   refetch: () => void;
 
-  // Skill ID
+  // Skill ID and Log ID
   skillId: string | null;
   setSkillId: (skillId: string | null) => void;
+  logId: string | null;
+  setLogId: (logId: string | null) => void;
 
   // Helper functions
   getEvaluationRunsByClusterId: (
@@ -45,16 +47,17 @@ export const SkillOptimizationEvaluationRunsProvider = ({
   const queryClient = useQueryClient();
 
   const [skillId, setSkillId] = useState<string | null>(null);
+  const [logId, setLogId] = useState<string | null>(null);
 
-  // Evaluation runs query
+  // Evaluation runs query - only fetches for specific log if logId is set
   const {
     data: evaluationRuns = [],
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: skillOptimizationEvaluationRunQueryKeys.list(skillId),
-    queryFn: () => getSkillEvaluationRuns(skillId!),
+    queryKey: ['evaluation-runs', skillId, logId],
+    queryFn: () => getSkillEvaluationRuns(skillId!, logId ?? undefined),
     enabled: !!skillId,
   });
 
@@ -81,9 +84,11 @@ export const SkillOptimizationEvaluationRunsProvider = ({
     error,
     refetch,
 
-    // Skill ID
+    // Skill ID and Log ID
     skillId,
     setSkillId,
+    logId,
+    setLogId,
 
     // Helper functions
     getEvaluationRunsByClusterId,

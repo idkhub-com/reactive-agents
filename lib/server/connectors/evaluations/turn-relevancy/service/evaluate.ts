@@ -114,6 +114,7 @@ export async function evaluateLog(
   const execution_time = Date.now() - start_time;
 
   const evaluationResult: SkillOptimizationEvaluationResult = {
+    evaluation_id: evaluation.id,
     method: EvaluationMethodName.TURN_RELEVANCY,
     score: final_score,
     extra_data: {
@@ -127,6 +128,28 @@ export async function evaluateLog(
       execution_time_ms: execution_time,
       evaluated_at: new Date().toISOString(),
     },
+    display_info: [
+      {
+        label: 'Reasoning',
+        content: judgeResult.reasoning,
+      },
+      {
+        label: 'Current Turn',
+        content: current_turn,
+      },
+      ...(instructions
+        ? [
+            {
+              label: 'Additional Instructions',
+              content: instructions,
+            },
+          ]
+        : []),
+      {
+        label: 'Conversation History',
+        content: conversation_history,
+      },
+    ],
   };
 
   return evaluationResult;

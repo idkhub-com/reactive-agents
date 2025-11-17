@@ -7,4 +7,5 @@ BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ language 'plpgsql'
+SET search_path = public;

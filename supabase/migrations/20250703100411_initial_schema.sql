@@ -1,5 +1,5 @@
 -- ================================================
--- Agents table
+-- Agents Table
 -- ================================================
 CREATE TABLE if not exists agents (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -21,7 +21,7 @@ CREATE POLICY "service_role_full_access" ON agents FOR ALL TO service_role USING
 
 
 -- ================================================
--- Skills table
+-- Skills Table
 -- ================================================
 CREATE TABLE if not exists skills (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -34,11 +34,12 @@ CREATE TABLE if not exists skills (
   clustering_interval INTEGER NOT NULL DEFAULT 15,
   reflection_min_requests_per_arm INTEGER NOT NULL DEFAULT 2,
   exploration_temperature FLOAT NOT NULL DEFAULT 1.0,
+  total_requests BIGINT NOT NULL DEFAULT 0,
+  allowed_template_variables TEXT[] NOT NULL DEFAULT '{}',
   last_clustering_at TIMESTAMPTZ,
   last_clustering_log_start_time BIGINT,
   evaluations_regenerated_at TIMESTAMPTZ,
   evaluation_lock_acquired_at TIMESTAMPTZ,
-  reflection_lock_acquired_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -52,8 +53,6 @@ CREATE INDEX idx_skills_agent_id ON skills(agent_id);
 CREATE INDEX idx_skills_name ON skills(name);
 CREATE INDEX idx_skills_evaluation_lock ON skills(evaluation_lock_acquired_at)
   WHERE evaluation_lock_acquired_at IS NOT NULL;
-CREATE INDEX idx_skills_reflection_lock ON skills(reflection_lock_acquired_at)
-  WHERE reflection_lock_acquired_at IS NOT NULL;
 CREATE INDEX idx_skills_last_clustering ON skills(last_clustering_at)
   WHERE last_clustering_at IS NOT NULL;
 
@@ -64,25 +63,28 @@ COMMENT ON COLUMN skills.configuration_count IS 'Number of configurations (clust
 COMMENT ON COLUMN skills.clustering_interval IS 'Recompute the centroid of the clusters every N requests so that they can better represent the last N requests.';
 COMMENT ON COLUMN skills.reflection_min_requests_per_arm IS 'Minimum number of requests per arm in a configuration (cluster) to trigger reflection. This is to ensure that the arms for the cluster have convergence.';
 COMMENT ON COLUMN skills.exploration_temperature IS 'Temperature for exploration. Higher values lead to more exploration.';
+COMMENT ON COLUMN skills.total_requests IS 'Total number of requests for this skill (never resets, for lifetime observability)';
+COMMENT ON COLUMN skills.allowed_template_variables IS 'List of allowed Jinja-style template variables that can be used in system prompts (e.g., datetime)';
 COMMENT ON COLUMN skills.last_clustering_at IS 'Timestamp when clustering was last performed for this skill';
 COMMENT ON COLUMN skills.last_clustering_log_start_time IS 'Unix timestamp of the most recent log used in the last clustering batch';
 COMMENT ON COLUMN skills.evaluations_regenerated_at IS 'Timestamp when evaluations were first regenerated with real examples (after 5 requests)';
 COMMENT ON COLUMN skills.evaluation_lock_acquired_at IS 'Lock timestamp to prevent concurrent evaluation regeneration (5 minute timeout)';
-COMMENT ON COLUMN skills.reflection_lock_acquired_at IS 'Lock timestamp to prevent concurrent system prompt reflection (10 minute timeout)';
 
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skills FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
--- Skill Optimization Clusters table
+-- Skill Optimization Clusters Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   name TEXT NOT NULL,
-  total_steps BIGINT NOT NULL,
+  total_steps BIGINT NOT NULL DEFAULT 0,
+  observability_total_requests BIGINT NOT NULL DEFAULT 0,
   centroid FLOAT[] NOT NULL,
+  reflection_lock_acquired_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
@@ -91,14 +93,18 @@ CREATE TABLE IF NOT EXISTS skill_optimization_clusters (
 
 CREATE TRIGGER update_skill_optimization_clusters_updated_at BEFORE UPDATE ON skill_optimization_clusters
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    
+
 CREATE INDEX idx_skill_optimization_clusters_name ON skill_optimization_clusters(name);
 CREATE INDEX idx_skill_optimization_clusters_agent_id ON skill_optimization_clusters(agent_id);
 CREATE INDEX idx_skill_optimization_clusters_skill_id ON skill_optimization_clusters(skill_id);
+CREATE INDEX idx_clusters_reflection_lock ON skill_optimization_clusters(reflection_lock_acquired_at)
+  WHERE reflection_lock_acquired_at IS NOT NULL;
 
 COMMENT ON TABLE skill_optimization_clusters IS 'Table to store skill optimization clusters (partitions)';
-COMMENT ON COLUMN skill_optimization_clusters.total_steps IS 'Total number of times requests have been routed to this cluster';
+COMMENT ON COLUMN skill_optimization_clusters.total_steps IS 'Total number of requests since last optimization cycle (resets during reflection/evaluation regen, used by Thompson Sampling)';
+COMMENT ON COLUMN skill_optimization_clusters.observability_total_requests IS 'Total number of requests routed to this cluster (never resets, for observability)';
 COMMENT ON COLUMN skill_optimization_clusters.centroid IS 'Center of the cluster';
+COMMENT ON COLUMN skill_optimization_clusters.reflection_lock_acquired_at IS 'Lock timestamp to prevent concurrent system prompt reflection for this cluster (10 minute timeout)';
 
 ALTER TABLE skill_optimization_clusters ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_optimization_clusters FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -132,7 +138,7 @@ ALTER TABLE tools ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON tools FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
--- Logs table
+-- Logs Table
 -- ================================================
 -- Define enum types first
 CREATE TYPE http_method AS ENUM ('GET', 'POST', 'PUT', 'DELETE', 'PATCH');
@@ -156,9 +162,10 @@ CREATE TABLE IF NOT EXISTS logs (
   endpoint TEXT NOT NULL,
   function_name TEXT NOT NULL,
   status INTEGER NOT NULL,
-  start_time BIGINT NOT NULL,
-  end_time BIGINT NOT NULL,
-  duration BIGINT NOT NULL,
+  start_time BIGINT NOT NULL, -- Timestamp (ms) when request started
+  first_token_time BIGINT, -- Timestamp (ms) when first token received (for streaming), NULL for non-streaming
+  end_time BIGINT NOT NULL, -- Timestamp (ms) when request completed
+  duration BIGINT NOT NULL, -- Total duration in milliseconds (end_time - start_time)
   base_ra_config JSONB NOT NULL,
   -- Maybe redundant. Used for indexing.
   ai_provider TEXT NOT NULL,
@@ -181,7 +188,8 @@ CREATE TABLE IF NOT EXISTS logs (
   external_user_human_name TEXT,
   user_metadata JSONB,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_logs_agent_id ON logs(agent_id);
@@ -198,8 +206,13 @@ CREATE INDEX idx_logs_cache_status ON logs(cache_status);
 ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON logs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+COMMENT ON COLUMN logs.start_time IS 'Timestamp in milliseconds when the request started';
+COMMENT ON COLUMN logs.first_token_time IS 'Timestamp in milliseconds when the first token was received (for streaming responses). NULL for non-streaming requests or if not captured.';
+COMMENT ON COLUMN logs.end_time IS 'Timestamp in milliseconds when the request completed';
+COMMENT ON COLUMN logs.duration IS 'Total request duration in milliseconds (end_time - start_time)';
+
 -- ================================================
--- Feedback table
+-- Feedback Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS feedbacks (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -217,7 +230,7 @@ ALTER TABLE feedbacks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON feedbacks FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
--- Improved responses table
+-- Improved Responses Table
 -- ================================================
 CREATE TABLE if not exists improved_responses (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -244,7 +257,7 @@ ALTER TABLE improved_responses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON improved_responses FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ================================================
--- Cache table
+-- Cache Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS cache (
   key CHAR(64) PRIMARY KEY,
@@ -257,7 +270,7 @@ CREATE POLICY "service_role_full_access" ON cache FOR ALL TO service_role USING 
 
 
 -- ================================================
--- AI Providers
+-- AI Providers Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS ai_providers (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -281,7 +294,7 @@ CREATE POLICY "service_role_full_access" ON ai_providers FOR ALL TO service_role
 
 
 -- ================================================
--- Models table
+-- Models Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS models (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -304,7 +317,7 @@ CREATE POLICY "service_role_full_access" ON models FOR ALL TO service_role USING
 
 
 -- ================================================
--- Skill Models bridge table
+-- Skills Models Bridge Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS skill_models (
   skill_id UUID NOT NULL,
@@ -323,12 +336,12 @@ CREATE POLICY "service_role_full_access" ON skill_models FOR ALL TO service_role
 
 COMMENT ON TABLE models IS 'AI models tied to specific AI providers';
 COMMENT ON COLUMN models.ai_provider_id IS 'The AI provider that enables access to this model';
-COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-4, claude-3-opus)';
+COMMENT ON COLUMN models.model_name IS 'The name of the AI model (e.g., gpt-5, claude-sonnet-4-5)';
 COMMENT ON TABLE skill_models IS 'Bridge table linking skills to the models they can use';
 
 
 -- ================================================
--- Skill Optimization Arms table
+-- Skill Optimization Arms Table
 -- ================================================
 CREATE TABLE IF NOT EXISTS skill_optimization_arms (
   id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
@@ -337,7 +350,6 @@ CREATE TABLE IF NOT EXISTS skill_optimization_arms (
   cluster_id UUID NOT NULL,
   name TEXT NOT NULL,
   params JSONB NOT NULL,
-  stats JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -366,11 +378,13 @@ CREATE TABLE if not exists skill_optimization_evaluations (
   skill_id UUID NOT NULL,
   evaluation_method TEXT NOT NULL,
   params JSONB NOT NULL DEFAULT '{}',
+  weight FLOAT NOT NULL DEFAULT 1.0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
   FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
-  UNIQUE (agent_id, skill_id, evaluation_method)
+  UNIQUE (agent_id, skill_id, evaluation_method),
+  CHECK (weight > 0)
 );
 
 CREATE TRIGGER update_skill_optimization_evaluations_updated_at BEFORE UPDATE ON skill_optimization_evaluations
@@ -381,29 +395,190 @@ CREATE INDEX idx_skill_optimization_evaluations_evaluation_method ON skill_optim
 
 COMMENT ON COLUMN skill_optimization_evaluations.evaluation_method IS 'The method used for evaluating the skill';
 COMMENT ON COLUMN skill_optimization_evaluations.params IS 'The parameters used for the evaluation run configuration and settings';
+COMMENT ON COLUMN skill_optimization_evaluations.weight IS 'Weight of this evaluation method in the final score calculation. Higher weights mean this evaluation has more influence on the final score. Must be positive.';
 
 ALTER TABLE skill_optimization_evaluations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_optimization_evaluations FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 
 -- ================================================
--- Skill Optimization Evaluation Runs table
+-- Skill Optimization Arm Stats Table
 -- ================================================
-CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_runs (
-  id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS skill_optimization_arm_stats (
+  arm_id UUID NOT NULL,
+  evaluation_id UUID NOT NULL,
   agent_id UUID NOT NULL,
   skill_id UUID NOT NULL,
   cluster_id UUID NOT NULL,
-  results JSONB NOT NULL,
+  n INTEGER NOT NULL DEFAULT 0,
+  mean FLOAT NOT NULL DEFAULT 0,
+  n2 FLOAT NOT NULL DEFAULT 0,
+  total_reward FLOAT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (arm_id, evaluation_id),
+  FOREIGN KEY (arm_id) REFERENCES skill_optimization_arms(id) ON DELETE CASCADE,
+  FOREIGN KEY (evaluation_id) REFERENCES skill_optimization_evaluations(id) ON DELETE CASCADE,
   FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
   FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
   FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE CASCADE
 );
 
+CREATE TRIGGER update_skill_optimization_arm_stats_updated_at BEFORE UPDATE ON skill_optimization_arm_stats
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_skill_optimization_arm_stats_arm_id ON skill_optimization_arm_stats(arm_id);
+CREATE INDEX idx_skill_optimization_arm_stats_evaluation_id ON skill_optimization_arm_stats(evaluation_id);
+CREATE INDEX idx_skill_optimization_arm_stats_skill_id ON skill_optimization_arm_stats(skill_id);
+CREATE INDEX idx_skill_optimization_arm_stats_cluster_id ON skill_optimization_arm_stats(cluster_id);
+
+COMMENT ON TABLE skill_optimization_arm_stats IS 'Stores per-evaluation statistics for each arm, enabling weighted averaging of multiple evaluation methods';
+COMMENT ON COLUMN skill_optimization_arm_stats.n IS 'Number of requests evaluated by this evaluation method for this arm';
+COMMENT ON COLUMN skill_optimization_arm_stats.mean IS 'Running mean score for this evaluation method';
+COMMENT ON COLUMN skill_optimization_arm_stats.n2 IS 'Sum of squared differences for variance calculation (used by Thompson Sampling)';
+COMMENT ON COLUMN skill_optimization_arm_stats.total_reward IS 'Sum of all rewards for this evaluation method';
+
+ALTER TABLE skill_optimization_arm_stats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_full_access" ON skill_optimization_arm_stats FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Skill Optimization Evaluation Runs Table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_optimization_evaluation_runs (
+  id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  cluster_id UUID,
+  log_id UUID NOT NULL,
+  results JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE SET NULL,
+  FOREIGN KEY (log_id) REFERENCES logs(id) ON DELETE CASCADE
+);
+
 CREATE INDEX idx_skill_optimization_evaluation_runs_agent_id ON skill_optimization_evaluation_runs(agent_id);
 CREATE INDEX idx_skill_optimization_evaluation_runs_skill_id ON skill_optimization_evaluation_runs(skill_id);
+CREATE INDEX idx_skill_optimization_evaluation_runs_log_id ON skill_optimization_evaluation_runs(log_id);
+
+COMMENT ON TABLE skill_optimization_evaluation_runs IS 'Table to store evaluation runs for skill optimization';
+COMMENT ON COLUMN skill_optimization_evaluation_runs.log_id IS 'Reference to the log that was evaluated';
 
 ALTER TABLE skill_optimization_evaluation_runs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_optimization_evaluation_runs FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+
+-- ================================================
+-- Skill Events Table
+-- ================================================
+CREATE TABLE IF NOT EXISTS skill_events (
+  id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
+
+  -- References
+  agent_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  cluster_id UUID,
+  -- cluster_id is NULL for skill-wide events (model_added, model_removed, etc.)
+  -- cluster_id is NOT NULL for cluster-specific events (reflection)
+
+  event_type TEXT NOT NULL,
+
+  -- Optional metadata (JSON for flexibility)
+  metadata JSONB DEFAULT '{}'::jsonb,
+  -- Examples:
+  --   reflection: { "arms_count": 10, "best_score": 0.85 }
+  --   model_added: { "model_name": "gpt-4o" }
+  --   model_removed: { "model_name": "gpt-4" }
+  --   evaluation_added: { "evaluation_method": "task_completion" }
+  --   evaluation_removed: { "evaluation_method": "tool_correctness" }
+  --   description_updated: { "old_description": "...", "new_description": "..." }
+  --   partitions_reclustered: { "old_count": 3, "new_count": 5 }
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_id) REFERENCES skill_optimization_clusters(id) ON DELETE CASCADE
+);
+  
+-- Indexes for efficient queries
+CREATE INDEX idx_skill_events_skill_id ON skill_events(skill_id);
+CREATE INDEX idx_skill_events_cluster_id ON skill_events(cluster_id) WHERE cluster_id IS NOT NULL;
+CREATE INDEX idx_skill_events_type ON skill_events(event_type);
+CREATE INDEX idx_skill_events_created_at ON skill_events(created_at DESC);
+
+-- Composite index for common query pattern: get events for a skill by type
+CREATE INDEX idx_skill_events_skill_type_time ON skill_events(skill_id, event_type, created_at DESC);
+
+-- Composite index for cluster-specific events
+CREATE INDEX idx_skill_events_cluster_time ON skill_events(cluster_id, created_at DESC) WHERE cluster_id IS NOT NULL;
+
+-- Add RLS policies
+ALTER TABLE skill_events ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can view all skill events
+CREATE POLICY "Enable read access for all users" ON skill_events
+  FOR SELECT USING (true);
+
+-- Policy: Only the system can insert events (through functions)
+CREATE POLICY "Enable insert for service role only" ON skill_events
+  FOR INSERT WITH CHECK (true);
+
+-- Comments
+COMMENT ON TABLE skill_events IS 'Tracks important events that affect skill optimization';
+COMMENT ON COLUMN skill_events.event_type IS 'Type of event (stored as TEXT for flexibility in adding new types). Valid values are enforced by check constraint.';
+COMMENT ON COLUMN skill_events.cluster_id IS 'NULL for skill-wide events, NOT NULL for cluster-specific events';
+COMMENT ON COLUMN skill_events.metadata IS 'Flexible JSON field for event-specific data';
+
+
+-- ================================================
+-- Logs with Evaluation Scores View
+-- ================================================
+-- This view efficiently computes weighted average evaluation scores for each log
+-- by aggregating all evaluation results from skill_optimization_evaluation_runs
+-- and joining with skill_optimization_evaluations to get weights
+CREATE VIEW logs_with_eval_scores
+WITH (security_invoker = true)
+AS
+SELECT
+  l.*,
+  COALESCE(
+    (
+      -- Calculate weighted average score
+      -- For each log, we need to:
+      -- 1. Get all evaluation results from evaluation_runs
+      -- 2. Join with evaluations to get the weights
+      -- 3. Calculate weighted sum / sum of weights
+      SELECT
+        SUM(score * weight) / NULLIF(SUM(weight), 0)
+      FROM (
+        -- Extract all scores from all evaluation runs for this log
+        SELECT
+          (result->>'score')::FLOAT AS score,
+          e.weight AS weight
+        FROM skill_optimization_evaluation_runs er
+        CROSS JOIN LATERAL jsonb_array_elements(er.results) AS result
+        LEFT JOIN skill_optimization_evaluations e
+          ON e.id = (result->>'evaluation_id')::UUID
+        WHERE er.log_id = l.id
+          AND result->>'score' IS NOT NULL
+          AND e.weight IS NOT NULL
+      ) AS weighted_scores
+    ),
+    NULL
+  ) AS avg_eval_score,
+  (
+    SELECT COUNT(*)
+    FROM skill_optimization_evaluation_runs er
+    WHERE er.log_id = l.id
+  ) AS eval_run_count
+FROM logs l;
+
+COMMENT ON VIEW logs_with_eval_scores IS 'Logs enriched with weighted average evaluation score and evaluation run count. The avg_eval_score is calculated as a weighted average based on the weight field in skill_optimization_evaluations. Use this view for efficient list queries that need to display evaluation scores. Uses SECURITY INVOKER to respect querying user''s RLS policies.';
+
+-- Index on log_id for the evaluation_runs table is already created above
+-- This makes the subquery lookups efficient

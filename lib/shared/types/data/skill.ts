@@ -59,9 +59,13 @@ export const Skill = z.object({
    * If set and recent (< 5 minutes old), regeneration is in progress. */
   evaluation_lock_acquired_at: z.iso.datetime({ offset: true }).nullable(),
 
-  /** Lock timestamp to prevent concurrent system prompt reflection across edge workers.
-   * If set and recent (< 10 minutes old), reflection is in progress. */
-  reflection_lock_acquired_at: z.iso.datetime({ offset: true }).nullable(),
+  /** Total number of requests for this skill (never resets, for lifetime observability) */
+  total_requests: z.number().min(0),
+
+  /** List of allowed Jinja-style template variables that can be used in system prompts.
+   * These variables will be auto-populated at runtime and shown to the reflector AI.
+   * Example: ['datetime', 'user_timezone'] */
+  allowed_template_variables: z.array(z.string()),
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -107,6 +111,7 @@ export const SkillCreateParams = z
     clustering_interval: z.int().min(1).max(1000).default(15),
     reflection_min_requests_per_arm: z.int().min(1).max(1000).default(3),
     exploration_temperature: z.number().min(0.1).max(10.0).default(3.0),
+    allowed_template_variables: z.array(z.string()).optional().default([]),
   })
   .strict();
 
@@ -121,6 +126,7 @@ export const SkillUpdateParams = z
     clustering_interval: z.int().min(1).max(1000).optional(),
     reflection_min_requests_per_arm: z.int().min(1).max(1000).optional(),
     exploration_temperature: z.number().min(0.1).max(10.0).optional(),
+    allowed_template_variables: z.array(z.string()).optional(),
     // State management fields (typically updated by system, not user)
     last_clustering_at: z.iso.datetime({ offset: true }).nullable().optional(),
     last_clustering_log_start_time: z.number().nullable().optional(),
@@ -129,10 +135,6 @@ export const SkillUpdateParams = z
       .nullable()
       .optional(),
     evaluation_lock_acquired_at: z.iso
-      .datetime({ offset: true })
-      .nullable()
-      .optional(),
-    reflection_lock_acquired_at: z.iso
       .datetime({ offset: true })
       .nullable()
       .optional(),
@@ -148,11 +150,11 @@ export const SkillUpdateParams = z
         'clustering_interval',
         'reflection_min_requests_per_arm',
         'exploration_temperature',
+        'allowed_template_variables',
         'last_clustering_at',
         'last_clustering_log_start_time',
         'evaluations_regenerated_at',
         'evaluation_lock_acquired_at',
-        'reflection_lock_acquired_at',
       ];
       return updateFields.some(
         (field) => data[field as keyof typeof data] !== undefined,
@@ -172,7 +174,6 @@ export const SkillUpdateParams = z
         'last_clustering_log_start_time',
         'evaluations_regenerated_at',
         'evaluation_lock_acquired_at',
-        'reflection_lock_acquired_at',
       ],
     },
   );

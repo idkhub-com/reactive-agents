@@ -13,11 +13,29 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useAgents } from '@client/providers/agents';
+import { useAIProviders } from '@client/providers/ai-providers';
+import { useModels } from '@client/providers/models';
 import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
+import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
 import { useSkills } from '@client/providers/skills';
+import type { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
+import { EvaluationMethodName } from '@shared/types/evaluations';
+import { useQuery } from '@tanstack/react-query';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+
+// Pretty names for evaluation methods
+const EvaluationMethodNames: Record<EvaluationMethodName, string> = {
+  [EvaluationMethodName.TASK_COMPLETION]: 'Task Completion',
+  [EvaluationMethodName.ARGUMENT_CORRECTNESS]: 'Argument Correctness',
+  [EvaluationMethodName.ROLE_ADHERENCE]: 'Role Adherence',
+  [EvaluationMethodName.TURN_RELEVANCY]: 'Turn Relevancy',
+  [EvaluationMethodName.TOOL_CORRECTNESS]: 'Tool Correctness',
+  [EvaluationMethodName.KNOWLEDGE_RETENTION]: 'Knowledge Retention',
+  [EvaluationMethodName.CONVERSATION_COMPLETENESS]: 'Conversation Completeness',
+  [EvaluationMethodName.LATENCY]: 'Latency',
+};
 
 export function ArmDetailView(): ReactElement {
   const { selectedAgent } = useAgents();
@@ -26,17 +44,58 @@ export function ArmDetailView(): ReactElement {
 
   const { selectedArm, isLoading, error, refetch, setSkillId, setClusterId } =
     useSkillOptimizationArms();
+  const { skillModels, setSkillId: setModelsSkillId } = useModels();
+  const { getAPIKeyById } = useAIProviders();
+  const { evaluations, setSkillId: setEvaluationsSkillId } =
+    useSkillOptimizationEvaluations();
 
   const clusterId = selectedArm?.cluster_id;
+
+  // Fetch arm stats for this specific arm
+  const { data: armStats = [] } = useQuery<SkillOptimizationArmStat[]>({
+    queryKey: ['armStats', selectedArm?.id],
+    queryFn: async () => {
+      if (!selectedArm) return [];
+      const { getSkillArmStats } = await import(
+        '@client/api/v1/reactive-agents/skills'
+      );
+      if (!selectedSkill) return [];
+      return getSkillArmStats(selectedSkill.id);
+    },
+    enabled: !!selectedArm && !!selectedSkill,
+  });
+
+  // Filter arm stats for this specific arm
+  const armStatsForArm = useMemo(
+    () => armStats.filter((stat) => stat.arm_id === selectedArm?.id),
+    [armStats, selectedArm?.id],
+  );
+
+  // Get model and provider info
+  const modelInfo = useMemo(() => {
+    if (!selectedArm) return null;
+    const model = skillModels.find((m) => m.id === selectedArm.params.model_id);
+    if (!model) return null;
+
+    const apiKey = getAPIKeyById(model.ai_provider_id);
+    return {
+      modelName: model.model_name,
+      providerName: apiKey?.ai_provider || 'Unknown',
+    };
+  }, [selectedArm, skillModels, getAPIKeyById]);
 
   // Set skill ID and cluster ID when they change
   useEffect(() => {
     if (!selectedSkill) {
       setSkillId(null);
+      setModelsSkillId(null);
+      setEvaluationsSkillId(null);
       return;
     }
     setSkillId(selectedSkill.id);
-  }, [selectedSkill, setSkillId]);
+    setModelsSkillId(selectedSkill.id);
+    setEvaluationsSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillId, setModelsSkillId, setEvaluationsSkillId]);
 
   useEffect(() => {
     if (!clusterId) {
@@ -145,109 +204,97 @@ export function ArmDetailView(): ReactElement {
     <>
       <PageHeader
         title={selectedArm.name}
-        description={`ID: ${selectedArm.id.slice(0, 8)}...`}
+        description="Configuration details and performance metrics"
         showBackButton={true}
         onBack={goBack}
-        actions={
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCwIcon className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        }
       />
 
       <div className="p-6 space-y-6">
-        {/* Basic Information */}
+        {/* Model & Provider Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-            <CardDescription>Core identifiers and metadata</CardDescription>
+            <CardTitle>Model & Provider</CardTitle>
+            <CardDescription>
+              AI model and provider used by this configuration
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Name
+                <div className="text-sm font-medium text-muted-foreground mb-1">
+                  AI Provider
                 </div>
-                <div className="font-mono text-sm">{selectedArm.name}</div>
+                <Badge variant="secondary" className="text-sm">
+                  {modelInfo?.providerName || 'Unknown'}
+                </Badge>
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Configuration ID
+                <div className="text-sm font-medium text-muted-foreground mb-1">
+                  Model
                 </div>
-                <div className="font-mono text-sm">{selectedArm.id}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Partition ID
-                </div>
-                <div className="font-mono text-sm">
-                  {selectedArm.cluster_id}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Created
-                </div>
-                <div className="text-sm">
-                  {new Date(selectedArm.created_at).toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Updated
-                </div>
-                <div className="text-sm">
-                  {new Date(selectedArm.updated_at).toLocaleString()}
-                </div>
+                <Badge variant="outline" className="text-sm">
+                  {modelInfo?.modelName || 'Unknown'}
+                </Badge>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Statistics */}
+        {/* Performance Statistics by Evaluation Method */}
         <Card>
           <CardHeader>
-            <CardTitle>Performance Statistics</CardTitle>
+            <CardTitle>Performance by Evaluation Method</CardTitle>
             <CardDescription>
-              Multi-armed bandit statistics for this configuration
+              Performance metrics for each evaluation method
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">
-                  Pulls (n)
-                </div>
-                <Badge variant="secondary" className="text-lg">
-                  {selectedArm.stats.n}
-                </Badge>
+            {armStatsForArm.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                No performance data available yet. This configuration needs to
+                receive requests to generate statistics.
               </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">
-                  Mean Reward
-                </div>
-                <Badge variant="outline" className="text-lg">
-                  {selectedArm.stats.mean.toFixed(4)}
-                </Badge>
+            ) : (
+              <div className="space-y-4">
+                {armStatsForArm.map((stat) => {
+                  const evaluation = evaluations.find(
+                    (e) => e.id === stat.evaluation_id,
+                  );
+                  const methodName = evaluation
+                    ? EvaluationMethodNames[evaluation.evaluation_method]
+                    : 'Unknown Method';
+
+                  return (
+                    <div
+                      key={stat.evaluation_id}
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{methodName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {stat.n} request{stat.n !== 1 ? 's' : ''} • Weight:{' '}
+                          {evaluation?.weight.toFixed(1) || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            stat.mean >= 0.7
+                              ? 'default'
+                              : stat.mean >= 0.5
+                                ? 'secondary'
+                                : 'destructive'
+                          }
+                          className="text-sm"
+                        >
+                          {(stat.mean * 100).toFixed(1)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">
-                  N² (Variance)
-                </div>
-                <Badge variant="outline" className="text-lg">
-                  {selectedArm.stats.n2.toFixed(4)}
-                </Badge>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">
-                  Total Reward
-                </div>
-                <Badge variant="outline" className="text-lg">
-                  {selectedArm.stats.total_reward.toFixed(4)}
-                </Badge>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -261,15 +308,6 @@ export function ArmDetailView(): ReactElement {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">
-                  Model ID
-                </div>
-                <div className="font-mono text-sm bg-muted p-2 rounded">
-                  {selectedArm.params.model_id}
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium mb-2">Temperature</div>

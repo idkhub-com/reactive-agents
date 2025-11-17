@@ -41,10 +41,17 @@ export interface TurnRelevancyMetadata {
   };
 }
 
-export const TurnRelevancyEvaluationParameters = z
-  .object({
+// Default evaluation model - can be overridden by users
+export const TURN_RELEVANCY_EVALUATION_MODEL_DEFAULT = 'gpt-5-mini';
+
+// AI-modifiable parameters - none needed, evaluation works automatically
+export const TurnRelevancyEvaluationAIParameters = z.object({}).strict();
+
+// Full parameters including user-modifiable settings
+export const TurnRelevancyEvaluationParameters =
+  TurnRelevancyEvaluationAIParameters.extend({
     threshold: z.number().min(0).max(1).default(0.7),
-    model: z.string().default('gpt-4o'),
+    model: z.string().default(TURN_RELEVANCY_EVALUATION_MODEL_DEFAULT),
     temperature: z.number().min(0).max(2).default(0.1),
     max_tokens: z.number().int().positive().default(1000),
     include_reason: z.boolean().default(true),
@@ -55,8 +62,7 @@ export const TurnRelevancyEvaluationParameters = z
     conversation_history: z.string().optional(),
     current_turn: z.string().optional(),
     instructions: z.string().optional(),
-  })
-  .strict();
+  });
 
 export type TurnRelevancyEvaluationParameters = z.infer<
   typeof TurnRelevancyEvaluationParameters

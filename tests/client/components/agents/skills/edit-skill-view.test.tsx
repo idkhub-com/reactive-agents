@@ -54,7 +54,8 @@ const mockSkill = {
   last_clustering_log_start_time: null,
   evaluations_regenerated_at: null,
   evaluation_lock_acquired_at: null,
-  reflection_lock_acquired_at: null,
+  total_requests: 0,
+  allowed_template_variables: ['datetime'],
 };
 
 // Mock the navigation provider with proper state
@@ -149,6 +150,7 @@ describe('EditSkillView', () => {
       navigateToLogDetail: vi.fn(),
       navigateToEvaluations: vi.fn(),
       navigateToEvaluationDetail: vi.fn(),
+      navigateToEditEvaluation: vi.fn(),
       navigateToCreateEvaluation: vi.fn(),
       replaceToEvaluations: vi.fn(),
       navigateToDatasets: vi.fn(),

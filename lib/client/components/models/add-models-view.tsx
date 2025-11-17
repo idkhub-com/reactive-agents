@@ -13,7 +13,7 @@ import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
 import { PageHeader } from '@client/components/ui/page-header';
 import { useToast } from '@client/hooks/use-toast';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import type { AIProvider } from '@shared/types/constants';
 import { PrettyAIProvider } from '@shared/types/constants';
@@ -44,7 +44,7 @@ export function AddModelsView({
 }: AddModelsViewProps): ReactElement {
   const router = useRouter();
   const { toast } = useToast();
-  const { apiKeys } = useAIProviderAPIKeys();
+  const { aiProviderConfigs: apiKeys } = useAIProviders();
   const { refetch } = useModels();
 
   const [modelFields, setModelFields] = useState<ModelField[]>([

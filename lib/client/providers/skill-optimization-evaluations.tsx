@@ -4,6 +4,7 @@ import {
   createSkillEvaluation,
   deleteSkillEvaluation,
   getSkillEvaluations,
+  updateSkillEvaluation,
 } from '@client/api/v1/reactive-agents/skills';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
@@ -22,12 +23,20 @@ interface SkillOptimizationEvaluationsContextType {
   evaluations: SkillOptimizationEvaluation[];
   isLoading: boolean;
   isCreating: boolean;
+  isUpdating: boolean;
   isDeleting: boolean;
+  error: Error | null;
+  refetch: () => void;
   setSkillId: (skillId: string | null) => void;
   createEvaluation: (
     skillId: string,
     methods: EvaluationMethodName[],
   ) => Promise<SkillOptimizationEvaluation[]>;
+  updateEvaluation: (
+    skillId: string,
+    evaluationId: string,
+    params: { weight: number; params?: Record<string, unknown> },
+  ) => Promise<SkillOptimizationEvaluation>;
   deleteEvaluation: (skillId: string, evaluationId: string) => Promise<void>;
 }
 
@@ -46,16 +55,17 @@ export function SkillOptimizationEvaluationsProvider({
   const [skillId, setSkillId] = useState<string | null>(null);
 
   // Fetch evaluations using React Query
-  const { data: evaluations = [], isLoading } = useQuery({
+  const {
+    data: evaluations = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: skillId
       ? evaluationQueryKeys.skillEvaluations(skillId)
       : ['evaluations-null'],
     queryFn: () => {
       if (!skillId) return [];
-      console.log(
-        'SkillOptimizationEvaluationsProvider - Fetching evaluations for skillId:',
-        skillId,
-      );
       return getSkillEvaluations(skillId);
     },
     enabled: !!skillId,
@@ -70,6 +80,24 @@ export function SkillOptimizationEvaluationsProvider({
       skillId: string;
       methods: EvaluationMethodName[];
     }) => createSkillEvaluation(skillId, methods),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: evaluationQueryKeys.skillEvaluations(variables.skillId),
+      });
+    },
+  });
+
+  // Update evaluation mutation
+  const updateMutation = useMutation({
+    mutationFn: ({
+      skillId,
+      evaluationId,
+      params,
+    }: {
+      skillId: string;
+      evaluationId: string;
+      params: { weight: number; params?: Record<string, unknown> };
+    }) => updateSkillEvaluation(skillId, evaluationId, params),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: evaluationQueryKeys.skillEvaluations(variables.skillId),
@@ -100,6 +128,21 @@ export function SkillOptimizationEvaluationsProvider({
     [createMutation],
   );
 
+  const updateEvaluation = useCallback(
+    async (
+      skillId: string,
+      evaluationId: string,
+      params: { weight: number; params?: Record<string, unknown> },
+    ) => {
+      return await updateMutation.mutateAsync({
+        skillId,
+        evaluationId,
+        params,
+      });
+    },
+    [updateMutation],
+  );
+
   const deleteEvaluation = useCallback(
     async (skillId: string, evaluationId: string) => {
       await deleteMutation.mutateAsync({ skillId, evaluationId });
@@ -111,9 +154,13 @@ export function SkillOptimizationEvaluationsProvider({
     evaluations,
     isLoading,
     isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    error: error as Error | null,
+    refetch,
     setSkillId,
     createEvaluation,
+    updateEvaluation,
     deleteEvaluation,
   };
 

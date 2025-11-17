@@ -118,26 +118,31 @@ export interface TaskCompletionAverageResult {
   evaluation_run_id: string;
 }
 
-// Parameters for task completion evaluation using Zod schema validation
-export const TaskCompletionEvaluationParameters = z.object({
-  threshold: z.number().min(0).max(1).default(0.7),
+// Default evaluation model - can be overridden by users
+export const TASK_COMPLETION_EVALUATION_MODEL_DEFAULT = 'gpt-5-mini';
+
+// AI-modifiable parameters - what the AI can set when creating evaluations
+export const TaskCompletionEvaluationAIParameters = z.object({
   task: z
     .string()
     .describe(
       'The expected task that the model should complete. The evaluation score will be based on how well the model completes the task.',
     ),
-  model: z.string().default('gpt-4o'),
-  include_reason: z.boolean().default(true),
-  strict_mode: z.boolean().default(false),
-  async_mode: z.boolean().default(true),
-  verbose_mode: z.boolean().default(false),
-  temperature: z.number().min(0).max(1).default(0.1),
-  max_tokens: z.number().positive().default(1000),
-  batch_size: z.number().positive().default(10),
-  // input: z.string().optional(),
-  // actual_output: z.string().optional(),
-  // tools_called: z.array(z.unknown()).optional(),
+  threshold: z.number().min(0).max(1).default(0.7),
 });
+
+// Full parameters including user-modifiable advanced settings
+export const TaskCompletionEvaluationParameters =
+  TaskCompletionEvaluationAIParameters.extend({
+    model: z.string().default(TASK_COMPLETION_EVALUATION_MODEL_DEFAULT),
+    include_reason: z.boolean().default(true),
+    strict_mode: z.boolean().default(false),
+    async_mode: z.boolean().default(true),
+    verbose_mode: z.boolean().default(false),
+    temperature: z.number().min(0).max(1).default(0.1),
+    max_tokens: z.number().positive().default(1000),
+    batch_size: z.number().positive().default(10),
+  });
 
 export type TaskCompletionEvaluationParameters = z.infer<
   typeof TaskCompletionEvaluationParameters

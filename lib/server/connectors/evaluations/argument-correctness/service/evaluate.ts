@@ -114,7 +114,51 @@ export async function evaluateLog(
   const final_score = computed_score ?? judgeResult.score;
   const execution_time = Date.now() - start_time;
 
+  // Format tool correctness information for display
+  const displayInfoSections = [];
+
+  // Add reasoning if available
+  if (judgeResult.reasoning) {
+    displayInfoSections.push({
+      label: 'Reasoning',
+      content: judgeResult.reasoning,
+    });
+  }
+
+  // Add per-tool breakdown if available
+  if (perTool && perTool.length > 0) {
+    const toolBreakdown = perTool
+      .map((item) => {
+        const obj = item as Record<string, unknown>;
+        const toolName = obj.tool_name || 'Unknown Tool';
+        const correct = obj.correct ? '✓ Correct' : '✗ Incorrect';
+        const reason = obj.reason ? `\nReason: ${obj.reason}` : '';
+        return `${toolName}: ${correct}${reason}`;
+      })
+      .join('\n\n');
+
+    displayInfoSections.push({
+      label: 'Tool Arguments Analysis',
+      content: toolBreakdown,
+    });
+  }
+
+  // Add tools called summary
+  if (tools_called.length > 0) {
+    const toolsSummary = tools_called
+      .map((tool) => {
+        return `${tool.name}\nPurpose: ${tool.purpose}\nSuccess: ${tool.success}`;
+      })
+      .join('\n\n');
+
+    displayInfoSections.push({
+      label: 'Tools Called',
+      content: toolsSummary,
+    });
+  }
+
   const result: SkillOptimizationEvaluationResult = {
+    evaluation_id: evaluation.id,
     method: EvaluationMethodName.ARGUMENT_CORRECTNESS,
     score: final_score,
     extra_data: {
@@ -123,6 +167,7 @@ export async function evaluateLog(
       execution_time_ms: execution_time,
       ...(judgeResult.metadata ? { judge_metadata: judgeResult.metadata } : {}),
     },
+    display_info: displayInfoSections,
   };
 
   return result;

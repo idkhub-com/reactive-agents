@@ -99,6 +99,10 @@ vi.mock('@client/providers/skill-optimization-evaluations', () => ({
   useSkillOptimizationEvaluations: vi.fn(),
 }));
 
+vi.mock('@client/providers/skill-events', () => ({
+  useSkillEvents: vi.fn(),
+}));
+
 // Mock dialog components
 vi.mock('@client/components/agents/skills/manage-skill-models-dialog', () => ({
   ManageSkillModelsDialog: () => <div data-testid="manage-models-dialog" />,
@@ -123,6 +127,7 @@ import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
+import { useSkillEvents } from '@client/providers/skill-events';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
@@ -257,6 +262,29 @@ describe('SkillDashboardView', () => {
     vi.mocked(useSkillValidation).mockReturnValue({
       isReady: true,
       missingRequirements: [],
+    } as unknown as never);
+
+    vi.mocked(useSkillEvents).mockReturnValue({
+      events: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      skillId: null,
+      setSkillId: vi.fn(),
+      clusterId: null,
+      setClusterId: vi.fn(),
+      eventType: null,
+      setEventType: vi.fn(),
+      scope: 'all',
+      setScope: vi.fn(),
+      page: 1,
+      pageSize: 20,
+      setPage: vi.fn(),
+      setPageSize: vi.fn(),
+      hasMore: false,
+      getEventsByClusterId: vi.fn(() => []),
+      getEventsBySkillId: vi.fn(() => []),
+      clearFilters: vi.fn(),
     } as unknown as never);
   });
 

@@ -31,6 +31,9 @@ const raConfig = {
   targets: [{ optimization: 'auto' }],
   agent_name: 'calendar_event_planner',
   skill_name: 'generate',
+  system_prompt_variables: {
+    datetime: new Date().toISOString(),
+  },
 };
 
 const CalendarEvent = z.object({

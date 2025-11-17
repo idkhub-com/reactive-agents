@@ -1,5 +1,6 @@
 'use client';
 
+import { info } from '@shared/console-logging';
 import type {
   SSEConnectionOptions,
   SSEEventData,
@@ -86,7 +87,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
       });
 
       eventSource.onopen = () => {
-        console.log('[SSE Client] Connection established');
+        info('[SSE Client] Connection established');
         setConnectionState({
           connected: true,
           connecting: false,
@@ -98,6 +99,11 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
 
       eventSource.onmessage = (event) => {
         try {
+          // Skip empty data (keep-alive messages, comments, etc.)
+          if (!event.data || event.data.trim() === '') {
+            return;
+          }
+
           const data: SSEEventData = JSON.parse(event.data);
 
           // Update last ping time
@@ -107,7 +113,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
           }
 
           // Log received event
-          console.log('[SSE Client] Received event:', data.type);
+          info('[SSE Client] Received event:', data.type);
 
           // Call specific event handlers
           const specificHandlers = eventHandlersRef.current.get(data.type);
@@ -154,7 +160,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
 
         // Attempt to reconnect if under max attempts
         if (currentAttempts < maxReconnectAttempts) {
-          console.log(
+          info(
             `[SSE Client] Reconnecting in ${reconnectDelay}ms (attempt ${currentAttempts}/${maxReconnectAttempts})`,
           );
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -202,7 +208,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
       reconnectAttempts: 0,
     });
 
-    console.log('[SSE Client] Disconnected');
+    info('[SSE Client] Disconnected');
   }, []);
 
   /**

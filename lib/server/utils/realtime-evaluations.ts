@@ -1,4 +1,5 @@
 import type { EvaluationMethodConnector } from '@server/types/connector';
+import { error } from '@shared/console-logging';
 import type {
   Log,
   SkillOptimizationEvaluation,
@@ -26,16 +27,20 @@ export async function runEvaluationsForLog(
       try {
         const connector = evaluationConnectorsMap[evaluation.evaluation_method];
         if (!connector || !connector.evaluateLog) {
-          console.warn(
-            `No connector found for evaluation method: ${evaluation.evaluation_method}`,
+          error(
+            `[REALTIME_EVAL] No connector found for evaluation method: ${evaluation.evaluation_method}`,
           );
           return;
         }
 
         // Use the evaluation ID for skill optimization evaluations
         return await connector.evaluateLog(evaluation, log);
-      } catch (_error) {
+      } catch (err) {
         // Don't throw - we want other evaluations to continue even if one fails
+        error(
+          `[REALTIME_EVAL] Failed to evaluate log ${log.id} with method ${evaluation.evaluation_method}:`,
+          err instanceof Error ? err.message : String(err),
+        );
       }
     },
   );

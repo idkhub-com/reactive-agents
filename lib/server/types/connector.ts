@@ -38,6 +38,11 @@ import type {
   SkillUpdateParams,
 } from '@shared/types/data/skill';
 import type {
+  SkillEvent,
+  SkillEventCreateParams,
+  SkillEventQueryParams,
+} from '@shared/types/data/skill-event';
+import type {
   SkillOptimizationArm,
   SkillOptimizationArmCreateParams,
   SkillOptimizationArmQueryParams,
@@ -101,6 +106,17 @@ export interface UserDataStorageConnector {
   createSkill(skill: SkillCreateParams): Promise<Skill> | Skill;
   updateSkill(id: string, update: SkillUpdateParams): Promise<Skill> | Skill;
   deleteSkill(id: string): Promise<void> | void;
+  /** Atomic operation: increment skill total_requests by 1 */
+  incrementSkillTotalRequests(skillId: string): Promise<Skill> | Skill;
+  /**
+   * Atomic operation: try to acquire reclustering lock for a skill
+   * Only updates last_clustering_at if it's older than lockThresholdMs
+   * Returns the updated skill if lock was acquired, null if lock was already held
+   */
+  tryAcquireReclusteringLock(
+    skillId: string,
+    lockThresholdMs: number,
+  ): Promise<Skill | null> | Skill | null;
 
   // Tools
   getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];
@@ -131,6 +147,7 @@ export interface UserDataStorageConnector {
 
   // Skill-Model Relationships
   getSkillModels(skillId: string): Promise<Model[]> | Model[];
+  getSkillsByModelId(modelId: string): Promise<Skill[]> | Skill[];
   addModelsToSkill(skillId: string, modelIds: string[]): Promise<void> | void;
   removeModelsFromSkill(
     skillId: string,
@@ -149,8 +166,8 @@ export interface UserDataStorageConnector {
     update: SkillOptimizationClusterUpdateParams,
   ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
   deleteSkillOptimizationCluster(id: string): Promise<void> | void;
-  // Atomic operation: increment total_steps by 1
-  incrementClusterTotalSteps(
+  /** Atomic operation: increment both total_steps and observability_total_requests by 1 */
+  incrementClusterCounters(
     clusterId: string,
   ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
 
@@ -165,10 +182,37 @@ export interface UserDataStorageConnector {
     id: string,
     update: SkillOptimizationArmUpdateParams,
   ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
+  /** Atomic operation: update arm stats for multiple evaluations and increment cluster/skill counters in a single transaction */
+  updateArmAndIncrementCounters(
+    armId: string,
+    evaluationResults: Array<{ evaluation_id: string; score: number }>,
+  ):
+    | Promise<{
+        arm: SkillOptimizationArm;
+        cluster: SkillOptimizationCluster;
+        skill: Skill;
+      }>
+    | {
+        arm: SkillOptimizationArm;
+        cluster: SkillOptimizationCluster;
+        skill: Skill;
+      };
   deleteSkillOptimizationArm(id: string): Promise<void> | void;
   deleteSkillOptimizationArmsForSkill(skillId: string): Promise<void> | void;
   deleteSkillOptimizationArmsForCluster(
     clusterId: string,
+  ): Promise<void> | void;
+
+  // Skill Optimization Arm Stats
+  getSkillOptimizationArmStats(
+    queryParams: import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStatQueryParams,
+  ):
+    | Promise<
+        import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStat[]
+      >
+    | import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStat[];
+  deleteSkillOptimizationArmStats(
+    queryParams: import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStatQueryParams,
   ): Promise<void> | void;
 
   // Skill Optimization Evaluations
@@ -178,6 +222,10 @@ export interface UserDataStorageConnector {
   createSkillOptimizationEvaluations(
     params_list: SkillOptimizationEvaluationCreateParams[],
   ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
+  updateSkillOptimizationEvaluation(
+    id: string,
+    update: import('@shared/types/data').SkillOptimizationEvaluationUpdateParams,
+  ): Promise<SkillOptimizationEvaluation> | SkillOptimizationEvaluation;
   deleteSkillOptimizationEvaluation(id: string): Promise<void> | void;
   deleteSkillOptimizationEvaluationsForSkill(
     skillId: string,
@@ -193,6 +241,21 @@ export interface UserDataStorageConnector {
     params: SkillOptimizationEvaluationRunCreateParams,
   ): Promise<SkillOptimizationEvaluationRun> | SkillOptimizationEvaluationRun;
   deleteSkillOptimizationEvaluationRun(id: string): Promise<void> | void;
+  getEvaluationScoresByTimeBucket(
+    params: import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketParams,
+  ):
+    | Promise<
+        import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketResult[]
+      >
+    | import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketResult[];
+
+  // Skill Events
+  getSkillEvents(
+    queryParams: SkillEventQueryParams,
+  ): Promise<SkillEvent[]> | SkillEvent[];
+  createSkillEvent(
+    params: SkillEventCreateParams,
+  ): Promise<SkillEvent> | SkillEvent;
 }
 
 export interface LogsStorageConnector {
@@ -219,4 +282,5 @@ export interface EvaluationMethodConnector {
     log: Log,
   ) => Promise<SkillOptimizationEvaluationResult>;
   getParameterSchema: z.ZodType;
+  getAIParameterSchema?: z.ZodType; // Optional - not all evaluations need AI for parameter generation
 }

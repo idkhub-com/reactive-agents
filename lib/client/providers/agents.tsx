@@ -137,7 +137,7 @@ export const AgentsProvider = ({
       return results.length > 0 ? results[0] : undefined;
     },
     enabled: !!navigationState.selectedAgentName,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0, // Refetch immediately when invalidated
   });
 
   // Resolve selectedAgent from navigationState.selectedAgentName

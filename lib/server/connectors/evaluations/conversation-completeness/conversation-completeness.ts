@@ -1,4 +1,7 @@
-import { ConversationCompletenessEvaluationParameters } from '@server/connectors/evaluations/conversation-completeness/types';
+import {
+  ConversationCompletenessEvaluationAIParameters,
+  ConversationCompletenessEvaluationParameters,
+} from '@server/connectors/evaluations/conversation-completeness/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import {
   type EvaluationMethodDetails,
@@ -20,4 +23,5 @@ export const conversationCompletenessEvaluationConnector: EvaluationMethodConnec
     getDetails: () => conversationCompletenessMethodConfig,
     evaluateLog,
     getParameterSchema: ConversationCompletenessEvaluationParameters,
+    getAIParameterSchema: ConversationCompletenessEvaluationAIParameters,
   };

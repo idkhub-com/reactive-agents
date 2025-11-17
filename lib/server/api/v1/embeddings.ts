@@ -1,6 +1,7 @@
 import { RouterError } from '@server/errors/router';
 import { tryTargets } from '@server/handlers/handler-utils';
 import type { AppEnv } from '@server/types/hono';
+import { error } from '@shared/console-logging';
 import { Hono } from 'hono';
 
 export const embeddingsRouter = new Hono<AppEnv>()
@@ -12,19 +13,20 @@ export const embeddingsRouter = new Hono<AppEnv>()
    * @throws Will throw an 500 error if the handler fails due to some reasons
    */
   .post(async (c): Promise<Response> => {
-    try {
-      const raConfig = c.get('ra_config');
-      const raRequestData = c.get('ra_request_data');
+    const raConfig = c.get('ra_config');
+    const raRequestData = c.get('ra_request_data');
 
+    try {
       const tryTargetsResponse = await tryTargets(c, raConfig, raRequestData);
 
       return tryTargetsResponse;
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error('embeddings error', err.message);
-      } else {
-        console.error('embeddings error', err);
-      }
+      // Log detailed error information
+      error('[EMBEDDINGS] Request failed:', {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+
       let statusCode = 500;
       let errorMessage = 'Something went wrong';
 

@@ -11,20 +11,22 @@ import { FunctionName } from '@shared/types/api/request';
 import type {
   Skill,
   SkillOptimizationArm,
-  SkillOptimizationArmCreateParams,
   SkillOptimizationEvaluationResult,
   SkillOptimizationEvaluationRunCreateParams,
 } from '@shared/types/data';
+import { SkillEventType } from '@shared/types/data/skill-event';
 
 export async function addSkillOptimizationEvaluationRun(
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
+  logId: string,
   evaluationResults: SkillOptimizationEvaluationResult[],
 ) {
   const createParams: SkillOptimizationEvaluationRunCreateParams = {
     agent_id: arm.agent_id,
     skill_id: arm.skill_id,
     cluster_id: arm.cluster_id,
+    log_id: logId,
     results: evaluationResults,
   };
 
@@ -33,18 +35,19 @@ export async function addSkillOptimizationEvaluationRun(
       createParams,
     );
 
-  // Emit SSE event for evaluation run creation
+  // Emit SSE event for evaluation run creation with full evaluation data
   emitSSEEvent('skill-optimization:evaluation-run-created', {
-    evaluationRunId: evaluationRun.id,
+    evaluationRun: evaluationRun,
+    agentId: arm.agent_id,
     skillId: arm.skill_id,
     clusterId: arm.cluster_id,
+    logId: logId,
   });
 }
 
 /**
- * Checks if we should regenerate evaluations with real examples.
- * This happens after the first 5 requests to ensure evaluations align with actual usage.
- * After that, evaluations are regenerated during system prompt reflection.
+ * Checks if we should regenerate system prompts and evaluations with real examples.
+ * This happens after the first 5 requests to use actual usage data.
  */
 export async function checkAndRegenerateEvaluationsEarly(
   functionName: FunctionName,
@@ -168,24 +171,6 @@ export async function checkAndRegenerateEvaluationsEarly(
       return;
     }
 
-    // Get existing evaluations
-    const existingEvaluations =
-      await userDataStorageConnector.getSkillOptimizationEvaluations({
-        skill_id: skill.id,
-      });
-
-    if (!existingEvaluations || existingEvaluations.length === 0) {
-      // Release lock
-      await userDataStorageConnector.updateSkill(skill.id, {
-        evaluation_lock_acquired_at: null,
-      });
-      return;
-    }
-
-    const evaluationMethods = existingEvaluations.map(
-      (e) => e.evaluation_method,
-    );
-
     // Extract response format from the first log that has one (needed for system prompt)
     let responseFormat: unknown;
     for (const log of exampleLogs) {
@@ -196,78 +181,76 @@ export async function checkAndRegenerateEvaluationsEarly(
       }
     }
 
-    // Run evaluation regeneration and system prompt generation in parallel
-    const [newEvaluationParams, newSystemPrompt] = await Promise.all([
-      // Regenerate evaluations with real examples
-      regenerateEvaluationsWithExamples(
-        skill,
-        agentDescription,
-        examples,
-        evaluationConnectorsMap,
-        evaluationMethods,
-      ),
-
-      // Generate new system prompt with schema and examples
-      generateSeedSystemPromptWithContext(
-        agentDescription,
-        skill.description,
-        examples,
-        responseFormat,
-      ),
-    ]);
-
-    // Delete old evaluations and create new ones
-    await userDataStorageConnector.deleteSkillOptimizationEvaluationsForSkill(
-      skill.id,
-    );
-    await userDataStorageConnector.createSkillOptimizationEvaluations(
-      newEvaluationParams,
+    // Generate new system prompt with schema and examples
+    const newSystemPrompt = await generateSeedSystemPromptWithContext(
+      agentDescription,
+      skill.description,
+      examples,
+      responseFormat,
+      skill.allowed_template_variables,
     );
 
-    // Delete all old arms and recreate with new system prompts
+    // Get existing evaluations to know which methods to regenerate
+    const existingEvaluations =
+      await userDataStorageConnector.getSkillOptimizationEvaluations({
+        skill_id: skill.id,
+      });
+    const existingEvaluationMethods = existingEvaluations.map(
+      (e) => e.evaluation_method,
+    );
+
+    // Regenerate evaluations with real examples
+    const newEvaluationParams = await regenerateEvaluationsWithExamples(
+      skill,
+      agentDescription,
+      examples,
+      evaluationConnectorsMap,
+      existingEvaluationMethods,
+    );
+
+    // Update evaluations in-place to preserve their IDs and relationships
+    // Match evaluations by method to ensure correct updates
+    for (const evaluation of existingEvaluations) {
+      const newParams = newEvaluationParams.find(
+        (p) => p.evaluation_method === evaluation.evaluation_method,
+      );
+
+      if (newParams) {
+        await userDataStorageConnector.updateSkillOptimizationEvaluation(
+          evaluation.id,
+          {
+            params: newParams.params,
+            weight: newParams.weight,
+          },
+        );
+      }
+    }
+
+    // Update all arms in-place with new system prompts
+    // This preserves arm IDs and cluster associations
     const allArms = await userDataStorageConnector.getSkillOptimizationArms({
       skill_id: skill.id,
     });
 
-    // Create new arms with the same system prompt and fresh stats
-    const newArmParams: SkillOptimizationArmCreateParams[] = allArms.map(
-      (arm) => {
-        return {
-          agent_id: arm.agent_id,
-          skill_id: arm.skill_id,
-          cluster_id: arm.cluster_id,
-          name: arm.name,
-          params: {
-            ...arm.params,
-            system_prompt: newSystemPrompt,
-          },
-          stats: {
-            n: 0,
-            mean: 0,
-            n2: 0,
-            total_reward: 0,
-          },
-        };
-      },
-    );
+    for (const arm of allArms) {
+      await userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+        params: {
+          ...arm.params,
+          system_prompt: newSystemPrompt,
+        },
+      });
+    }
 
-    // Delete all old arms for this skill
-    await userDataStorageConnector.deleteSkillOptimizationArmsForSkill(
-      skill.id,
-    );
+    // Reset all arm stats since we have new evaluations and system prompts
+    // This forces Thompson Sampling to re-explore with the new configurations
+    for (const arm of allArms) {
+      await userDataStorageConnector.deleteSkillOptimizationArmStats({
+        arm_id: arm.id,
+      });
+    }
 
-    // Create new arms
-    await userDataStorageConnector.createSkillOptimizationArms(newArmParams);
-
-    // Mark completion and release lock atomically
-    await userDataStorageConnector.updateSkill(skill.id, {
-      evaluations_regenerated_at: new Date().toISOString(),
-      evaluation_lock_acquired_at: null, // Release lock
-    });
-
-    // Reset all cluster total_steps to 0 since we're doing a soft reset
-    // IMPORTANT: This happens AFTER marking completion to avoid race conditions
-    // where concurrent requests increment total_steps during the regeneration process
+    // Reset all cluster total_steps to 0 for early regeneration
+    // This restarts the exploration/exploitation balance
     const allClusters =
       await userDataStorageConnector.getSkillOptimizationClusters({
         skill_id: skill.id,
@@ -281,6 +264,23 @@ export async function checkAndRegenerateEvaluationsEarly(
         },
       );
     }
+
+    // Mark completion and release lock atomically
+    await userDataStorageConnector.updateSkill(skill.id, {
+      evaluations_regenerated_at: new Date().toISOString(),
+      evaluation_lock_acquired_at: null, // Release lock
+    });
+
+    // Create event for context generation
+    await userDataStorageConnector.createSkillEvent({
+      agent_id: skill.agent_id,
+      skill_id: skill.id,
+      cluster_id: null, // Skill-wide event
+      event_type: SkillEventType.CONTEXT_GENERATED,
+      metadata: {
+        log_count: exampleLogs.length,
+      },
+    });
 
     // Emit SSE event
     emitSSEEvent('skill-optimization:evaluations-regenerated', {

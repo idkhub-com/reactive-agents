@@ -98,8 +98,8 @@ export function DeleteAgentDialog({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
+            variant={'destructive'}
             disabled={isConfirmDisabled}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {isDeleting ? 'Deleting...' : 'Delete Agent'}
           </AlertDialogAction>

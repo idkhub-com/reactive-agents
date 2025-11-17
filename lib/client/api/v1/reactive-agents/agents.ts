@@ -76,13 +76,18 @@ export async function deleteAgent(id: string): Promise<void> {
 
 export async function getAgentEvaluationRuns(
   agentId: string,
+  logId?: string,
 ): Promise<SkillOptimizationEvaluationRun[]> {
+  const query: Record<string, string> = {};
+  if (logId) query.log_id = logId;
+
   const response = await client.v1['reactive-agents'].agents[':agentId'][
     'evaluation-runs'
   ].$get({
     param: {
       agentId,
     },
+    query,
   });
 
   if (!response.ok) {
@@ -90,4 +95,37 @@ export async function getAgentEvaluationRuns(
   }
 
   return SkillOptimizationEvaluationRun.array().parse(await response.json());
+}
+
+export async function getAgentEvaluationScoresByTimeBucket(
+  agentId: string,
+  params: {
+    interval_minutes: number;
+    start_time: string;
+    end_time: string;
+  },
+): Promise<
+  import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketResult[]
+> {
+  const { EvaluationScoresByTimeBucketResult } = await import(
+    '@shared/types/data/evaluation-runs-with-scores'
+  );
+
+  const response = await client.v1['reactive-agents'].agents[':agentId'][
+    'evaluation-scores-by-time-bucket'
+  ].$post({
+    param: {
+      agentId,
+    },
+    json: params,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch agent evaluation scores by time bucket');
+  }
+
+  const z = await import('zod');
+  return z.z
+    .array(EvaluationScoresByTimeBucketResult)
+    .parse(await response.json());
 }

@@ -4,9 +4,10 @@ import type {
 } from '@server/types/connector';
 import { calculateDistance, kMeansClustering } from '@server/utils/math';
 import { emitSSEEvent } from '@server/utils/sse-event-manager';
-import { error } from '@shared/console-logging';
+import { error, info, success } from '@shared/console-logging';
 import { FunctionName } from '@shared/types/api/request';
-import type { Log, Skill, SkillOptimizationArm } from '@shared/types/data';
+import type { Log, Skill } from '@shared/types/data';
+import { SkillEventType } from '@shared/types/data/skill-event';
 import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/skill-optimization-cluster';
 import type { ClusterResult } from '@shared/utils/math';
 
@@ -43,11 +44,8 @@ export function getClusters(skill: Skill, logs: Log[]): ClusterResult | null {
     });
     const result = kMeansClustering(embeddings, numberOfClusters);
     return result;
-  } catch (error) {
-    console.error(
-      `[OPTIMIZER] Error clustering logs for skill ${skill.id}:`,
-      error,
-    );
+  } catch (e) {
+    error(`[OPTIMIZER] Error clustering logs for skill ${skill.id}:`, e);
     return null;
   }
 }
@@ -81,7 +79,36 @@ export async function autoClusterSkill(
 
   // Automatically cluster logs if there are enough logs
   if (logs.length >= interval) {
+    info(
+      `[OPTIMIZER] Starting reclustering for skill ${skill.id} (${skill.name}) with ${logs.length} logs...`,
+    );
+    const startTime = Date.now();
+
     try {
+      // Try to atomically acquire the reclustering lock
+      // This prevents race conditions where multiple requests try to recluster simultaneously
+      const lockThresholdMs = 60000; // 60 seconds
+      const lockedSkill =
+        await userDataStorageConnector.tryAcquireReclusteringLock(
+          skill.id,
+          lockThresholdMs,
+        );
+
+      if (!lockedSkill) {
+        // Lock was not acquired - another request is already reclustering or did so recently
+        const currentTime = Date.now();
+        const lastClusteringTime = skill.last_clustering_at
+          ? new Date(skill.last_clustering_at).getTime()
+          : 0;
+        info(
+          `[OPTIMIZER] Reclustering already in progress for skill ${skill.id} (last clustered ${Math.floor((currentTime - lastClusteringTime) / 1000)}s ago). Skipping.`,
+        );
+        return;
+      }
+
+      // Lock acquired successfully - update in-memory skill object
+      skill.last_clustering_at = lockedSkill.last_clustering_at;
+
       const clusterStates =
         await userDataStorageConnector.getSkillOptimizationClusters({
           skill_id: skill.id,
@@ -108,8 +135,9 @@ export async function autoClusterSkill(
           newCentroids.map((centroid, index) => ({
             agent_id: skill.agent_id,
             skill_id: skill.id,
-            name: `Partition ${index + 1}`,
+            name: `${index + 1}`,
             total_steps: 0,
+            observability_total_requests: 0,
             centroid,
           }));
         await userDataStorageConnector.createSkillOptimizationClusters(
@@ -167,25 +195,42 @@ export async function autoClusterSkill(
         });
       }
 
-      const lastLog = logs[logs.length - 1];
+      // Logs are ordered by start_time desc, so logs[0] is the most recent
+      const mostRecentLog = logs[0];
 
-      // Update clustering state
+      // Update clustering state (last_clustering_at was already set as a lock)
       await userDataStorageConnector.updateSkill(skill.id, {
-        last_clustering_at: new Date().toISOString(),
-        last_clustering_log_start_time: lastLog.start_time,
+        last_clustering_log_start_time: mostRecentLog.start_time,
       });
+
+      // Create reclustering event
+      await userDataStorageConnector.createSkillEvent({
+        agent_id: skill.agent_id,
+        skill_id: skill.id,
+        cluster_id: null, // Skill-wide event
+        event_type: SkillEventType.CLUSTERS_UPDATED,
+        metadata: {
+          cluster_count:
+            clusterStates.length > 0
+              ? clusterStates.length
+              : skill.configuration_count,
+          log_count: logs.length,
+        },
+      });
+
+      // Update the in-memory skill object (last_clustering_at already set when lock was acquired)
+      skill.last_clustering_log_start_time = mostRecentLog.start_time;
+
+      const duration = Date.now() - startTime;
+      success(
+        `[OPTIMIZER] Reclustering completed for skill ${skill.id} (${skill.name}) in ${duration}ms. Updated ${clusterStates.length > 0 ? clusterStates.length : skill.configuration_count} clusters.`,
+      );
     } catch (e) {
-      error(`[OPTIMIZER] Error during optimization for skill ${skill.id}:`, e);
+      const duration = Date.now() - startTime;
+      error(
+        `[OPTIMIZER] Error during reclustering for skill ${skill.id} after ${duration}ms:`,
+        e,
+      );
     }
   }
-}
-
-export async function updateClusterState(
-  userDataStorageConnector: UserDataStorageConnector,
-  pulledArm: SkillOptimizationArm,
-) {
-  // Use atomic increment to avoid race conditions
-  await userDataStorageConnector.incrementClusterTotalSteps(
-    pulledArm.cluster_id,
-  );
 }

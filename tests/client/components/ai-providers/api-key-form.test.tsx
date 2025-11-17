@@ -1,5 +1,5 @@
 import { APIKeyForm } from '@client/components/ai-providers/api-key-form';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import type { AIProviderConfig } from '@shared/types/data/ai-provider';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,8 +8,9 @@ import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@client/providers/ai-provider-api-keys', () => ({
+vi.mock('@client/providers/ai-providers', () => ({
   useAIProviderAPIKeys: vi.fn(),
+  useAIProviders: vi.fn(),
 }));
 
 vi.mock('@client/api/v1/reactive-agents/ai-providers', () => ({
@@ -214,12 +215,12 @@ describe('APIKeyForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useRouter).mockReturnValue(mockRouter);
-    vi.mocked(useAIProviderAPIKeys).mockReturnValue({
+    vi.mocked(useAIProviders).mockReturnValue({
       createAPIKey: mockCreateAPIKey,
       updateAPIKey: mockUpdateAPIKey,
       isCreating: false,
       isUpdating: false,
-      apiKeys: [],
+      aiProviderConfigs: [],
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -320,12 +321,12 @@ describe('APIKeyForm', () => {
     });
 
     it('should show creating state during mutation', async () => {
-      vi.mocked(useAIProviderAPIKeys).mockReturnValue({
+      vi.mocked(useAIProviders).mockReturnValue({
         createAPIKey: mockCreateAPIKey,
         updateAPIKey: mockUpdateAPIKey,
         isCreating: true, // Set to true to show creating state
         isUpdating: false,
-        apiKeys: [],
+        aiProviderConfigs: [],
         isLoading: false,
         error: null,
         refetch: vi.fn(),
@@ -387,12 +388,12 @@ describe('APIKeyForm', () => {
     };
 
     it('should show updating state during mutation', async () => {
-      vi.mocked(useAIProviderAPIKeys).mockReturnValue({
+      vi.mocked(useAIProviders).mockReturnValue({
         createAPIKey: mockCreateAPIKey,
         updateAPIKey: mockUpdateAPIKey,
         isCreating: false,
         isUpdating: true, // Set to true to show updating state
-        apiKeys: [],
+        aiProviderConfigs: [],
         isLoading: false,
         error: null,
         refetch: vi.fn(),

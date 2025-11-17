@@ -16,17 +16,21 @@ export interface NavigationState {
   selectedSkillName?: string;
   selectedClusterName?: string;
   selectedArmName?: string;
+  selectedEvaluationId?: string;
   currentView:
     | 'agents-list'
     | 'edit-agent'
-    | 'skills-list'
+    | 'agent-view'
+    | 'create-skill'
     | 'skill-dashboard'
     | 'edit-skill'
     | 'logs'
     | 'evaluations'
+    | 'edit-evaluation'
     | 'datasets'
     | 'configurations'
     | 'models'
+    | 'skill-events'
     | 'clusters'
     | 'cluster-arms'
     | 'arm-detail'
@@ -60,6 +64,11 @@ export interface NavigationContextType {
     agentName: string,
     skillName: string,
     evalId: string,
+  ) => void;
+  navigateToEditEvaluation: (
+    agentName: string,
+    skillName: string,
+    evaluationId: string,
   ) => void;
   navigateToCreateEvaluation: (agentName: string, skillName: string) => void;
   replaceToEvaluations: (agentName: string, skillName: string) => void;

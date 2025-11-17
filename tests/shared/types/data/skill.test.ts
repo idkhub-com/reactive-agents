@@ -520,7 +520,8 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: [],
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -546,7 +547,8 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: 1234567890,
         evaluations_regenerated_at: '2023-01-01T00:00:00.000Z',
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: ['datetime'],
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -575,7 +577,7 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -599,7 +601,7 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -625,7 +627,8 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: [],
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -651,7 +654,7 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -675,7 +678,7 @@ describe('Skill Data Transforms and Validation', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
       };

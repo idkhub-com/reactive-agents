@@ -131,15 +131,17 @@ export function NavMain({
                     <span className="ml-auto text-xs text-muted-foreground">
                       {agents.length}
                     </span>
-                    <Link
-                      href="/agents/create"
+                    <button
+                      type="button"
                       className="ml-1 size-4 cursor-pointer hover:opacity-70 flex items-center justify-center"
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
+                        router.push('/agents/create');
                       }}
                     >
                       <Plus className="size-4" />
-                    </Link>
+                    </button>
                   </>
                 )}
               </Link>

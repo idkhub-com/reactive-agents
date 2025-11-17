@@ -64,8 +64,6 @@ export const SkillOptimizationArm = z.object({
    */
   params: SkillOptimizationArmParams,
 
-  /** Statistics used for tracking the performance of the arm. */
-  stats: SkillOptimizationArmStats,
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -93,18 +91,17 @@ export const SkillOptimizationArmCreateParams = z
     cluster_id: z.uuid(),
     name: z.string(),
     params: SkillOptimizationArmParams,
-    stats: SkillOptimizationArmStats,
   })
   .strict();
 export type SkillOptimizationArmCreateParams = z.infer<
   typeof SkillOptimizationArmCreateParams
 >;
 
-// Only stats can be updated
-// Name and params (including system_prompt) are constants defined at creation time
+// Params can be updated during reflection
+// Name is constant defined at creation time
 export const SkillOptimizationArmUpdateParams = z
   .object({
-    stats: SkillOptimizationArmStats.partial().optional(),
+    params: SkillOptimizationArmParams.optional(),
   })
   .strict();
 export type SkillOptimizationArmUpdateParams = z.infer<

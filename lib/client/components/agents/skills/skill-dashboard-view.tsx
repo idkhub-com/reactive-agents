@@ -1,7 +1,9 @@
 'use client';
 
+import { getSkillEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/skills';
 import { ManageSkillModelsDialog } from '@client/components/agents/skills/manage-skill-models-dialog';
 import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
+import { SkillWarmingUpIndicator } from '@client/components/agents/skills/skill-warming-up-indicator';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -11,28 +13,57 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import { DateTimePicker } from '@client/components/ui/date-time-picker';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@client/components/ui/dropdown-menu';
 import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from '@client/components/ui/table';
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from '@client/components/ui/toggle-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@client/components/ui/tooltip';
+import { eventLabels } from '@client/constants';
 import { useSkillValidation } from '@client/hooks/use-skill-validation';
+import { useToast } from '@client/hooks/use-toast';
 import { useAgents } from '@client/providers/agents';
 import { useLogs } from '@client/providers/logs';
 import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
+import { useSkillEvents } from '@client/providers/skill-events';
 import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@client/providers/skills';
 import { shapes } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
+import { PrettyFunctionName } from '@shared/types/api/request/function-name';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
-  ArrowRightIcon,
+  CalendarIcon,
   CheckCircle2,
+  Clock,
   CpuIcon,
   Edit,
   FileTextIcon,
   LayersIcon,
+  MoreVertical,
   PlusIcon,
-  RefreshCwIcon,
+  RotateCcwIcon,
   Trash2,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -40,8 +71,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
+import { ClusterPerformanceChart } from './clusters/cluster-performance-chart';
 import { DeleteSkillDialog } from './delete-skill-dialog';
-import { ManageSkillEvaluationsDialog } from './manage-skill-evaluations-dialog';
+import { ResetSkillDialog } from './reset-skill-dialog';
 import { SkillPerformanceChart } from './skill-performance-chart';
 
 // ============================================================================
@@ -79,14 +111,54 @@ const createSkillAvatar = (skillName: string) => {
 };
 
 export function SkillDashboardView(): ReactElement {
-  const { navigateToLogs, navigateToClusters } = useNavigation();
+  const { navigateToLogs, navigateToClusterArms } = useNavigation();
   const router = useRouter();
+  const { toast } = useToast();
+  const { navigateToEvaluations } = useNavigation();
 
   const { selectedAgent } = useAgents();
-  const { selectedSkill, deleteSkill } = useSkills();
-  const [isManageEvaluationsOpen, setIsManageEvaluationsOpen] = useState(false);
+  const { selectedSkill, deleteSkill, refetch: refetchSkills } = useSkills();
   const [isManageModelsOpen, setIsManageModelsOpen] = useState(false);
   const [isDeleteSkillDialogOpen, setIsDeleteSkillDialogOpen] = useState(false);
+  const [isResetSkillDialogOpen, setIsResetSkillDialogOpen] = useState(false);
+  const [isResettingSkill, setIsResettingSkill] = useState(false);
+
+  // Time interval controls for chart (30 buckets fixed)
+  type TimeInterval = '1min' | '5min' | '15min' | '1hour' | '6hour' | '24hour';
+  const BUCKETS = 30; // Fixed number of buckets
+  const INTERVAL_CONFIG = {
+    '1min': { label: '1 Min', minutes: 1, hours: (BUCKETS * 1) / 60 },
+    '5min': { label: '5 Min', minutes: 5, hours: (BUCKETS * 5) / 60 },
+    '15min': { label: '15 Min', minutes: 15, hours: (BUCKETS * 15) / 60 },
+    '1hour': { label: '1 Hour', minutes: 60, hours: (BUCKETS * 60) / 60 },
+    '6hour': { label: '6 Hours', minutes: 360, hours: (BUCKETS * 360) / 60 },
+    '24hour': { label: '1 Day', minutes: 1440, hours: (BUCKETS * 1440) / 60 },
+  } as const;
+
+  const [selectedInterval, setSelectedInterval] = useState<TimeInterval>(() => {
+    if (typeof window === 'undefined') return '1hour';
+    try {
+      const stored = localStorage.getItem('skill-performance-interval');
+      if (stored && stored in INTERVAL_CONFIG) {
+        return stored as TimeInterval;
+      }
+    } catch {
+      // localStorage not available
+    }
+    return '1hour';
+  });
+
+  // Save interval preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('skill-performance-interval', selectedInterval);
+    } catch {
+      // localStorage not available
+    }
+  }, [selectedInterval]);
+
+  // End time for charts (defaults to now)
+  const [endTime, setEndTime] = useState<Date>(() => new Date());
 
   // Skill validation
   const { isReady, missingRequirements } = useSkillValidation(selectedSkill);
@@ -95,7 +167,6 @@ export function SkillDashboardView(): ReactElement {
   const {
     logs: recentLogs = [],
     isLoading: isLoadingLogs,
-    refetch: refetchLogs,
     setAgentId: setLogsAgentId,
     setSkillId: setLogsSkillId,
   } = useLogs();
@@ -110,12 +181,72 @@ export function SkillDashboardView(): ReactElement {
     setSkillId: setClusterStatesSkillId,
   } = useSkillOptimizationClusters();
 
-  // Skill optimization evaluation runs via provider
+  // Fetch skill-level evaluation scores by time bucket (more efficient than full runs)
   const {
-    evaluationRuns: skillEvaluationRuns,
-    isLoading: isLoadingSkillEvaluationRuns,
-    setSkillId: setSkillEvaluationRunsSkillId,
-  } = useSkillOptimizationEvaluationRuns();
+    data: skillEvaluationScores = [],
+    isLoading: isLoadingSkillEvaluationScores,
+  } = useQuery({
+    queryKey: [
+      'skillEvaluationScores',
+      selectedSkill?.id,
+      selectedInterval,
+      endTime.toISOString(),
+    ],
+    queryFn: () =>
+      selectedSkill
+        ? getSkillEvaluationScoresByTimeBucket(selectedSkill.id, {
+            interval_minutes: INTERVAL_CONFIG[selectedInterval].minutes,
+            start_time: new Date(
+              endTime.getTime() -
+                INTERVAL_CONFIG[selectedInterval].hours * 60 * 60 * 1000,
+            ).toISOString(),
+            end_time: endTime.toISOString(),
+          })
+        : Promise.resolve([]),
+    enabled: !!selectedSkill,
+    refetchInterval: 60000, // Refetch every minute
+  });
+
+  // Fetch cluster-level evaluation scores for all clusters
+  const {
+    data: clusterEvaluationScores = {},
+    isLoading: isLoadingClusterEvaluationScores,
+  } = useQuery({
+    queryKey: [
+      'clusterEvaluationScores',
+      selectedSkill?.id,
+      clusterStates.map((c) => c.id).join(','),
+      endTime.toISOString(),
+    ],
+    queryFn: async () => {
+      if (!selectedSkill || clusterStates.length === 0) return {};
+
+      // Fetch scores for all clusters in parallel (30 buckets at 5 min intervals = 2.5 hours)
+      const scoresPromises = clusterStates.map(async (cluster) => {
+        const scores = await getSkillEvaluationScoresByTimeBucket(
+          selectedSkill.id,
+          {
+            cluster_id: cluster.id,
+            interval_minutes: 5, // 5 min intervals
+            start_time: new Date(
+              endTime.getTime() - 2.5 * 60 * 60 * 1000,
+            ).toISOString(), // Last 2.5 hours (30 buckets)
+            end_time: endTime.toISOString(),
+          },
+        ).catch(() => []);
+        return [cluster.id, scores] as const;
+      });
+
+      const scoresArray = await Promise.all(scoresPromises);
+      return Object.fromEntries(scoresArray);
+    },
+    enabled: !!selectedSkill && clusterStates.length > 0,
+    refetchInterval: 60000, // Refetch every minute
+  });
+
+  // Skill events via provider
+  const { events: skillEvents = [], setSkillId: setSkillEventsSkillId } =
+    useSkillEvents();
 
   // Update logs agentId and skillId
   useEffect(() => {
@@ -146,19 +277,46 @@ export function SkillDashboardView(): ReactElement {
     setClusterStatesSkillId(selectedSkill.id);
   }, [selectedSkill, setClusterStatesSkillId]);
 
-  // Update skill evaluation runs skill ID
+  // Update skill events skill ID
   useEffect(() => {
     if (!selectedSkill) {
-      setSkillEvaluationRunsSkillId(null);
+      setSkillEventsSkillId(null);
       return;
     }
-    setSkillEvaluationRunsSkillId(selectedSkill.id);
-  }, [selectedSkill, setSkillEvaluationRunsSkillId]);
+    setSkillEventsSkillId(selectedSkill.id);
+  }, [selectedSkill, setSkillEventsSkillId]);
 
   const handleDeleteSkill = async () => {
     if (!selectedSkill || !selectedAgent) return;
     await deleteSkill(selectedSkill.id);
     router.push(`/agents/${encodeURIComponent(selectedAgent.name)}`);
+  };
+
+  const handleResetSkill = async (clearObservabilityCount: boolean) => {
+    if (!selectedSkill) return;
+
+    setIsResettingSkill(true);
+    try {
+      const { resetSkill } = await import(
+        '@client/api/v1/reactive-agents/skills'
+      );
+      await resetSkill(selectedSkill.id, clearObservabilityCount);
+      await refetchSkills();
+      toast({
+        title: 'Skill reset successfully',
+        description: `${selectedSkill.name} has been reset and is regenerating.`,
+      });
+    } catch (error) {
+      console.error('Failed to reset skill:', error);
+      toast({
+        title: 'Failed to reset skill',
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingSkill(false);
+    }
   };
 
   // Early return if no skill or agent selected - AFTER all hooks
@@ -196,6 +354,11 @@ export function SkillDashboardView(): ReactElement {
               variant="badge"
               tooltipSide="bottom"
             />
+            <SkillWarmingUpIndicator
+              skill={selectedSkill}
+              variant="badge"
+              tooltipSide="bottom"
+            />
           </div>
         }
         description={selectedSkill.description || 'No description available'}
@@ -210,33 +373,50 @@ export function SkillDashboardView(): ReactElement {
             </Button>
             <Button
               variant="outline"
-              onClick={() => setIsManageEvaluationsOpen(true)}
+              onClick={() =>
+                selectedAgent &&
+                selectedSkill &&
+                navigateToEvaluations(selectedAgent.name, selectedSkill.name)
+              }
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Manage Evaluations
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() =>
-                router.push(
-                  `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}/edit`,
-                )
-              }
-              title="Edit Skill"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsDeleteSkillDialogOpen(true)}
-              title="Delete Skill"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" title="More options">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() =>
+                    router.push(
+                      `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}/edit`,
+                    )
+                  }
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Skill
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsResetSkillDialogOpen(true)}
+                  disabled={isResettingSkill}
+                >
+                  <RotateCcwIcon className="h-4 w-4 mr-2" />
+                  {isResettingSkill ? 'Resetting...' : 'Reset Skill'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setIsDeleteSkillDialogOpen(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Skill
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         }
       />
@@ -270,7 +450,14 @@ export function SkillDashboardView(): ReactElement {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsManageEvaluationsOpen(true)}
+                    onClick={() =>
+                      selectedAgent &&
+                      selectedSkill &&
+                      navigateToEvaluations(
+                        selectedAgent.name,
+                        selectedSkill.name,
+                      )
+                    }
                     className="bg-white dark:bg-orange-900 hover:bg-orange-50 dark:hover:bg-orange-800 border-orange-300 dark:border-orange-700"
                   >
                     <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -286,165 +473,344 @@ export function SkillDashboardView(): ReactElement {
         {/* Performance Chart - Full Width */}
         <Card>
           <CardContent className="pt-6">
-            {isLoadingSkillEvaluationRuns ? (
+            <div className="flex justify-between items-start mb-4 gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <DateTimePicker
+                          date={endTime}
+                          onDateChange={setEndTime}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>
+                        Select the end time for the chart (rightmost data point)
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setEndTime(new Date())}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Jump to current time</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Total Requests:
+                  </span>
+                  <Badge variant="secondary">
+                    {clusterStates
+                      .reduce(
+                        (sum, cluster) =>
+                          sum + cluster.observability_total_requests,
+                        0,
+                      )
+                      .toLocaleString()}
+                  </Badge>
+                </div>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroup
+                    type="single"
+                    value={selectedInterval}
+                    onValueChange={(value) => {
+                      if (value) setSelectedInterval(value as TimeInterval);
+                    }}
+                    size="sm"
+                    className="border rounded-lg gap-0 overflow-hidden"
+                  >
+                    {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
+                      (interval) => (
+                        <ToggleGroupItem
+                          key={interval}
+                          value={interval}
+                          aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
+                          className="text-xs rounded-none"
+                        >
+                          {INTERVAL_CONFIG[interval].label}
+                        </ToggleGroupItem>
+                      ),
+                    )}
+                  </ToggleGroup>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Select time interval for chart buckets</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            {isLoadingSkillEvaluationScores ? (
               <div className="h-64 flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (
-              <SkillPerformanceChart evaluationRuns={skillEvaluationRuns} />
+              <SkillPerformanceChart
+                evaluationScores={skillEvaluationScores}
+                events={skillEvents}
+                clusters={clusterStates}
+                intervalMinutes={INTERVAL_CONFIG[selectedInterval].minutes}
+                windowHours={INTERVAL_CONFIG[selectedInterval].hours}
+                endTime={endTime}
+              />
             )}
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
-          {/* Partitions Card */}
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() =>
-              navigateToClusters(selectedAgent.name, selectedSkill.name)
-            }
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base font-medium">
-                  Partitions
-                </CardTitle>
-                <CardDescription>Optimization partitions</CardDescription>
-              </div>
-              <LayersIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoadingClusterStates ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map(() => (
-                    <Skeleton key={nanoid()} className="h-4 w-full" />
-                  ))}
-                </div>
-              ) : clusterStates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No partitions found
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {clusterStates.slice(0, 3).map((cluster) => (
-                    <div
-                      key={cluster.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="truncate flex-1">{cluster.name}</span>
-                      <Badge variant="outline" className="ml-2">
-                        {cluster.total_steps.toString()} reqs
-                      </Badge>
-                    </div>
-                  ))}
-                  {clusterStates.length > 3 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-muted-foreground">
-                        +{clusterStates.length - 3} more
-                      </span>
-                      <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-4">
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRightIcon className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Partitions - Horizontal Scroll */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Partitions</h3>
+              <p className="text-sm text-muted-foreground">
+                Optimization partitions for this skill
+              </p>
+            </div>
+            <Badge variant="secondary">{clusterStates.length} total</Badge>
+          </div>
 
+          {isLoadingClusterStates ? (
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {Array.from({ length: 3 }).map(() => (
+                <Card key={nanoid()} className="min-w-[300px]">
+                  <CardHeader className="pb-2">
+                    <Skeleton className="h-6 w-24 mb-2" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-5 w-12" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-8" />
+                      </div>
+                      <div className="pt-2 border-t">
+                        <Skeleton className="h-3 w-32 mb-2" />
+                        <Skeleton className="h-32 w-full" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : clusterStates.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <LayersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No partitions found
+                </h3>
+                <p className="text-muted-foreground">
+                  This skill has no optimization partitions yet.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {clusterStates.map((cluster) => (
+                <Card
+                  key={cluster.id}
+                  className="min-w-[300px] cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                  onClick={() =>
+                    navigateToClusterArms(
+                      selectedAgent.name,
+                      selectedSkill.name,
+                      cluster.name,
+                    )
+                  }
+                >
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg leading-none mb-2">
+                      {cluster.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Total Requests
+                        </span>
+                        <Badge variant="secondary">
+                          {cluster.observability_total_requests.toString()}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          Since Reflection
+                        </span>
+                        <span className="text-muted-foreground">
+                          {cluster.total_steps.toString()}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="text-xs text-muted-foreground mb-2">
+                          Performance
+                        </div>
+                        {isLoadingClusterEvaluationScores ? (
+                          <Skeleton className="h-32 w-full" />
+                        ) : (
+                          <ClusterPerformanceChart
+                            evaluationScores={
+                              clusterEvaluationScores[cluster.id] || []
+                            }
+                            events={skillEvents.filter(
+                              (e) =>
+                                e.cluster_id === cluster.id ||
+                                e.cluster_id === null,
+                            )}
+                            intervalMinutes={5}
+                            windowHours={2.5}
+                            endTime={endTime}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold">Observability</h3>
+            <p className="text-sm text-muted-foreground">
+              Monitor and analyze the performance and behavior of your skill
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Recent Logs Card */}
           <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
             onClick={() =>
               navigateToLogs(selectedAgent.name, selectedSkill.name)
             }
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
-                <CardTitle className="text-base font-medium">
-                  Recent Logs
-                </CardTitle>
-                <CardDescription>Last 25 requests</CardDescription>
+                <CardTitle className="text-base font-medium">Logs</CardTitle>
+                <CardDescription>Recent requests</CardDescription>
               </div>
               <FileTextIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {isLoadingLogs ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map(() => (
-                    <Skeleton key={nanoid()} className="h-4 w-full" />
+                <div className="p-6 space-y-1">
+                  {Array.from({ length: 5 }).map(() => (
+                    <Skeleton key={nanoid()} className="h-8 w-full" />
                   ))}
                 </div>
               ) : recentLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="p-6 text-sm text-muted-foreground">
                   No logs available
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {recentLogs.slice(0, 5).map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="truncate flex-1">
-                        {log.function_name || 'N/A'}
-                      </span>
-                      <Badge
-                        variant={
-                          log.status >= 200 && log.status < 300
-                            ? 'default'
-                            : 'destructive'
-                        }
-                        className="ml-2"
-                      >
-                        {log.status}
-                      </Badge>
-                    </div>
-                  ))}
-                  {recentLogs.length > 5 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-muted-foreground">
-                        +{recentLogs.length - 5} more
-                      </span>
-                      <ArrowRightIcon className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  )}
+                <div className="m-4 border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableBody>
+                      {recentLogs.slice(0, 5).map((log) => {
+                        const cluster = clusterStates.find(
+                          (c) => c.id === log.cluster_id,
+                        );
+                        return (
+                          <TableRow
+                            key={log.id}
+                            className="hover:bg-transparent"
+                          >
+                            <TableCell className="font-medium">
+                              {PrettyFunctionName[log.function_name] ||
+                                log.function_name ||
+                                'N/A'}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {log.model}
+                            </TableCell>
+                            {cluster && (
+                              <TableCell className="text-muted-foreground">
+                                {cluster.name}
+                              </TableCell>
+                            )}
+                            <TableCell className="text-right text-muted-foreground">
+                              {log.duration.toFixed(0)}ms
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
-              <div className="flex items-center justify-between pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    refetchLogs();
-                  }}
-                >
-                  <RefreshCwIcon className="h-3 w-3 mr-1" />
-                  Refresh
-                </Button>
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRightIcon className="h-3 w-3 ml-1" />
-                </Button>
+            </CardContent>
+          </Card>
+
+          {/* Events Card */}
+          <Card
+            className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+            onClick={() =>
+              router.push(
+                `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}/events`,
+              )
+            }
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-medium">Events</CardTitle>
+                <CardDescription>Skill changes and updates</CardDescription>
               </div>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              {skillEvents.length === 0 ? (
+                <p className="p-6 text-sm text-muted-foreground">
+                  No events available
+                </p>
+              ) : (
+                <div className="m-4 border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableBody>
+                      {skillEvents.slice(0, 5).map((event) => {
+                        const label =
+                          eventLabels[event.event_type] || event.event_type;
+
+                        return (
+                          <TableRow
+                            key={event.id}
+                            className="hover:bg-transparent"
+                          >
+                            <TableCell className="font-medium">
+                              {label}
+                              {event.metadata.model_name
+                                ? `: ${event.metadata.model_name}`
+                                : ''}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              {new Date(event.created_at).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* Manage Evaluations Dialog */}
-      {selectedSkill && (
-        <ManageSkillEvaluationsDialog
-          open={isManageEvaluationsOpen}
-          onOpenChange={setIsManageEvaluationsOpen}
-          skillId={selectedSkill.id}
-        />
-      )}
 
       {/* Manage Models Dialog */}
       {selectedSkill && (
@@ -461,6 +827,15 @@ export function SkillDashboardView(): ReactElement {
         open={isDeleteSkillDialogOpen}
         onOpenChange={setIsDeleteSkillDialogOpen}
         onConfirm={handleDeleteSkill}
+      />
+
+      {/* Reset Skill Dialog */}
+      <ResetSkillDialog
+        skill={selectedSkill || null}
+        open={isResetSkillDialogOpen}
+        onOpenChange={setIsResetSkillDialogOpen}
+        onConfirm={handleResetSkill}
+        isResetting={isResettingSkill}
       />
     </>
   );

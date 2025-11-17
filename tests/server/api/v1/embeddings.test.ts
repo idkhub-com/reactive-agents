@@ -118,8 +118,12 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(400);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        'Invalid input parameters',
+        expect.stringMatching(/\[\d{2}:\d{2}:\d{2}\]/),
+        expect.stringMatching(/✖/),
+        '[EMBEDDINGS] Request failed:',
+        expect.objectContaining({
+          error: 'Invalid input parameters',
+        }),
       );
 
       const responseData = await res.json();
@@ -137,8 +141,12 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        'Network connection failed',
+        expect.stringMatching(/\[\d{2}:\d{2}:\d{2}\]/),
+        expect.stringMatching(/✖/),
+        '[EMBEDDINGS] Request failed:',
+        expect.objectContaining({
+          error: 'Network connection failed',
+        }),
       );
 
       const responseData = await res.json();
@@ -156,8 +164,12 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        'string error',
+        expect.stringMatching(/\[\d{2}:\d{2}:\d{2}\]/),
+        expect.stringMatching(/✖/),
+        '[EMBEDDINGS] Request failed:',
+        expect.objectContaining({
+          error: 'string error',
+        }),
       );
 
       const responseData = await res.json();
@@ -215,7 +227,14 @@ describe('Embeddings API', () => {
       const res = await client.index.$post();
 
       expect(res.status).toBe(500);
-      expect(consoleSpy.error).toHaveBeenCalledWith('embeddings error', null);
+      expect(consoleSpy.error).toHaveBeenCalledWith(
+        expect.stringMatching(/\[\d{2}:\d{2}:\d{2}\]/),
+        expect.stringMatching(/✖/),
+        '[EMBEDDINGS] Request failed:',
+        expect.objectContaining({
+          error: 'null',
+        }),
+      );
 
       const responseData = await res.json();
       expect(responseData).toEqual({
@@ -231,8 +250,12 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        undefined,
+        expect.stringMatching(/\[\d{2}:\d{2}:\d{2}\]/),
+        expect.stringMatching(/✖/),
+        '[EMBEDDINGS] Request failed:',
+        expect.objectContaining({
+          error: 'undefined',
+        }),
       );
 
       const responseData = await res.json();
@@ -253,8 +276,12 @@ describe('Embeddings API', () => {
 
       expect(res.status).toBe(500);
       expect(consoleSpy.error).toHaveBeenCalledWith(
-        'embeddings error',
-        objectError,
+        expect.stringMatching(/\[\d{2}:\d{2}:\d{2}\]/),
+        expect.stringMatching(/✖/),
+        '[EMBEDDINGS] Request failed:',
+        expect.objectContaining({
+          error: '[object Object]',
+        }),
       );
 
       const responseData = await res.json();

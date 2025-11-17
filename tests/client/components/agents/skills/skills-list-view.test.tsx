@@ -1,10 +1,11 @@
-import { SkillsListView } from '@client/components/agents/skills/skills-list-view';
+import { AgentView } from '@client/components/agents/agent-view';
 import { AgentsProvider } from '@client/providers/agents';
 import { NavigationProvider } from '@client/providers/navigation';
 import { SkillsProvider } from '@client/providers/skills';
 import type { Agent, Skill } from '@shared/types/data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,7 +75,8 @@ const mockSkills: Skill[] = [
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   },
   {
     id: 'skill-2',
@@ -93,7 +95,8 @@ const mockSkills: Skill[] = [
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   },
 ];
 
@@ -171,15 +174,18 @@ const renderWithProviders = (component: React.ReactElement) => {
     },
   });
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <NavigationProvider>
-        <AgentsProvider>
-          <SkillsProvider>{component}</SkillsProvider>
-        </AgentsProvider>
-      </NavigationProvider>
-    </QueryClientProvider>,
-  );
+  return {
+    user: userEvent.setup(),
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <NavigationProvider>
+          <AgentsProvider>
+            <SkillsProvider>{component}</SkillsProvider>
+          </AgentsProvider>
+        </NavigationProvider>
+      </QueryClientProvider>,
+    ),
+  };
 };
 
 describe('SkillsListView', () => {
@@ -195,7 +201,7 @@ describe('SkillsListView', () => {
   });
 
   it('renders skills list when agent is selected', async () => {
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(screen.getByText('Email Response')).toBeInTheDocument();
@@ -208,7 +214,7 @@ describe('SkillsListView', () => {
       createSkillsCtx({ skills: [], isLoading: true }),
     );
 
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     // Loading state shows skeleton cards
     await waitFor(() => {
@@ -222,7 +228,7 @@ describe('SkillsListView', () => {
       createSkillsCtx({ skills: [], isLoading: false }),
     );
 
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(screen.getByText(/no skills found/i)).toBeInTheDocument();
@@ -232,7 +238,7 @@ describe('SkillsListView', () => {
   it('shows message when no agent is selected', async () => {
     mockParams = { agentName: undefined };
 
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(screen.getAllByText(/select an agent/i).length).toBeGreaterThan(0);
@@ -240,7 +246,7 @@ describe('SkillsListView', () => {
   });
 
   it('displays skill descriptions', async () => {
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(screen.getByText('Handles email responses')).toBeInTheDocument();
@@ -251,35 +257,49 @@ describe('SkillsListView', () => {
   });
 
   it('shows create skill button', async () => {
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(screen.getByText(/create skill/i)).toBeInTheDocument();
     });
   });
 
-  it('shows edit agent button', async () => {
-    renderWithProviders(<SkillsListView />);
+  it('shows more options button', async () => {
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: /edit agent/i }),
+        screen.getByRole('button', { name: /more options/i }),
       ).toBeInTheDocument();
     });
   });
 
-  it('navigates to edit agent page when edit agent button is clicked', async () => {
-    renderWithProviders(<SkillsListView />);
+  it('navigates to edit agent page when edit agent menu item is clicked', async () => {
+    const { user } = renderWithProviders(<AgentView />);
 
     await waitFor(() => {
-      const editAgentButton = screen.getByRole('button', {
+      const moreOptionsButton = screen.getByRole('button', {
+        name: /more options/i,
+      });
+      expect(moreOptionsButton).toBeInTheDocument();
+    });
+
+    // Open the dropdown menu
+    const moreOptionsButton = screen.getByRole('button', {
+      name: /more options/i,
+    });
+    await user.click(moreOptionsButton);
+
+    // Click the edit menu item
+    await waitFor(() => {
+      const editMenuItem = screen.getByRole('menuitem', {
         name: /edit agent/i,
       });
-      expect(editAgentButton).toBeInTheDocument();
-
-      // Click the button
-      editAgentButton.click();
+      expect(editMenuItem).toBeInTheDocument();
     });
+
+    const editMenuItem = screen.getByRole('menuitem', { name: /edit agent/i });
+    await user.click(editMenuItem);
 
     // Check that push was called with correct path
     await waitFor(() => {
@@ -287,20 +307,20 @@ describe('SkillsListView', () => {
     });
   });
 
-  it('does not show edit agent button when no agent is selected', async () => {
+  it('does not show more options button when no agent is selected', async () => {
     mockParams = { agentName: undefined };
 
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('button', { name: /edit agent/i }),
+        screen.queryByRole('button', { name: /more options/i }),
       ).not.toBeInTheDocument();
     });
   });
 
   it('displays DiceBear avatar for each skill', async () => {
-    renderWithProviders(<SkillsListView />);
+    renderWithProviders(<AgentView />);
 
     await waitFor(() => {
       // Should find images for each skill

@@ -348,10 +348,6 @@ describe('Request Headers Types', () => {
         },
         provider: AIProvider.OPENAI,
         model: 'gpt-4',
-        system_prompt_variables: {
-          name: 'Assistant',
-          role: 'helpful',
-        },
         api_key: 'sk-test-key',
         openai_project: 'proj_123',
         openai_organization: 'org_456',
@@ -365,7 +361,6 @@ describe('Request Headers Types', () => {
       expect(parsed.id).toBe('openai-target-1');
       expect(parsed.weight).toBe(2);
       expect(parsed.provider).toBe(AIProvider.OPENAI);
-      expect(parsed.system_prompt_variables?.name).toBe('Assistant');
       expect(parsed.openai_project).toBe('proj_123');
     });
   });
@@ -895,6 +890,33 @@ describe('Request Headers Types', () => {
       ).not.toThrow();
       const parsed = ReactiveAgentsConfigPreProcessed.parse(config);
       expect(parsed.targets[0].optimization).toBe(OptimizationType.AUTO);
+    });
+
+    it('should validate config with system_prompt_variables', () => {
+      const config = {
+        agent_name: 'test-agent',
+        skill_name: 'test-skill',
+        system_prompt_variables: {
+          name: 'Assistant',
+          role: 'helpful',
+          datetime: '2024-01-01',
+        },
+        targets: [
+          {
+            provider: AIProvider.OPENAI,
+            model: 'gpt-4',
+            api_key: 'sk-test',
+          },
+        ],
+      };
+
+      expect(() =>
+        ReactiveAgentsConfigPreProcessed.parse(config),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsConfigPreProcessed.parse(config);
+      expect(parsed.system_prompt_variables?.name).toBe('Assistant');
+      expect(parsed.system_prompt_variables?.role).toBe('helpful');
+      expect(parsed.system_prompt_variables?.datetime).toBe('2024-01-01');
     });
   });
 
