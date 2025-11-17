@@ -6,14 +6,15 @@ export interface AnthropicTool {
   description: string;
   input_schema: {
     type: string;
-    properties: Record<
+    properties?: Record<
       string,
       {
         type: string;
         description: string;
       }
     >;
-    required: string[];
+    required?: string[];
+    additionalProperties?: boolean;
   };
 }
 
@@ -129,4 +130,6 @@ export type AnthropicStreamState = {
     cache_creation_input_tokens?: number;
   };
   model?: string;
+  jsonOutputToolId?: string;
+  jsonOutputToolIndex?: number;
 };
