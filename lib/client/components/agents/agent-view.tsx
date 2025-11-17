@@ -2,9 +2,11 @@
 
 import { getAgentEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/agents';
 import { getSkillEvents } from '@client/api/v1/reactive-agents/skill-events';
+import { getSkillEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/skills';
 import { AgentPerformanceChart } from '@client/components/agents/agent-performance-chart';
 import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
 import { DeleteAgentDialog } from '@client/components/agents/delete-agent-dialog';
+import { SkillPerformanceChart } from '@client/components/agents/skills/skill-performance-chart';
 import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
 import { Button } from '@client/components/ui/button';
 import {
@@ -224,13 +226,51 @@ export function AgentView(): ReactElement {
     refetchInterval: 60000, // Refetch every minute
   });
 
+  // Fetch skill-level evaluation scores for all skills (small charts)
+  const {
+    data: skillEvaluationScores = {},
+    isLoading: isLoadingSkillEvaluationScores,
+  } = useQuery({
+    queryKey: [
+      'skillEvaluationScores',
+      selectedAgent?.id,
+      skills.map((s) => s.id).join(','),
+      endTime.toISOString(),
+    ],
+    queryFn: async () => {
+      if (!selectedAgent || skills.length === 0) return {};
+
+      // Fetch scores for all skills in parallel (30 buckets at 5 min intervals = 2.5 hours)
+      const scoresPromises = skills.map(async (skill) => {
+        const scores = await getSkillEvaluationScoresByTimeBucket(skill.id, {
+          interval_minutes: 5, // 5 min intervals
+          start_time: new Date(
+            endTime.getTime() - 2.5 * 60 * 60 * 1000,
+          ).toISOString(), // Last 2.5 hours (30 buckets)
+          end_time: endTime.toISOString(),
+        }).catch(() => []);
+        return [skill.id, scores] as const;
+      });
+
+      const scoresArray = await Promise.all(scoresPromises);
+      return Object.fromEntries(scoresArray);
+    },
+    enabled: !!selectedAgent && skills.length > 0,
+    refetchInterval: 60000, // Refetch every minute
+  });
+
   const filteredSkills = useMemo(() => {
-    if (!searchQuery) return skills;
-    return skills.filter(
-      (skill) =>
-        skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        skill.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
+    const filtered = searchQuery
+      ? skills.filter(
+          (skill) =>
+            skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            skill.description
+              ?.toLowerCase()
+              .includes(searchQuery.toLowerCase()),
+        )
+      : skills;
+
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [skills, searchQuery]);
 
   const handleSkillSelect = (skill: Skill) => {
@@ -474,7 +514,7 @@ export function AgentView(): ReactElement {
                   className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
                   onClick={() => handleSkillSelect(skill)}
                 >
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <Image
@@ -494,10 +534,30 @@ export function AgentView(): ReactElement {
                         tooltipSide="left"
                       />
                     </div>
-                    <CardDescription className="line-clamp-3 text-sm">
+                    <CardDescription className="line-clamp-2 text-sm">
                       {skill.description || 'No description available'}
                     </CardDescription>
                   </CardHeader>
+                  <CardContent>
+                    <div className="pt-2 border-t">
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Performance
+                      </div>
+                      {isLoadingSkillEvaluationScores ? (
+                        <Skeleton className="h-32 w-full" />
+                      ) : (
+                        <SkillPerformanceChart
+                          evaluationScores={
+                            skillEvaluationScores[skill.id] || []
+                          }
+                          size="small"
+                          intervalMinutes={5}
+                          windowHours={2.5}
+                          endTime={endTime}
+                        />
+                      )}
+                    </div>
+                  </CardContent>
                 </Card>
               );
             })}

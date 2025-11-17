@@ -17,7 +17,7 @@ const raConfig = {
 };
 
 // Number of random inputs to process
-const N_INPUTS = 10;
+const N_INPUTS = 50;
 
 // Function to get random elements from array
 function getRandomElements<T>(array: T[], count: number): T[] {
@@ -42,9 +42,9 @@ for (let i = 0; i < selectedInputs.length; i++) {
         'ra-config': JSON.stringify(raConfig),
       },
     })
-    .responses.create({
+    .chat.completions.create({
       model: 'gpt-4o-mini',
-      input: [
+      messages: [
         {
           role: 'user',
           content: JSON.stringify(eventData),
@@ -52,7 +52,7 @@ for (let i = 0; i < selectedInputs.length; i++) {
       ],
     });
 
-  const agentResponse = response.output_text;
+  const agentResponse = response.choices[0]?.message?.content ?? '';
   logger.printWithHeader(`Response ${i + 1}`, agentResponse);
 
   // Add a small delay between requests to be respectful to the API

@@ -68,7 +68,7 @@ export const eventLabels: Record<SkillEventType, string> = {
   [SkillEventType.PARTITIONS_RECLUSTERED]: 'Recluster',
   [SkillEventType.OPTIMIZATION_ENABLED]: 'Opt On',
   [SkillEventType.OPTIMIZATION_DISABLED]: 'Opt Off',
-  [SkillEventType.CLUSTERS_UPDATED]: 'Clusters',
-  [SkillEventType.CONTEXT_GENERATED]: 'Context',
-  [SkillEventType.REFLECTION]: 'Reflection',
+  [SkillEventType.CLUSTERS_UPDATED]: 'Partition Opt',
+  [SkillEventType.CONTEXT_GENERATED]: 'Context Gen',
+  [SkillEventType.REFLECTION]: 'Prompt Opt',
 };

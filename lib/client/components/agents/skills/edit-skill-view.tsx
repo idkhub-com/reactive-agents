@@ -184,13 +184,13 @@ export function EditSkillView(): React.ReactElement {
 
       await updateSkill(selectedSkill.id, updateParams);
 
-      // Navigate back to skill dashboard
+      // Navigate back to skill dashboard (replace to remove edit page from history)
       if (agentName && skillName) {
-        router.push(
+        router.replace(
           `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
         );
       } else {
-        router.push('/agents');
+        router.replace('/agents');
       }
     } catch (error) {
       console.error('Error updating skill:', error);
@@ -648,7 +648,16 @@ export function EditSkillView(): React.ReactElement {
                     type="button"
                     variant="outline"
                     size="lg"
-                    onClick={() => router.back()}
+                    onClick={() => {
+                      // Navigate back to skill dashboard (replace to remove edit page from history)
+                      if (agentName && skillName) {
+                        router.replace(
+                          `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
+                        );
+                      } else {
+                        router.replace('/agents');
+                      }
+                    }}
                     disabled={isUpdating}
                     className="flex-1"
                   >
