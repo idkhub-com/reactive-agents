@@ -15,7 +15,7 @@ import {
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { format } from 'date-fns';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 
 // Register Chart.js components
@@ -41,6 +41,7 @@ interface AgentPerformanceChartProps {
   title?: string;
   intervalMinutes?: number;
   windowHours?: number;
+  endTime?: Date; // End time for the chart (rightmost bucket)
 }
 
 export function AgentPerformanceChart({
@@ -50,10 +51,8 @@ export function AgentPerformanceChart({
   title = 'Agent Performance Over Time (All Skills)',
   intervalMinutes = 60,
   windowHours = 24,
+  endTime = new Date(),
 }: AgentPerformanceChartProps) {
-  // Update current time to trigger chart re-render
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   // Create skill name lookup map
@@ -65,37 +64,9 @@ export function AgentPerformanceChart({
     return map;
   }, [skills]);
 
-  useEffect(() => {
-    // Update chart at the start of every minute (aligned to clock time)
-    const updateInterval = Math.min(intervalMinutes * 60 * 1000, 60000); // At least every minute
-
-    // Calculate milliseconds until next minute starts
-    const now = new Date();
-    const msUntilNextMinute =
-      60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
-
-    // First update at the start of next minute
-    const initialTimeout = setTimeout(() => {
-      setCurrentTime(new Date());
-
-      // Then update every interval after that
-      intervalIdRef.current = setInterval(() => {
-        setCurrentTime(new Date());
-      }, updateInterval);
-    }, msUntilNextMinute);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current);
-        intervalIdRef.current = null;
-      }
-    };
-  }, [intervalMinutes]);
-
   const chartData = useMemo(() => {
     // Generate all time buckets for the window
-    const now = currentTime;
+    const now = endTime;
     const startTime = new Date(now.getTime() - windowHours * 60 * 60 * 1000);
     const buckets: Array<{ time: Date; label: string }> = [];
 
@@ -192,7 +163,7 @@ export function AgentPerformanceChart({
       datasets: [weightedAvgDataset, eventsDataset],
       buckets, // Include for event annotation calculation
     };
-  }, [evaluationScores, events, intervalMinutes, windowHours, currentTime]);
+  }, [evaluationScores, events, intervalMinutes, windowHours, endTime]);
 
   // Create event annotations
   const eventAnnotations = useMemo(() => {

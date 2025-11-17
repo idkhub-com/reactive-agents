@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import { DateTimePicker } from '@client/components/ui/date-time-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@client/components/ui/toggle-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@client/components/ui/tooltip';
 import { eventLabels } from '@client/constants';
 import { useSkillValidation } from '@client/hooks/use-skill-validation';
 import { useToast } from '@client/hooks/use-toast';
@@ -50,6 +56,7 @@ import {
   AlertCircle,
   CalendarIcon,
   CheckCircle2,
+  Clock,
   CpuIcon,
   Edit,
   FileTextIcon,
@@ -150,6 +157,9 @@ export function SkillDashboardView(): ReactElement {
     }
   }, [selectedInterval]);
 
+  // End time for charts (defaults to now)
+  const [endTime, setEndTime] = useState<Date>(() => new Date());
+
   // Skill validation
   const { isReady, missingRequirements } = useSkillValidation(selectedSkill);
 
@@ -176,16 +186,21 @@ export function SkillDashboardView(): ReactElement {
     data: skillEvaluationScores = [],
     isLoading: isLoadingSkillEvaluationScores,
   } = useQuery({
-    queryKey: ['skillEvaluationScores', selectedSkill?.id, selectedInterval],
+    queryKey: [
+      'skillEvaluationScores',
+      selectedSkill?.id,
+      selectedInterval,
+      endTime.toISOString(),
+    ],
     queryFn: () =>
       selectedSkill
         ? getSkillEvaluationScoresByTimeBucket(selectedSkill.id, {
             interval_minutes: INTERVAL_CONFIG[selectedInterval].minutes,
             start_time: new Date(
-              Date.now() -
+              endTime.getTime() -
                 INTERVAL_CONFIG[selectedInterval].hours * 60 * 60 * 1000,
             ).toISOString(),
-            end_time: new Date().toISOString(),
+            end_time: endTime.toISOString(),
           })
         : Promise.resolve([]),
     enabled: !!selectedSkill,
@@ -201,6 +216,7 @@ export function SkillDashboardView(): ReactElement {
       'clusterEvaluationScores',
       selectedSkill?.id,
       clusterStates.map((c) => c.id).join(','),
+      endTime.toISOString(),
     ],
     queryFn: async () => {
       if (!selectedSkill || clusterStates.length === 0) return {};
@@ -213,9 +229,9 @@ export function SkillDashboardView(): ReactElement {
             cluster_id: cluster.id,
             interval_minutes: 5, // 5 min intervals
             start_time: new Date(
-              Date.now() - 2.5 * 60 * 60 * 1000,
+              endTime.getTime() - 2.5 * 60 * 60 * 1000,
             ).toISOString(), // Last 2.5 hours (30 buckets)
-            end_time: new Date().toISOString(),
+            end_time: endTime.toISOString(),
           },
         ).catch(() => []);
         return [cluster.id, scores] as const;
@@ -457,43 +473,83 @@ export function SkillDashboardView(): ReactElement {
         {/* Performance Chart - Full Width */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Total Requests:
-                </span>
-                <Badge variant="secondary">
-                  {clusterStates
-                    .reduce(
-                      (sum, cluster) =>
-                        sum + cluster.observability_total_requests,
-                      0,
-                    )
-                    .toLocaleString()}
-                </Badge>
+            <div className="flex justify-between items-start mb-4 gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <DateTimePicker
+                          date={endTime}
+                          onDateChange={setEndTime}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>
+                        Select the end time for the chart (rightmost data point)
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setEndTime(new Date())}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Jump to current time</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Total Requests:
+                  </span>
+                  <Badge variant="secondary">
+                    {clusterStates
+                      .reduce(
+                        (sum, cluster) =>
+                          sum + cluster.observability_total_requests,
+                        0,
+                      )
+                      .toLocaleString()}
+                  </Badge>
+                </div>
               </div>
-              <ToggleGroup
-                type="single"
-                value={selectedInterval}
-                onValueChange={(value) => {
-                  if (value) setSelectedInterval(value as TimeInterval);
-                }}
-                size="sm"
-                className="border rounded-lg gap-0 overflow-hidden"
-              >
-                {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
-                  (interval) => (
-                    <ToggleGroupItem
-                      key={interval}
-                      value={interval}
-                      aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
-                      className="text-xs rounded-none"
-                    >
-                      {INTERVAL_CONFIG[interval].label}
-                    </ToggleGroupItem>
-                  ),
-                )}
-              </ToggleGroup>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroup
+                    type="single"
+                    value={selectedInterval}
+                    onValueChange={(value) => {
+                      if (value) setSelectedInterval(value as TimeInterval);
+                    }}
+                    size="sm"
+                    className="border rounded-lg gap-0 overflow-hidden"
+                  >
+                    {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
+                      (interval) => (
+                        <ToggleGroupItem
+                          key={interval}
+                          value={interval}
+                          aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
+                          className="text-xs rounded-none"
+                        >
+                          {INTERVAL_CONFIG[interval].label}
+                        </ToggleGroupItem>
+                      ),
+                    )}
+                  </ToggleGroup>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Select time interval for chart buckets</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
             {isLoadingSkillEvaluationScores ? (
               <div className="h-64 flex items-center justify-center">
@@ -506,6 +562,7 @@ export function SkillDashboardView(): ReactElement {
                 clusters={clusterStates}
                 intervalMinutes={INTERVAL_CONFIG[selectedInterval].minutes}
                 windowHours={INTERVAL_CONFIG[selectedInterval].hours}
+                endTime={endTime}
               />
             )}
           </CardContent>
@@ -592,7 +649,7 @@ export function SkillDashboardView(): ReactElement {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">
-                          Current Cycle
+                          Since Reflection
                         </span>
                         <span className="text-muted-foreground">
                           {cluster.total_steps.toString()}
@@ -616,6 +673,7 @@ export function SkillDashboardView(): ReactElement {
                             )}
                             intervalMinutes={5}
                             windowHours={2.5}
+                            endTime={endTime}
                           />
                         )}
                       </div>

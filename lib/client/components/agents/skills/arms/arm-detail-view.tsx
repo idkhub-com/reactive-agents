@@ -207,12 +207,6 @@ export function ArmDetailView(): ReactElement {
         description="Configuration details and performance metrics"
         showBackButton={true}
         onBack={goBack}
-        actions={
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCwIcon className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        }
       />
 
       <div className="p-6 space-y-6">

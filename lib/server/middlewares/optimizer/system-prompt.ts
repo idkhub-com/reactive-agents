@@ -494,26 +494,12 @@ async function generateExampleConversationsWithEvaluations(
           log_id: log.id,
         });
 
-      console.log(
-        `[REFLECTION] Log ${log.id}: Found ${evaluationRuns.length} evaluation runs`,
-      );
-
       if (evaluationRuns.length > 0) {
         const evaluationRun = evaluationRuns[0];
-        console.log(
-          `[REFLECTION] Evaluation run has ${evaluationRun.results.length} results`,
-        );
+
         const evaluationInfo: string[] = [];
 
         for (const result of evaluationRun.results) {
-          console.log(
-            `[REFLECTION] Processing result for method: ${result.method}, score: ${result.score}`,
-          );
-          console.log(
-            `[REFLECTION] Display info:`,
-            JSON.stringify(result.display_info, null, 2),
-          );
-
           evaluationInfo.push(`\n## Evaluation: ${result.method}`);
           evaluationInfo.push(`Score: ${result.score.toFixed(2)}`);
 
@@ -526,16 +512,9 @@ async function generateExampleConversationsWithEvaluations(
           }
         }
 
-        console.log(
-          `[REFLECTION] Evaluation info array length: ${evaluationInfo.length}`,
-        );
-        console.log(`[REFLECTION] Evaluation info:`, evaluationInfo.join('\n'));
-
         if (evaluationInfo.length > 0) {
           conversation += `\n\n---\n## Evaluation Results:${evaluationInfo.join('\n')}`;
         }
-      } else {
-        console.log(`[REFLECTION] No evaluation runs found for log ${log.id}`);
       }
 
       conversations.push(conversation);

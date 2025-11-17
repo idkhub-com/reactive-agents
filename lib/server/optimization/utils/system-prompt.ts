@@ -311,14 +311,5 @@ export async function generateReflectiveSystemPromptForSkill(
     allowedTemplateVariables,
   );
 
-  console.log('[REFLECTION] System prompt for reflection:');
-  console.log('='.repeat(80));
-  console.log(systemPrompt);
-  console.log('='.repeat(80));
-  console.log('[REFLECTION] User message for reflection:');
-  console.log('='.repeat(80));
-  console.log(userMessage);
-  console.log('='.repeat(80));
-
   return await callSystemPromptAPI(client, raConfig, systemPrompt, userMessage);
 }

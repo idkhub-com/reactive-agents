@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import { DateTimePicker } from '@client/components/ui/date-time-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@client/components/ui/toggle-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@client/components/ui/tooltip';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useToast } from '@client/hooks/use-toast';
 import { useAgents } from '@client/providers/agents';
@@ -39,6 +45,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowUpDown,
   BoxIcon,
+  Clock,
   MoreVertical,
   PaletteIcon,
   RefreshCwIcon,
@@ -120,6 +127,9 @@ export function ClusterArmsView(): ReactElement {
     }
   }, [selectedInterval]);
 
+  // End time for charts (defaults to now)
+  const [endTime, setEndTime] = useState<Date>(() => new Date());
+
   // Fetch cluster-level evaluation scores
   const {
     data: clusterEvaluationScores = [],
@@ -130,6 +140,7 @@ export function ClusterArmsView(): ReactElement {
       selectedSkill?.id,
       clusterId,
       selectedInterval,
+      endTime.toISOString(),
     ],
     queryFn: () =>
       selectedSkill && clusterId
@@ -137,10 +148,10 @@ export function ClusterArmsView(): ReactElement {
             cluster_id: clusterId,
             interval_minutes: INTERVAL_CONFIG[selectedInterval].minutes,
             start_time: new Date(
-              Date.now() -
+              endTime.getTime() -
                 INTERVAL_CONFIG[selectedInterval].hours * 60 * 60 * 1000,
             ).toISOString(),
-            end_time: new Date().toISOString(),
+            end_time: endTime.toISOString(),
           })
         : Promise.resolve([]),
     enabled: !!selectedSkill && !!clusterId,
@@ -511,38 +522,79 @@ export function ClusterArmsView(): ReactElement {
               </CardTitle>
               <CardDescription>
                 Total requests:{' '}
-                {selectedCluster.observability_total_requests.toString()}{' '}
-                (Current cycle: {selectedCluster.total_steps.toString()})
+                {selectedCluster.observability_total_requests.toString()} (Since
+                reflection: {selectedCluster.total_steps.toString()})
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm font-medium">
-                    Performance Over Time
+              <div className="space-y-4">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-2">
+                            <DateTimePicker
+                              date={endTime}
+                              onDateChange={setEndTime}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>
+                            Select the end time for the chart (rightmost data
+                            point)
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setEndTime(new Date())}
+                          >
+                            <Clock className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Jump to current time</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="text-sm font-medium">
+                      Performance Over Time
+                    </div>
                   </div>
-                  <ToggleGroup
-                    type="single"
-                    value={selectedInterval}
-                    onValueChange={(value) => {
-                      if (value) setSelectedInterval(value as TimeInterval);
-                    }}
-                    size="sm"
-                    className="border rounded-lg gap-0 overflow-hidden"
-                  >
-                    {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
-                      (interval) => (
-                        <ToggleGroupItem
-                          key={interval}
-                          value={interval}
-                          aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
-                          className="text-xs rounded-none"
-                        >
-                          {INTERVAL_CONFIG[interval].label}
-                        </ToggleGroupItem>
-                      ),
-                    )}
-                  </ToggleGroup>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroup
+                        type="single"
+                        value={selectedInterval}
+                        onValueChange={(value) => {
+                          if (value) setSelectedInterval(value as TimeInterval);
+                        }}
+                        size="sm"
+                        className="border rounded-lg gap-0 overflow-hidden"
+                      >
+                        {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
+                          (interval) => (
+                            <ToggleGroupItem
+                              key={interval}
+                              value={interval}
+                              aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
+                              className="text-xs rounded-none"
+                            >
+                              {INTERVAL_CONFIG[interval].label}
+                            </ToggleGroupItem>
+                          ),
+                        )}
+                      </ToggleGroup>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Select time interval for chart buckets</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 {isLoadingClusterEvaluationScores ? (
                   <Skeleton className="h-64 w-full" />
@@ -556,6 +608,7 @@ export function ClusterArmsView(): ReactElement {
                     size="large"
                     intervalMinutes={INTERVAL_CONFIG[selectedInterval].minutes}
                     windowHours={INTERVAL_CONFIG[selectedInterval].hours}
+                    endTime={endTime}
                   />
                 )}
               </div>

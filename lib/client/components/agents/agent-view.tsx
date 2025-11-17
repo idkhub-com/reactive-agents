@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
+import { DateTimePicker } from '@client/components/ui/date-time-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@client/components/ui/toggle-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@client/components/ui/tooltip';
 import { useAgents } from '@client/providers/agents';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkills } from '@client/providers/skills';
@@ -37,6 +43,7 @@ import type { Skill } from '@shared/types/data';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart3Icon,
+  Clock,
   Edit,
   MoreVertical,
   PlusIcon,
@@ -156,6 +163,9 @@ export function AgentView(): ReactElement {
     }
   }, [selectedInterval]);
 
+  // End time for charts (defaults to now)
+  const [endTime, setEndTime] = useState<Date>(() => new Date());
+
   // Use providers
   const {
     skills,
@@ -182,6 +192,7 @@ export function AgentView(): ReactElement {
       selectedAgent?.id,
       selectedInterval,
       INTERVAL_CONFIG[selectedInterval].hours,
+      endTime.toISOString(),
     ],
     queryFn: async () => {
       if (!selectedAgent) return [];
@@ -190,10 +201,10 @@ export function AgentView(): ReactElement {
         {
           interval_minutes: INTERVAL_CONFIG[selectedInterval].minutes,
           start_time: new Date(
-            Date.now() -
+            endTime.getTime() -
               INTERVAL_CONFIG[selectedInterval].hours * 60 * 60 * 1000,
           ).toISOString(),
-          end_time: new Date().toISOString(),
+          end_time: endTime.toISOString(),
         },
       );
       return scores;
@@ -322,37 +333,77 @@ export function AgentView(): ReactElement {
         {/* Agent Performance Chart */}
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BarChart3Icon className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-lg">Agent Performance</CardTitle>
-              </div>
-              <ToggleGroup
-                type="single"
-                value={selectedInterval}
-                onValueChange={(value) => {
-                  if (value) setSelectedInterval(value as TimeInterval);
-                }}
-                size="sm"
-                className="border rounded-lg gap-0 overflow-hidden"
-              >
-                {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
-                  (interval) => (
-                    <ToggleGroupItem
-                      key={interval}
-                      value={interval}
-                      aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
-                      className="text-xs rounded-none"
-                    >
-                      {INTERVAL_CONFIG[interval].label}
-                    </ToggleGroupItem>
-                  ),
-                )}
-              </ToggleGroup>
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3Icon className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg">Agent Performance</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="mb-4">
               Performance metrics across all skills for this agent
             </CardDescription>
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <DateTimePicker
+                          date={endTime}
+                          onDateChange={setEndTime}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>
+                        Select the end time for the chart (rightmost data point)
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setEndTime(new Date())}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Jump to current time</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroup
+                    type="single"
+                    value={selectedInterval}
+                    onValueChange={(value) => {
+                      if (value) setSelectedInterval(value as TimeInterval);
+                    }}
+                    size="sm"
+                    className="border rounded-lg gap-0 overflow-hidden"
+                  >
+                    {(Object.keys(INTERVAL_CONFIG) as TimeInterval[]).map(
+                      (interval) => (
+                        <ToggleGroupItem
+                          key={interval}
+                          value={interval}
+                          aria-label={`Toggle ${INTERVAL_CONFIG[interval].label} interval`}
+                          className="text-xs rounded-none"
+                        >
+                          {INTERVAL_CONFIG[interval].label}
+                        </ToggleGroupItem>
+                      ),
+                    )}
+                  </ToggleGroup>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Select time interval for chart buckets</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoadingAgentEvaluationScores ? (
@@ -366,6 +417,7 @@ export function AgentView(): ReactElement {
                 skills={skills}
                 intervalMinutes={INTERVAL_CONFIG[selectedInterval].minutes}
                 windowHours={INTERVAL_CONFIG[selectedInterval].hours}
+                endTime={endTime}
               />
             )}
           </CardContent>
