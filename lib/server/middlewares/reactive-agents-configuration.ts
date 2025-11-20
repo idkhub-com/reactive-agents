@@ -206,6 +206,27 @@ async function validateTargetConfiguration(
         cluster_id: optimalCluster.id,
       });
 
+      // If no arms exist for this cluster, generate them
+      if (arms.length === 0) {
+        await handleGenerateArms(c, userDataStorageConnector, skill.id);
+        // Refetch arms after generation
+        const newArms = await userDataStorageConnector.getSkillOptimizationArms(
+          {
+            skill_id: skill.id,
+            cluster_id: optimalCluster.id,
+          },
+        );
+        if (newArms.length === 0) {
+          return c.json(
+            {
+              error: 'Failed to generate optimization arms for skill',
+            },
+            500,
+          );
+        }
+        arms.push(...newArms);
+      }
+
       const optimalArm = getOptimalArm(arms, skill.exploration_temperature);
 
       c.set('pulled_arm', optimalArm);

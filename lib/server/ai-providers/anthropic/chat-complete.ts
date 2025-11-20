@@ -644,6 +644,7 @@ export const anthropicChatCompleteResponseTransform: ResponseTransformFunction =
       }
 
       const toolCalls: ChatCompletionToolCall[] = [];
+      let jsonOutputToolInput: unknown;
       response.content.forEach((item) => {
         if (item.type === 'tool_use') {
           // Exclude __json_output tool call from tool_calls array
@@ -657,9 +658,35 @@ export const anthropicChatCompleteResponseTransform: ResponseTransformFunction =
                 arguments: JSON.stringify(item.input),
               },
             });
+          } else {
+            // Store the __json_output tool input for the parsed field
+            jsonOutputToolInput = item.input;
           }
         }
       });
+
+      // Build message object with optional fields
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic message construction requires flexibility
+      const message: any = {
+        role: ChatCompletionMessageRole.ASSISTANT,
+        content,
+      };
+
+      if (!strictOpenAiCompliance) {
+        message.content_blocks = response.content.filter(
+          (item) => item.type !== 'tool_use',
+        );
+      }
+
+      if (toolCalls.length) {
+        message.tool_calls = toolCalls;
+      }
+
+      // Add parsed field when JSON output was extracted via tool
+      // This is required for OpenAI SDK's .parse() method to work
+      if (jsonOutputExtracted && jsonOutputToolInput !== undefined) {
+        message.parsed = jsonOutputToolInput;
+      }
 
       const responseObject: ChatCompletionResponseBody = {
         id: response.id,
@@ -668,16 +695,7 @@ export const anthropicChatCompleteResponseTransform: ResponseTransformFunction =
         model: response.model,
         choices: [
           {
-            message: {
-              role: ChatCompletionMessageRole.ASSISTANT,
-              content,
-              ...(!strictOpenAiCompliance && {
-                content_blocks: response.content.filter(
-                  (item) => item.type !== 'tool_use',
-                ),
-              }),
-              tool_calls: toolCalls.length ? toolCalls : undefined,
-            },
+            message,
             index: 0,
             logprobs: null,
             finish_reason: mapStopReasonToFinishReason(response.stop_reason),

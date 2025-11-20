@@ -44,6 +44,7 @@ export interface AnthropicUrlImageContentItem {
 export interface AnthropicTextContentItem {
   type: 'text';
   text: string;
+  cache_control?: { type: 'ephemeral' };
 }
 
 export interface AnthropicUrlPdfContentItem {
@@ -94,11 +95,6 @@ export interface AnthropicErrorObject {
 export interface AnthropicErrorResponse {
   type: string;
   error: AnthropicErrorObject;
-}
-
-export interface AnthropicTextContentItem {
-  type: 'text';
-  text: string;
 }
 
 export interface AnthropicToolContentItem {
