@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
 } from '@client/components/ui/tooltip';
 import { useToast } from '@client/hooks/use-toast';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { Model } from '@shared/types/data/model';
@@ -55,7 +55,7 @@ import { useEffect, useState } from 'react';
 export function ModelsListView(): ReactElement {
   const { toast } = useToast();
   const { models, isLoading, error, setQueryParams, refetch } = useModels();
-  const { apiKeys } = useAIProviderAPIKeys();
+  const { aiProviderConfigs: apiKeys } = useAIProviders();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);

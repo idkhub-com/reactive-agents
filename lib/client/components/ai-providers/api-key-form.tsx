@@ -34,7 +34,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@client/components/ui/popover';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AIProvider,
@@ -90,7 +90,7 @@ interface APIKeyFormProps {
 export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
   const router = useRouter();
   const { createAPIKey, updateAPIKey, isCreating, isUpdating } =
-    useAIProviderAPIKeys();
+    useAIProviders();
   const [showAPIKey, setShowAPIKey] = useState(false);
   const [providerSchemas, setProviderSchemas] = useState<
     Record<string, AIProviderSchemaResponse>
@@ -203,6 +203,10 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
           custom_fields: data.custom_fields || {},
         };
         const newProvider = await createAPIKey(createParams);
+
+        // Reset form after successful creation to clear data
+        form.reset();
+
         // Navigate to add models view for the new provider
         // The mutation's onSuccess already waits for cache invalidation
         router.push(`/ai-providers/${newProvider.id}/add-models`);

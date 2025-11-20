@@ -63,6 +63,7 @@ export async function evaluateLog(
   const execution_time = Date.now() - start_time;
 
   const evaluationResult: SkillOptimizationEvaluationResult = {
+    evaluation_id: evaluation.id,
     method: EvaluationMethodName.KNOWLEDGE_RETENTION,
     score: result.score,
     extra_data: {
@@ -73,6 +74,24 @@ export async function evaluateLog(
       execution_time_ms: execution_time,
       evaluated_at: new Date().toISOString(),
     },
+    display_info: [
+      {
+        label: 'Reasoning',
+        content: result.reasoning,
+      },
+      ...(result.metadata?.knowledgeRetention
+        ? [
+            {
+              label: 'Knowledge Retention Analysis',
+              content: JSON.stringify(
+                result.metadata.knowledgeRetention,
+                null,
+                2,
+              ),
+            },
+          ]
+        : []),
+    ],
   };
 
   return evaluationResult;

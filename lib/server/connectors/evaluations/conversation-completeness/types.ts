@@ -15,10 +15,21 @@ export interface ConversationCompletenessAverageResult {
   evaluation_run_id: string;
 }
 
-export const ConversationCompletenessEvaluationParameters = z
-  .object({
+// Default evaluation model - can be overridden by users
+export const CONVERSATION_COMPLETENESS_EVALUATION_MODEL_DEFAULT = 'gpt-5-mini';
+
+// AI-modifiable parameters - none needed, evaluation works automatically
+export const ConversationCompletenessEvaluationAIParameters = z
+  .object({})
+  .strict();
+
+// Full parameters including user-modifiable settings
+export const ConversationCompletenessEvaluationParameters =
+  ConversationCompletenessEvaluationAIParameters.extend({
     threshold: z.number().min(0).max(1),
-    model: z.string().default('gpt-4'),
+    model: z
+      .string()
+      .default(CONVERSATION_COMPLETENESS_EVALUATION_MODEL_DEFAULT),
     temperature: z.number().min(0).max(2).default(0.1),
     max_tokens: z.number().int().positive().default(1000),
     include_reason: z.boolean().default(true),
@@ -26,8 +37,7 @@ export const ConversationCompletenessEvaluationParameters = z
     async_mode: z.boolean().default(false),
     verbose_mode: z.boolean().default(false),
     batch_size: z.number().int().positive().default(10),
-  })
-  .strict();
+  });
 
 export type ConversationCompletenessEvaluationParameters = z.infer<
   typeof ConversationCompletenessEvaluationParameters

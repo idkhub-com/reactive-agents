@@ -38,6 +38,8 @@ const mockUserDataStorageConnector = {
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
+  incrementSkillTotalRequests: vi.fn(),
+  tryAcquireReclusteringLock: vi.fn(),
   // System prompt methods
   getSystemPrompts: vi.fn(),
   createSystemPrompt: vi.fn(),
@@ -48,11 +50,14 @@ const mockUserDataStorageConnector = {
   createSkillOptimizationClusters: vi.fn(),
   updateSkillOptimizationCluster: vi.fn(),
   deleteSkillOptimizationCluster: vi.fn(),
-  incrementClusterTotalSteps: vi.fn(),
+  incrementClusterCounters: vi.fn(),
   // Skill Optimization Arm methods
   getSkillOptimizationArms: vi.fn(),
+  getSkillOptimizationArmStats: vi.fn(),
+  deleteSkillOptimizationArmStats: vi.fn(),
   createSkillOptimizationArms: vi.fn(),
   updateSkillOptimizationArm: vi.fn(),
+  updateArmAndIncrementCounters: vi.fn(),
   deleteSkillOptimizationArm: vi.fn(),
   deleteSkillOptimizationArmsForSkill: vi.fn(),
   deleteSkillOptimizationArmsForCluster: vi.fn(),
@@ -60,11 +65,15 @@ const mockUserDataStorageConnector = {
   getSkillOptimizationEvaluations: vi.fn(),
   createSkillOptimizationEvaluations: vi.fn(),
   deleteSkillOptimizationEvaluation: vi.fn(),
+  updateSkillOptimizationEvaluation: vi.fn(),
   deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
   // Skill Optimization Evaluation Run methods
   getSkillOptimizationEvaluationRuns: vi.fn(),
+  getEvaluationScoresByTimeBucket: vi.fn(),
   createSkillOptimizationEvaluationRun: vi.fn(),
   deleteSkillOptimizationEvaluationRun: vi.fn(),
+  getSkillEvents: vi.fn(),
+  createSkillEvent: vi.fn(),
   // Tool methods
   getTools: vi.fn(),
   createTool: vi.fn(),
@@ -104,6 +113,7 @@ const mockUserDataStorageConnector = {
   deleteModel: vi.fn(),
   // Skill-Model relationship methods
   getSkillModels: vi.fn(),
+  getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
 };
@@ -259,6 +269,8 @@ describe('Skills API Status Codes', () => {
         skill_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
         name: 'Cluster 1',
         total_steps: 0,
+        observability_total_requests: 0,
+        allowed_template_variables: ['datetime'],
         centroid: [0.5],
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',

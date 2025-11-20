@@ -1,5 +1,5 @@
 import { ModelForm } from '@client/components/models/model-form';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
@@ -12,8 +12,9 @@ vi.mock('@client/api/v1/reactive-agents/models', () => ({
   updateModel: vi.fn(),
 }));
 
-vi.mock('@client/providers/ai-provider-api-keys', () => ({
+vi.mock('@client/providers/ai-providers', () => ({
   useAIProviderAPIKeys: vi.fn(),
+  useAIProviders: vi.fn(),
 }));
 
 vi.mock('@client/providers/models', () => ({
@@ -80,8 +81,8 @@ describe('ModelForm', () => {
       push: mockPush,
     });
 
-    (useAIProviderAPIKeys as Mock).mockReturnValue({
-      apiKeys: mockAPIKeys,
+    (useAIProviders as Mock).mockReturnValue({
+      aiProviderConfigs: mockAPIKeys,
       isLoading: false,
       error: null,
     });
@@ -122,8 +123,8 @@ describe('ModelForm', () => {
     });
 
     it('should show loading state when AI keys are loading', () => {
-      (useAIProviderAPIKeys as Mock).mockReturnValue({
-        apiKeys: [],
+      (useAIProviders as Mock).mockReturnValue({
+        aiProviderConfigs: [],
         isLoading: true,
         error: null,
       });
@@ -134,8 +135,8 @@ describe('ModelForm', () => {
     });
 
     it('should show error state when AI keys fail to load', () => {
-      (useAIProviderAPIKeys as Mock).mockReturnValue({
-        apiKeys: [],
+      (useAIProviders as Mock).mockReturnValue({
+        aiProviderConfigs: [],
         isLoading: false,
         error: 'Failed to load API keys',
       });

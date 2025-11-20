@@ -72,6 +72,7 @@ describe('Turn Relevancy - evaluateLog', () => {
         temperature: 0.1,
         max_tokens: 1000,
       },
+      weight: 1.0,
       created_at: '2024-01-01T00:00:00.000Z',
       updated_at: '2024-01-01T00:00:00.000Z',
     };
@@ -86,6 +87,7 @@ describe('Turn Relevancy - evaluateLog', () => {
       function_name: FunctionName.CHAT_COMPLETE,
       status: 200,
       start_time: 1677652288000,
+      first_token_time: null,
       end_time: 1677652289000,
       duration: 1000,
       base_ra_config: {},
@@ -183,6 +185,7 @@ describe('Turn Relevancy - evaluateLog', () => {
         temperature: 0.1,
         max_tokens: 1000,
       },
+      weight: 1.0,
       created_at: '2024-01-01T00:00:00.000Z',
       updated_at: '2024-01-01T00:00:00.000Z',
     };
@@ -197,6 +200,7 @@ describe('Turn Relevancy - evaluateLog', () => {
       function_name: FunctionName.CHAT_COMPLETE,
       status: 200,
       start_time: 1677652288000,
+      first_token_time: null,
       end_time: 1677652289000,
       duration: 1000,
       base_ra_config: {},

@@ -1,4 +1,7 @@
-import { KnowledgeRetentionEvaluationParameters } from '@server/connectors/evaluations/knowledge-retention/types';
+import {
+  KnowledgeRetentionEvaluationAIParameters,
+  KnowledgeRetentionEvaluationParameters,
+} from '@server/connectors/evaluations/knowledge-retention/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import {
   type EvaluationMethodDetails,
@@ -20,4 +23,5 @@ export const knowledgeRetentionEvaluationConnector: EvaluationMethodConnector =
     getDetails: () => knowledgeRetentionMethodConfig,
     evaluateLog,
     getParameterSchema: KnowledgeRetentionEvaluationParameters,
+    getAIParameterSchema: KnowledgeRetentionEvaluationAIParameters,
   };

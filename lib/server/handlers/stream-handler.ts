@@ -78,10 +78,12 @@ export async function* readAWSStream(
   fallbackChunkId: string,
   strictOpenAiCompliance: boolean,
   raRequestData: ReactiveAgentsRequestData,
+  onFirstChunk?: () => void,
 ): AsyncGenerator<string | Uint8Array, void, unknown> {
   let buffer = new Uint8Array() as Uint8Array<ArrayBufferLike>;
   let expectedLength = 0;
   const streamState = {};
+  let isFirstChunk = true;
   while (true) {
     const { done, value } = await reader.read();
     if (done) {
@@ -128,6 +130,11 @@ export async function* readAWSStream(
       expectedLength = readUInt32BE(buffer, 0);
       const payload = getPayloadFromAWSChunk(data);
 
+      if (isFirstChunk && onFirstChunk) {
+        onFirstChunk();
+        isFirstChunk = false;
+      }
+
       if (transformFunction) {
         const transformedChunk = transformFunction(
           payload,
@@ -158,6 +165,7 @@ export async function* readStream(
   fallbackChunkId: string,
   strictOpenAiCompliance: boolean,
   raRequestData: ReactiveAgentsRequestData,
+  onFirstChunk?: () => void,
 ): AsyncGenerator<string | Uint8Array, void, unknown> {
   let buffer = '';
   const decoder = new TextDecoder();
@@ -201,6 +209,9 @@ export async function* readStream(
 
         if (part.length > 0) {
           if (isFirstChunk) {
+            if (onFirstChunk) {
+              onFirstChunk();
+            }
             isFirstChunk = false;
             await new Promise((resolve) => setTimeout(resolve, 25));
           } else if (isSleepTimeRequired) {
@@ -374,6 +385,7 @@ export function handleStreamingMode(
   aiProviderRequestURL: string,
   raRequestData: ReactiveAgentsRequestData,
   strictOpenAiCompliance: boolean,
+  onFirstChunk?: () => void,
 ): Response {
   const splitPattern = getStreamModeSplitPattern(
     provider,
@@ -400,6 +412,7 @@ export function handleStreamingMode(
         fallbackChunkId,
         strictOpenAiCompliance,
         raRequestData,
+        onFirstChunk,
       )) {
         await writer.write(encoder.encode(chunk as string));
       }
@@ -415,6 +428,7 @@ export function handleStreamingMode(
         fallbackChunkId,
         strictOpenAiCompliance,
         raRequestData,
+        onFirstChunk,
       )) {
         await writer.write(encoder.encode(chunk as string));
       }

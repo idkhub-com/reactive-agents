@@ -7,6 +7,7 @@ import { responsesRouter } from '@server/api/v1/responses';
 // import { argumentCorrectnessEvaluationConnector } from '@server/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@server/connectors/evaluations/conversation-completeness';
 import { knowledgeRetentionEvaluationConnector } from '@server/connectors/evaluations/knowledge-retention';
+import { latencyEvaluationConnector } from '@server/connectors/evaluations/latency/latency';
 // import { roleAdherenceEvaluationConnector } from '@server/connectors/evaluations/role-adherence';
 import { taskCompletionEvaluationConnector } from '@server/connectors/evaluations/task-completion';
 import { toolCorrectnessEvaluationConnector } from '@server/connectors/evaluations/tool-correctness';
@@ -67,6 +68,7 @@ app.use(
     // argumentCorrectnessEvaluationConnector,
     conversationCompletenessEvaluationConnector,
     knowledgeRetentionEvaluationConnector,
+    latencyEvaluationConnector,
     // roleAdherenceEvaluationConnector,
     taskCompletionEvaluationConnector,
     toolCorrectnessEvaluationConnector,

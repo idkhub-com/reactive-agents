@@ -814,6 +814,13 @@ export async function recursiveOutputHookHandler(
     retry?.use_retry_after_header || false,
   ));
 
+  // Create callback to capture first token time for streaming responses
+  const onFirstChunk = isStreamingMode
+    ? () => {
+        c.set('first_token_time', Date.now());
+      }
+    : undefined;
+
   const {
     response: mappedResponse,
     raResponseBody,
@@ -828,6 +835,7 @@ export async function recursiveOutputHookHandler(
     raRequestData,
     strictOpenAiCompliance,
     commonRequestOptions.areSyncHooksAvailable,
+    onFirstChunk,
   );
 
   if (!mappedResponse.ok) {

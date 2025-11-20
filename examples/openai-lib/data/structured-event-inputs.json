@@ -1,0 +1,904 @@
+[
+  {
+    "name": "Science Fair",
+    "date": "Friday",
+    "participants": ["Alice Johnson", "Bob Martinez"],
+    "location": "Lincoln High School Gymnasium"
+  },
+  {
+    "name": "Team Meeting",
+    "date": "Monday at 2 PM",
+    "participants": ["John Smith", "Sarah Williams", "Mike Davis"],
+    "location": "Zoom"
+  },
+  {
+    "name": "Client Presentation",
+    "date": "Monday at 4 PM",
+    "participants": [
+      "Rebecca Price",
+      "William Brooks",
+      "Catherine Ward",
+      "Andrew Hughes"
+    ],
+    "location": "Conference Room B"
+  },
+  {
+    "name": "Birthday Party",
+    "date": "next Saturday at 6 PM",
+    "participants": ["Emma Thompson", "Tom Anderson", "Lisa Brown"],
+    "location": "456 Oak Street"
+  },
+  {
+    "name": "Wedding Ceremony",
+    "date": "June 15th at 3 PM",
+    "participants": [
+      "Jennifer Garcia",
+      "Michael Rodriguez",
+      "Susan Chen",
+      "Thomas Wilson"
+    ],
+    "location": "St. Mary's Church"
+  },
+  {
+    "name": "Wedding Reception",
+    "date": "June 15th at 6 PM",
+    "participants": [
+      "Jennifer Garcia",
+      "Michael Rodriguez",
+      "David Lee",
+      "Susan Chen",
+      "Amanda Martinez",
+      "Robert Thompson"
+    ],
+    "location": "Grand Ballroom Hotel"
+  },
+  {
+    "name": "Conference Call",
+    "date": "this Thursday at 10 AM",
+    "participants": ["Patricia Wilson", "James Taylor", "Linda Moore"],
+    "location": "Google Meet"
+  },
+  {
+    "name": "Book Club Meeting",
+    "date": "tomorrow evening",
+    "participants": ["Rachel Green", "David Miller", "Helen Cooper"],
+    "location": "Central Library"
+  },
+  {
+    "name": "Graduation Ceremony",
+    "date": "next month at 10 AM",
+    "participants": ["Alex Turner", "Margaret Hall", "Robert Clark"],
+    "location": "University Auditorium"
+  },
+  {
+    "name": "Graduation Lunch",
+    "date": "next month at 1 PM",
+    "participants": [
+      "Alex Turner",
+      "Margaret Hall",
+      "Robert Clark",
+      "Sarah Turner"
+    ],
+    "location": "Italian Garden Restaurant"
+  },
+  {
+    "name": "Graduation Party",
+    "date": "next month at 6 PM",
+    "participants": [
+      "Alex Turner",
+      "Margaret Hall",
+      "Robert Clark",
+      "Sarah Turner",
+      "Kevin Martinez",
+      "Emily Chen"
+    ],
+    "location": "789 Maple Drive"
+  },
+  {
+    "name": "Dinner Reservation",
+    "date": "Friday night",
+    "participants": ["Maria Gonzalez", "Carlos Rivera"],
+    "location": "La Bella Vista Restaurant"
+  },
+  {
+    "name": "Machine Learning Workshop",
+    "date": "next Tuesday",
+    "participants": [
+      "Dr. Smith",
+      "Kevin Harris",
+      "Amanda White",
+      "Tyler Jackson"
+    ],
+    "location": "Zoom"
+  },
+  {
+    "name": "Soccer Game",
+    "date": "this Saturday at 2 PM",
+    "participants": ["Marcus Phillips", "Chris Evans", "Brian Mitchell"],
+    "location": "Riverside Sports Complex"
+  },
+  {
+    "name": "Team Dinner",
+    "date": "this Saturday at 7 PM",
+    "participants": [
+      "Marcus Phillips",
+      "Chris Evans",
+      "Diego Sanchez",
+      "Laura Bennett"
+    ],
+    "location": "Pizza Palace"
+  },
+  {
+    "name": "Art Exhibition Opening",
+    "date": "March 20th",
+    "participants": ["Victoria Bell", "Nathan Foster", "Sophia Turner"],
+    "location": "Modern Art Gallery"
+  },
+  {
+    "name": "Cooking Class",
+    "date": "next Wednesday",
+    "participants": [
+      "Chef Johnson",
+      "Emily Parker",
+      "Daniel Reed",
+      "Grace Bennett"
+    ],
+    "location": "Culinary Institute Kitchen"
+  },
+  {
+    "name": "Movie Night",
+    "date": "Sunday at 7 PM",
+    "participants": [
+      "Jake Coleman",
+      "Amy Russell",
+      "Ben Murphy",
+      "Chloe Martinez"
+    ],
+    "location": "123 Pine Street"
+  },
+  {
+    "name": "Late Night Snacks",
+    "date": "Sunday at 10 PM",
+    "participants": ["Jake Coleman", "Amy Russell"],
+    "location": "123 Pine Street"
+  },
+  {
+    "name": "Yoga Retreat",
+    "date": "this weekend",
+    "participants": ["Maya Peterson", "Nicole Sanders", "Olivia Foster"],
+    "location": "Serenity Wellness Center"
+  },
+  {
+    "name": "Christmas Party",
+    "date": "December 24th at 6 PM",
+    "participants": [
+      "George Washington",
+      "Elizabeth Roberts",
+      "Frank Edwards",
+      "Patricia Moore"
+    ],
+    "location": "Company Headquarters"
+  },
+  {
+    "name": "Christmas Brunch",
+    "date": "December 25th at 11 AM",
+    "participants": [
+      "George Washington",
+      "Elizabeth Roberts",
+      "Dorothy King",
+      "Samuel Harrison"
+    ],
+    "location": "555 Cedar Avenue"
+  },
+  {
+    "name": "Hiking Trip",
+    "date": "next month",
+    "participants": [
+      "Thomas Scott",
+      "Jennifer Hill",
+      "Kyle Baker",
+      "Hannah Adams"
+    ],
+    "location": "Blue Ridge Mountain Trail"
+  },
+  {
+    "name": "Piano Recital",
+    "date": "Thursday evening",
+    "participants": [
+      "Sophie Nelson",
+      "Liam Carter",
+      "Charlotte Ross",
+      "Ethan Morgan"
+    ],
+    "location": "Music Academy Concert Hall"
+  },
+  {
+    "name": "Business Lunch",
+    "date": "tomorrow at noon",
+    "participants": ["Richard Butler", "Angela Powell", "Steven Perry"],
+    "location": "The Capital Grille"
+  },
+  {
+    "name": "Follow-up Meeting",
+    "date": "tomorrow at 3 PM",
+    "participants": ["Richard Butler", "Angela Powell", "Jennifer Walsh"],
+    "location": "Google Meet"
+  },
+  {
+    "name": "Garden Party",
+    "date": "next Saturday afternoon",
+    "participants": ["Barbara Griffin", "Timothy Coleman", "Laura Patterson"],
+    "location": "Botanical Gardens"
+  },
+  {
+    "name": "Tech Conference",
+    "date": "next week",
+    "participants": ["Mark Richardson", "Samantha Howard", "Jonathan Myers"],
+    "location": "Silicon Valley Convention Center"
+  },
+  {
+    "name": "Baby Shower",
+    "date": "next Sunday at 2 PM",
+    "participants": [
+      "Jessica Henderson",
+      "Ashley Cooper",
+      "Brittany Wood",
+      "Samantha Lee"
+    ],
+    "location": "321 Elm Street"
+  },
+  {
+    "name": "Baby Shower Games",
+    "date": "next Sunday at 3 PM",
+    "participants": [
+      "Jessica Henderson",
+      "Ashley Cooper",
+      "Megan Kelly",
+      "Rachel Adams"
+    ],
+    "location": "321 Elm Street"
+  },
+  {
+    "name": "Charity Fundraiser Gala",
+    "date": "Friday night",
+    "participants": ["Peter Harrison", "Diane Fisher", "Arthur Wallace"],
+    "location": "Grand Hotel Ballroom"
+  },
+  {
+    "name": "Language Exchange Meetup",
+    "date": "this Tuesday",
+    "participants": [
+      "Yuki Tanaka",
+      "Pierre Dubois",
+      "Fatima Hassan",
+      "Juan Martinez"
+    ],
+    "location": "Zoom"
+  },
+  {
+    "name": "Photography Workshop",
+    "date": "next weekend",
+    "participants": [
+      "Vincent Shaw",
+      "Isabella Knight",
+      "Mason Bryant",
+      "Lily Stevens"
+    ],
+    "location": "Downtown Photography Studio"
+  },
+  {
+    "name": "Board Game Night",
+    "date": "this Thursday at 7 PM",
+    "participants": [
+      "Ryan Webb",
+      "Chloe Jordan",
+      "Brandon Stone",
+      "Tyler Morgan"
+    ],
+    "location": "999 Birch Lane"
+  },
+  {
+    "name": "Pizza Delivery",
+    "date": "this Thursday at 8 PM",
+    "participants": [
+      "Ryan Webb",
+      "Chloe Jordan",
+      "Zoe Armstrong",
+      "Madison Fisher"
+    ],
+    "location": "999 Birch Lane"
+  },
+  {
+    "name": "Wine Tasting Event",
+    "date": "next Friday",
+    "participants": ["Gregory Palmer", "Natalie Duncan", "Raymond Pierce"],
+    "location": "Vineyard Estate"
+  },
+  {
+    "name": "Marathon Race",
+    "date": "Sunday morning at 7 AM",
+    "participants": [
+      "Aaron Crawford",
+      "Kayla Reynolds",
+      "Eric Spencer",
+      "Nicole Brooks"
+    ],
+    "location": "City Center Starting Line"
+  },
+  {
+    "name": "Marathon Celebration",
+    "date": "Sunday afternoon at 1 PM",
+    "participants": [
+      "Aaron Crawford",
+      "Kayla Reynolds",
+      "Alexis Quinn",
+      "Brandon Cole",
+      "Emma Foster"
+    ],
+    "location": "Victory Park Pavilion"
+  },
+  {
+    "name": "Academic Symposium",
+    "date": "next month",
+    "participants": ["Dr. Martinez", "Dr. Chen", "Dr. Patel", "Dr. Williams"],
+    "location": "Google Meet"
+  },
+  {
+    "name": "New Product Launch",
+    "date": "next Tuesday",
+    "participants": ["Sandra Bishop", "Matthew Graham", "Kimberly Hayes"],
+    "location": "Tech Hub Auditorium"
+  },
+  {
+    "name": "Dental Checkup",
+    "date": "Monday at 9 AM",
+    "participants": ["Dr. Anderson", "Janet Miller"],
+    "location": "Smile Dental Clinic"
+  },
+  {
+    "name": "Airport Drop-off",
+    "date": "Saturday at 5 AM",
+    "participants": ["Marcus Lee", "Diana Lee"],
+    "location": "International Airport Terminal 3"
+  },
+  {
+    "name": "Return Flight Pickup",
+    "date": "next Saturday at 8 PM",
+    "participants": ["Marcus Lee", "Diana Lee"],
+    "location": "International Airport Terminal 3"
+  },
+  {
+    "name": "Veterinary Appointment",
+    "date": "Wednesday at 3 PM",
+    "participants": ["Dr. Peterson", "Max (Golden Retriever)"],
+    "location": "Pet Care Animal Hospital"
+  },
+  {
+    "name": "Rehearsal Dinner",
+    "date": "August 14th at 7 PM",
+    "participants": [
+      "Kyle Anderson",
+      "Melissa Brown",
+      "John Anderson",
+      "Sarah Brown",
+      "Pastor Williams"
+    ],
+    "location": "Riverside Restaurant"
+  },
+  {
+    "name": "Wedding Day Preparation",
+    "date": "August 15th at 9 AM",
+    "participants": [
+      "Melissa Brown",
+      "Sarah Brown",
+      "Emma Taylor",
+      "Olivia Martinez"
+    ],
+    "location": "Grand Hotel Suite 501"
+  },
+  {
+    "name": "Wedding Ceremony",
+    "date": "August 15th at 4 PM",
+    "participants": [
+      "Kyle Anderson",
+      "Melissa Brown",
+      "John Anderson",
+      "Sarah Brown",
+      "Pastor Williams",
+      "Michael Chen"
+    ],
+    "location": "Lakeside Chapel"
+  },
+  {
+    "name": "Trivia Night",
+    "date": "this Wednesday at 8 PM",
+    "participants": ["Team Brainiacs", "Quiz Master Tony"],
+    "location": "The Pub on Main"
+  },
+  {
+    "name": "Job Interview",
+    "date": "tomorrow at 10 AM",
+    "participants": ["Hiring Manager Susan Park", "HR Director James Wilson"],
+    "location": "TechCorp Building Floor 15"
+  },
+  {
+    "name": "First Day of School",
+    "date": "September 5th at 8 AM",
+    "participants": ["Emma Rodriguez", "Teacher Mrs. Thompson"],
+    "location": "Washington Elementary School Room 204"
+  },
+  {
+    "name": "Back to School Night",
+    "date": "September 12th at 6 PM",
+    "participants": [
+      "Emma Rodriguez",
+      "Carlos Rodriguez",
+      "Maria Rodriguez",
+      "Teacher Mrs. Thompson"
+    ],
+    "location": "Washington Elementary School Room 204"
+  },
+  {
+    "name": "Blood Donation",
+    "date": "Friday at 11 AM",
+    "participants": ["Red Cross Volunteer Staff"],
+    "location": "Community Blood Center"
+  },
+  {
+    "name": "Pottery Class",
+    "date": "every Tuesday at 6 PM",
+    "participants": ["Instructor Kelly Chen", "Beginner Group"],
+    "location": "Creative Arts Studio"
+  },
+  {
+    "name": "Flight to Tokyo",
+    "date": "October 10th at 11 PM",
+    "participants": ["David Kim", "Jennifer Kim"],
+    "location": "JFK Airport Terminal 1"
+  },
+  {
+    "name": "Tokyo Hotel Check-in",
+    "date": "October 11th at 2 PM JST",
+    "participants": ["David Kim", "Jennifer Kim"],
+    "location": "Park Hyatt Tokyo"
+  },
+  {
+    "name": "Return Flight",
+    "date": "October 20th at 6 PM JST",
+    "participants": ["David Kim", "Jennifer Kim"],
+    "location": "Narita Airport Terminal 2"
+  },
+  {
+    "name": "Guitar Lessons",
+    "date": "every Saturday at 2 PM",
+    "participants": ["Instructor Jake Morrison", "Tommy Wilson"],
+    "location": "Music School Studio B"
+  },
+  {
+    "name": "Neighborhood BBQ",
+    "date": "Sunday at noon",
+    "participants": [
+      "The Johnson Family",
+      "The Martinez Family",
+      "The Chen Family",
+      "The Anderson Family"
+    ],
+    "location": "Community Park Pavilion 3"
+  },
+  {
+    "name": "Doctor Consultation",
+    "date": "Thursday at 9:30 AM",
+    "participants": ["Dr. Roberts", "Patricia Miller"],
+    "location": "Medical Center Building A"
+  },
+  {
+    "name": "Lab Tests",
+    "date": "Thursday at 10:30 AM",
+    "participants": ["Lab Technician", "Patricia Miller"],
+    "location": "Medical Center Building B"
+  },
+  {
+    "name": "Follow-up Appointment",
+    "date": "next Thursday at 2 PM",
+    "participants": ["Dr. Roberts", "Patricia Miller"],
+    "location": "Medical Center Building A"
+  },
+  {
+    "name": "Chess Tournament",
+    "date": "Saturday starting at 9 AM",
+    "participants": ["Tournament Director Alex Wong", "32 Registered Players"],
+    "location": "City Library Meeting Hall"
+  },
+  {
+    "name": "Escape Room Challenge",
+    "date": "Friday at 7 PM",
+    "participants": ["Sarah Johnson", "Mike Taylor", "Lisa Chen", "Kevin Park"],
+    "location": "Mystery Escape Rooms Downtown"
+  },
+  {
+    "name": "Bridal Shower",
+    "date": "next Saturday at 1 PM",
+    "participants": [
+      "Amanda Stevens",
+      "Maid of Honor Rachel",
+      "Bridesmaids",
+      "Family Members"
+    ],
+    "location": "Garden Tea House"
+  },
+  {
+    "name": "Bachelorette Party",
+    "date": "next Saturday at 8 PM",
+    "participants": ["Amanda Stevens", "Rachel", "Kelly", "Michelle", "Sarah"],
+    "location": "Downtown Karaoke Bar"
+  },
+  {
+    "name": "Career Fair",
+    "date": "Wednesday 10 AM to 4 PM",
+    "participants": ["50+ Employers", "Job Seekers", "Career Counselors"],
+    "location": "Convention Center Hall C"
+  },
+  {
+    "name": "Farmers Market",
+    "date": "every Sunday 8 AM to 2 PM",
+    "participants": ["Local Vendors", "Community Members"],
+    "location": "Downtown Square"
+  },
+  {
+    "name": "Orchestra Rehearsal",
+    "date": "Monday at 7 PM",
+    "participants": [
+      "Conductor Maestro Thompson",
+      "Symphony Orchestra Members"
+    ],
+    "location": "Concert Hall"
+  },
+  {
+    "name": "Dress Rehearsal",
+    "date": "Friday at 7 PM",
+    "participants": [
+      "Conductor Maestro Thompson",
+      "Symphony Orchestra Members"
+    ],
+    "location": "Concert Hall"
+  },
+  {
+    "name": "Symphony Performance",
+    "date": "Saturday at 8 PM",
+    "participants": [
+      "Conductor Maestro Thompson",
+      "Symphony Orchestra Members",
+      "Guest Soloist Maria Volkov"
+    ],
+    "location": "Concert Hall"
+  },
+  {
+    "name": "Tax Preparation Appointment",
+    "date": "April 10th at 1 PM",
+    "participants": ["CPA Ronald Martinez", "William Thompson"],
+    "location": "Martinez Accounting Office"
+  },
+  {
+    "name": "Virtual Team Building",
+    "date": "Tuesday at 3 PM",
+    "participants": ["Remote Team Members", "Facilitator Jessica Wong"],
+    "location": "Zoom"
+  },
+  {
+    "name": "Camping Trip Setup",
+    "date": "Friday at 4 PM",
+    "participants": ["Brian Foster", "Amanda Foster", "Kids Tyler and Sophie"],
+    "location": "Yosemite National Park Campsite 47"
+  },
+  {
+    "name": "Morning Hike",
+    "date": "Saturday at 7 AM",
+    "participants": [
+      "Brian Foster",
+      "Amanda Foster",
+      "Tyler",
+      "Sophie",
+      "Ranger Mike"
+    ],
+    "location": "Yosemite Valley Trail"
+  },
+  {
+    "name": "Return Home",
+    "date": "Sunday at 2 PM",
+    "participants": ["Brian Foster", "Amanda Foster", "Tyler", "Sophie"],
+    "location": "Yosemite National Park Campsite 47"
+  },
+  {
+    "name": "Cooking Competition",
+    "date": "next Saturday at 5 PM",
+    "participants": [
+      "Chef Contestants",
+      "Judges Panel",
+      "Host Marcus Williams"
+    ],
+    "location": "Culinary Institute Main Kitchen"
+  },
+  {
+    "name": "Ballet Performance",
+    "date": "Friday evening at 7:30 PM",
+    "participants": [
+      "Prima Ballerina Anna Petrova",
+      "Dance Company",
+      "Orchestra"
+    ],
+    "location": "Metropolitan Theater"
+  },
+  {
+    "name": "Hackathon Kickoff",
+    "date": "Friday at 6 PM",
+    "participants": ["120 Developers", "Sponsors", "Organizers"],
+    "location": "Tech Campus Building 7"
+  },
+  {
+    "name": "Hackathon Presentations",
+    "date": "Sunday at 10 AM",
+    "participants": ["Teams", "Judges", "Sponsors"],
+    "location": "Tech Campus Building 7"
+  },
+  {
+    "name": "Spin Class",
+    "date": "every Monday and Wednesday at 6 AM",
+    "participants": ["Instructor Jenna Rodriguez", "Fitness Class Members"],
+    "location": "FitLife Gym Studio 2"
+  },
+  {
+    "name": "House Closing",
+    "date": "next Friday at 10 AM",
+    "participants": [
+      "Buyer Jonathan Lee",
+      "Buyer Emily Lee",
+      "Seller",
+      "Real Estate Agents",
+      "Title Officer"
+    ],
+    "location": "First National Title Company"
+  },
+  {
+    "name": "Arrival at Beach House",
+    "date": "July 1st at 3 PM",
+    "participants": ["Thompson Family", "Martinez Family", "Chen Family"],
+    "location": "Ocean View Beach House Rental"
+  },
+  {
+    "name": "Beach Day",
+    "date": "July 2nd at 10 AM",
+    "participants": ["Thompson Family", "Martinez Family", "Chen Family"],
+    "location": "Sunset Beach"
+  },
+  {
+    "name": "Group Dinner",
+    "date": "July 2nd at 7 PM",
+    "participants": ["Thompson Family", "Martinez Family", "Chen Family"],
+    "location": "The Crab Shack"
+  },
+  {
+    "name": "Checkout",
+    "date": "July 5th at 11 AM",
+    "participants": ["Thompson Family", "Martinez Family", "Chen Family"],
+    "location": "Ocean View Beach House Rental"
+  },
+  {
+    "name": "Podcast Recording",
+    "date": "Thursday at 2 PM",
+    "participants": [
+      "Host Trevor Jackson",
+      "Guest Expert Dr. Sarah Lin",
+      "Producer Mike"
+    ],
+    "location": "Studio B Podcast Network"
+  },
+  {
+    "name": "Dog Training Class",
+    "date": "every Saturday at 10 AM",
+    "participants": ["Trainer Lisa Martinez", "Dog Owners and their Pets"],
+    "location": "Bark Park Training Center"
+  },
+  {
+    "name": "Departure for Conference",
+    "date": "Monday at 6 AM",
+    "participants": ["Elena Rodriguez", "Marcus Chen", "Sophia Taylor"],
+    "location": "Airport"
+  },
+  {
+    "name": "Conference Registration",
+    "date": "Monday at 2 PM",
+    "participants": ["Elena Rodriguez", "Marcus Chen", "Sophia Taylor"],
+    "location": "Las Vegas Convention Center"
+  },
+  {
+    "name": "Keynote Speech",
+    "date": "Tuesday at 9 AM",
+    "participants": [
+      "Elena Rodriguez",
+      "Marcus Chen",
+      "Sophia Taylor",
+      "2000+ Attendees"
+    ],
+    "location": "Las Vegas Convention Center Main Hall"
+  },
+  {
+    "name": "Networking Dinner",
+    "date": "Tuesday at 7 PM",
+    "participants": [
+      "Elena Rodriguez",
+      "Marcus Chen",
+      "Sophia Taylor",
+      "Industry Leaders"
+    ],
+    "location": "The Venetian Grand Ballroom"
+  },
+  {
+    "name": "Return Flight",
+    "date": "Wednesday at 5 PM",
+    "participants": ["Elena Rodriguez", "Marcus Chen", "Sophia Taylor"],
+    "location": "Las Vegas Airport"
+  },
+  {
+    "name": "Vision Test Appointment",
+    "date": "next Monday at 11 AM",
+    "participants": ["Optometrist Dr. Kim", "Patient Robert Wilson"],
+    "location": "Clear View Eye Center"
+  },
+  {
+    "name": "Stand-up Comedy Open Mic",
+    "date": "Thursday at 9 PM",
+    "participants": ["Comedians", "Host Danny Rivers", "Audience"],
+    "location": "Laugh Factory Comedy Club"
+  },
+  {
+    "name": "Quilting Bee",
+    "date": "every Friday at 1 PM",
+    "participants": [
+      "Betty Johnson",
+      "Margaret Smith",
+      "Carol Davis",
+      "Susan Lee"
+    ],
+    "location": "Community Center Craft Room"
+  },
+  {
+    "name": "Car Purchase Negotiation",
+    "date": "Saturday at 10 AM",
+    "participants": ["Sales Manager Tom", "Customer Alex Brown"],
+    "location": "Toyota Dealership"
+  },
+  {
+    "name": "Test Drive",
+    "date": "Saturday at 10:30 AM",
+    "participants": ["Sales Rep", "Alex Brown", "Alex's Spouse"],
+    "location": "Toyota Dealership"
+  },
+  {
+    "name": "Financing Meeting",
+    "date": "Saturday at 11:30 AM",
+    "participants": ["Finance Manager", "Alex Brown", "Alex's Spouse"],
+    "location": "Toyota Dealership"
+  },
+  {
+    "name": "Meditation Workshop",
+    "date": "Sunday at 9 AM",
+    "participants": ["Mindfulness Coach Yuki Tanaka", "Wellness Seekers"],
+    "location": "Zen Center Meditation Hall"
+  },
+  {
+    "name": "Costume Fitting",
+    "date": "Wednesday at 4 PM",
+    "participants": [
+      "Theater Director",
+      "Lead Actor James",
+      "Costume Designer"
+    ],
+    "location": "Community Theater Backstage"
+  },
+  {
+    "name": "Parent-Teacher Conference",
+    "date": "Thursday at 5 PM",
+    "participants": [
+      "Teacher Ms. Anderson",
+      "Parent Michael Johnson",
+      "Parent Lisa Johnson"
+    ],
+    "location": "Roosevelt High School Room 312"
+  },
+  {
+    "name": "Principal Meeting",
+    "date": "Thursday at 5:30 PM",
+    "participants": [
+      "Principal Dr. Martinez",
+      "Michael Johnson",
+      "Lisa Johnson"
+    ],
+    "location": "Roosevelt High School Principal's Office"
+  },
+  {
+    "name": "Salsa Dancing Lessons",
+    "date": "every Tuesday at 7 PM",
+    "participants": ["Instructor Carlos Rivera", "Dance Students"],
+    "location": "Latin Dance Studio"
+  },
+  {
+    "name": "Investment Seminar",
+    "date": "next Wednesday at 6 PM",
+    "participants": [
+      "Financial Advisor Robert Chen",
+      "Investors",
+      "Guest Speaker"
+    ],
+    "location": "Hilton Hotel Conference Room A"
+  },
+  {
+    "name": "Immunization Appointment",
+    "date": "Monday at 2 PM",
+    "participants": ["Nurse Practitioner", "Child Patient Emma"],
+    "location": "Children's Health Clinic"
+  },
+  {
+    "name": "Brunch with College Friends",
+    "date": "Saturday at 11 AM",
+    "participants": [
+      "Sarah Martinez",
+      "College Roommate Jenny",
+      "Friend Michael",
+      "Friend Rachel"
+    ],
+    "location": "The Breakfast Club Cafe"
+  },
+  {
+    "name": "Museum Visit",
+    "date": "Saturday at 2 PM",
+    "participants": ["Sarah Martinez", "Jenny", "Michael", "Rachel"],
+    "location": "Museum of Modern Art"
+  },
+  {
+    "name": "Toastmasters Meeting",
+    "date": "every Thursday at 6:30 PM",
+    "participants": ["Club Members", "President Victoria Chen"],
+    "location": "Business Center Conference Room"
+  },
+  {
+    "name": "Physical Therapy Session",
+    "date": "every Monday, Wednesday, Friday at 9 AM",
+    "participants": ["Therapist Dr. Johnson", "Patient Marcus Williams"],
+    "location": "Sports Medicine Clinic"
+  },
+  {
+    "name": "Comic Book Club",
+    "date": "first Sunday of each month at 3 PM",
+    "participants": ["Club Members", "Comic Shop Owner Dan"],
+    "location": "Galaxy Comics & Games"
+  },
+  {
+    "name": "Birthday Breakfast",
+    "date": "March 15th at 8 AM",
+    "participants": ["Birthday Girl Katie", "Mom", "Dad", "Brother Tommy"],
+    "location": "Home"
+  },
+  {
+    "name": "School Birthday Celebration",
+    "date": "March 15th at 2 PM",
+    "participants": ["Katie", "Classmates", "Teacher"],
+    "location": "Jefferson Elementary Room 105"
+  },
+  {
+    "name": "Birthday Party",
+    "date": "March 15th at 4 PM",
+    "participants": ["Katie", "20 Friends", "Parents", "Clown Entertainer"],
+    "location": "Fun Zone Party Center"
+  },
+  {
+    "name": "Craft Beer Festival",
+    "date": "next Saturday 1 PM to 8 PM",
+    "participants": [
+      "30 Breweries",
+      "Food Trucks",
+      "Live Bands",
+      "Festival Goers"
+    ],
+    "location": "Waterfront Park"
+  }
+]

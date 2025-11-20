@@ -85,7 +85,8 @@ const mockSkills: Skill[] = [
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   },
   {
     id: '2',
@@ -104,7 +105,8 @@ const mockSkills: Skill[] = [
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   },
 ];
 
@@ -243,7 +245,7 @@ describe('NavigationProvider', () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith(
-      '/agents/Test%20Agent%201/Test%20Skill%201',
+      '/agents/Test%20Agent%201/skills/Test%20Skill%201',
     );
   });
 
@@ -337,13 +339,13 @@ describe('NavigationProvider', () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith(
-      '/agents/Test%20Agent%201/Test%20Skill%201',
+      '/agents/Test%20Agent%201/skills/Test%20Skill%201',
     );
   });
 
   it('parses edit-skill view from URL correctly', async () => {
     // Mock the URL pathname to simulate edit route
-    mockPathnameValue = '/agents/Test%20Agent%201/Test%20Skill%201/edit';
+    mockPathnameValue = '/agents/Test%20Agent%201/skills/Test%20Skill%201/edit';
 
     mockParams.agentName = 'Test%20Agent%201';
     mockParams.skillName = 'Test%20Skill%201';
@@ -366,7 +368,7 @@ describe('NavigationProvider', () => {
 
   it('parses skill-dashboard view from URL correctly', async () => {
     // Mock the URL pathname to simulate skill dashboard route
-    mockPathnameValue = '/agents/Test%20Agent%201/Test%20Skill%201';
+    mockPathnameValue = '/agents/Test%20Agent%201/skills/Test%20Skill%201';
 
     mockParams.agentName = 'Test%20Agent%201';
     mockParams.skillName = 'Test%20Skill%201';

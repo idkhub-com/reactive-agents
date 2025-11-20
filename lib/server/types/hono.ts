@@ -38,6 +38,7 @@ export interface AppEnv {
     pulled_arm?: SkillOptimizationArm;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
+    first_token_time?: number;
     cache_storage_connector: CacheStorageConnector;
     logs_storage_connector: LogsStorageConnector;
     user_data_storage_connector: UserDataStorageConnector;

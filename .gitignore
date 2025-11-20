@@ -44,6 +44,7 @@ next-env.d.ts
 
 # ide
 .vscode/
+.zed/
 
 # turbo
 .turbo/
@@ -57,5 +58,3 @@ next-env.d.ts
 
 # Docker
 .env.docker
-*.sql
-!docker/postgres/init/*.sql

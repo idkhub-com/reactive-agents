@@ -34,7 +34,7 @@ import {
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useToast } from '@client/hooks/use-toast';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type {
@@ -64,7 +64,8 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
   const goBack = useSmartBack();
   const { toast } = useToast();
   const { refetch } = useModels();
-  const { apiKeys, isLoading: isLoadingAPIKeys } = useAIProviderAPIKeys();
+  const { aiProviderConfigs: apiKeys, isLoading: isLoadingAPIKeys } =
+    useAIProviders();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(!!modelId);
@@ -135,6 +136,9 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
           title: 'Model created',
           description: `Model "${data.model_name}" has been created successfully.`,
         });
+
+        // Reset form after successful creation to clear data
+        form.reset();
       }
 
       await refetch();
@@ -227,7 +231,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
                       <FormLabel>Model Name</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="e.g., gpt-4, claude-3-sonnet, gemini-pro"
+                          placeholder="e.g., gpt-5, claude-sonnet-4-5, gemini-2.5-pro"
                           {...field}
                         />
                       </FormControl>

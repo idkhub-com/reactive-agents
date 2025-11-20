@@ -1,8 +1,9 @@
 import {
-  AIProviderAPIKeysProvider,
-  aiProviderAPIKeyQueryKeys,
-  useAIProviderAPIKeys,
-} from '@client/providers/ai-provider-api-keys';
+  AIProvidersProvider,
+  aiProvidersQueryKeys,
+  useAIProviders,
+} from '@client/providers/ai-providers';
+
 import type { AIProviderConfig } from '@shared/types/data/ai-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -58,7 +59,7 @@ const mockAIProviders: AIProviderConfig[] = [
 
 function TestComponent(): React.ReactElement {
   const {
-    apiKeys,
+    aiProviderConfigs: apiKeys,
     isLoading,
     error,
     queryParams,
@@ -75,7 +76,7 @@ function TestComponent(): React.ReactElement {
     getAPIKeyById,
     getAPIKeysByProvider,
     refreshAPIKeys,
-  } = useAIProviderAPIKeys();
+  } = useAIProviders();
 
   return (
     <div>
@@ -213,9 +214,9 @@ describe('AIProviderAPIKeysProvider', () => {
   const renderWithProviders = () => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <AIProviderAPIKeysProvider>
+        <AIProvidersProvider>
           <TestComponent />
-        </AIProviderAPIKeysProvider>
+        </AIProvidersProvider>
       </QueryClientProvider>,
     );
   };
@@ -355,7 +356,7 @@ describe('AIProviderAPIKeysProvider', () => {
       });
 
       const initialQueryState = queryClient.getQueryState(
-        aiProviderAPIKeyQueryKeys.list({ limit: 50 }),
+        aiProvidersQueryKeys.list({ limit: 50 }),
       );
       expect(initialQueryState?.dataUpdatedAt).toBeDefined();
       const initialUpdateTime = initialQueryState?.dataUpdatedAt ?? 0;
@@ -379,7 +380,7 @@ describe('AIProviderAPIKeysProvider', () => {
       // Verify that the cache was updated (dataUpdatedAt changed)
       await waitFor(() => {
         const updatedQueryState = queryClient.getQueryState(
-          aiProviderAPIKeyQueryKeys.list({ limit: 50 }),
+          aiProvidersQueryKeys.list({ limit: 50 }),
         );
         expect(updatedQueryState?.dataUpdatedAt).toBeGreaterThan(
           initialUpdateTime,

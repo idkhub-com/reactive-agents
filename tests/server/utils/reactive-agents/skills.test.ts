@@ -24,6 +24,8 @@ describe('getSkill', () => {
       createSkill: vi.fn(),
       updateSkill: vi.fn(),
       deleteSkill: vi.fn(),
+      incrementSkillTotalRequests: vi.fn(),
+      tryAcquireReclusteringLock: vi.fn(),
 
       // Feedback methods
       getFeedback: vi.fn(),
@@ -77,6 +79,7 @@ describe('getSkill', () => {
       deleteModel: vi.fn(),
       // Skill-Model relationship methods
       getSkillModels: vi.fn(),
+      getSkillsByModelId: vi.fn(),
       addModelsToSkill: vi.fn(),
       removeModelsFromSkill: vi.fn(),
       // Skill Optimization Cluster methods
@@ -84,11 +87,14 @@ describe('getSkill', () => {
       createSkillOptimizationClusters: vi.fn(),
       updateSkillOptimizationCluster: vi.fn(),
       deleteSkillOptimizationCluster: vi.fn(),
-      incrementClusterTotalSteps: vi.fn(),
+      incrementClusterCounters: vi.fn(),
       // Skill Optimization Arm methods
       getSkillOptimizationArms: vi.fn(),
+      getSkillOptimizationArmStats: vi.fn(),
+      deleteSkillOptimizationArmStats: vi.fn(),
       createSkillOptimizationArms: vi.fn(),
       updateSkillOptimizationArm: vi.fn(),
+      updateArmAndIncrementCounters: vi.fn(),
       deleteSkillOptimizationArm: vi.fn(),
       deleteSkillOptimizationArmsForSkill: vi.fn(),
       deleteSkillOptimizationArmsForCluster: vi.fn(),
@@ -96,11 +102,15 @@ describe('getSkill', () => {
       getSkillOptimizationEvaluations: vi.fn(),
       createSkillOptimizationEvaluations: vi.fn(),
       deleteSkillOptimizationEvaluation: vi.fn(),
+      updateSkillOptimizationEvaluation: vi.fn(),
       deleteSkillOptimizationEvaluationsForSkill: vi.fn(),
       // Skill Optimization Evaluation Run methods
       getSkillOptimizationEvaluationRuns: vi.fn(),
+      getEvaluationScoresByTimeBucket: vi.fn(),
       createSkillOptimizationEvaluationRun: vi.fn(),
       deleteSkillOptimizationEvaluationRun: vi.fn(),
+      getSkillEvents: vi.fn(),
+      createSkillEvent: vi.fn(),
     } as UserDataStorageConnector;
   });
 
@@ -123,7 +133,8 @@ describe('getSkill', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: ['datetime'],
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
@@ -162,7 +173,8 @@ describe('getSkill', () => {
           last_clustering_log_start_time: null,
           evaluations_regenerated_at: null,
           evaluation_lock_acquired_at: null,
-          reflection_lock_acquired_at: null,
+          total_requests: 0,
+          allowed_template_variables: ['datetime'],
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
@@ -181,7 +193,8 @@ describe('getSkill', () => {
           last_clustering_log_start_time: null,
           evaluations_regenerated_at: null,
           evaluation_lock_acquired_at: null,
-          reflection_lock_acquired_at: null,
+          total_requests: 0,
+          allowed_template_variables: ['datetime'],
         },
       ];
 
@@ -268,7 +281,8 @@ describe('getSkill', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: ['datetime'],
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([skill]);
@@ -327,7 +341,8 @@ describe('getSkill', () => {
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
         evaluation_lock_acquired_at: null,
-        reflection_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: ['datetime'],
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);

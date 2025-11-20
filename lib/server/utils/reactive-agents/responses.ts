@@ -41,6 +41,14 @@ export async function createResponse(
   c: AppContext,
   options: CreateResponseOptions,
 ): Promise<Response> {
+  // Create callback to capture first token time for streaming responses
+  const onFirstChunk = options.isStreamingMode
+    ? () => {
+        const firstTokenTime = Date.now();
+        c.set('first_token_time', firstTokenTime);
+      }
+    : undefined;
+
   const { response: mappedResponse } = await responseHandler(
     options.response,
     options.isStreamingMode,
@@ -51,6 +59,7 @@ export async function createResponse(
     options.raRequestData,
     options.strictOpenAiCompliance,
     options.areSyncHooksAvailable,
+    onFirstChunk,
   );
 
   const mappedResponseClone = mappedResponse.clone();

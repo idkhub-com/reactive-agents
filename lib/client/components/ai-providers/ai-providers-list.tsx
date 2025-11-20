@@ -27,7 +27,7 @@ import {
   TableRow,
 } from '@client/components/ui/table';
 import { useToast } from '@client/hooks/use-toast';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import type { AIProviderConfig } from '@shared/types/data/ai-provider';
 import { format } from 'date-fns';
 import {
@@ -36,7 +36,6 @@ import {
   KeyIcon,
   MoreHorizontalIcon,
   PlusIcon,
-  RefreshCwIcon,
   SearchIcon,
   TrashIcon,
 } from 'lucide-react';
@@ -57,13 +56,11 @@ export function AIProvidersListView({
   const router = useRouter();
   const { toast } = useToast();
   const {
-    apiKeys,
+    aiProviderConfigs: apiKeys,
     isLoading,
-    refetch,
     deleteAPIKey,
     isDeleting,
-    refreshAPIKeys,
-  } = useAIProviderAPIKeys();
+  } = useAIProviders();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedKeys, setCopiedKeys] = useState<Set<string>>(new Set());
@@ -206,16 +203,6 @@ export function AIProvidersListView({
         showBackButton={false}
         actions={
           <div className="flex gap-2">
-            <Button
-              onClick={() => {
-                refreshAPIKeys();
-                refetch();
-              }}
-              variant="outline"
-            >
-              <RefreshCwIcon className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
             <Button onClick={() => router.push('/ai-providers/create')}>
               <PlusIcon className="h-4 w-4 mr-2" />
               Add AI Provider

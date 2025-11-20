@@ -53,7 +53,8 @@ const mockSkills: Skill[] = [
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   },
   {
     id: '2',
@@ -72,7 +73,8 @@ const mockSkills: Skill[] = [
     last_clustering_log_start_time: null,
     evaluations_regenerated_at: null,
     evaluation_lock_acquired_at: null,
-    reflection_lock_acquired_at: null,
+    total_requests: 0,
+    allowed_template_variables: ['datetime'],
   },
 ];
 

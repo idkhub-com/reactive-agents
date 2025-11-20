@@ -8,11 +8,13 @@ export enum EvaluationMethodName {
   TOOL_CORRECTNESS = 'tool_correctness',
   KNOWLEDGE_RETENTION = 'knowledge_retention',
   CONVERSATION_COMPLETENESS = 'conversation_completeness',
+  LATENCY = 'latency',
 }
 
 export const EvaluationMethodDetails = z.object({
   method: z.enum(EvaluationMethodName),
   name: z.string(),
   description: z.string(),
+  parameterSchema: z.record(z.string(), z.unknown()).optional(), // JSON representation of the schema shape
 });
 export type EvaluationMethodDetails = z.infer<typeof EvaluationMethodDetails>;

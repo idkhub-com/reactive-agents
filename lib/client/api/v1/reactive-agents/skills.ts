@@ -9,10 +9,15 @@ import {
   type SkillQueryParams,
   type SkillUpdateParams,
 } from '@shared/types/data';
+import { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
 import { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
-import type { EvaluationMethodName } from '@shared/types/evaluations';
+import {
+  EvaluationMethodDetails,
+  type EvaluationMethodName,
+} from '@shared/types/evaluations';
 import { hc } from 'hono/client';
+import { z } from 'zod';
 
 const client = hc<ReactiveAgentsRoute>(API_URL);
 
@@ -172,6 +177,24 @@ export async function getSkillArms(
   return SkillOptimizationArm.array().parse(await response.json());
 }
 
+export async function getSkillArmStats(
+  skillId: string,
+): Promise<SkillOptimizationArmStat[]> {
+  const response = await client.v1['reactive-agents'].skills[':skillId'][
+    'arm-stats'
+  ].$get({
+    param: {
+      skillId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill arm stats');
+  }
+
+  return SkillOptimizationArmStat.array().parse(await response.json());
+}
+
 export async function generateSkillArms(
   skillId: string,
 ): Promise<SkillOptimizationArm[]> {
@@ -192,13 +215,18 @@ export async function generateSkillArms(
 
 export async function getSkillEvaluationRuns(
   skillId: string,
+  logId?: string,
 ): Promise<SkillOptimizationEvaluationRun[]> {
+  const query: Record<string, string> = {};
+  if (logId) query.log_id = logId;
+
   const response = await client.v1['reactive-agents'].skills[':skillId'][
     'evaluation-runs'
   ].$get({
     param: {
       skillId,
     },
+    query,
   });
 
   if (!response.ok) {
@@ -206,6 +234,53 @@ export async function getSkillEvaluationRuns(
   }
 
   return SkillOptimizationEvaluationRun.array().parse(await response.json());
+}
+
+export async function getSkillEvaluationScoresByTimeBucket(
+  skillId: string,
+  params: {
+    cluster_id?: string;
+    interval_minutes: number;
+    start_time: string;
+    end_time: string;
+  },
+): Promise<
+  import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketResult[]
+> {
+  const { EvaluationScoresByTimeBucketResult } = await import(
+    '@shared/types/data/evaluation-runs-with-scores'
+  );
+
+  const response = await client.v1['reactive-agents'].skills[':skillId'][
+    'evaluation-scores-by-time-bucket'
+  ].$post({
+    param: {
+      skillId,
+    },
+    json: params,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill evaluation scores by time bucket');
+  }
+
+  const z = await import('zod');
+  return z.z
+    .array(EvaluationScoresByTimeBucketResult)
+    .parse(await response.json());
+}
+
+export async function getEvaluationMethods(): Promise<
+  EvaluationMethodDetails[]
+> {
+  const response =
+    await client.v1['reactive-agents']['evaluation-methods'].$get();
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch evaluation methods');
+  }
+
+  return z.array(EvaluationMethodDetails).parse(await response.json());
 }
 
 export async function getSkillEvaluations(
@@ -248,6 +323,33 @@ export async function createSkillEvaluation(
   return SkillOptimizationEvaluation.array().parse(await response.json());
 }
 
+export async function updateSkillEvaluation(
+  skillId: string,
+  evaluationId: string,
+  params: { weight: number; params?: Record<string, unknown> },
+): Promise<SkillOptimizationEvaluation> {
+  const response = await client.v1['reactive-agents'].skills[
+    ':skillId'
+  ].evaluations[':evaluationId'].$patch({
+    param: {
+      skillId,
+      evaluationId,
+    },
+    json: params,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      (errorData as { details?: string })?.details ||
+      (errorData as { error?: string })?.error ||
+      'Failed to update skill evaluation';
+    throw new Error(errorMessage);
+  }
+
+  return SkillOptimizationEvaluation.parse(await response.json());
+}
+
 export async function deleteSkillEvaluation(
   skillId: string,
   evaluationId: string,
@@ -263,5 +365,47 @@ export async function deleteSkillEvaluation(
 
   if (!response.ok) {
     throw new Error('Failed to delete skill evaluation');
+  }
+}
+
+export async function resetCluster(
+  skillId: string,
+  clusterId: string,
+  clearObservabilityCount = false,
+): Promise<void> {
+  const response = await client.v1['reactive-agents'].skills[
+    ':skillId'
+  ].clusters[':clusterId'].reset.$post({
+    param: {
+      skillId,
+      clusterId,
+    },
+    query: {
+      clearObservabilityCount: clearObservabilityCount.toString(),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to reset cluster');
+  }
+}
+
+export async function resetSkill(
+  skillId: string,
+  clearObservabilityCount = false,
+): Promise<void> {
+  const response = await client.v1['reactive-agents'].skills[
+    ':skillId'
+  ].reset.$post({
+    param: {
+      skillId,
+    },
+    query: {
+      clearObservabilityCount: clearObservabilityCount.toString(),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to reset skill');
   }
 }

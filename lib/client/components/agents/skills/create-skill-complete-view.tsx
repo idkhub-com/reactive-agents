@@ -1,6 +1,9 @@
 'use client';
 
-import { addModelsToSkill } from '@client/api/v1/reactive-agents/skills';
+import {
+  addModelsToSkill,
+  getEvaluationMethods,
+} from '@client/api/v1/reactive-agents/skills';
 import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
@@ -16,51 +19,20 @@ import { PageHeader } from '@client/components/ui/page-header';
 import { Skeleton } from '@client/components/ui/skeleton';
 import { useToast } from '@client/hooks/use-toast';
 import { useAgents } from '@client/providers/agents';
-import { useAIProviderAPIKeys } from '@client/providers/ai-provider-api-keys';
+import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
 import { useSkills } from '@client/providers/skills';
 import type { AIProvider } from '@shared/types/constants';
 import { PrettyAIProvider } from '@shared/types/constants';
-import { EvaluationMethodName } from '@shared/types/evaluations';
+import type {
+  EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
 import { CheckCircle2, Clock, CpuIcon, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
-
-// Available evaluation methods
-const EVALUATION_METHODS = [
-  {
-    name: EvaluationMethodName.TASK_COMPLETION,
-    label: 'Task Completion',
-    description:
-      'Evaluates whether the AI successfully completed the requested task',
-  },
-  {
-    name: EvaluationMethodName.TURN_RELEVANCY,
-    label: 'Turn Relevancy',
-    description:
-      'Assesses whether responses are relevant to the conversation context',
-  },
-  {
-    name: EvaluationMethodName.TOOL_CORRECTNESS,
-    label: 'Tool Correctness',
-    description:
-      'Validates that tools are used appropriately and produce correct results',
-  },
-  {
-    name: EvaluationMethodName.KNOWLEDGE_RETENTION,
-    label: 'Knowledge Retention',
-    description:
-      'Evaluates how well the AI retains and recalls information from previous interactions',
-  },
-  {
-    name: EvaluationMethodName.CONVERSATION_COMPLETENESS,
-    label: 'Conversation Completeness',
-    description:
-      'Assesses whether conversations are properly concluded and all topics are addressed',
-  },
-];
 
 interface SelectedModel {
   providerId: string;
@@ -71,7 +43,8 @@ export function CreateSkillCompleteView(): ReactElement {
   const { selectedAgent } = useAgents();
   const { selectedSkill } = useSkills();
   const { createEvaluation } = useSkillOptimizationEvaluations();
-  const { apiKeys, isLoading: isLoadingAPIKeys } = useAIProviderAPIKeys();
+  const { aiProviderConfigs: apiKeys, isLoading: isLoadingAPIKeys } =
+    useAIProviders();
   const { models, isLoading: isLoadingModels, setQueryParams } = useModels();
   const router = useRouter();
   const { toast } = useToast();
@@ -81,11 +54,37 @@ export function CreateSkillCompleteView(): ReactElement {
     EvaluationMethodName[]
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [evaluationMethods, setEvaluationMethods] = useState<
+    EvaluationMethodDetails[]
+  >([]);
+  const [isLoadingEvaluations, setIsLoadingEvaluations] = useState(true);
 
   // Fetch all models on mount
   useEffect(() => {
     setQueryParams({});
   }, [setQueryParams]);
+
+  // Fetch evaluation methods from server
+  useEffect(() => {
+    const fetchMethods = async () => {
+      try {
+        setIsLoadingEvaluations(true);
+        const methods = await getEvaluationMethods();
+        setEvaluationMethods(methods);
+      } catch (error) {
+        console.error('Failed to fetch evaluation methods:', error);
+        toast({
+          title: 'Failed to load evaluation methods',
+          description: 'Please try refreshing the page.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingEvaluations(false);
+      }
+    };
+
+    fetchMethods();
+  }, [toast]);
 
   const handleToggleModel = (providerId: string, modelName: string) => {
     setSelectedModels((prev) => {
@@ -175,10 +174,10 @@ export function CreateSkillCompleteView(): ReactElement {
         description: `Added ${selectedModels.length} model(s)${selectedEvaluations.length > 0 ? ` and ${selectedEvaluations.length} evaluation method(s)` : ''} to ${selectedSkill.name}.`,
       });
 
-      // Navigate to skill dashboard
+      // Navigate to skill dashboard (replace to remove setup page from history)
       if (selectedAgent && selectedSkill) {
-        router.push(
-          `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}`,
+        router.replace(
+          `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}`,
         );
       }
     } catch (error) {
@@ -197,10 +196,10 @@ export function CreateSkillCompleteView(): ReactElement {
   };
 
   const handleSkip = () => {
-    // Navigate to skill dashboard without adding anything
+    // Navigate to skill dashboard without adding anything (replace to remove setup page from history)
     if (selectedAgent && selectedSkill) {
-      router.push(
-        `/agents/${encodeURIComponent(selectedAgent.name)}/${encodeURIComponent(selectedSkill.name)}`,
+      router.replace(
+        `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}`,
       );
     }
   };
@@ -361,41 +360,61 @@ export function CreateSkillCompleteView(): ReactElement {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 border rounded-md p-3">
-                {EVALUATION_METHODS.map((method) => (
-                  <Card
-                    key={method.name}
-                    className={`cursor-pointer transition-all ${
-                      selectedEvaluations.includes(method.name)
-                        ? 'border-primary bg-primary/5'
-                        : 'hover:border-primary/50'
-                    }`}
-                    onClick={() => handleToggleEvaluation(method.name)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex gap-3">
-                        <div className="pt-0.5">
-                          <Checkbox
-                            checked={selectedEvaluations.includes(method.name)}
-                            onCheckedChange={() =>
-                              handleToggleEvaluation(method.name)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                          />
+              {isLoadingEvaluations ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : evaluationMethods.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    No evaluation methods available
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Unable to load evaluation methods. Please try again later.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 border rounded-md p-3">
+                  {evaluationMethods.map((method) => (
+                    <Card
+                      key={method.method}
+                      className={`cursor-pointer transition-all ${
+                        selectedEvaluations.includes(method.method)
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:border-primary/50'
+                      }`}
+                      onClick={() => handleToggleEvaluation(method.method)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex gap-3">
+                          <div className="pt-0.5">
+                            <Checkbox
+                              checked={selectedEvaluations.includes(
+                                method.method,
+                              )}
+                              onCheckedChange={() =>
+                                handleToggleEvaluation(method.method)
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label className="text-base font-medium cursor-pointer">
+                              {method.name}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {method.description}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <Label className="text-base font-medium cursor-pointer">
-                            {method.label}
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {method.description}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

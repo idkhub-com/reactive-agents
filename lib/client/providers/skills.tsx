@@ -137,7 +137,7 @@ export const SkillsProvider = ({
       return results.length > 0 ? results[0] : undefined;
     },
     enabled: !!navigationState.selectedSkillName && !!selectedAgent?.id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0, // Refetch immediately when invalidated
   });
 
   // Resolve selectedSkill from navigationState.selectedSkillName
@@ -178,8 +178,8 @@ export const SkillsProvider = ({
       params: SkillUpdateParams;
     }) => updateSkill(skillId, params),
     onSuccess: (updatedSkill: Skill) => {
-      // Invalidate queries to ensure consistency
-      queryClient.invalidateQueries({ queryKey: skillQueryKeys.lists() });
+      // Invalidate all skill queries to ensure UI reflects changes
+      queryClient.invalidateQueries({ queryKey: skillQueryKeys.all });
 
       toast({
         title: 'Skill updated',

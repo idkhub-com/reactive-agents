@@ -10,6 +10,8 @@ export * from './log';
 export * from './model';
 // Skill types
 export * from './skill';
+// Skill Event types
+export * from './skill-event';
 // Skill Optimization Arm types
 export * from './skill-optimization-arm';
 // Skill Optimization Cluster types

@@ -61,8 +61,6 @@ export const sseEventsMiddleware: MiddlewareHandler<AppEnv> = async (
         userId: String(userId),
         timestamp: Date.now(),
       });
-
-      console.log(`[SSE Middleware] Emitted event: ${eventType}`);
     }
   }
 };
@@ -111,7 +109,7 @@ function mapRouteToEventType(
   // AI Provider events
   if (
     normalizedPath.startsWith('/ai-providers') ||
-    normalizedPath.startsWith('/ai-provider-api-keys')
+    normalizedPath.startsWith('/ai-providers')
   ) {
     if (method === 'POST') return 'ai-provider:created';
     if (method === 'PATCH') return 'ai-provider:updated';

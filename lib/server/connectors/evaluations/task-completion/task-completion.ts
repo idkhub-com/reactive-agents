@@ -1,5 +1,8 @@
 import { evaluateLog } from '@server/connectors/evaluations/task-completion/service/evaluate';
-import { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
+import {
+  TaskCompletionEvaluationAIParameters,
+  TaskCompletionEvaluationParameters,
+} from '@server/connectors/evaluations/task-completion/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import {
   type EvaluationMethodDetails,
@@ -19,4 +22,5 @@ export const taskCompletionEvaluationConnector: EvaluationMethodConnector = {
   getDetails: () => taskCompletionMethodConfig,
   evaluateLog,
   getParameterSchema: TaskCompletionEvaluationParameters,
+  getAIParameterSchema: TaskCompletionEvaluationAIParameters,
 };

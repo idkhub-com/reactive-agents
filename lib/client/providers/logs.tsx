@@ -3,7 +3,7 @@ import { queryLogs } from '@client/api/v1/reactive-agents/observability/logs';
 import { useToast } from '@client/hooks/use-toast';
 import { useNavigation } from '@client/providers/navigation';
 import { type Log, LogsQueryParams } from '@shared/types/data/log';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
 import {
   createContext,
@@ -29,9 +29,11 @@ interface LogsContextType {
   setSkillId: (skillId: string | null) => void;
 
   // Pagination
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  fetchNextPage: () => void;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
 
   // Helper functions
   getLogById: (id: string) => Log | undefined;
@@ -44,8 +46,12 @@ const LogsContext = createContext<LogsContextType | undefined>(undefined);
 export const logsQueryKeys = {
   all: ['logs'] as const,
   lists: () => [...logsQueryKeys.all, 'list'] as const,
-  list: (agentId: string | null, skillId: string | null) =>
-    [...logsQueryKeys.lists(), agentId, skillId] as const,
+  list: (
+    agentId: string | null,
+    skillId: string | null,
+    page: number,
+    pageSize: number,
+  ) => [...logsQueryKeys.lists(), agentId, skillId, page, pageSize] as const,
 };
 
 export const LogsProvider = ({
@@ -59,41 +65,48 @@ export const LogsProvider = ({
 
   const [agentId, setAgentId] = useState<string | null>(null);
   const [skillId, setSkillId] = useState<string | null>(null);
+  const [page, setPage] = useState(1); // Pages are 1-indexed for display
+  const [pageSize, setPageSize] = useState(50);
 
-  // Logs infinite query for pagination
+  // Reset page to 1 when agent/skill changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally reset page when agentId or skillId changes
+  useEffect(() => {
+    setPage(1);
+  }, [agentId, skillId]);
+
+  // Logs query with pagination
   const {
     data: logs = [],
     isLoading,
     error,
     refetch,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  } = useInfiniteQuery({
-    queryKey: logsQueryKeys.list(agentId, skillId),
-    queryFn: async ({ pageParam = 0 }) => {
+  } = useQuery({
+    queryKey: logsQueryKeys.list(agentId, skillId, page, pageSize),
+    queryFn: async () => {
       if (!agentId || !skillId) return [];
+      const offset = (page - 1) * pageSize;
       return await queryLogs(
         LogsQueryParams.parse({
           agent_id: agentId,
           skill_id: skillId,
-          limit: '50',
-          offset: String(pageParam),
+          limit: String(pageSize),
+          offset: String(offset),
         }),
       );
     },
-    select: (data) => data?.pages?.flat() ?? [],
-    getNextPageParam: (lastPage, allPages) => {
-      const currentLength = allPages.flat().length;
-      const limit = 50;
-      if (lastPage.length < limit) {
-        return undefined;
-      }
-      return currentLength;
-    },
-    initialPageParam: 0,
     enabled: !!agentId && !!skillId, // Only fetch when we have both IDs
   });
+
+  // Calculate total pages (approximate based on current page results)
+  const totalPages = useMemo(() => {
+    if (logs.length < pageSize) {
+      // If we got fewer results than pageSize, this is the last page
+      return page;
+    }
+    // We don't know the exact total, but we know there's at least one more page
+    // This is a limitation of offset-based pagination without total count
+    return page + 1;
+  }, [logs.length, page, pageSize]);
 
   // Resolve selectedLog from navigationState.logId
   const selectedLog = useMemo(() => {
@@ -138,9 +151,11 @@ export const LogsProvider = ({
     setSkillId,
 
     // Pagination
-    hasNextPage: hasNextPage ?? false,
-    isFetchingNextPage,
-    fetchNextPage,
+    page,
+    pageSize,
+    totalPages,
+    setPage,
+    setPageSize,
 
     // Helper functions
     getLogById,

@@ -1,7 +1,4 @@
-import {
-  autoClusterSkill,
-  updateClusterState,
-} from '@server/middlewares/optimizer/clusters';
+import { autoClusterSkill } from '@server/middlewares/optimizer/clusters';
 import {
   addSkillOptimizationEvaluationRun,
   checkAndRegenerateEvaluationsEarly,
@@ -104,6 +101,7 @@ interface ProcessLogsParams {
   agent: Agent;
   skill: Skill;
   startTime: number;
+  firstTokenTime?: number;
   aiProviderLog: AIProviderRequestLog;
   embedding: number[] | null;
   hookLogs: HookLog[];
@@ -124,6 +122,7 @@ async function processLogs({
   agent,
   skill,
   startTime,
+  firstTokenTime,
   aiProviderLog,
   embedding,
   hookLogs,
@@ -131,7 +130,11 @@ async function processLogs({
   userDataStorageConnector,
   evaluationConnectorsMap,
   pulledArm,
-}: ProcessLogsParams): Promise<SkillOptimizationEvaluationResult[]> {
+}: ProcessLogsParams): Promise<{
+  evaluationResults: SkillOptimizationEvaluationResult[];
+  logId: string | null;
+  evaluationsPromise?: Promise<SkillOptimizationEvaluationResult[]>;
+}> {
   const endTime = Date.now();
   const duration = endTime - startTime;
 
@@ -140,7 +143,7 @@ async function processLogs({
 
   if (!('model' in aiProviderLog.request_body)) {
     error('No model found in request body');
-    return [];
+    return { evaluationResults: [], logId: null };
   }
 
   const createParams: LogCreateParams = {
@@ -148,6 +151,7 @@ async function processLogs({
     skill_id: skill.id,
     cluster_id: pulledArm?.cluster_id,
     start_time: startTime,
+    first_token_time: firstTokenTime,
     end_time: endTime,
     duration: duration,
     trace_id: raConfig.trace_id,
@@ -190,38 +194,53 @@ async function processLogs({
   try {
     const insertedLog = await logsStorageConnector.createLog(createParams);
 
-    // Emit SSE event for real-time log updates
+    // Emit SSE event for real-time log updates with full log data
     emitSSEEvent('log:created', {
-      logId: insertedLog.id,
-      agentId: agent.id,
-      skillId: skill.id,
+      log: insertedLog,
     });
 
-    // Trigger evaluations if conditions are met
+    // Trigger evaluations asynchronously (non-blocking) if conditions are met
     if (
       shouldTriggerRealtimeEvaluation(status, url) &&
       userDataStorageConnector &&
       evaluationConnectorsMap
     ) {
-      const evaluations =
-        await userDataStorageConnector.getSkillOptimizationEvaluations({
-          agent_id: skill.agent_id,
-          skill_id: skill.id,
-        });
+      // Run evaluations in the background without blocking log creation
+      const evaluationsPromise: Promise<SkillOptimizationEvaluationResult[]> =
+        Promise.resolve(
+          userDataStorageConnector.getSkillOptimizationEvaluations({
+            agent_id: skill.agent_id,
+            skill_id: skill.id,
+          }),
+        )
+          .then((evaluations) => {
+            if (evaluations.length > 0) {
+              return runEvaluationsForLog(
+                insertedLog,
+                evaluations,
+                evaluationConnectorsMap,
+              );
+            }
+            return [];
+          })
+          .catch((e: unknown) => {
+            error('Error running evaluations for log', e);
+            return [];
+          });
 
-      if (evaluations.length > 0) {
-        const results = await runEvaluationsForLog(
-          insertedLog,
-          evaluations,
-          evaluationConnectorsMap,
-        );
-        return results;
-      }
+      // Return promise for background processing
+      return {
+        evaluationResults: [],
+        logId: insertedLog.id,
+        evaluationsPromise,
+      };
     }
+
+    return { evaluationResults: [], logId: insertedLog.id };
   } catch (e) {
     error('Error creating log', e);
   }
-  return [];
+  return { evaluationResults: [], logId: null };
 }
 
 const shouldLogRequest = (url: URL): boolean => {
@@ -241,18 +260,63 @@ const shouldLogRequest = (url: URL): boolean => {
 async function processLogsAndOptimizeSkill(
   processLogsParams: ProcessLogsParams,
 ) {
-  const evaluationResults = await processLogs(processLogsParams);
-  if (evaluationResults.length > 0 && processLogsParams.pulledArm) {
-    await updatePulledArm(
-      processLogsParams.userDataStorageConnector,
-      processLogsParams.pulledArm,
-      evaluationResults,
-    );
-    await addSkillOptimizationEvaluationRun(
-      processLogsParams.userDataStorageConnector,
-      processLogsParams.pulledArm,
-      evaluationResults,
-    );
+  const { evaluationResults, logId, evaluationsPromise } =
+    await processLogs(processLogsParams);
+
+  // If we pulled an arm, handle arm updates and optimization
+  if (processLogsParams.pulledArm) {
+    // If evaluations are running in the background, wait for them and update the arm
+    if (evaluationsPromise && logId) {
+      evaluationsPromise
+        .then(async (results) => {
+          if (results.length > 0 && processLogsParams.pulledArm) {
+            // Update arm stats with real scores
+            await updatePulledArm(
+              processLogsParams.userDataStorageConnector,
+              processLogsParams.pulledArm,
+              results,
+            );
+            await addSkillOptimizationEvaluationRun(
+              processLogsParams.userDataStorageConnector,
+              processLogsParams.pulledArm,
+              logId,
+              results,
+            );
+          }
+        })
+        .catch((e: unknown) => {
+          error('Error updating arm with evaluation results', e);
+          // Still emit SSE event so client knows a request was processed
+          if (processLogsParams.pulledArm) {
+            emitSSEEvent('skill-optimization:arm-updated', {
+              armId: processLogsParams.pulledArm.id,
+              skillId: processLogsParams.pulledArm.skill_id,
+              clusterId: processLogsParams.pulledArm.cluster_id,
+            });
+          }
+        });
+    } else if (evaluationResults.length > 0 && logId) {
+      // We have synchronous evaluation results - update arm stats with real scores
+      await updatePulledArm(
+        processLogsParams.userDataStorageConnector,
+        processLogsParams.pulledArm,
+        evaluationResults,
+      );
+      await addSkillOptimizationEvaluationRun(
+        processLogsParams.userDataStorageConnector,
+        processLogsParams.pulledArm,
+        logId,
+        evaluationResults,
+      );
+    } else {
+      // No evaluation results (evaluations failed or not configured)
+      // Still emit SSE event so client knows a request was processed
+      emitSSEEvent('skill-optimization:arm-updated', {
+        armId: processLogsParams.pulledArm.id,
+        skillId: processLogsParams.pulledArm.skill_id,
+        clusterId: processLogsParams.pulledArm.cluster_id,
+      });
+    }
 
     // Check if we should regenerate evaluations early (after first 5 requests)
     if (processLogsParams.evaluationConnectorsMap) {
@@ -262,17 +326,9 @@ async function processLogsAndOptimizeSkill(
         processLogsParams.logsStorageConnector,
         processLogsParams.skill,
         processLogsParams.agent.description,
-        processLogsParams.evaluationConnectorsMap as Record<
-          string,
-          EvaluationMethodConnector
-        >,
+        processLogsParams.evaluationConnectorsMap,
       );
     }
-
-    await updateClusterState(
-      processLogsParams.userDataStorageConnector,
-      processLogsParams.pulledArm,
-    );
     await autoClusterSkill(
       processLogsParams.functionName,
       processLogsParams.userDataStorageConnector,
@@ -329,6 +385,7 @@ export const logsMiddleware = (
       agent: c.get('agent'),
       skill: c.get('skill'),
       startTime,
+      firstTokenTime: c.get('first_token_time'),
       aiProviderLog,
       embedding: c.get('embedding'),
       hookLogs,

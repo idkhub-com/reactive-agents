@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockParams: { agentName?: string } = {};
 const mockPathname = { current: '/agents' };
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -28,7 +29,7 @@ vi.mock('next/navigation', () => ({
         // ignore
       }
     },
-    replace: vi.fn(),
+    replace: mockReplace,
     refresh: vi.fn(),
     forward: vi.fn(),
     prefetch: vi.fn().mockResolvedValue(undefined),
@@ -170,6 +171,7 @@ describe('CreateSkillView', () => {
     });
     vi.clearAllMocks();
     mockPush.mockClear();
+    mockReplace.mockClear();
     localStorageMock.clear();
     window.location.hash = '';
     // Reset mock navigation state
@@ -691,8 +693,8 @@ describe('CreateSkillView', () => {
 
     // Override the mock to test navigation
     mockCreateSkill.mockImplementation(() => {
-      // Simulate the navigation that happens in onSubmit
-      mockPush('/agents/Test%20Agent%201/test-skill/setup');
+      // Simulate the navigation that happens in onSubmit (using replace to avoid back button issue)
+      mockReplace('/agents/Test%20Agent%201/test-skill/setup');
       return Promise.resolve(createdSkill);
     });
 
@@ -721,8 +723,8 @@ describe('CreateSkillView', () => {
       });
     });
 
-    // Verify the navigation was called correctly
-    expect(mockPush).toHaveBeenCalledWith(
+    // Verify the navigation was called correctly (using replace to avoid back button issue)
+    expect(mockReplace).toHaveBeenCalledWith(
       '/agents/Test%20Agent%201/test-skill/setup',
     );
   });

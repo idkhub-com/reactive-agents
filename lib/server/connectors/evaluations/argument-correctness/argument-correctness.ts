@@ -1,4 +1,7 @@
-import { ArgumentCorrectnessEvaluationParameters } from '@server/connectors/evaluations/argument-correctness/types';
+import {
+  ArgumentCorrectnessEvaluationAIParameters,
+  ArgumentCorrectnessEvaluationParameters,
+} from '@server/connectors/evaluations/argument-correctness/types';
 import type { EvaluationMethodConnector } from '@server/types/connector';
 import {
   type EvaluationMethodDetails,
@@ -18,4 +21,5 @@ export const argumentCorrectnessEvaluationConnector: EvaluationMethodConnector =
     getDetails: () => methodConfig,
     evaluateLog,
     getParameterSchema: ArgumentCorrectnessEvaluationParameters,
+    getAIParameterSchema: ArgumentCorrectnessEvaluationAIParameters,
   };

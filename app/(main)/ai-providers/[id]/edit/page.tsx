@@ -3,15 +3,16 @@
 import { APIKeyForm } from '@client/components/ai-providers';
 import { Skeleton } from '@client/components/ui/skeleton';
 import {
-  AIProviderAPIKeysProvider,
-  useAIProviderAPIKeys,
-} from '@client/providers/ai-provider-api-keys';
+  AIProvidersProvider,
+  useAIProviders,
+} from '@client/providers/ai-providers';
+
 import { useParams } from 'next/navigation';
 import type { ReactElement } from 'react';
 
 function EditAPIKeyContent(): ReactElement {
   const params = useParams();
-  const { getAPIKeyById, isLoading } = useAIProviderAPIKeys();
+  const { getAPIKeyById, isLoading } = useAIProviders();
 
   const apiKeyId = params.id as string;
   const apiKey = getAPIKeyById(apiKeyId);
@@ -48,8 +49,8 @@ function EditAPIKeyContent(): ReactElement {
 
 export default function EditAPIKeyPage(): ReactElement {
   return (
-    <AIProviderAPIKeysProvider>
+    <AIProvidersProvider>
       <EditAPIKeyContent />
-    </AIProviderAPIKeysProvider>
+    </AIProvidersProvider>
   );
 }

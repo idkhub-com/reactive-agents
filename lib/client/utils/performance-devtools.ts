@@ -37,9 +37,18 @@ export function setupPerformanceDevTools() {
     getMetrics: () => {
       try {
         const stored = localStorage.getItem(METRICS_KEY);
-        return stored ? JSON.parse(stored) : [];
+        if (!stored || stored.trim() === '') {
+          return [];
+        }
+        return JSON.parse(stored);
       } catch (error) {
         console.error('Failed to get metrics:', error);
+        // Clear corrupted data
+        try {
+          localStorage.removeItem(METRICS_KEY);
+        } catch {
+          // Ignore cleanup errors
+        }
         return [];
       }
     },

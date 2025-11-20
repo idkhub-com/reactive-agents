@@ -1,10 +1,13 @@
 import { zValidator } from '@hono/zod-validator';
+import { handleGenerateArms } from '@server/optimization/skill-optimizations';
 import type { AppEnv } from '@server/types/hono';
+import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import {
   ModelCreateParams,
   ModelQueryParams,
   ModelUpdateParams,
 } from '@shared/types/data/model';
+import { SkillEventType } from '@shared/types/data/skill-event';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -77,7 +80,52 @@ export const modelsRouter = new Hono<AppEnv>()
       const userDataStorageConnector = c.get('user_data_storage_connector');
       const { id } = c.req.valid('param');
 
+      // Find all skills using this model
+      const affectedSkills =
+        await userDataStorageConnector.getSkillsByModelId(id);
+
+      // For each affected skill, remove the model and create an event
+      for (const skill of affectedSkills) {
+        // Remove the model from the skill
+        await userDataStorageConnector.removeModelsFromSkill(skill.id, [id]);
+
+        // Create MODEL_REMOVED event
+        await userDataStorageConnector.createSkillEvent({
+          agent_id: skill.agent_id,
+          skill_id: skill.id,
+          cluster_id: null,
+          event_type: SkillEventType.MODEL_REMOVED,
+          metadata: {
+            model_id: id,
+          },
+        });
+
+        // Emit SSE event for skill update (models changed)
+        emitSSEEvent('skill:updated', {
+          skillId: skill.id,
+          agentId: skill.agent_id,
+          reason: 'model_removed',
+        });
+
+        // Check if skill still has models
+        const remainingModels = await userDataStorageConnector.getSkillModels(
+          skill.id,
+        );
+
+        // If skill still has models, regenerate arms to use remaining models
+        if (remainingModels.length > 0) {
+          await handleGenerateArms(c, userDataStorageConnector, skill.id);
+        }
+      }
+
+      // Delete the model
       await userDataStorageConnector.deleteModel(id);
+
+      // Emit SSE event for model deletion
+      emitSSEEvent('model:deleted', {
+        modelId: id,
+      });
+
       return c.json({ success: true });
     },
   );
