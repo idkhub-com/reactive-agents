@@ -50,33 +50,7 @@ const response1 = await client
     },
   });
 
-let content = response1.choices[0]?.message?.content || '{}';
-
-// Handle Anthropic-style JSON mode responses
-// Anthropic may return just the tool name or include it in the content
-if (typeof content === 'string' && content.includes('__json_output')) {
-  // Try to extract JSON after "__json_output" (with optional newline)
-  const jsonMatch = content.match(/__json_output\s*\n?\s*(\{[\s\S]*\})/);
-  const jsonBody = jsonMatch?.[1];
-  if (jsonBody) {
-    content = jsonBody.trim();
-  }
-}
-
-// If content is just the tool name, try to extract from tool_calls
-if (content === '__json_output' && response1.choices[0]?.message?.tool_calls) {
-  const jsonToolCall = response1.choices[0].message.tool_calls.find(
-    (tc: OpenAI.ChatCompletionMessageToolCall) =>
-      'function' in tc && tc.function?.name === '__json_output',
-  );
-  if (
-    jsonToolCall &&
-    'function' in jsonToolCall &&
-    jsonToolCall.function?.arguments
-  ) {
-    content = jsonToolCall.function.arguments;
-  }
-}
-
-const agentResponse = JSON.parse(content);
+const agentResponse = JSON.parse(
+  response1.choices[0]?.message?.content || '{}',
+);
 logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));
