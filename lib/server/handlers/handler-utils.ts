@@ -486,18 +486,6 @@ export async function tryPost(
               overriddenReactiveAgentsRequestData,
             )
           : overriddenReactiveAgentsRequestBody;
-
-      // Debug logging for Anthropic JSON mode
-      if (
-        raTarget.configuration.ai_provider === 'anthropic' &&
-        overriddenReactiveAgentsRequestData.requestBody &&
-        'response_format' in overriddenReactiveAgentsRequestData.requestBody
-      ) {
-        console.log(
-          '[DEBUG] Anthropic request body being sent:',
-          JSON.stringify(aiProviderRequestBody, null, 2),
-        );
-      }
     }
 
     const apiConfigHeaders = await apiConfig.headers({
