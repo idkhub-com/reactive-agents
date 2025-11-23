@@ -216,6 +216,25 @@ export async function tryPost(
       ...overrideParams,
     } as ReactiveAgentsRequestBody;
 
+    // Helper to generate JSON schema instructions for response_format
+    const getJsonSchemaInstructions = (
+      responseFormat: ChatCompletionRequestBody['response_format'],
+    ): string => {
+      if (!responseFormat) return '';
+
+      if (responseFormat.type === 'json_schema') {
+        const schema =
+          responseFormat.json_schema?.schema ?? responseFormat.json_schema;
+        if (schema && typeof schema === 'object') {
+          return `\n\nIMPORTANT: You must output your response as a JSON object that strictly conforms to the following schema:\n\n${JSON.stringify(schema, null, 2)}\n\nEnsure every required field is present with the correct type and format. Use the __json_output tool to provide your response.`;
+        }
+      } else if (responseFormat.type === 'json_object') {
+        return '\n\nIMPORTANT: You must output your response as a valid JSON object. Use the __json_output tool to provide your response.';
+      }
+
+      return '';
+    };
+
     if (
       raTarget.configuration.system_prompt &&
       (raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE ||
@@ -223,7 +242,13 @@ export async function tryPost(
         raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
     ) {
       // Handle system prompt with template variables
-      const systemPrompt = raTarget.configuration.system_prompt;
+      let systemPrompt = raTarget.configuration.system_prompt;
+
+      // Augment system prompt with JSON schema instructions if response_format is present
+      const responseFormat = (
+        overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+      ).response_format;
+      systemPrompt += getJsonSchemaInstructions(responseFormat);
 
       // Add system prompt if not overridden by the user
       switch (raRequestData.functionName) {
@@ -294,6 +319,46 @@ export async function tryPost(
             overriddenReactiveAgentsRequestBody as Record<string, unknown>
           ).input = input;
         }
+      }
+    } else if (
+      !raTarget.configuration.system_prompt &&
+      (raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+        raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
+    ) {
+      // If there's no system prompt from the optimization arm,
+      // we still need to augment any existing system message in the user's request
+      // with JSON schema instructions if response_format is present
+      const responseFormat = (
+        overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+      ).response_format;
+      const jsonInstructions = getJsonSchemaInstructions(responseFormat);
+
+      if (jsonInstructions) {
+        const messages = (
+          overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+        ).messages;
+
+        // Find existing system message
+        const systemMessageIndex = messages.findIndex(
+          (msg) => msg.role === ChatCompletionMessageRole.SYSTEM,
+        );
+
+        if (systemMessageIndex >= 0) {
+          // Augment existing system message
+          const existingContent = messages[systemMessageIndex].content || '';
+          messages[systemMessageIndex].content =
+            existingContent + jsonInstructions;
+        } else {
+          // Create new system message with just the JSON instructions
+          messages.unshift({
+            role: ChatCompletionMessageRole.SYSTEM,
+            content: jsonInstructions.trim(),
+          });
+        }
+
+        (
+          overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+        ).messages = messages;
       }
     }
 

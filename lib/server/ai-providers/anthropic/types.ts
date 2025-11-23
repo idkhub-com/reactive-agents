@@ -6,14 +6,15 @@ export interface AnthropicTool {
   description: string;
   input_schema: {
     type: string;
-    properties: Record<
+    properties?: Record<
       string,
       {
         type: string;
         description: string;
       }
     >;
-    required: string[];
+    required?: string[];
+    additionalProperties?: boolean;
   };
 }
 
@@ -43,6 +44,7 @@ export interface AnthropicUrlImageContentItem {
 export interface AnthropicTextContentItem {
   type: 'text';
   text: string;
+  cache_control?: { type: 'ephemeral' };
 }
 
 export interface AnthropicUrlPdfContentItem {
@@ -95,11 +97,6 @@ export interface AnthropicErrorResponse {
   error: AnthropicErrorObject;
 }
 
-export interface AnthropicTextContentItem {
-  type: 'text';
-  text: string;
-}
-
 export interface AnthropicToolContentItem {
   type: 'tool_use';
   name: string;
@@ -129,4 +126,6 @@ export type AnthropicStreamState = {
     cache_creation_input_tokens?: number;
   };
   model?: string;
+  jsonOutputToolId?: string;
+  jsonOutputToolIndex?: number;
 };

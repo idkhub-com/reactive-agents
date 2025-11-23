@@ -77,12 +77,25 @@ const transformAssistantMessage = (
   }
   if (msg.tool_calls && msg.tool_calls.length > 0) {
     msg.tool_calls.forEach((toolCall: ChatCompletionToolCall) => {
-      transformedContent.push({
-        type: 'tool_use',
-        name: toolCall.function.name,
-        id: toolCall.id,
-        input: JSON.parse(toolCall.function.arguments),
-      });
+      try {
+        transformedContent.push({
+          type: 'tool_use',
+          name: toolCall.function.name,
+          id: toolCall.id,
+          input: JSON.parse(toolCall.function.arguments),
+        });
+      } catch (error) {
+        // If JSON parsing fails, use the arguments as a string wrapped in an object
+        console.warn(
+          `Failed to parse tool call arguments for ${toolCall.function.name}: ${error}`,
+        );
+        transformedContent.push({
+          type: 'tool_use',
+          name: toolCall.function.name,
+          id: toolCall.id,
+          input: { raw_arguments: toolCall.function.arguments },
+        });
+      }
     });
   }
   return {
@@ -175,11 +188,269 @@ const transformAndAppendFileContentItem = (
   }
 };
 
+/**
+ * Recursively converts a JSON schema to Anthropic's tool input schema format.
+ * Handles nested objects, arrays, enums, patterns, and other JSON schema features.
+ */
+const convertJsonSchemaToAnthropicSchema = (
+  schema: Record<string, unknown>,
+): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+
+  // Copy over basic type information
+  if (schema.type) {
+    result.type = schema.type;
+  }
+
+  // Handle description
+  if (schema.description) {
+    result.description = schema.description;
+  }
+
+  // Handle enum values
+  if (schema.enum && Array.isArray(schema.enum)) {
+    result.enum = schema.enum;
+  }
+
+  // Handle const values
+  if ('const' in schema) {
+    result.const = schema.const;
+  }
+
+  // Handle pattern for strings
+  if (schema.pattern && typeof schema.pattern === 'string') {
+    result.pattern = schema.pattern;
+  }
+
+  // Handle format
+  if (schema.format && typeof schema.format === 'string') {
+    result.format = schema.format;
+  }
+
+  // Handle numeric constraints
+  if (typeof schema.minimum === 'number') {
+    result.minimum = schema.minimum;
+  }
+  if (typeof schema.maximum === 'number') {
+    result.maximum = schema.maximum;
+  }
+  if (typeof schema.exclusiveMinimum === 'number') {
+    result.exclusiveMinimum = schema.exclusiveMinimum;
+  }
+  if (typeof schema.exclusiveMaximum === 'number') {
+    result.exclusiveMaximum = schema.exclusiveMaximum;
+  }
+
+  // Handle string constraints
+  if (typeof schema.minLength === 'number') {
+    result.minLength = schema.minLength;
+  }
+  if (typeof schema.maxLength === 'number') {
+    result.maxLength = schema.maxLength;
+  }
+
+  // Handle array constraints
+  if (typeof schema.minItems === 'number') {
+    result.minItems = schema.minItems;
+  }
+  if (typeof schema.maxItems === 'number') {
+    result.maxItems = schema.maxItems;
+  }
+  if (typeof schema.uniqueItems === 'boolean') {
+    result.uniqueItems = schema.uniqueItems;
+  }
+
+  // Handle nested properties (for objects)
+  if (schema.properties && typeof schema.properties === 'object') {
+    const properties: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(schema.properties)) {
+      if (typeof value === 'object' && value !== null) {
+        properties[key] = convertJsonSchemaToAnthropicSchema(
+          value as Record<string, unknown>,
+        );
+      }
+    }
+    if (Object.keys(properties).length > 0) {
+      result.properties = properties;
+    }
+  }
+
+  // Handle required fields
+  if (schema.required && Array.isArray(schema.required)) {
+    result.required = schema.required;
+  }
+
+  // Handle additionalProperties
+  if ('additionalProperties' in schema) {
+    if (typeof schema.additionalProperties === 'boolean') {
+      result.additionalProperties = schema.additionalProperties;
+    } else if (
+      typeof schema.additionalProperties === 'object' &&
+      schema.additionalProperties !== null
+    ) {
+      result.additionalProperties = convertJsonSchemaToAnthropicSchema(
+        schema.additionalProperties as Record<string, unknown>,
+      );
+    }
+  }
+
+  // Handle array items
+  if (schema.items) {
+    if (typeof schema.items === 'object' && schema.items !== null) {
+      if (Array.isArray(schema.items)) {
+        // Tuple validation (array of schemas)
+        result.items = schema.items.map((item) => {
+          if (typeof item === 'object' && item !== null) {
+            return convertJsonSchemaToAnthropicSchema(
+              item as Record<string, unknown>,
+            );
+          }
+          return item;
+        });
+      } else {
+        // Single schema for all items
+        result.items = convertJsonSchemaToAnthropicSchema(
+          schema.items as Record<string, unknown>,
+        );
+      }
+    }
+  }
+
+  // Handle anyOf, oneOf, allOf
+  if (schema.anyOf && Array.isArray(schema.anyOf)) {
+    result.anyOf = schema.anyOf.map((subSchema) => {
+      if (typeof subSchema === 'object' && subSchema !== null) {
+        return convertJsonSchemaToAnthropicSchema(
+          subSchema as Record<string, unknown>,
+        );
+      }
+      return subSchema;
+    });
+  }
+
+  if (schema.oneOf && Array.isArray(schema.oneOf)) {
+    result.oneOf = schema.oneOf.map((subSchema) => {
+      if (typeof subSchema === 'object' && subSchema !== null) {
+        return convertJsonSchemaToAnthropicSchema(
+          subSchema as Record<string, unknown>,
+        );
+      }
+      return subSchema;
+    });
+  }
+
+  if (schema.allOf && Array.isArray(schema.allOf)) {
+    result.allOf = schema.allOf.map((subSchema) => {
+      if (typeof subSchema === 'object' && subSchema !== null) {
+        return convertJsonSchemaToAnthropicSchema(
+          subSchema as Record<string, unknown>,
+        );
+      }
+      return subSchema;
+    });
+  }
+
+  // Handle not
+  if (schema.not && typeof schema.not === 'object') {
+    result.not = convertJsonSchemaToAnthropicSchema(
+      schema.not as Record<string, unknown>,
+    );
+  }
+
+  // Handle default values
+  if ('default' in schema) {
+    result.default = schema.default;
+  }
+
+  return result;
+};
+
+// Helper to create a JSON output tool for response_format
+const createJsonOutputTool = (
+  responseFormat: ChatCompletionRequestBody['response_format'],
+): AnthropicTool | null => {
+  if (!responseFormat) return null;
+
+  if (responseFormat.type === 'json_object') {
+    // Simple JSON object - any valid JSON object
+    // Use additionalProperties to allow any JSON structure
+    return {
+      name: '__json_output',
+      description:
+        'Output the response as a JSON object. This tool must be called with a valid JSON object. The entire input should be the JSON object you want to output.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: true,
+      },
+    };
+  } else if (responseFormat.type === 'json_schema') {
+    // Use the provided JSON schema
+    const schema =
+      responseFormat.json_schema?.schema ?? responseFormat.json_schema;
+    if (!schema || typeof schema !== 'object') return null;
+
+    // Convert the schema using comprehensive transformation
+    const convertedSchema = convertJsonSchemaToAnthropicSchema(
+      schema as Record<string, unknown>,
+    );
+
+    // Ensure we have at least a type field for the input schema
+    const inputSchema = {
+      type: (convertedSchema.type as string) || 'object',
+      ...convertedSchema,
+    };
+
+    return {
+      name: '__json_output',
+      description:
+        'Output the response as a JSON object matching the specified schema. This tool must be called with a valid JSON object that conforms to the schema.',
+      input_schema: inputSchema,
+    };
+  }
+
+  return null;
+};
+
+// Helper to get JSON mode system prompt instruction
+const getJsonModeSystemPrompt = (
+  responseFormat: ChatCompletionRequestBody['response_format'],
+): string => {
+  if (!responseFormat) return '';
+
+  if (responseFormat.type === 'json_object') {
+    return '\n\nIMPORTANT: You must respond by calling the __json_output tool with a valid JSON object. Do not include any text outside of the tool call.';
+  } else if (responseFormat.type === 'json_schema') {
+    return '\n\nIMPORTANT: You must respond by calling the __json_output tool with a JSON object that matches the specified schema. Do not include any text outside of the tool call.';
+  }
+
+  return '';
+};
+
+// Map model names with -latest suffix to valid versioned model names
+// Anthropic API requires specific version dates, not -latest aliases
+// Note: Model availability depends on API key permissions and account access
+const mapModelNameToVersioned = (modelName: string): string => {
+  // Map common -latest aliases to their most recent valid versions
+  // Users may need to check their API key permissions if models are not found
+  const modelMappings: Record<string, string> = {
+    'claude-3-5-sonnet-latest': 'claude-3-5-sonnet-20241022', // October 2024 version
+    'claude-3-opus-latest': 'claude-3-opus-20240229',
+    'claude-3-haiku-latest': 'claude-3-haiku-20240307',
+    'claude-3-sonnet-latest': 'claude-3-sonnet-20240229',
+  };
+
+  return modelMappings[modelName] || modelName;
+};
+
 export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
   model: {
     param: 'model',
     default: 'claude-2.1',
     required: true,
+    transform: (raRequestBody: ChatCompletionRequestBody): string => {
+      const modelName = raRequestBody.model || 'claude-2.1';
+      return mapModelNameToVersioned(modelName);
+    },
   },
   messages: [
     {
@@ -272,6 +543,33 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
             }
           });
         }
+
+        // Append JSON mode instruction if response_format is specified
+        const jsonModeInstruction = getJsonModeSystemPrompt(
+          raRequestBody.response_format,
+        );
+        if (jsonModeInstruction) {
+          // If there are existing system messages, append to the last one
+          // Otherwise, create a new system message
+          if (systemMessages.length > 0) {
+            const lastMessage = systemMessages[systemMessages.length - 1];
+            if (lastMessage.type === 'text' && 'text' in lastMessage) {
+              lastMessage.text += jsonModeInstruction;
+            } else {
+              // If last message is not text, add a new text message
+              systemMessages.push({
+                text: jsonModeInstruction.trim(),
+                type: 'text',
+              });
+            }
+          } else {
+            systemMessages.push({
+              text: jsonModeInstruction.trim(),
+              type: 'text',
+            });
+          }
+        }
+
         return systemMessages as unknown as Record<string, unknown>[];
       },
     },
@@ -307,6 +605,15 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
           }
         });
       }
+
+      // Add JSON output tool if response_format is specified
+      const jsonOutputTool = createJsonOutputTool(
+        raRequestBody.response_format,
+      );
+      if (jsonOutputTool) {
+        tools.push(jsonOutputTool);
+      }
+
       return tools as unknown as Record<string, unknown>[];
     },
   },
@@ -317,6 +624,15 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
     transform: (
       raRequestBody: ChatCompletionRequestBody,
     ): { type: 'tool' | 'any' | 'auto'; name?: string } | null => {
+      // If response_format is specified, require the JSON output tool
+      // unless the user has explicitly set a different tool_choice
+      if (raRequestBody.response_format && !raRequestBody.tool_choice) {
+        return {
+          type: 'tool',
+          name: '__json_output',
+        };
+      }
+
       if (raRequestBody.tool_choice) {
         if (typeof raRequestBody.tool_choice === 'string') {
           if (raRequestBody.tool_choice === 'required') return { type: 'any' };
@@ -470,25 +786,71 @@ export const anthropicChatCompleteResponseTransform: ResponseTransformFunction =
         cache_creation_input_tokens || cache_read_input_tokens;
 
       let content = '';
+      let jsonOutputExtracted = false;
+
+      // Check for __json_output tool call first (for JSON mode)
       response.content.forEach((item) => {
-        if (item.type === 'text') {
-          content += item.text;
+        if (item.type === 'tool_use' && item.name === '__json_output') {
+          // Extract JSON from the tool input
+          // The tool input is the JSON object itself (for both json_object and json_schema)
+          content = JSON.stringify(item.input);
+          jsonOutputExtracted = true;
         }
       });
 
+      // If no JSON output tool was found, collect text content as usual
+      if (!jsonOutputExtracted) {
+        response.content.forEach((item) => {
+          if (item.type === 'text') {
+            content += item.text;
+          }
+        });
+      }
+
       const toolCalls: ChatCompletionToolCall[] = [];
+      let jsonOutputToolInput: unknown;
       response.content.forEach((item) => {
         if (item.type === 'tool_use') {
-          toolCalls.push({
-            id: item.id,
-            type: 'function',
-            function: {
-              name: item.name,
-              arguments: JSON.stringify(item.input),
-            },
-          });
+          // Exclude __json_output tool call from tool_calls array
+          // since it's used internally for JSON mode
+          if (item.name !== '__json_output') {
+            toolCalls.push({
+              id: item.id,
+              type: 'function',
+              function: {
+                name: item.name,
+                arguments: JSON.stringify(item.input),
+              },
+            });
+          } else {
+            // Store the __json_output tool input for the parsed field
+            jsonOutputToolInput = item.input;
+          }
         }
       });
+
+      // Build message object with optional fields
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic message construction requires flexibility
+      const message: any = {
+        role: ChatCompletionMessageRole.ASSISTANT,
+        content,
+      };
+
+      if (!strictOpenAiCompliance) {
+        message.content_blocks = response.content.filter(
+          (item) => item.type !== 'tool_use',
+        );
+      }
+
+      if (toolCalls.length) {
+        message.tool_calls = toolCalls;
+      }
+
+      // Add parsed field when JSON output was extracted via tool
+      // This is required for OpenAI SDK's .parse() method to work
+      if (jsonOutputExtracted && jsonOutputToolInput !== undefined) {
+        message.parsed = jsonOutputToolInput;
+      }
 
       const responseObject: ChatCompletionResponseBody = {
         id: response.id,
@@ -497,16 +859,7 @@ export const anthropicChatCompleteResponseTransform: ResponseTransformFunction =
         model: response.model,
         choices: [
           {
-            message: {
-              role: ChatCompletionMessageRole.ASSISTANT,
-              content,
-              ...(!strictOpenAiCompliance && {
-                content_blocks: response.content.filter(
-                  (item) => item.type !== 'tool_use',
-                ),
-              }),
-              tool_calls: toolCalls.length ? toolCalls : undefined,
-            },
+            message,
             index: 0,
             logprobs: null,
             finish_reason: mapStopReasonToFinishReason(response.stop_reason),
@@ -647,6 +1000,7 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
     }
 
     const toolCalls = [];
+    let isJsonOutputTool = false;
     const isToolBlockStart: boolean =
       parsedChunk.type === 'content_block_start' &&
       parsedChunk.content_block?.type === 'tool_use';
@@ -654,22 +1008,49 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
       streamState.toolIndex = streamState.toolIndex
         ? (streamState.toolIndex as number) + 1
         : 0;
+      // Check if this is the __json_output tool
+      if (parsedChunk.content_block?.name === '__json_output') {
+        isJsonOutputTool = true;
+        // Store in stream state to track JSON mode
+        streamState.jsonOutputToolId = parsedChunk.content_block.id;
+        streamState.jsonOutputToolIndex = streamState.toolIndex;
+      }
     }
     const isToolBlockDelta: boolean =
       parsedChunk.type === 'content_block_delta' &&
       parsedChunk.delta?.partial_json !== undefined;
 
+    // Check if we're streaming JSON output tool
+    // Try to match by content_block id first, then by index
+    if (isToolBlockDelta) {
+      if (
+        streamState.jsonOutputToolId &&
+        parsedChunk.content_block?.id === streamState.jsonOutputToolId
+      ) {
+        isJsonOutputTool = true;
+      } else if (
+        streamState.jsonOutputToolIndex !== undefined &&
+        parsedChunk.index === streamState.jsonOutputToolIndex
+      ) {
+        isJsonOutputTool = true;
+      }
+    }
+
     if (isToolBlockStart && parsedChunk.content_block) {
-      toolCalls.push({
-        index: streamState.toolIndex,
-        id: parsedChunk.content_block.id,
-        type: 'function',
-        function: {
-          name: parsedChunk.content_block.name,
-          arguments: '',
-        },
-      });
-    } else if (isToolBlockDelta) {
+      // Only add to toolCalls if it's not __json_output
+      if (parsedChunk.content_block.name !== '__json_output') {
+        toolCalls.push({
+          index: streamState.toolIndex,
+          id: parsedChunk.content_block.id,
+          type: 'function',
+          function: {
+            name: parsedChunk.content_block.name,
+            arguments: '',
+          },
+        });
+      }
+    } else if (isToolBlockDelta && !isJsonOutputTool) {
+      // Only add to toolCalls if it's not JSON output
       toolCalls.push({
         index: streamState.toolIndex,
         function: {
@@ -678,7 +1059,17 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
       });
     }
 
-    const content = parsedChunk.delta?.text;
+    // For JSON output tool, extract the partial JSON as content
+    let content = parsedChunk.delta?.text;
+    if (
+      isJsonOutputTool &&
+      isToolBlockDelta &&
+      parsedChunk.delta?.partial_json
+    ) {
+      // Stream the partial JSON as content
+      // The partial_json is already a string, so we can use it directly
+      content = parsedChunk.delta.partial_json;
+    }
 
     const contentBlockObject = {
       index: parsedChunk.index,

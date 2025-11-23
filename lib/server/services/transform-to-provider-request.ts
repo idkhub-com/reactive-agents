@@ -118,16 +118,29 @@ export const transformUsingProviderConfig = (
           value,
         );
       }
-      // If the parameter is not present in the incoming request body but is required, set it to the default value
-      else if (paramConfig?.required && paramConfig?.default !== undefined) {
-        let value: unknown;
-        if (typeof paramConfig.default === 'function') {
-          value = paramConfig.default({ raRequestBody, raTarget });
-        } else {
-          value = paramConfig.default;
+      // If the parameter is not present in the incoming request body
+      else {
+        // Check if there's a transform function - if so, call it
+        // This handles cases like Anthropic's __json_output tool that needs to be added
+        // when response_format is present, even though tools is not required
+        if (paramConfig?.transform) {
+          const value = getValue(configParam, raRequestBody, paramConfig);
+          // Only set if the transform returned a non-null/undefined value
+          if (value !== null && value !== undefined) {
+            setNestedProperty(transformedRequest, paramConfig.param, value);
+          }
         }
-        // Set the transformed parameter to the default value
-        setNestedProperty(transformedRequest, paramConfig.param, value);
+        // Otherwise, if it's required and has a default, use the default
+        else if (paramConfig?.required && paramConfig?.default !== undefined) {
+          let value: unknown;
+          if (typeof paramConfig.default === 'function') {
+            value = paramConfig.default({ raRequestBody, raTarget });
+          } else {
+            value = paramConfig.default;
+          }
+          // Set the transformed parameter to the default value
+          setNestedProperty(transformedRequest, paramConfig.param, value);
+        }
       }
     }
   }
