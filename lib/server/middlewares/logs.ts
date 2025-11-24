@@ -17,7 +17,7 @@ import {
   shouldTriggerRealtimeEvaluation,
 } from '@server/utils/realtime-evaluations';
 import { emitSSEEvent } from '@server/utils/sse-event-manager';
-import { error } from '@shared/console-logging';
+import { error, warn } from '@shared/console-logging';
 import type { FunctionName } from '@shared/types/api/request';
 import {
   NonPrivateReactiveAgentsConfig,
@@ -642,17 +642,35 @@ export const logsMiddleware = (
         | undefined;
       const raRequestData = c.get('ra_request_data');
       if (accumulatedChunks && aiProviderLog && raRequestData) {
-        try {
-          const { response_body, raw_response_body } =
-            parseStreamChunksToResponseBody(
-              accumulatedChunks,
-              raRequestData.functionName,
-            );
-          aiProviderLog.response_body = response_body;
-          aiProviderLog.raw_response_body = raw_response_body;
-        } catch (e) {
-          error('Failed to parse stream chunks', e);
-          // Keep the null/empty values if parsing fails
+        // Validate size to prevent processing extremely large accumulated chunks
+        const chunkSize = new TextEncoder().encode(accumulatedChunks).length;
+        const MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+
+        if (chunkSize > MAX_CHUNK_SIZE) {
+          warn(
+            '[Logs Middleware] Accumulated chunks exceed safe processing size, truncating',
+            {
+              size: chunkSize,
+              maxSize: MAX_CHUNK_SIZE,
+              functionName: raRequestData.functionName,
+            },
+          );
+          // Keep the log with placeholders rather than trying to parse
+          aiProviderLog.response_body = null;
+          aiProviderLog.raw_response_body = `[Truncated: Response too large (${chunkSize} bytes)]`;
+        } else {
+          try {
+            const { response_body, raw_response_body } =
+              parseStreamChunksToResponseBody(
+                accumulatedChunks,
+                raRequestData.functionName,
+              );
+            aiProviderLog.response_body = response_body;
+            aiProviderLog.raw_response_body = raw_response_body;
+          } catch (e) {
+            error('Failed to parse stream chunks', e);
+            // Keep the null/empty values if parsing fails
+          }
         }
       }
 
