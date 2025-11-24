@@ -144,7 +144,7 @@ export const ResponsesAPIFunctionCall = z.object({
   /**
    * The type of the function tool call.
    */
-  type: z.literal('function'),
+  type: z.union([z.literal('function'), z.literal('function_call')]),
 
   /**
    * The unique ID of the function tool call.
@@ -547,13 +547,23 @@ export const ResponsesResponseBody = z.object({
   reasoning: z
     .object({
       effort: z
-        .union([z.literal('low'), z.literal('medium'), z.literal('high')])
+        .union([
+          z.literal('minimal'),
+          z.literal('low'),
+          z.literal('medium'),
+          z.literal('high'),
+        ])
         .nullable()
         .optional(),
     })
     .nullable(),
   reasoning_effort: z
-    .union([z.literal('low'), z.literal('medium'), z.literal('high')])
+    .union([
+      z.literal('minimal'),
+      z.literal('low'),
+      z.literal('medium'),
+      z.literal('high'),
+    ])
     .nullable()
     .optional(),
   status: z

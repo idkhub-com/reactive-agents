@@ -137,12 +137,12 @@ export function GenericViewer({
   return (
     <div
       className={cn(
-        'flex flex-col h-fit w-full gap-2 border rounded-lg overflow-hidden shrink-0 bg-card shadow-sm',
+        'flex flex-col h-fit w-full gap-2 border rounded-lg overflow-hidden shrink-0 bg-card',
         className,
       )}
     >
-      <div className="flex flex-col items-center p-2 border-b">
-        <div className="flex flex-row gap-2 w-full justify-between items-center h-10">
+      <div className="flex flex-col items-center border-b">
+        <div className="flex flex-row gap-2 w-full justify-between items-center h-10 px-2">
           {children}
           <Separator orientation="vertical" />
           <div className="flex flex-row gap-2 w-full justify-between items-center">

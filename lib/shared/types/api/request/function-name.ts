@@ -441,6 +441,17 @@ export const functionConfigs: ReactiveAgentsRequestData[] = [
     url: '',
     requestHeaders: {},
   },
+  {
+    route_pattern: /^\/v1\/responses$/,
+    method: HttpMethod.POST,
+    functionName: FunctionName.CREATE_MODEL_RESPONSE,
+    requestSchema: ResponsesRequestBody,
+    requestBody: {} as ResponsesRequestBody,
+    responseSchema: ResponsesResponseBody,
+    url: '',
+    requestHeaders: {},
+    stream: true,
+  },
   // {
   //   pattern: /^\/v1\/responses\/[^\/]+\/input_items$/,
   //   method: HttpMethod.GET,

@@ -59,9 +59,11 @@ export const openAIConfig: AIProviderConfig = {
 
   // Chat Completions API
   [FunctionName.CHAT_COMPLETE]: openAIChatCompleteConfig,
+  [FunctionName.STREAM_CHAT_COMPLETE]: openAIChatCompleteConfig,
 
   // Completions API
   [FunctionName.COMPLETE]: openAICompleteConfig,
+  [FunctionName.STREAM_COMPLETE]: openAICompleteConfig,
 
   // Embeddings API
   [FunctionName.EMBED]: openAIEmbedConfig,
@@ -73,7 +75,12 @@ export const openAIConfig: AIProviderConfig = {
   [FunctionName.CREATE_FINE_TUNING_JOB]: openAICreateFinetuneConfig,
 
   // Responses API
-  [FunctionName.CREATE_MODEL_RESPONSE]: createModelResponseParams([]),
+  [FunctionName.CREATE_MODEL_RESPONSE]: createModelResponseParams([
+    'temperature',
+    'top_p',
+    'frequency_penalty',
+    'presence_penalty',
+  ]),
 
   requestTransforms: {
     [FunctionName.UPLOAD_FILE]: openAIFileUploadRequestTransform,
@@ -93,11 +100,11 @@ export const openAIConfig: AIProviderConfig = {
 
     // Chat Completions API
     [FunctionName.CHAT_COMPLETE]: openAIChatCompleteResponseTransform,
-    [FunctionName.STREAM_CHAT_COMPLETE]: openAIChatCompleteResponseTransform,
+    // Note: STREAM_CHAT_COMPLETE has no transformer - OpenAI already returns correct format
 
     // Completions API
     [FunctionName.COMPLETE]: openAICompleteResponseTransform,
-    [FunctionName.STREAM_COMPLETE]: openAICompleteResponseTransform,
+    // Note: STREAM_COMPLETE has no transformer - OpenAI already returns correct format
 
     // Files API
     [FunctionName.UPLOAD_FILE]: openAIUploadFileResponseTransform,

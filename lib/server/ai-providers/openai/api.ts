@@ -36,8 +36,10 @@ export const openAIAPIConfig: InternalProviderAPIConfig = {
     const basePath = raRequestData.url.split('/v1')?.[1];
     switch (raRequestData.functionName) {
       case FunctionName.COMPLETE:
+      case FunctionName.STREAM_COMPLETE:
         return '/completions';
       case FunctionName.CHAT_COMPLETE:
+      case FunctionName.STREAM_CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.EMBED:
         return '/embeddings';

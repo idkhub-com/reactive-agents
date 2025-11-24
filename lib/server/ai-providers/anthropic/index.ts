@@ -17,7 +17,9 @@ export const anthropicConfig: AIProviderConfig = {
   api: anthropicAPIConfig,
   modelCapabilities: anthropicModelCapabilities,
   [FunctionName.COMPLETE]: anthropicCompleteConfig,
+  [FunctionName.STREAM_COMPLETE]: anthropicCompleteConfig,
   [FunctionName.CHAT_COMPLETE]: anthropicChatCompleteConfig,
+  [FunctionName.STREAM_CHAT_COMPLETE]: anthropicChatCompleteConfig,
   responseTransforms: {
     [FunctionName.STREAM_COMPLETE]: anthropicCompleteStreamChunkTransform,
     [FunctionName.COMPLETE]: anthropicCompleteResponseTransform,

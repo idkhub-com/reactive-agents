@@ -386,6 +386,7 @@ export function handleStreamingMode(
   raRequestData: ReactiveAgentsRequestData,
   strictOpenAiCompliance: boolean,
   onFirstChunk?: () => void,
+  onStreamEnd?: (accumulatedChunks: string) => void,
 ): Response {
   const splitPattern = getStreamModeSplitPattern(
     provider,
@@ -403,36 +404,64 @@ export function handleStreamingMode(
   const reader = response.body.getReader();
   const isSleepTimeRequired = provider === AIProvider.AZURE_OPENAI;
   const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  // Accumulate chunks for logging
+  let accumulatedChunks = '';
 
   if (provider === AIProvider.BEDROCK) {
     (async () => {
-      for await (const chunk of readAWSStream(
-        reader,
-        responseTransformer,
-        fallbackChunkId,
-        strictOpenAiCompliance,
-        raRequestData,
-        onFirstChunk,
-      )) {
-        await writer.write(encoder.encode(chunk as string));
+      try {
+        for await (const chunk of readAWSStream(
+          reader,
+          responseTransformer,
+          fallbackChunkId,
+          strictOpenAiCompliance,
+          raRequestData,
+          onFirstChunk,
+        )) {
+          const encodedChunk = encoder.encode(chunk as string);
+          accumulatedChunks += decoder.decode(encodedChunk, { stream: true });
+          await writer.write(encodedChunk);
+        }
+      } finally {
+        try {
+          writer.close();
+        } catch {
+          // Ignore errors if writer is already closed
+        }
+        if (onStreamEnd) {
+          onStreamEnd(accumulatedChunks);
+        }
       }
-      writer.close();
     })();
   } else {
     (async () => {
-      for await (const chunk of readStream(
-        reader,
-        splitPattern,
-        responseTransformer,
-        isSleepTimeRequired,
-        fallbackChunkId,
-        strictOpenAiCompliance,
-        raRequestData,
-        onFirstChunk,
-      )) {
-        await writer.write(encoder.encode(chunk as string));
+      try {
+        for await (const chunk of readStream(
+          reader,
+          splitPattern,
+          responseTransformer,
+          isSleepTimeRequired,
+          fallbackChunkId,
+          strictOpenAiCompliance,
+          raRequestData,
+          onFirstChunk,
+        )) {
+          const encodedChunk = encoder.encode(chunk as string);
+          accumulatedChunks += decoder.decode(encodedChunk, { stream: true });
+          await writer.write(encodedChunk);
+        }
+      } finally {
+        try {
+          writer.close();
+        } catch {
+          // Ignore errors if writer is already closed
+        }
+        if (onStreamEnd) {
+          onStreamEnd(accumulatedChunks);
+        }
       }
-      writer.close();
     })();
   }
 

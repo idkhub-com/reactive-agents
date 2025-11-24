@@ -64,7 +64,7 @@ function calculate(operation: string, a: number, b: number): number {
 const userMessage1 = 'What is 15 multiplied by 8?';
 logger.printWithHeader('User', userMessage1);
 
-const response1 = await client
+const stream1 = await client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
@@ -80,19 +80,56 @@ const response1 = await client
     ],
     tools,
     tool_choice: 'auto',
+    stream: true,
   });
 
-const message1 = response1.choices[0].message;
-logger.printWithHeader(
-  'Agent Response',
-  message1.content || '[Tool calls made]',
-);
+let message1Content = '';
+const message1ToolCalls: OpenAI.Chat.Completions.ChatCompletionMessageFunctionToolCall[] =
+  [];
+
+for await (const chunk of stream1) {
+  const delta = chunk.choices[0]?.delta;
+
+  if (delta?.content) {
+    message1Content += delta.content;
+    process.stdout.write(delta.content);
+  }
+
+  if (delta?.tool_calls) {
+    for (const toolCallDelta of delta.tool_calls) {
+      const index = toolCallDelta.index;
+
+      if (!message1ToolCalls[index]) {
+        message1ToolCalls[index] = {
+          id: toolCallDelta.id || '',
+          type: 'function',
+          function: {
+            name: toolCallDelta.function?.name || '',
+            arguments: '',
+          },
+        };
+      }
+
+      if (toolCallDelta.function?.arguments) {
+        message1ToolCalls[index].function.arguments +=
+          toolCallDelta.function.arguments;
+      }
+    }
+  }
+}
+
+if (message1Content) {
+  console.log(); // New line after streaming
+  logger.printWithHeader('Agent Response', message1Content);
+} else if (message1ToolCalls.length > 0) {
+  logger.printWithHeader('Agent Response', '[Tool calls made]');
+}
 
 // Handle tool calls if present
-if (message1.tool_calls) {
+if (message1ToolCalls.length > 0) {
   logger.printWithHeader(
     'Tool Calls',
-    `${message1.tool_calls.length} tool(s) called`,
+    `${message1ToolCalls.length} tool(s) called`,
   );
 
   const toolMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -100,10 +137,14 @@ if (message1.tool_calls) {
       role: 'user',
       content: userMessage1,
     },
-    message1,
+    {
+      role: 'assistant',
+      content: message1Content || null,
+      tool_calls: message1ToolCalls,
+    },
   ];
 
-  for (const toolCall of message1.tool_calls) {
+  for (const toolCall of message1ToolCalls) {
     if (toolCall.type !== 'function') continue;
 
     logger.printWithHeader(
@@ -135,8 +176,8 @@ if (message1.tool_calls) {
     });
   }
 
-  // Get the final response after tool execution
-  const finalResponse = await client
+  // Get the final response after tool execution with streaming
+  const finalStream = await client
     .withOptions({
       defaultHeaders: {
         'ra-config': JSON.stringify(raConfig),
@@ -147,10 +188,15 @@ if (message1.tool_calls) {
       messages: toolMessages,
       tools,
       tool_choice: 'auto',
+      stream: true,
     });
 
-  logger.printWithHeader(
-    'Final Agent Response',
-    finalResponse.choices[0].message.content || '',
-  );
+  logger.printWithHeader('Final Agent Response', '');
+  for await (const chunk of finalStream) {
+    const delta = chunk.choices[0]?.delta;
+    if (delta?.content) {
+      process.stdout.write(delta.content);
+    }
+  }
+  console.log(); // New line after streaming
 }

@@ -16,7 +16,6 @@ import type {
   ResponseTransformFunction,
 } from '@shared/types/ai-providers/config';
 import type { ErrorResponseBody } from '@shared/types/api/response';
-
 import type {
   ChatCompletionRequestBody,
   ChatCompletionResponseBody,
@@ -1077,7 +1076,7 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
     };
     delete contentBlockObject.delta.type;
 
-    return `data: ${JSON.stringify({
+    const outputChunk = `data: ${JSON.stringify({
       id: fallbackId,
       object: 'chat.completion.chunk',
       created: Math.floor(Date.now() / 1000),
@@ -1101,4 +1100,6 @@ export const anthropicChatCompleteStreamChunkTransform: ResponseChunkStreamTrans
         },
       ],
     })}\n\n`;
+
+    return outputChunk;
   };

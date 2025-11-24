@@ -11,7 +11,10 @@ export const anthropicAPIConfig: InternalProviderAPIConfig = {
     const betaHeader = raTarget.anthropic_beta ?? 'messages-2023-12-15';
     const version = raTarget.anthropic_version ?? '2023-06-01';
 
-    if (raRequestData.functionName === FunctionName.CHAT_COMPLETE) {
+    if (
+      raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+      raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
+    ) {
       headers['anthropic-beta'] = betaHeader;
     }
     headers['anthropic-version'] = version;
@@ -20,8 +23,10 @@ export const anthropicAPIConfig: InternalProviderAPIConfig = {
   getEndpoint: ({ raRequestData }) => {
     switch (raRequestData.functionName) {
       case FunctionName.COMPLETE:
+      case FunctionName.STREAM_COMPLETE:
         return '/complete';
       case FunctionName.CHAT_COMPLETE:
+      case FunctionName.STREAM_CHAT_COMPLETE:
         return '/messages';
       default:
         return '';

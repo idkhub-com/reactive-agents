@@ -92,6 +92,260 @@ const broadcastLog = async (log: string): Promise<void> => {
   });
 };
 
+/**
+ * Parse accumulated SSE stream chunks and reconstruct the response body
+ */
+function parseStreamChunksToResponseBody(
+  accumulatedChunks: string,
+  functionName?: string,
+): {
+  response_body: Record<string, unknown>;
+  raw_response_body: string;
+} {
+  const lines = accumulatedChunks.split('\n');
+  let accumulatedContent = '';
+  let id = '';
+  let model = '';
+  let created = 0;
+  const toolCalls: Array<{
+    id: string;
+    type: string;
+    function: { name: string; arguments: string };
+  }> = [];
+  let currentToolCall: {
+    index: number;
+    id: string;
+    type: string;
+    function: { name: string; arguments: string };
+  } | null = null;
+
+  // Track Responses API function calls by output_index
+  const responsesAPIFunctionCalls = new Map<
+    number,
+    {
+      type: 'function_call';
+      id: string;
+      call_id: string;
+      name: string;
+      arguments: string;
+      status: string;
+    }
+  >();
+
+  for (const line of lines) {
+    if (!line.startsWith('data: ')) continue;
+
+    const data = line.slice(6).trim();
+    if (data === '[DONE]') continue;
+
+    try {
+      const chunk = JSON.parse(data);
+      if (!id && chunk.id) id = chunk.id;
+      if (!model && chunk.model) model = chunk.model;
+      if (!created && chunk.created) created = chunk.created;
+
+      // Handle Responses API format (response.output_text.delta)
+      if (chunk.type === 'response.output_text.delta' && chunk.delta) {
+        accumulatedContent += chunk.delta;
+      }
+      // Handle Responses API function_call item added
+      else if (
+        chunk.type === 'response.output_item.added' &&
+        chunk.item?.type === 'function_call'
+      ) {
+        responsesAPIFunctionCalls.set(chunk.output_index, {
+          type: 'function_call',
+          id: chunk.item.id || '',
+          call_id: chunk.item.call_id || '',
+          name: chunk.item.name || '',
+          arguments: chunk.item.arguments || '',
+          status: chunk.item.status || 'in_progress',
+        });
+      }
+      // Handle Responses API function_call arguments delta
+      else if (chunk.type === 'response.function_call_arguments.delta') {
+        const funcCall = responsesAPIFunctionCalls.get(chunk.output_index);
+        if (funcCall && chunk.delta) {
+          funcCall.arguments += chunk.delta;
+        }
+      }
+      // Handle Responses API function_call arguments done
+      else if (chunk.type === 'response.function_call_arguments.done') {
+        const funcCall = responsesAPIFunctionCalls.get(chunk.output_index);
+        if (funcCall && chunk.arguments) {
+          funcCall.arguments = chunk.arguments;
+        }
+      }
+      // Handle Responses API function_call item done
+      else if (
+        chunk.type === 'response.output_item.done' &&
+        chunk.item?.type === 'function_call'
+      ) {
+        const funcCall = responsesAPIFunctionCalls.get(chunk.output_index);
+        if (funcCall) {
+          funcCall.status = chunk.item.status || 'completed';
+          if (chunk.item.id) funcCall.id = chunk.item.id;
+          if (chunk.item.call_id) funcCall.call_id = chunk.item.call_id;
+          if (chunk.item.name) funcCall.name = chunk.item.name;
+          if (chunk.item.arguments) funcCall.arguments = chunk.item.arguments;
+        }
+      }
+      // Extract response ID from Responses API completed event
+      else if (chunk.type === 'response.completed' && chunk.response) {
+        if (!id && chunk.response.id) id = chunk.response.id;
+        if (!model && chunk.response.model) model = chunk.response.model;
+        if (!created && chunk.response.created_at)
+          created = chunk.response.created_at;
+      }
+      // Handle Chat Completions format
+      else if (chunk.choices?.[0]?.delta) {
+        const delta = chunk.choices[0].delta;
+
+        // Accumulate content
+        if (delta.content) {
+          accumulatedContent += delta.content;
+        }
+
+        // Accumulate tool calls
+        if (delta.tool_calls) {
+          for (const toolCallDelta of delta.tool_calls) {
+            if (toolCallDelta.index !== undefined) {
+              if (
+                !currentToolCall ||
+                currentToolCall.index !== toolCallDelta.index
+              ) {
+                if (currentToolCall) {
+                  toolCalls.push({
+                    id: currentToolCall.id,
+                    type: currentToolCall.type,
+                    function: currentToolCall.function,
+                  });
+                }
+                currentToolCall = {
+                  index: toolCallDelta.index,
+                  id: toolCallDelta.id || '',
+                  type: toolCallDelta.type || 'function',
+                  function: { name: '', arguments: '' },
+                };
+              }
+
+              if (toolCallDelta.id) currentToolCall.id = toolCallDelta.id;
+              if (toolCallDelta.type) currentToolCall.type = toolCallDelta.type;
+              if (toolCallDelta.function?.name) {
+                currentToolCall.function.name += toolCallDelta.function.name;
+              }
+              if (toolCallDelta.function?.arguments) {
+                currentToolCall.function.arguments +=
+                  toolCallDelta.function.arguments;
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Skip malformed chunks
+    }
+  }
+
+  // Add the last tool call if any
+  if (currentToolCall) {
+    toolCalls.push({
+      id: currentToolCall.id,
+      type: currentToolCall.type,
+      function: currentToolCall.function,
+    });
+  }
+
+  let response_body: Record<string, unknown>;
+
+  // Construct response body in the appropriate format
+  if (functionName === 'create_model_response') {
+    // Responses API format
+    // Build output array with all items (messages and function_calls)
+    const outputItems: Record<string, unknown>[] = [];
+
+    // Add message item if there's content
+    if (accumulatedContent) {
+      outputItems.push({
+        id: `msg-${Date.now()}`,
+        type: 'message',
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: accumulatedContent,
+            annotations: [],
+          },
+        ],
+        status: 'completed',
+      });
+    }
+
+    // Add function_call items from the map (sorted by output_index)
+    const sortedFunctionCalls = Array.from(
+      responsesAPIFunctionCalls.entries(),
+    ).sort(([a], [b]) => a - b);
+    for (const [, funcCall] of sortedFunctionCalls) {
+      outputItems.push({
+        type: funcCall.type,
+        id: funcCall.id,
+        call_id: funcCall.call_id,
+        name: funcCall.name,
+        arguments: funcCall.arguments,
+        status: funcCall.status,
+      });
+    }
+
+    response_body = {
+      id: id || `resp-${Date.now()}`,
+      object: 'response',
+      created_at: created || Math.floor(Date.now() / 1000),
+      model: model || 'unknown',
+      status: 'completed',
+      output: outputItems,
+      // Required nullable fields
+      error: null,
+      incomplete_details: null,
+      instructions: null,
+      metadata: null,
+      output_text: accumulatedContent || null,
+      parallel_tool_calls: null,
+      previous_response_id: null,
+      reasoning: null,
+      temperature: null,
+      text: null,
+      tool_choice: null,
+      tools: [],
+      usage: null,
+      user: null,
+    };
+  } else {
+    // Chat Completion format (default)
+    response_body = {
+      id: id || `chatcmpl-${Date.now()}`,
+      object: 'chat.completion',
+      created: created || Math.floor(Date.now() / 1000),
+      model: model || 'unknown',
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: accumulatedContent || null,
+            ...(toolCalls.length > 0 && { tool_calls: toolCalls }),
+          },
+          finish_reason: 'stop',
+        },
+      ],
+    };
+  }
+
+  return {
+    response_body,
+    raw_response_body: JSON.stringify(response_body),
+  };
+}
+
 interface ProcessLogsParams {
   url: URL;
   status: number;
@@ -101,6 +355,7 @@ interface ProcessLogsParams {
   agent: Agent;
   skill: Skill;
   startTime: number;
+  endTime: number;
   firstTokenTime?: number;
   aiProviderLog: AIProviderRequestLog;
   embedding: number[] | null;
@@ -122,6 +377,7 @@ async function processLogs({
   agent,
   skill,
   startTime,
+  endTime,
   firstTokenTime,
   aiProviderLog,
   embedding,
@@ -135,7 +391,6 @@ async function processLogs({
   logId: string | null;
   evaluationsPromise?: Promise<SkillOptimizationEvaluationResult[]>;
 }> {
-  const endTime = Date.now();
   const duration = endTime - startTime;
 
   const baseReactiveAgentsConfig =
@@ -370,34 +625,95 @@ export const logsMiddleware = (
       return;
     }
 
-    // Logs produced by the hooks middleware
-    const hookLogs = c.get('hook_logs') || [];
+    // For streaming requests, wait for the stream to complete before logging
+    const streamEndPromise = c.get('stream_end_promise') as
+      | Promise<void>
+      | undefined;
 
-    const raRequestData = c.get('ra_request_data');
-    const pulledArm = c.get('pulled_arm');
+    const processLogsAsync = async () => {
+      // Wait for stream to end if it's a streaming request
+      if (streamEndPromise) {
+        await streamEndPromise;
+      }
 
-    const processLogsParams: ProcessLogsParams = {
-      url,
-      status: c.res.status,
-      method: raRequestData.method,
-      functionName: raRequestData.functionName,
-      raConfig: c.get('ra_config'),
-      agent: c.get('agent'),
-      skill: c.get('skill'),
-      startTime,
-      firstTokenTime: c.get('first_token_time'),
-      aiProviderLog,
-      embedding: c.get('embedding'),
-      hookLogs,
-      logsStorageConnector: c.get('logs_storage_connector'),
-      userDataStorageConnector: c.get('user_data_storage_connector'),
-      evaluationConnectorsMap: c.get('evaluation_connectors_map'),
-      pulledArm,
+      // For streaming requests, parse accumulated chunks and update the log
+      const accumulatedChunks = c.get('accumulated_stream_chunks') as
+        | string
+        | undefined;
+      const raRequestData = c.get('ra_request_data');
+      if (accumulatedChunks && aiProviderLog && raRequestData) {
+        try {
+          const { response_body, raw_response_body } =
+            parseStreamChunksToResponseBody(
+              accumulatedChunks,
+              raRequestData.functionName,
+            );
+          aiProviderLog.response_body = response_body;
+          aiProviderLog.raw_response_body = raw_response_body;
+        } catch (e) {
+          error('Failed to parse stream chunks', e);
+          // Keep the null/empty values if parsing fails
+        }
+      }
+
+      // Logs produced by the hooks middleware
+      const hookLogs = c.get('hook_logs') || [];
+      const pulledArm = c.get('pulled_arm');
+
+      // Use stream_end_time if available (for streaming requests), otherwise use current time
+      const endTime =
+        (c.get('stream_end_time') as number | undefined) || Date.now();
+
+      // Validate that we don't save incomplete logs for successful requests
+      if (aiProviderLog && c.res.status >= 200 && c.res.status < 300) {
+        const hasEmptyResponseBody =
+          aiProviderLog.response_body === null ||
+          (typeof aiProviderLog.response_body === 'object' &&
+            Object.keys(aiProviderLog.response_body).length === 0);
+        const hasEmptyRawResponseBody =
+          !aiProviderLog.raw_response_body ||
+          aiProviderLog.raw_response_body.trim() === '';
+
+        if (hasEmptyResponseBody || hasEmptyRawResponseBody) {
+          error(
+            '[Logs] Skipping log creation - successful request but missing response body',
+            {
+              status: c.res.status,
+              hasEmptyResponseBody,
+              hasEmptyRawResponseBody,
+              functionName: raRequestData.functionName,
+            },
+          );
+          return; // Skip saving this log
+        }
+      }
+
+      const processLogsParams: ProcessLogsParams = {
+        url,
+        status: c.res.status,
+        method: raRequestData.method,
+        functionName: raRequestData.functionName,
+        raConfig: c.get('ra_config'),
+        agent: c.get('agent'),
+        skill: c.get('skill'),
+        startTime,
+        endTime,
+        firstTokenTime: c.get('first_token_time'),
+        aiProviderLog,
+        embedding: c.get('embedding'),
+        hookLogs,
+        logsStorageConnector: c.get('logs_storage_connector'),
+        userDataStorageConnector: c.get('user_data_storage_connector'),
+        evaluationConnectorsMap: c.get('evaluation_connectors_map'),
+        pulledArm,
+      };
+
+      await processLogsAndOptimizeSkill(processLogsParams);
     };
 
     if (getRuntimeKey() === 'workerd') {
-      c.executionCtx.waitUntil(processLogsAndOptimizeSkill(processLogsParams));
+      c.executionCtx.waitUntil(processLogsAsync());
     } else {
-      processLogsAndOptimizeSkill(processLogsParams);
+      processLogsAsync();
     }
   });

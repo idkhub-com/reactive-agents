@@ -176,7 +176,10 @@ export const cacheMiddleware = (
         return;
       }
 
-      if (aiProviderLog.cache_mode === CacheMode.SIMPLE) {
+      if (
+        aiProviderLog.cache_mode === CacheMode.SIMPLE &&
+        aiProviderLog.response_body !== null
+      ) {
         await putAIProviderResponseInCache(
           c.get('cache_storage_connector'),
           aiProviderLog.request_body,

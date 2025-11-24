@@ -66,7 +66,6 @@ for (let i = 0; i < selectedInputs.length; i++) {
     .chat.completions.parse({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'Extract the event information.' },
         {
           role: 'user',
           content: userMessage,

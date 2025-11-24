@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import 'dotenv/config';
 import logger from '@shared/console-logging';
-import { z } from 'zod';
+import z from 'zod';
 
 const client = new OpenAI({
   // This is the API key to Reactive Agents
@@ -12,8 +12,8 @@ const client = new OpenAI({
 
 const raConfig = {
   targets: [{ optimization: 'auto' }],
-  agent_name: 'calendar_event_planner',
-  skill_name: 'third_person_view',
+  agent_name: 'captain_code',
+  skill_name: 'programming',
 };
 
 const CalendarEvent = z.object({
@@ -25,31 +25,51 @@ const CalendarEvent = z.object({
 const userMessage1 = 'Alice and Bob are going to a science fair on Friday.';
 logger.printWithHeader('User', userMessage1);
 
-const response1 = await client
+logger.printWithHeader('Agent (JSON Response - Streaming)', '');
+
+const stream1 = client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
     },
   })
-  .chat.completions.create({
+  .responses.stream({
     model: 'gpt-4o-mini',
-    messages: [
+    input: [
       {
         role: 'user',
         content: userMessage1,
       },
     ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
+    text: {
+      format: {
+        type: 'json_schema',
         name: 'event',
-        strict: true,
         schema: z.toJSONSchema(CalendarEvent),
       },
     },
+  })
+  .on('response.output_text.delta', (event) => {
+    process.stdout.write(event.delta);
+  })
+  .on('error', (error) => {
+    logger.error(error);
   });
 
-const agentResponse = JSON.parse(
-  response1.choices[0]?.message?.content || '{}',
-);
-logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));
+const response1 = await stream1.finalResponse();
+
+console.log(); // New line after streaming
+
+const agentResponse1 = response1.output_text;
+
+// Parse and display the JSON response
+if (agentResponse1) {
+  try {
+    const eventData = JSON.parse(agentResponse1);
+    logger.printWithHeader('Parsed JSON', JSON.stringify(eventData, null, 2));
+  } catch (error) {
+    logger.error('Failed to parse JSON response:', error);
+  }
+} else {
+  logger.printWithHeader('Note', 'JSON was streamed above');
+}
