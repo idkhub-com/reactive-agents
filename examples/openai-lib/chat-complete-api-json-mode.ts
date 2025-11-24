@@ -13,7 +13,7 @@ const client = new OpenAI({
 const raConfig = {
   targets: [{ optimization: 'auto' }],
   agent_name: 'calendar_event_planner',
-  skill_name: 'third_person_view',
+  skill_name: 'generate',
 };
 
 const CalendarEvent = z.object({
