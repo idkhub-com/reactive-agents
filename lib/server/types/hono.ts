@@ -39,6 +39,9 @@ export interface AppEnv {
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     first_token_time?: number;
+    stream_end_time?: number;
+    stream_end_promise?: Promise<void>;
+    accumulated_stream_chunks?: string;
     cache_storage_connector: CacheStorageConnector;
     logs_storage_connector: LogsStorageConnector;
     user_data_storage_connector: UserDataStorageConnector;

@@ -39,6 +39,7 @@ export async function responseHandler(
   strictOpenAiCompliance: boolean,
   areSyncHooksAvailable: boolean,
   onFirstChunk?: () => void,
+  onStreamEnd?: (accumulatedChunks: string) => void,
 ): Promise<{
   response: Response;
   raResponseBody: ReactiveAgentsResponseBody | null;
@@ -66,8 +67,16 @@ export async function responseHandler(
 
   // Checking status 200 so that errors are not considered as stream mode.
   if (responseTransformerFunctionName && streamingMode && isSuccessStatusCode) {
+    // If function name already starts with 'stream_', use it directly
+    // Otherwise, add 'stream_' prefix
+    const streamFunctionName = responseTransformerFunctionName.startsWith(
+      'stream_',
+    )
+      ? responseTransformerFunctionName
+      : (`stream_${responseTransformerFunctionName}` as FunctionName);
+
     responseTransformFunction = responseTransformFunctions?.[
-      `stream_${responseTransformerFunctionName}` as FunctionName
+      streamFunctionName
     ] as ResponseTransformFunction | undefined;
   } else if (responseTransformerFunctionName) {
     responseTransformFunction = responseTransformFunctions?.[
@@ -120,6 +129,7 @@ export async function responseHandler(
         raRequestData,
         strictOpenAiCompliance,
         onFirstChunk,
+        onStreamEnd,
       ),
       raResponseBody: null,
     };

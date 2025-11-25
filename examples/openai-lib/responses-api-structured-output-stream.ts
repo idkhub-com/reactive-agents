@@ -1,6 +1,7 @@
-import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 import 'dotenv/config';
 import logger from '@shared/console-logging';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
 const client = new OpenAI({
@@ -14,6 +15,9 @@ const raConfig = {
   targets: [{ optimization: 'auto' }],
   agent_name: 'calendar_event_planner',
   skill_name: 'generate',
+  system_prompt_variables: {
+    datetime: new Date().toISOString(),
+  },
 };
 
 const CalendarEvent = z.object({
@@ -25,31 +29,38 @@ const CalendarEvent = z.object({
 const userMessage1 = 'Alice and Bob are going to a science fair on Friday.';
 logger.printWithHeader('User', userMessage1);
 
-const response1 = await client
+const stream = client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
     },
   })
-  .chat.completions.create({
+  .responses.stream({
     model: 'gpt-4o-mini',
-    messages: [
+    input: [
       {
         role: 'user',
         content: userMessage1,
       },
     ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'event',
-        strict: true,
-        schema: z.toJSONSchema(CalendarEvent),
-      },
+    text: {
+      format: zodTextFormat(CalendarEvent, 'event'),
     },
+  })
+  .on('response.refusal.delta', (event) => {
+    process.stdout.write(event.delta);
+  })
+  .on('response.output_text.delta', (event) => {
+    process.stdout.write(event.delta);
+  })
+  .on('response.output_text.done', () => {
+    process.stdout.write('\n');
+  })
+  .on('error', (error) => {
+    logger.error(error);
   });
 
-const agentResponse = JSON.parse(
-  response1.choices[0]?.message?.content || '{}',
-);
+const response1 = await stream.finalResponse();
+
+const agentResponse = response1.output_parsed;
 logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));

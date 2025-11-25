@@ -2,6 +2,7 @@ import {
   getStreamModeSplitPattern,
   type SplitPatternType,
 } from '@server/utils/object';
+import { error, warn } from '@shared/console-logging';
 import type {
   JSONToStreamGeneratorTransformFunction,
   ResponseChunkStreamTransformFunction,
@@ -17,6 +18,25 @@ import {
   PRECONDITION_CHECK_FAILED_STATUS_CODE,
   REQUEST_TIMEOUT_STATUS_CODE,
 } from '@shared/types/constants';
+
+// Stream processing constants
+/**
+ * Delay after first chunk to allow client to establish connection and process headers
+ * This helps prevent race conditions where the client hasn't fully set up stream handling
+ */
+const FIRST_CHUNK_DELAY_MS = 25;
+
+/**
+ * Small delay between chunks for Azure OpenAI to prevent rate limiting
+ * Azure OpenAI requires throttling between chunks to avoid connection issues
+ */
+const AZURE_CHUNK_DELAY_MS = 1;
+
+/**
+ * Maximum size for accumulated stream chunks in bytes (10 MB)
+ * Protects against memory exhaustion from extremely long streams
+ */
+const MAX_ACCUMULATED_CHUNKS_SIZE = 10 * 1024 * 1024;
 
 // Helper function to clean response headers by removing compression-related headers
 function cleanResponseHeaders(
@@ -213,9 +233,13 @@ export async function* readStream(
               onFirstChunk();
             }
             isFirstChunk = false;
-            await new Promise((resolve) => setTimeout(resolve, 25));
+            await new Promise((resolve) =>
+              setTimeout(resolve, FIRST_CHUNK_DELAY_MS),
+            );
           } else if (isSleepTimeRequired) {
-            await new Promise((resolve) => setTimeout(resolve, 1));
+            await new Promise((resolve) =>
+              setTimeout(resolve, AZURE_CHUNK_DELAY_MS),
+            );
           }
 
           if (transformFunction) {
@@ -386,6 +410,7 @@ export function handleStreamingMode(
   raRequestData: ReactiveAgentsRequestData,
   strictOpenAiCompliance: boolean,
   onFirstChunk?: () => void,
+  onStreamEnd?: (accumulatedChunks: string) => void,
 ): Response {
   const splitPattern = getStreamModeSplitPattern(
     provider,
@@ -403,36 +428,105 @@ export function handleStreamingMode(
   const reader = response.body.getReader();
   const isSleepTimeRequired = provider === AIProvider.AZURE_OPENAI;
   const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  // Accumulate chunks for logging
+  let accumulatedChunks = '';
 
   if (provider === AIProvider.BEDROCK) {
     (async () => {
-      for await (const chunk of readAWSStream(
-        reader,
-        responseTransformer,
-        fallbackChunkId,
-        strictOpenAiCompliance,
-        raRequestData,
-        onFirstChunk,
-      )) {
-        await writer.write(encoder.encode(chunk as string));
+      try {
+        for await (const chunk of readAWSStream(
+          reader,
+          responseTransformer,
+          fallbackChunkId,
+          strictOpenAiCompliance,
+          raRequestData,
+          onFirstChunk,
+        )) {
+          const encodedChunk = encoder.encode(chunk as string);
+          const decodedChunk = decoder.decode(encodedChunk, { stream: true });
+
+          // Check size limit before accumulating
+          const newSize =
+            new TextEncoder().encode(accumulatedChunks).length +
+            new TextEncoder().encode(decodedChunk).length;
+          if (newSize > MAX_ACCUMULATED_CHUNKS_SIZE) {
+            warn(
+              '[Stream Handler] Accumulated chunks exceed size limit, stopping accumulation',
+              { currentSize: newSize, maxSize: MAX_ACCUMULATED_CHUNKS_SIZE },
+            );
+            // Continue writing to client but stop accumulating
+            await writer.write(encodedChunk);
+            continue;
+          }
+
+          accumulatedChunks += decodedChunk;
+          await writer.write(encodedChunk);
+        }
+      } catch (streamError) {
+        error('[Stream Handler] Error processing Bedrock stream', streamError);
+        throw streamError;
+      } finally {
+        try {
+          writer.close();
+        } catch (closeError) {
+          error(
+            '[Stream Handler] Error closing Bedrock stream writer',
+            closeError,
+          );
+        }
+        if (onStreamEnd) {
+          onStreamEnd(accumulatedChunks);
+        }
       }
-      writer.close();
     })();
   } else {
     (async () => {
-      for await (const chunk of readStream(
-        reader,
-        splitPattern,
-        responseTransformer,
-        isSleepTimeRequired,
-        fallbackChunkId,
-        strictOpenAiCompliance,
-        raRequestData,
-        onFirstChunk,
-      )) {
-        await writer.write(encoder.encode(chunk as string));
+      try {
+        for await (const chunk of readStream(
+          reader,
+          splitPattern,
+          responseTransformer,
+          isSleepTimeRequired,
+          fallbackChunkId,
+          strictOpenAiCompliance,
+          raRequestData,
+          onFirstChunk,
+        )) {
+          const encodedChunk = encoder.encode(chunk as string);
+          const decodedChunk = decoder.decode(encodedChunk, { stream: true });
+
+          // Check size limit before accumulating
+          const newSize =
+            new TextEncoder().encode(accumulatedChunks).length +
+            new TextEncoder().encode(decodedChunk).length;
+          if (newSize > MAX_ACCUMULATED_CHUNKS_SIZE) {
+            warn(
+              '[Stream Handler] Accumulated chunks exceed size limit, stopping accumulation',
+              { currentSize: newSize, maxSize: MAX_ACCUMULATED_CHUNKS_SIZE },
+            );
+            // Continue writing to client but stop accumulating
+            await writer.write(encodedChunk);
+            continue;
+          }
+
+          accumulatedChunks += decodedChunk;
+          await writer.write(encodedChunk);
+        }
+      } catch (streamError) {
+        error('[Stream Handler] Error processing stream', streamError);
+        throw streamError;
+      } finally {
+        try {
+          writer.close();
+        } catch (closeError) {
+          error('[Stream Handler] Error closing stream writer', closeError);
+        }
+        if (onStreamEnd) {
+          onStreamEnd(accumulatedChunks);
+        }
       }
-      writer.close();
     })();
   }
 

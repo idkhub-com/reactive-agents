@@ -25,7 +25,7 @@ const CalendarEvent = z.object({
 const userMessage1 = 'Alice and Bob are going to a science fair on Friday.';
 logger.printWithHeader('User', userMessage1);
 
-const response1 = await client
+const stream = await client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
@@ -47,9 +47,14 @@ const response1 = await client
         schema: z.toJSONSchema(CalendarEvent),
       },
     },
+    stream: true,
   });
 
-const agentResponse = JSON.parse(
-  response1.choices[0]?.message?.content || '{}',
-);
+let contentBuffer = '';
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content || '';
+  contentBuffer += content;
+}
+
+const agentResponse = JSON.parse(contentBuffer || '{}');
 logger.printWithHeader('Agent Response', JSON.stringify(agentResponse));

@@ -451,6 +451,7 @@ export function LogDetailsView(): ReactElement {
               )}
               {selectedLog &&
                 raRequestData &&
+                selectedLog.ai_provider_request_log.response_body &&
                 ('choices' in
                   selectedLog.ai_provider_request_log.response_body ||
                   'output' in

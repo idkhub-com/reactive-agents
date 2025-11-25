@@ -18,7 +18,10 @@ export function CompletionViewer({
     return <div>No response body found.</div>;
   }
 
-  if (raRequestData.functionName === FunctionName.CHAT_COMPLETE) {
+  if (
+    raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+    raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
+  ) {
     return (
       <ChatCompletionsAPIViewer
         logId={logId}

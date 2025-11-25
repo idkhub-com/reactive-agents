@@ -578,6 +578,7 @@ export async function tryPost(
       cacheStatus: CacheStatus.MISS,
       retryCount: undefined,
       aiProviderRequestBody,
+      responseAlreadyHandled: true, // Stream already processed by responseHandler
       ...commonRequestOptions,
     };
 
@@ -802,12 +803,25 @@ export async function recursiveOutputHookHandler(
     retry?.use_retry_after_header || false,
   ));
 
-  // Create callback to capture first token time for streaming responses
+  // Create callbacks for streaming responses
   const onFirstChunk = isStreamingMode
     ? () => {
         c.set('first_token_time', Date.now());
       }
     : undefined;
+
+  // Create a promise that resolves when the stream ends
+  let streamEndResolver: ((accumulatedChunks: string) => void) | undefined;
+  if (isStreamingMode) {
+    const streamEndPromise = new Promise<void>((resolve) => {
+      streamEndResolver = (accumulatedChunks: string) => {
+        c.set('stream_end_time', Date.now());
+        c.set('accumulated_stream_chunks', accumulatedChunks);
+        resolve();
+      };
+    });
+    c.set('stream_end_promise', streamEndPromise);
+  }
 
   const {
     response: mappedResponse,
@@ -824,6 +838,7 @@ export async function recursiveOutputHookHandler(
     strictOpenAiCompliance,
     commonRequestOptions.areSyncHooksAvailable,
     onFirstChunk,
+    streamEndResolver,
   );
 
   if (!mappedResponse.ok) {
@@ -835,15 +850,25 @@ export async function recursiveOutputHookHandler(
     });
   }
 
-  if (!raResponseBody) {
+  if (!raResponseBody && !isStreamingMode) {
     throw new GatewayError('No response body from target');
+  }
+
+  // For streaming responses, skip output hooks and return the streaming response directly
+  if (isStreamingMode) {
+    return {
+      mappedResponse,
+      retryCount: retryCount || 0,
+      createdAt,
+      originalResponseJson,
+    };
   }
 
   const outputHookResponse = await outputHookHandler(
     c,
     raRequestData,
     mappedResponse,
-    raResponseBody,
+    raResponseBody!, // Non-null assertion: we've already checked and returned early for streaming
     retryAttemptsMade,
   );
 

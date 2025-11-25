@@ -11,6 +11,7 @@ import { ollamaEmbedConfig, ollamaEmbedResponseTransform } from './embed';
 export const ollamaConfig: AIProviderConfig = {
   api: ollamaAPIConfig,
   [FunctionName.CHAT_COMPLETE]: ollamaChatCompleteConfig,
+  [FunctionName.STREAM_CHAT_COMPLETE]: ollamaChatCompleteConfig,
   [FunctionName.EMBED]: ollamaEmbedConfig,
   responseTransforms: {
     [FunctionName.CHAT_COMPLETE]: ollamaChatCompleteResponseTransform,

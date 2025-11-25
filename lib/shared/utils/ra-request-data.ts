@@ -11,7 +11,7 @@ export function produceReactiveAgentsRequestData(
   urlString: string,
   requestHeaders: Record<string, string>,
   rawRequestBody: Record<string, unknown>,
-  rawResponseBody?: Record<string, unknown>,
+  rawResponseBody?: Record<string, unknown> | null,
 ): ReactiveAgentsRequestData {
   const url = new URL(urlString);
   const pathname = url.pathname;
@@ -27,11 +27,11 @@ export function produceReactiveAgentsRequestData(
 
   // Find matching route pattern
   for (const config of functionConfigs) {
-    if (
-      config.route_pattern.test(pathname) &&
-      config.method === method &&
-      (config.stream ?? false) === stream
-    ) {
+    const patternMatches = config.route_pattern.test(pathname);
+    const methodMatches = config.method === method;
+    const streamMatches = (config.stream ?? false) === stream;
+
+    if (patternMatches && methodMatches && streamMatches) {
       const functionName = config.functionName;
 
       let requestBody = rawRequestBody;
@@ -50,12 +50,17 @@ export function produceReactiveAgentsRequestData(
         const responseSchemaSafeParseResult =
           config.responseSchema.safeParse(rawResponseBody);
         if (!responseSchemaSafeParseResult.success) {
-          throw new Error(
-            `Invalid response body: ${responseSchemaSafeParseResult.error}`,
+          // For logs, the response may have been modified during accumulation
+          // Use the raw response without validation instead of throwing
+          console.warn(
+            `Response body validation failed for ${functionName}, using raw response:`,
+            responseSchemaSafeParseResult.error,
           );
+          responseBody = rawResponseBody as ReactiveAgentsResponseBody;
+        } else {
+          responseBody =
+            responseSchemaSafeParseResult.data as ReactiveAgentsResponseBody;
         }
-        responseBody =
-          responseSchemaSafeParseResult.data as ReactiveAgentsResponseBody;
       }
 
       const rawReactiveAgentsRequestData = {

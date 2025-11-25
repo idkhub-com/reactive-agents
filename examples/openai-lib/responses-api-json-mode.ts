@@ -35,10 +35,6 @@ const response1 = await client
     model: 'gpt-4o-mini',
     input: [
       {
-        role: 'system',
-        content: 'Extract the event information into a JSON object.',
-      },
-      {
         role: 'user',
         content: userMessage1,
       },

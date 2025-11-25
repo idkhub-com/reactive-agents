@@ -18,37 +18,44 @@ const raConfig = {
 const userMessage1 = 'Are semicolons optional in JavaScript?';
 logger.printWithHeader('User', userMessage1);
 
-const response1 = await client
+const stream1 = await client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
     },
   })
-  .responses.create({
-    model: 'gpt-4o-mini',
-    input: [
+  .chat.completions.create({
+    model: 'gpt-4o-mini', // The model value is ignored by Reactive Agents
+    messages: [
       {
         role: 'user',
         content: userMessage1,
       },
     ],
+    stream: true,
   });
 
-const agentResponse1 = response1.output_text;
-logger.printWithHeader('Agent', agentResponse1 || '');
+let agentResponse1 = '';
+process.stdout.write('Agent: ');
+for await (const chunk of stream1) {
+  const content = chunk.choices[0]?.delta?.content || '';
+  process.stdout.write(content);
+  agentResponse1 += content;
+}
+process.stdout.write('\n');
 
 const userMessage2 = 'What about in Rust?';
 logger.printWithHeader('User', userMessage2);
 
-const response2 = await client
+const stream2 = await client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
     },
   })
-  .responses.create({
-    model: 'gpt-4o-mini',
-    input: [
+  .chat.completions.create({
+    model: 'gpt-4o-mini', // The model value is ignored by Reactive Agents
+    messages: [
       {
         role: 'user',
         content: userMessage1,
@@ -62,6 +69,12 @@ const response2 = await client
         content: userMessage2,
       },
     ],
+    stream: true,
   });
 
-logger.printWithHeader('Agent', response2.output_text);
+process.stdout.write('Agent: ');
+for await (const chunk of stream2) {
+  const content = chunk.choices[0]?.delta?.content || '';
+  process.stdout.write(content);
+}
+process.stdout.write('\n');

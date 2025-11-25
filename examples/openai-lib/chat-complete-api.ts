@@ -28,10 +28,6 @@ const response1 = await client
     model: 'gpt-4o-mini',
     messages: [
       {
-        role: 'system',
-        content: 'You are a coding assistant that talks like a pirate',
-      },
-      {
         role: 'user',
         content: userMessage1,
       },
@@ -53,10 +49,6 @@ const response2 = await client
   .chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
-      {
-        role: 'system',
-        content: 'You are a coding assistant that talks like a pirate',
-      },
       {
         role: 'user',
         content: userMessage1,

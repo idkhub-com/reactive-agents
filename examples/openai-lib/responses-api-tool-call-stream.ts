@@ -72,24 +72,32 @@ const input: ResponseInputItem[] = [
   },
 ];
 
-const response1 = await client
+logger.printWithHeader('Agent Response', '[Streaming tool calls...]');
+
+const stream1 = client
   .withOptions({
     defaultHeaders: {
       'ra-config': JSON.stringify(raConfig),
     },
   })
-  .responses.create({
+  .responses.stream({
     model: 'gpt-4o-mini',
     input,
     tools,
     tool_choice: 'required',
+  })
+  .on('response.output_text.delta', (event) => {
+    process.stdout.write(event.delta);
+  })
+  .on('error', (error) => {
+    logger.error(error);
   });
 
-logger.printWithHeader(
-  'Agent Response',
-  response1.output_text || '[Tool calls made]',
-);
+const response1 = await stream1.finalResponse();
 
+console.log(); // New line after streaming
+
+// Execute the function calls from the response
 for (const output of response1.output) {
   input.push(output);
 

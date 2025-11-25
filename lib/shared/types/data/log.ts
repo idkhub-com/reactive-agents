@@ -20,7 +20,7 @@ export const AIProviderRequestLog = z.object({
   request_url: z.string(),
   status: z.number(),
   request_body: z.record(z.string(), z.unknown()),
-  response_body: z.record(z.string(), z.unknown()),
+  response_body: z.record(z.string(), z.unknown()).nullable(), // Allow null for streaming responses
   raw_request_body: z.string(),
   raw_response_body: z.string(),
   cache_mode: z.enum(CacheMode),
