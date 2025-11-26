@@ -75,16 +75,16 @@ CHECK (
 -- ============================================================================
 
 -- Create a function to validate model type
-CREATE OR REPLACE FUNCTION check_model_type(model_id UUID, expected_type model_type)
+CREATE OR REPLACE FUNCTION check_model_type(model_id UUID, expected_type public.model_type)
 RETURNS BOOLEAN AS $$
 DECLARE
-  actual_type model_type;
+  actual_type public.model_type;
 BEGIN
   IF model_id IS NULL THEN
     RETURN TRUE;
   END IF;
 
-  SELECT model_type INTO actual_type FROM models WHERE id = model_id;
+  SELECT m.model_type INTO actual_type FROM public.models m WHERE m.id = model_id;
 
   IF actual_type IS NULL THEN
     RETURN FALSE; -- Model doesn't exist
@@ -92,35 +92,37 @@ BEGIN
 
   RETURN actual_type = expected_type;
 END;
-$$ LANGUAGE plpgsql STABLE;
+$$ LANGUAGE plpgsql STABLE
+SET search_path = '';
 
 -- Create trigger function to validate system_settings model types
 CREATE OR REPLACE FUNCTION validate_system_settings_model_types()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Validate embedding_model_id must be an embed model
-  IF NOT check_model_type(NEW.embedding_model_id, 'embed') THEN
+  IF NOT public.check_model_type(NEW.embedding_model_id, 'embed') THEN
     RAISE EXCEPTION 'embedding_model_id must reference an embed model';
   END IF;
 
   -- Validate system_prompt_reflection_model_id must be a text model
-  IF NOT check_model_type(NEW.system_prompt_reflection_model_id, 'text') THEN
+  IF NOT public.check_model_type(NEW.system_prompt_reflection_model_id, 'text') THEN
     RAISE EXCEPTION 'system_prompt_reflection_model_id must reference a text model';
   END IF;
 
   -- Validate evaluation_generation_model_id must be a text model
-  IF NOT check_model_type(NEW.evaluation_generation_model_id, 'text') THEN
+  IF NOT public.check_model_type(NEW.evaluation_generation_model_id, 'text') THEN
     RAISE EXCEPTION 'evaluation_generation_model_id must reference a text model';
   END IF;
 
   -- Validate judge_model_id must be a text model
-  IF NOT check_model_type(NEW.judge_model_id, 'text') THEN
+  IF NOT public.check_model_type(NEW.judge_model_id, 'text') THEN
     RAISE EXCEPTION 'judge_model_id must reference a text model';
   END IF;
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Create trigger on system_settings
 CREATE TRIGGER system_settings_model_type_validation
@@ -139,7 +141,7 @@ BEGIN
 
   -- Check if this model is referenced in system_settings
   IF EXISTS (
-    SELECT 1 FROM system_settings
+    SELECT 1 FROM public.system_settings
     WHERE embedding_model_id = NEW.id
        OR system_prompt_reflection_model_id = NEW.id
        OR evaluation_generation_model_id = NEW.id
@@ -150,7 +152,8 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Create trigger on models
 CREATE TRIGGER models_prevent_type_change_if_referenced
@@ -180,13 +183,14 @@ BEGIN
   END IF;
 
   -- Validate model_id must be a text model
-  IF NOT check_model_type(NEW.model_id, 'text') THEN
+  IF NOT public.check_model_type(NEW.model_id, 'text') THEN
     RAISE EXCEPTION 'evaluation model_id must reference a text model';
   END IF;
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Create trigger on skill_optimization_evaluations
 CREATE TRIGGER skill_optimization_evaluations_model_type_validation

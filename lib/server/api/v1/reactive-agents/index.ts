@@ -26,8 +26,6 @@ export const reactiveAgentsRouter = new Hono<AppEnv>()
   .route('/feedbacks', feedbacksRouter)
   .route('/improved-responses', improvedResponsesRouter)
   .route('/ai-providers', aiProvidersRouter)
-  // Keep old endpoint for backward compatibility
-  .route('/ai-providers', aiProvidersRouter)
   .route('/events', eventsRouter)
   .route('/evaluation-methods', evaluationMethodsRouter)
   .route('/system-settings', systemSettingsRouter);
