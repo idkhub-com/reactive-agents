@@ -119,7 +119,8 @@ export async function addModelsToSkill(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to add models to skill');
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to add models to skill');
   }
 }
 
@@ -137,7 +138,8 @@ export async function removeModelsFromSkill(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to remove models from skill');
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to remove models from skill');
   }
 }
 

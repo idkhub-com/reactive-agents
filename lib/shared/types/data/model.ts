@@ -77,6 +77,62 @@ export const ModelUpdateParams = z
       message: 'At least one field must be provided for update',
       path: ['model_name'],
     },
+  )
+  .refine(
+    (data) => {
+      // If explicitly setting model_type to 'embed', embedding_dimensions must be provided
+      if (data.model_type === 'embed') {
+        return (
+          data.embedding_dimensions !== undefined &&
+          data.embedding_dimensions !== null
+        );
+      }
+      return true;
+    },
+    {
+      message:
+        'embedding_dimensions is required when changing model_type to embed',
+      path: ['embedding_dimensions'],
+    },
+  )
+  .refine(
+    (data) => {
+      // If explicitly setting model_type to 'text', embedding_dimensions must be null or not set
+      if (data.model_type === 'text') {
+        return (
+          data.embedding_dimensions === undefined ||
+          data.embedding_dimensions === null
+        );
+      }
+      return true;
+    },
+    {
+      message:
+        'embedding_dimensions must not be set when changing model_type to text',
+      path: ['embedding_dimensions'],
+    },
+  )
+  .refine(
+    (data) => {
+      // If only embedding_dimensions is being set (without model_type), it cannot be a positive number
+      // because we don't know if the target model is embed type
+      // This prevents accidentally setting dimensions on a text model
+      if (
+        data.model_type === undefined &&
+        data.embedding_dimensions !== undefined &&
+        data.embedding_dimensions !== null
+      ) {
+        // Setting dimensions without specifying model_type is not allowed
+        // because we can't validate consistency without knowing the target model's type
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        'model_type must be specified as "embed" when setting embedding_dimensions',
+      path: ['model_type'],
+    },
   );
 
 export type ModelUpdateParams = z.infer<typeof ModelUpdateParams>;

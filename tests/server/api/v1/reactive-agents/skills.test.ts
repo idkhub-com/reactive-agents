@@ -197,7 +197,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to create skill' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid input', async () => {
@@ -256,7 +258,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to fetch skills' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
   });
 
@@ -343,7 +347,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to update skill' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {
@@ -383,7 +389,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to delete skill' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {

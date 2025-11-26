@@ -207,6 +207,133 @@ describe('Model Data Transforms and Validation', () => {
 
       expect(() => ModelUpdateParams.parse(inputData)).toThrow();
     });
+
+    describe('model_type and embedding_dimensions validation', () => {
+      it('should accept model_type embed with embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'embed',
+          embedding_dimensions: 1536,
+        };
+
+        const result = ModelUpdateParams.parse(inputData);
+
+        expect(result.model_type).toBe('embed');
+        expect(result.embedding_dimensions).toBe(1536);
+      });
+
+      it('should reject model_type embed without embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'embed',
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow(
+          'embedding_dimensions is required when changing model_type to embed',
+        );
+      });
+
+      it('should reject model_type embed with null embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'embed',
+          embedding_dimensions: null,
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow(
+          'embedding_dimensions is required when changing model_type to embed',
+        );
+      });
+
+      it('should accept model_type text without embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'text',
+        };
+
+        const result = ModelUpdateParams.parse(inputData);
+
+        expect(result.model_type).toBe('text');
+      });
+
+      it('should accept model_type text with null embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'text',
+          embedding_dimensions: null,
+        };
+
+        const result = ModelUpdateParams.parse(inputData);
+
+        expect(result.model_type).toBe('text');
+        expect(result.embedding_dimensions).toBeNull();
+      });
+
+      it('should reject model_type text with positive embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'text',
+          embedding_dimensions: 1536,
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow(
+          'embedding_dimensions must not be set when changing model_type to text',
+        );
+      });
+
+      it('should reject embedding_dimensions without model_type', () => {
+        const inputData = {
+          embedding_dimensions: 1536,
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow();
+      });
+
+      it('should accept clearing embedding_dimensions to null without model_type', () => {
+        const inputData = {
+          embedding_dimensions: null,
+        };
+
+        const result = ModelUpdateParams.parse(inputData);
+
+        expect(result.embedding_dimensions).toBeNull();
+      });
+
+      it('should accept model_name update with model_type embed and dimensions', () => {
+        const inputData = {
+          model_name: 'text-embedding-3-large',
+          model_type: 'embed',
+          embedding_dimensions: 3072,
+        };
+
+        const result = ModelUpdateParams.parse(inputData);
+
+        expect(result.model_name).toBe('text-embedding-3-large');
+        expect(result.model_type).toBe('embed');
+        expect(result.embedding_dimensions).toBe(3072);
+      });
+
+      it('should reject zero embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'embed',
+          embedding_dimensions: 0,
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow();
+      });
+
+      it('should reject negative embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'embed',
+          embedding_dimensions: -1536,
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow();
+      });
+
+      it('should reject non-integer embedding_dimensions', () => {
+        const inputData = {
+          model_type: 'embed',
+          embedding_dimensions: 1536.5,
+        };
+
+        expect(() => ModelUpdateParams.parse(inputData)).toThrow();
+      });
+    });
   });
 
   describe('ModelQueryParams Transform', () => {

@@ -597,7 +597,7 @@ describe('Improved Responses API', () => {
       const data = await res.json();
       expect(data).toHaveProperty(
         'error',
-        'Failed to update improved response',
+        'An unexpected database error occurred. Please try again.',
       );
     });
   });
@@ -670,7 +670,7 @@ describe('Improved Responses API', () => {
       const data = await res.json();
       expect(data).toHaveProperty(
         'error',
-        'Failed to retrieve improved response',
+        'An unexpected database error occurred. Please try again.',
       );
     });
 
@@ -699,7 +699,7 @@ describe('Improved Responses API', () => {
       const data = await res.json();
       expect(data).toHaveProperty(
         'error',
-        'Failed to create improved response',
+        'An unexpected database error occurred. Please try again.',
       );
     });
 

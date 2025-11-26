@@ -1,6 +1,15 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
+import { DeveloperModeToggle } from '@client/components/settings/developer-mode-toggle';
+import {
+  type ModelOption,
+  ModelSelector,
+} from '@client/components/settings/model-selector';
+import {
+  ErrorWarning,
+  IncompleteSettingsWarning,
+  NoModelsWarning,
+} from '@client/components/settings/validation-warnings';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -9,165 +18,24 @@ import {
   CardHeader,
   CardTitle,
 } from '@client/components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@client/components/ui/command';
 import { PageHeader } from '@client/components/ui/page-header';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@client/components/ui/popover';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { Switch } from '@client/components/ui/switch';
 import { useToast } from '@client/hooks/use-toast';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { useSystemSettings } from '@client/providers/system-settings';
 import { sortModels } from '@client/utils/model-sorting';
-import { cn } from '@client/utils/ui/utils';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { SystemSettingsUpdateParams } from '@shared/types/data/system-settings';
-import {
-  AlertCircleIcon,
-  CheckIcon,
-  ChevronsUpDownIcon,
-  CodeIcon,
-  RefreshCwIcon,
-  SaveIcon,
-  SettingsIcon,
-} from 'lucide-react';
-import Link from 'next/link';
+import { SaveIcon, SettingsIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
-interface ModelOption {
-  id: string;
-  modelName: string;
-  providerName: string;
-  modelType: 'text' | 'embed';
-  searchLabel: string;
-}
-
-interface SettingFieldProps {
-  label: string;
-  description: string;
-  recommendation?: string;
-  value: string | null;
-  onChange: (value: string) => void;
-  modelOptions: ModelOption[];
-  isLoading: boolean;
-  required?: boolean;
-}
-
-function SettingField({
-  label,
-  description,
-  recommendation,
-  value,
-  onChange,
-  modelOptions,
-  isLoading,
-  required = true,
-}: SettingFieldProps): ReactElement {
-  const [open, setOpen] = useState(false);
-
-  const selectedModel = useMemo(
-    () => modelOptions.find((m) => m.id === value),
-    [modelOptions, value],
-  );
-
-  const showNotConfiguredWarning =
-    required && !value && modelOptions.length > 0;
-
-  return (
-    <div className="grid gap-4 md:grid-cols-[1fr,300px] items-start py-4 border-b last:border-b-0">
-      <div className="space-y-1">
-        <h4 className="font-medium">
-          {label}
-          {required && <span className="text-destructive ml-1">*</span>}
-        </h4>
-        <p className="text-sm text-muted-foreground">{description}</p>
-        {recommendation && (
-          <p className="text-sm text-muted-foreground">
-            Recommended: {recommendation}
-          </p>
-        )}
-      </div>
-      <div className="space-y-2">
-        {isLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className={cn(
-                  'w-[400px] justify-between',
-                  showNotConfiguredWarning && 'border-destructive',
-                )}
-              >
-                {selectedModel ? (
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="truncate">{selectedModel.modelName}</span>
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      {selectedModel.providerName}
-                    </Badge>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">Select a model</span>
-                )}
-                <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search models..." />
-                <CommandList>
-                  <CommandEmpty>No model found.</CommandEmpty>
-                  <CommandGroup>
-                    {modelOptions.map((model) => (
-                      <CommandItem
-                        key={model.id}
-                        value={model.searchLabel}
-                        onSelect={() => {
-                          onChange(model.id);
-                          setOpen(false);
-                        }}
-                      >
-                        <CheckIcon
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            value === model.id ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
-                        <div className="flex items-center gap-2">
-                          <span>{model.modelName}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {model.providerName}
-                          </Badge>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
-        {showNotConfiguredWarning && (
-          <p className="text-sm text-destructive">This field is required</p>
-        )}
-      </div>
-    </div>
-  );
+interface FormValues {
+  system_prompt_reflection_model_id: string | null;
+  evaluation_generation_model_id: string | null;
+  embedding_model_id: string | null;
+  judge_model_id: string | null;
+  developer_mode: boolean;
 }
 
 export function SystemSettingsView(): ReactElement {
@@ -178,13 +46,7 @@ export function SystemSettingsView(): ReactElement {
   const { aiProviderConfigs: apiKeys } = useAIProviders();
 
   // Local state for form values
-  const [formValues, setFormValues] = useState<{
-    system_prompt_reflection_model_id: string | null;
-    evaluation_generation_model_id: string | null;
-    embedding_model_id: string | null;
-    judge_model_id: string | null;
-    developer_mode: boolean;
-  }>({
+  const [formValues, setFormValues] = useState<FormValues>({
     system_prompt_reflection_model_id: null,
     evaluation_generation_model_id: null,
     embedding_model_id: null,
@@ -246,8 +108,13 @@ export function SystemSettingsView(): ReactElement {
     [modelOptions],
   );
 
-  const handleFieldChange = (field: keyof typeof formValues, value: string) => {
+  const handleFieldChange = (field: keyof FormValues, value: string) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleDeveloperModeChange = (checked: boolean) => {
+    setFormValues((prev) => ({ ...prev, developer_mode: checked }));
     setIsDirty(true);
   };
 
@@ -353,70 +220,27 @@ export function SystemSettingsView(): ReactElement {
           <Button
             onClick={handleSave}
             disabled={!isDirty || isUpdating || isAnyLoading}
+            aria-label={isUpdating ? 'Saving changes' : 'Save changes'}
           >
-            <SaveIcon className="h-4 w-4 mr-2" />
+            <SaveIcon className="h-4 w-4 mr-2" aria-hidden="true" />
             {isUpdating ? 'Saving...' : 'Save Changes'}
           </Button>
         }
       />
 
       <div className="p-6 space-y-6">
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircleIcon className="h-5 w-5" />
-                <p>{error}</p>
-              </div>
-              <Button variant="outline" onClick={refetch} className="mt-4">
-                <RefreshCwIcon className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {error && <ErrorWarning error={error} onRetry={refetch} />}
 
-        {hasNoModels && (
-          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertCircleIcon className="h-5 w-5 text-amber-500 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="font-medium">No models configured</p>
-                  <p className="text-sm text-muted-foreground">
-                    You need to add at least one model before you can configure
-                    system settings.
-                  </p>
-                  <Button asChild variant="outline" className="mt-2">
-                    <Link href="/models/create">Add Your First Model</Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {hasNoModels && <NoModelsWarning />}
 
         {!hasNoModels && !isSettingsComplete && (
-          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertCircleIcon className="h-5 w-5 text-amber-500 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="font-medium">Settings incomplete</p>
-                  <p className="text-sm text-muted-foreground">
-                    Please configure all required models below for the system to
-                    function properly. Missing: {missingFields.join(', ')}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <IncompleteSettingsWarning missingFields={missingFields} />
         )}
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
+              <SettingsIcon className="h-5 w-5" aria-hidden="true" />
               Model Configuration
             </CardTitle>
             <CardDescription>
@@ -426,7 +250,7 @@ export function SystemSettingsView(): ReactElement {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SettingField
+            <ModelSelector
               label="System Prompt Reflection"
               description="Model used for analyzing and improving system prompts during optimization."
               recommendation="gpt-5.1, claude-sonnet-4-5, or claude-opus-4-5"
@@ -438,7 +262,7 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
             />
 
-            <SettingField
+            <ModelSelector
               label="Evaluation Generation"
               description="Model used for automatically generating evaluation criteria for skills."
               recommendation="gpt-5.1, claude-sonnet-4-5, or claude-opus-4-5"
@@ -450,7 +274,7 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
             />
 
-            <SettingField
+            <ModelSelector
               label="Embedding Model"
               description="Model used for generating text embeddings for request clustering."
               recommendation="text-embedding-3-small (OpenAI) or gemini-embedding-001 (Google)"
@@ -460,7 +284,7 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
             />
 
-            <SettingField
+            <ModelSelector
               label="Judge Model"
               description="Model used for evaluating and scoring responses during optimization."
               recommendation="gpt-5.1, claude-sonnet-4-5, or claude-opus-4-5"
@@ -472,40 +296,11 @@ export function SystemSettingsView(): ReactElement {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CodeIcon className="h-5 w-5" />
-              Developer Mode
-            </CardTitle>
-            <CardDescription>
-              Advanced settings for development and debugging purposes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between py-4">
-              <div className="space-y-1">
-                <h4 className="font-medium">Enable Developer Mode</h4>
-                <p className="text-sm text-muted-foreground">
-                  When enabled, shows the internal reactive-agents agent and all
-                  its skills and data. This is useful for debugging and
-                  development.
-                </p>
-              </div>
-              <Switch
-                checked={formValues.developer_mode}
-                onCheckedChange={(checked) => {
-                  setFormValues((prev) => ({
-                    ...prev,
-                    developer_mode: checked,
-                  }));
-                  setIsDirty(true);
-                }}
-                disabled={isAnyLoading}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <DeveloperModeToggle
+          checked={formValues.developer_mode}
+          onCheckedChange={handleDeveloperModeChange}
+          disabled={isAnyLoading}
+        />
       </div>
     </>
   );

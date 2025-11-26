@@ -21,11 +21,14 @@ export async function getModels(params?: ModelQueryParams): Promise<Model[]> {
     },
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Failed to fetch models');
+    const errorData = data as { error?: string };
+    throw new Error(errorData.error || 'Failed to fetch models');
   }
 
-  return Model.array().parse(await response.json());
+  return Model.array().parse(data);
 }
 
 export async function getModelById(id: string): Promise<Model> {
@@ -35,11 +38,14 @@ export async function getModelById(id: string): Promise<Model> {
     },
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Failed to fetch model');
+    const errorData = data as { error?: string };
+    throw new Error(errorData.error || 'Failed to fetch model');
   }
 
-  return Model.parse(await response.json());
+  return Model.parse(data);
 }
 
 export async function createModel(model: ModelCreateParams): Promise<Model> {
@@ -47,11 +53,14 @@ export async function createModel(model: ModelCreateParams): Promise<Model> {
     json: model,
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Failed to create model');
+    const errorData = data as { error?: string };
+    throw new Error(errorData.error || 'Failed to create model');
   }
 
-  return Model.parse(await response.json());
+  return Model.parse(data);
 }
 
 export async function updateModel(
@@ -65,11 +74,14 @@ export async function updateModel(
     json: update,
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Failed to update model');
+    const errorData = data as { error?: string };
+    throw new Error(errorData.error || 'Failed to update model');
   }
 
-  return Model.parse(await response.json());
+  return Model.parse(data);
 }
 
 export async function deleteModel(id: string): Promise<void> {
@@ -80,6 +92,7 @@ export async function deleteModel(id: string): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to delete model');
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to delete model');
   }
 }

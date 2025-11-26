@@ -525,7 +525,10 @@ describe('Feedback API', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toHaveProperty('error', 'Failed to retrieve feedback');
+      expect(data).toHaveProperty(
+        'error',
+        'An unexpected database error occurred. Please try again.',
+      );
     });
 
     it('should handle database errors during CREATE', async () => {
@@ -549,7 +552,10 @@ describe('Feedback API', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toHaveProperty('error', 'Failed to create feedback');
+      expect(data).toHaveProperty(
+        'error',
+        'An unexpected database error occurred. Please try again.',
+      );
     });
 
     it('should handle database errors during DELETE', async () => {
@@ -564,7 +570,10 @@ describe('Feedback API', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toHaveProperty('error', 'Failed to delete feedback');
+      expect(data).toHaveProperty(
+        'error',
+        'An unexpected database error occurred. Please try again.',
+      );
     });
 
     it('should handle malformed JSON', async () => {

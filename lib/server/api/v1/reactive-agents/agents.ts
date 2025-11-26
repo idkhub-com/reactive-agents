@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
+import { parseDatabaseError } from '@server/utils/database-error';
 import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import {
   AgentCreateParams,
@@ -20,7 +21,8 @@ export const agentsRouter = new Hono<AppEnv>()
       return c.json(newAgent, 201);
     } catch (error) {
       console.error('Error creating agent:', error);
-      return c.json({ error: 'Failed to create agent' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
   .get('/', zValidator('query', AgentQueryParams), async (c) => {
@@ -33,7 +35,8 @@ export const agentsRouter = new Hono<AppEnv>()
       return c.json(agents, 200);
     } catch (error) {
       console.error('Error fetching agents:', error);
-      return c.json({ error: 'Failed to fetch agents' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
   .patch(
@@ -56,7 +59,8 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.json(updatedAgent, 200);
       } catch (error) {
         console.error('Error updating agent:', error);
-        return c.json({ error: 'Failed to update agent' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -73,7 +77,8 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.body(null, 204);
       } catch (error) {
         console.error('Error deleting agent:', error);
-        return c.json({ error: 'Failed to delete agent' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -95,7 +100,8 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.json(skills, 200);
       } catch (error) {
         console.error('Error fetching skills:', error);
-        return c.json({ error: 'Failed to fetch skills' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -127,7 +133,8 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.json(evaluationRuns);
       } catch (error) {
         console.error('Error getting evaluation runs:', error);
-        return c.json({ error: 'Failed to get evaluation runs' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -158,10 +165,8 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.json(scores);
       } catch (error) {
         console.error('Error getting evaluation scores by time bucket:', error);
-        return c.json(
-          { error: 'Failed to get evaluation scores by time bucket' },
-          500,
-        );
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   );

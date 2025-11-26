@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import type { AppEnv } from '@server/types/hono';
+import { parseDatabaseError } from '@server/utils/database-error';
 import {
   FeedbackCreateParams,
   FeedbackQueryParams,
@@ -18,7 +19,8 @@ export const feedbacksRouter = new Hono<AppEnv>()
       return c.json(feedback);
     } catch (error) {
       console.error('Error retrieving feedback:', error);
-      return c.json({ error: 'Failed to retrieve feedback' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
   // Create new feedback
@@ -32,7 +34,8 @@ export const feedbacksRouter = new Hono<AppEnv>()
       return c.json(newFeedback, 201);
     } catch (error) {
       console.error('Error creating feedback:', error);
-      return c.json({ error: 'Failed to create feedback' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
   // Delete feedback
@@ -49,7 +52,8 @@ export const feedbacksRouter = new Hono<AppEnv>()
         return c.body(null, 204);
       } catch (error) {
         console.error('Error deleting feedback:', error);
-        return c.json({ error: 'Failed to delete feedback' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   );

@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { handleGenerateArms } from '@server/optimization/skill-optimizations';
 import { generateEvaluationCreateParams } from '@server/optimization/utils/evaluations';
 import type { AppEnv } from '@server/types/hono';
+import { parseDatabaseError } from '@server/utils/database-error';
 import { resolveEmbeddingModelConfig } from '@server/utils/evaluation-model-resolver';
 import { getInitialClusterCentroids } from '@server/utils/math';
 import { emitSSEEvent } from '@server/utils/sse-event-manager';
@@ -63,7 +64,8 @@ export const skillsRouter = new Hono<AppEnv>()
       return c.json(newSkill, 201);
     } catch (error) {
       console.error('Error creating skill:', error);
-      return c.json({ error: 'Failed to create skill' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
   .get('/', zValidator('query', SkillQueryParams), async (c) => {
@@ -76,7 +78,8 @@ export const skillsRouter = new Hono<AppEnv>()
       return c.json(skills, 200);
     } catch (error) {
       console.error('Error fetching skills:', error);
-      return c.json({ error: 'Failed to fetch skills' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
   .patch(
@@ -216,7 +219,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(updatedSkill, 200);
       } catch (error) {
         console.error('Error updating skill:', error);
-        return c.json({ error: 'Failed to update skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -233,7 +237,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.body(null, 204);
       } catch (error) {
         console.error('Error deleting skill:', error);
-        return c.json({ error: 'Failed to delete skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -250,7 +255,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(models);
       } catch (error) {
         console.error('Error fetching models for skill:', error);
-        return c.json({ error: 'Failed to fetch models for skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -297,7 +303,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ success: true }, 201);
       } catch (error) {
         console.error('Error adding models to skill:', error);
-        return c.json({ error: 'Failed to add models to skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -358,7 +365,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ success: true });
       } catch (error) {
         console.error('Error removing models from skill:', error);
-        return c.json({ error: 'Failed to remove models from skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -377,7 +385,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(clusters);
       } catch (error) {
         console.error('Error getting clusters for skill:', error);
-        return c.json({ error: 'Failed to get clusters for skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -396,7 +405,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(arms);
       } catch (error) {
         console.error('Error getting models for skill:', error);
-        return c.json({ error: 'Failed to get models for skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -415,7 +425,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(armStats);
       } catch (error) {
         console.error('Error getting arm stats for skill:', error);
-        return c.json({ error: 'Failed to get arm stats for skill' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -430,7 +441,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return await handleGenerateArms(c, connector, skillId);
       } catch (error) {
         console.error('Error generating arms:', error);
-        return c.json({ error: 'Failed to generate arms' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -462,7 +474,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(evaluationRuns);
       } catch (error) {
         console.error('Error getting evaluation runs:', error);
-        return c.json({ error: 'Failed to get evaluation runs' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -496,10 +509,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(scores);
       } catch (error) {
         console.error('Error getting evaluation scores by time bucket:', error);
-        return c.json(
-          { error: 'Failed to get evaluation scores by time bucket' },
-          500,
-        );
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -518,7 +529,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(evaluations);
       } catch (error) {
         console.error('Error getting evaluations:', error);
-        return c.json({ error: 'Failed to get evaluations' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -601,7 +613,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(createdEvaluations, 200);
       } catch (error) {
         console.error('Error generating evaluations:', error);
-        return c.json({ error: 'Failed to generate evaluations' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -666,7 +679,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json(updatedEvaluation);
       } catch (error) {
         console.error('Error updating evaluation:', error);
-        return c.json({ error: 'Failed to update evaluation' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -711,7 +725,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ message: 'Evaluations deleted successfully' }, 200);
       } catch (error) {
         console.error('Error deleting evaluations:', error);
-        return c.json({ error: 'Failed to delete evaluations' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -777,7 +792,8 @@ export const skillsRouter = new Hono<AppEnv>()
         return c.json({ message: 'Cluster reset successfully' }, 200);
       } catch (error) {
         console.error('Error resetting cluster:', error);
-        return c.json({ error: 'Failed to reset cluster' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -932,6 +948,7 @@ export const skillsRouter = new Hono<AppEnv>()
       return c.json({ message: 'Skill reset successfully' }, 200);
     } catch (error) {
       console.error('Error resetting skill:', error);
-      return c.json({ error: 'Failed to reset skill' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   });
