@@ -35,6 +35,7 @@ import {
 import { useToast } from '@client/hooks/use-toast';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
+import { compareModels } from '@client/utils/model-sorting';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { Model } from '@shared/types/data/model';
 import { format } from 'date-fns';
@@ -65,18 +66,28 @@ export function ModelsListView(): ReactElement {
     setQueryParams({});
   }, [setQueryParams]);
 
-  const filteredModels = models.filter((model) => {
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase();
-      const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
-      return (
-        model.model_name.toLowerCase().includes(searchLower) ||
-        apiKey?.ai_provider?.toLowerCase().includes(searchLower) ||
-        apiKey?.name?.toLowerCase().includes(searchLower)
+  // Filter models and sort alphabetically by model name, then by provider
+  const filteredModels = models
+    .filter((model) => {
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
+        return (
+          model.model_name.toLowerCase().includes(searchLower) ||
+          apiKey?.ai_provider?.toLowerCase().includes(searchLower) ||
+          apiKey?.name?.toLowerCase().includes(searchLower)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const providerA = apiKeys.find((k) => k.id === a.ai_provider_id);
+      const providerB = apiKeys.find((k) => k.id === b.ai_provider_id);
+      return compareModels(
+        { modelName: a.model_name, providerName: providerA?.name || '' },
+        { modelName: b.model_name, providerName: providerB?.name || '' },
       );
-    }
-    return true;
-  });
+    });
 
   const handleDeleteModel = async (model: Model) => {
     if (isDeleting) return;
@@ -228,6 +239,7 @@ export function ModelsListView(): ReactElement {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Model</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Provider</TableHead>
                       <TableHead>API Key</TableHead>
                       <TableHead>Created</TableHead>
@@ -255,6 +267,13 @@ export function ModelsListView(): ReactElement {
                                 </div>
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {model.model_type === 'embed'
+                                ? `Embed (${model.embedding_dimensions})`
+                                : 'Text'}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">

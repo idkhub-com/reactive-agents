@@ -116,6 +116,9 @@ const mockUserDataStorageConnector = {
   getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
+  // System Settings methods
+  getSystemSettings: vi.fn(),
+  updateSystemSettings: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector
@@ -131,6 +134,14 @@ describe('Skills API Status Codes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock getSystemSettings to return empty (no embedding model configured)
+    // This allows skills to be created without embedding model
+    mockUserDataStorageConnector.getSystemSettings.mockResolvedValue({
+      embedding_model_id: null,
+      judge_model_id: null,
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+    });
   });
 
   describe('POST /', () => {
@@ -186,7 +197,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to create skill' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid input', async () => {
@@ -245,7 +258,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to fetch skills' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
   });
 
@@ -332,7 +347,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to update skill' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {
@@ -372,7 +389,9 @@ describe('Skills API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to delete skill' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {

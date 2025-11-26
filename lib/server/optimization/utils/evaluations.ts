@@ -1,6 +1,10 @@
-import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
-import type { EvaluationMethodConnector } from '@server/types/connector';
-
+import { API_URL, BEARER_TOKEN } from '@server/constants';
+import type {
+  EvaluationMethodConnector,
+  UserDataStorageConnector,
+} from '@server/types/connector';
+import { resolveSystemSettingsModel } from '@server/utils/evaluation-model-resolver';
+import { warn } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
 import type { SkillOptimizationEvaluationCreateParams } from '@shared/types/data/skill-optimization-evaluation';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
@@ -92,13 +96,21 @@ export async function generateEvaluationCreateParams(
   evaluationConnector: EvaluationMethodConnector,
   method: EvaluationMethodName,
   agentDescription: string,
+  connector: UserDataStorageConnector,
   examples?: string[],
 ): Promise<SkillOptimizationEvaluationCreateParams> {
-  // Check if OpenAI API key is available
-  const apiKey = OPENAI_API_KEY;
-  if (!apiKey) {
+  // Resolve evaluation generation model from system settings
+  const modelConfig = await resolveSystemSettingsModel(
+    'evaluation_generation',
+    connector,
+  );
+
+  if (!modelConfig) {
+    warn(
+      '[OPTIMIZER] No evaluation generation model configured in system settings',
+    );
     throw new Error(
-      `[OPTIMIZER] can't generate evaluations for skill - No OPENAI_API_KEY found`,
+      'No evaluation generation model configured in system settings',
     );
   }
 
@@ -110,9 +122,9 @@ export async function generateEvaluationCreateParams(
   const raConfig = {
     targets: [
       {
-        provider: 'openai',
-        model: 'gpt-5-mini',
-        api_key: apiKey,
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        api_key: modelConfig.apiKey,
       },
     ],
     agent_name: 'reactive-agents',
@@ -151,7 +163,7 @@ export async function generateEvaluationCreateParams(
       },
     })
     .chat.completions.parse({
-      model: 'gpt-5-mini',
+      model: modelConfig.model,
       messages: [
         { role: 'system', content: systemPrompt },
         {
@@ -200,6 +212,7 @@ export async function regenerateEvaluationsWithExamples(
   examples: string[],
   evaluationConnectors: Record<string, EvaluationMethodConnector>,
   existingEvaluationMethods: EvaluationMethodName[],
+  connector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationCreateParams[]> {
   const regeneratePromises = existingEvaluationMethods.map(async (method) => {
     const evaluationConnector = evaluationConnectors[method];
@@ -212,6 +225,7 @@ export async function regenerateEvaluationsWithExamples(
       evaluationConnector,
       method,
       agentDescription,
+      connector,
       examples,
     );
   });

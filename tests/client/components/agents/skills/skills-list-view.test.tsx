@@ -24,10 +24,19 @@ vi.mock('next/navigation', () => ({
 // Mock API functions and providers
 vi.mock('@client/api/v1/reactive-agents/agents', () => ({
   getAgents: vi.fn(),
+  getAgentEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn(),
+  getSkillEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
+  getSkillClusterStates: vi.fn().mockResolvedValue([]),
+  getSkillModels: vi.fn().mockResolvedValue([]),
+  getSkillEvaluations: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@client/api/v1/reactive-agents/skill-events', () => ({
+  getSkillEvents: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@client/providers/skills', async (importOriginal) => {
@@ -41,6 +50,26 @@ vi.mock('@client/providers/skills', async (importOriginal) => {
 
 vi.mock('@client/providers/logs', () => ({
   useLogs: vi.fn(),
+}));
+
+// Mock the system settings provider
+vi.mock('@client/providers/system-settings', () => ({
+  useSystemSettings: vi.fn(() => ({
+    systemSettings: {
+      embedding_model_id: null,
+      judge_model_id: null,
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    updateSystemSettings: vi.fn(),
+    isUpdating: false,
+    updateError: null,
+  })),
+  SystemSettingsProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 import { getAgents } from '@client/api/v1/reactive-agents/agents';

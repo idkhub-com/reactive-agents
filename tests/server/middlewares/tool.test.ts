@@ -169,6 +169,9 @@ describe('toolMiddleware', () => {
       deleteSkillOptimizationEvaluationRun: vi.fn(),
       getSkillEvents: vi.fn(),
       createSkillEvent: vi.fn(),
+      // System Settings methods
+      getSystemSettings: vi.fn(),
+      updateSystemSettings: vi.fn(),
     } as UserDataStorageConnector;
 
     // Mock crypto.subtle.digest to return our mock digest

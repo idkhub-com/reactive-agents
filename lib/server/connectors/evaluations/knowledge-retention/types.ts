@@ -15,17 +15,14 @@ export interface KnowledgeRetentionAverageResult {
   evaluation_run_id: string;
 }
 
-// Default evaluation model - can be overridden by users
-export const KNOWLEDGE_RETENTION_EVALUATION_MODEL_DEFAULT = 'gpt-5-mini';
-
 // AI-modifiable parameters - none needed, evaluation works automatically
 export const KnowledgeRetentionEvaluationAIParameters = z.object({}).strict();
 
 // Full parameters including user-modifiable settings
+// Note: model is configured via evaluation.model_id, not in parameters
 export const KnowledgeRetentionEvaluationParameters =
   KnowledgeRetentionEvaluationAIParameters.extend({
     threshold: z.number().min(0).max(1),
-    model: z.string().default(KNOWLEDGE_RETENTION_EVALUATION_MODEL_DEFAULT),
     temperature: z.number().min(0).max(2).default(0.1),
     max_tokens: z.number().int().positive().default(1000),
     include_reason: z.boolean().default(true),

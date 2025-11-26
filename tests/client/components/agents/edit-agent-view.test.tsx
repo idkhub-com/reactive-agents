@@ -3,6 +3,7 @@ import { NavigationProvider } from '@client/providers/navigation';
 import { SkillsProvider } from '@client/providers/skills';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Next.js router and params before importing component
@@ -83,6 +84,26 @@ vi.mock('@client/providers/agents', async (importOriginal) => {
     useAgents: vi.fn(),
   };
 });
+
+// Mock the system settings provider
+vi.mock('@client/providers/system-settings', () => ({
+  useSystemSettings: vi.fn(() => ({
+    systemSettings: {
+      embedding_model_id: null,
+      judge_model_id: null,
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    updateSystemSettings: vi.fn(),
+    isUpdating: false,
+    updateError: null,
+  })),
+  SystemSettingsProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+}));
 
 describe('EditAgentView', () => {
   let queryClient: QueryClient;

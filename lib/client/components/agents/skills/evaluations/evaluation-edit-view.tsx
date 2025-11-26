@@ -1,6 +1,7 @@
 'use client';
 
 import { getEvaluationMethods } from '@client/api/v1/reactive-agents/skills';
+import { Badge } from '@client/components/ui/badge';
 import { Button } from '@client/components/ui/button';
 import {
   Card,
@@ -10,9 +11,22 @@ import {
   CardTitle,
 } from '@client/components/ui/card';
 import { Checkbox } from '@client/components/ui/checkbox';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@client/components/ui/command';
 import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
 import { PageHeader } from '@client/components/ui/page-header';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@client/components/ui/popover';
 import { Skeleton } from '@client/components/ui/skeleton';
 import {
   Tooltip,
@@ -22,13 +36,31 @@ import {
 } from '@client/components/ui/tooltip';
 import { useSmartBack } from '@client/hooks/use-smart-back';
 import { useToast } from '@client/hooks/use-toast';
+import { useAIProviders } from '@client/providers/ai-providers';
+import { useModels } from '@client/providers/models';
 import { useNavigation } from '@client/providers/navigation';
 import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
 import { useSkills } from '@client/providers/skills';
+import { sortModels } from '@client/utils/model-sorting';
+import { cn } from '@client/utils/ui/utils';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { EvaluationMethodDetails } from '@shared/types/evaluations';
-import { Loader2, RotateCcw, SaveIcon } from 'lucide-react';
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  Loader2,
+  RotateCcw,
+  SaveIcon,
+} from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+interface ModelOption {
+  id: string;
+  name: string;
+  provider: AIProvider;
+  modelType: 'text' | 'embed';
+}
 
 export function EvaluationEditView(): ReactElement {
   const { selectedSkill } = useSkills();
@@ -38,16 +70,44 @@ export function EvaluationEditView(): ReactElement {
 
   const { evaluations, updateEvaluation, setSkillId } =
     useSkillOptimizationEvaluations();
+  const { models, setQueryParams } = useModels();
+  const { aiProviderConfigs } = useAIProviders();
+
+  // Fetch all models on mount
+  useEffect(() => {
+    setQueryParams({});
+  }, [setQueryParams]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [evaluationMethods, setEvaluationMethods] = useState<
     EvaluationMethodDetails[]
   >([]);
   const [isLoadingMethods, setIsLoadingMethods] = useState(true);
+  const [modelPopoverOpen, setModelPopoverOpen] = useState(false);
 
   // Form state
   const [weight, setWeight] = useState<string>('1.0');
   const [params, setParams] = useState<Record<string, unknown>>({});
+  const [modelId, setModelId] = useState<string | null>(null);
+
+  // Build model options (text models only for evaluations), sorted alphabetically
+  const textModelOptions = useMemo((): ModelOption[] => {
+    const options = models
+      .filter((model) => model.model_type === 'text')
+      .map((model) => {
+        const provider = aiProviderConfigs.find(
+          (p) => p.id === model.ai_provider_id,
+        );
+        return {
+          id: model.id,
+          name: model.model_name,
+          provider: (provider?.ai_provider ?? 'openai') as AIProvider,
+          modelType: model.model_type,
+        };
+      });
+    // Sort alphabetically by model name, then by provider name
+    return sortModels(options);
+  }, [models, aiProviderConfigs]);
 
   // Fetch evaluation methods from server
   useEffect(() => {
@@ -100,6 +160,7 @@ export function EvaluationEditView(): ReactElement {
   useEffect(() => {
     if (evaluation && evaluationMethod) {
       setWeight(evaluation.weight.toString());
+      setModelId(evaluation.model_id);
 
       // Extract defaults from JSON schema if available
       if (evaluationMethod.parameterSchema) {
@@ -149,10 +210,11 @@ export function EvaluationEditView(): ReactElement {
 
     setIsSaving(true);
     try {
-      // Send all params
+      // Send all params including model_id
       await updateEvaluation(selectedSkill.id, evaluation.id, {
         weight: numericWeight,
         params,
+        model_id: modelId,
       });
 
       toast({
@@ -525,6 +587,123 @@ export function EvaluationEditView(): ReactElement {
                 step="0.1"
                 min="0.01"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Model Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Model</CardTitle>
+            <CardDescription>
+              The model used to run this evaluation. If not set, the system
+              default will be used.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label>Evaluation Model</Label>
+              <Popover
+                open={modelPopoverOpen}
+                onOpenChange={setModelPopoverOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    aria-expanded={modelPopoverOpen}
+                    className="w-full justify-between"
+                    disabled={isSaving}
+                  >
+                    {modelId ? (
+                      (() => {
+                        const selectedModel = textModelOptions.find(
+                          (m) => m.id === modelId,
+                        );
+                        return selectedModel ? (
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="truncate">
+                              {selectedModel.name}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="text-xs shrink-0"
+                            >
+                              {PrettyAIProvider[selectedModel.provider] ??
+                                selectedModel.provider}
+                            </Badge>
+                          </div>
+                        ) : (
+                          'Select a model...'
+                        );
+                      })()
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Use system default
+                      </span>
+                    )}
+                    <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search models..." />
+                    <CommandList>
+                      <CommandEmpty>No models found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__none__"
+                          onSelect={() => {
+                            setModelId(null);
+                            setModelPopoverOpen(false);
+                          }}
+                        >
+                          <CheckIcon
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              modelId === null ? 'opacity-100' : 'opacity-0',
+                            )}
+                          />
+                          <span className="text-muted-foreground">
+                            Use system default
+                          </span>
+                        </CommandItem>
+                        {textModelOptions.map((model) => (
+                          <CommandItem
+                            key={model.id}
+                            value={`${model.name} ${PrettyAIProvider[model.provider] ?? model.provider}`}
+                            onSelect={() => {
+                              setModelId(model.id);
+                              setModelPopoverOpen(false);
+                            }}
+                          >
+                            <CheckIcon
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                modelId === model.id
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            <div className="flex items-center gap-2">
+                              <span>{model.name}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {PrettyAIProvider[model.provider] ??
+                                  model.provider}
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {textModelOptions.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No text models available. Add models in AI Providers &amp;
+                  Models settings.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

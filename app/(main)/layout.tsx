@@ -3,6 +3,7 @@
 import { AgentsView } from '@client/components/agents';
 import { BreadcrumbComponent } from '@client/components/breadcrumb';
 import { ErrorBoundary } from '@client/components/error-boundary';
+import { HomeRedirect } from '@client/components/home-redirect';
 import { AppSidebar } from '@client/components/side-bar/app-sidebar';
 import { Separator } from '@client/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@client/components/ui/sidebar';
@@ -48,15 +49,18 @@ function MainContent({ children }: { children: ReactNode }): ReactElement {
   }
 
   // For the root route, show placeholder content based on navigation state
+  // Also check if we should redirect to settings when settings are incomplete
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold mb-2 capitalize">
-          {navigationState.section}
-        </h2>
-        <p className="text-muted-foreground">This section is coming soon!</p>
+    <HomeRedirect>
+      <div className="flex flex-1 items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-2 capitalize">
+            {navigationState.section}
+          </h2>
+          <p className="text-muted-foreground">This section is coming soon!</p>
+        </div>
       </div>
-    </div>
+    </HomeRedirect>
   );
 }
 

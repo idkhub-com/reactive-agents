@@ -1,6 +1,8 @@
 import type { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
-import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
-
+import { API_URL, BEARER_TOKEN } from '@server/constants';
+import type { UserDataStorageConnector } from '@server/types/connector';
+import { resolveSystemSettingsModel } from '@server/utils/evaluation-model-resolver';
+import { warn } from '@shared/console-logging';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
 import z from 'zod';
@@ -42,13 +44,14 @@ export async function extractTaskAndOutcome(
   params: TaskCompletionEvaluationParameters,
   input: string,
   output: string,
+  connector: UserDataStorageConnector,
 ) {
-  // Check if OpenAI API key is available
-  const apiKey = OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      `[OPTIMIZER] can't extract task and outcome - No OPENAI_API_KEY found`,
-    );
+  // Resolve judge model from system settings for task extraction
+  const modelConfig = await resolveSystemSettingsModel('judge', connector);
+
+  if (!modelConfig) {
+    warn('[OPTIMIZER] No judge model configured in system settings');
+    throw new Error('No judge model configured in system settings');
   }
 
   const client = new OpenAI({
@@ -59,9 +62,9 @@ export async function extractTaskAndOutcome(
   const raConfig = {
     targets: [
       {
-        provider: 'openai',
-        model: 'gpt-5-mini',
-        api_key: apiKey,
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        api_key: modelConfig.apiKey,
       },
     ],
     agent_name: 'reactive-agents',
@@ -78,7 +81,7 @@ export async function extractTaskAndOutcome(
       },
     })
     .chat.completions.parse({
-      model: 'gpt-5-mini',
+      model: modelConfig.model,
       messages: [
         { role: 'system', content: systemPrompt },
         {

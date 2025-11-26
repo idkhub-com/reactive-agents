@@ -87,6 +87,7 @@ export async function handleGenerateArms(
               EvaluationMethodConnector
             >,
             existingMethods as EvaluationMethodName[],
+            userStorageConnector,
           );
 
         // Delete old evaluations and create new ones
@@ -176,14 +177,21 @@ export async function handleGenerateArms(
         agent.description,
         skill.description,
         examples,
+        userStorageConnector,
       );
     } else {
       // Fallback to no-context generation
-      systemPrompt = await generateSeedSystemPromptForSkill(skill);
+      systemPrompt = await generateSeedSystemPromptForSkill(
+        skill,
+        userStorageConnector,
+      );
     }
   } else {
     // Use no-context generation for initial setup
-    systemPrompt = await generateSeedSystemPromptForSkill(skill);
+    systemPrompt = await generateSeedSystemPromptForSkill(
+      skill,
+      userStorageConnector,
+    );
   }
 
   // Build expected arms structure

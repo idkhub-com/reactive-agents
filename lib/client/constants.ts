@@ -1,6 +1,6 @@
 import type { SideBarDataSchema } from '@client/types/ui/side-bar';
 import { SkillEventType } from '@shared/types/data';
-import { BookOpenIcon, KeyIcon } from 'lucide-react';
+import { BookOpenIcon, CableIcon, SettingsIcon } from 'lucide-react';
 
 export const AVATAR_SEED = '';
 
@@ -23,11 +23,22 @@ export const SideBarData: SideBarDataSchema = {
     {
       title: 'AI Providers & Models',
       url: '/ai-providers',
-      icon: KeyIcon,
+      icon: CableIcon,
       items: [
         {
           title: 'Providers & Models',
           url: '/ai-providers',
+        },
+      ],
+    },
+    {
+      title: 'Settings',
+      url: '/settings',
+      icon: SettingsIcon,
+      items: [
+        {
+          title: 'System Settings',
+          url: '/settings',
         },
       ],
     },

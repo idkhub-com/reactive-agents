@@ -15,6 +15,7 @@ import { SkillOptimizationEvaluationRunsProvider } from './skill-optimization-ev
 import { SkillOptimizationEvaluationsProvider } from './skill-optimization-evaluations';
 import { SkillsProvider } from './skills';
 import { SSEProvider } from './sse';
+import { SystemSettingsProvider } from './system-settings';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -49,25 +50,27 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
       >
         <SSEProvider>
           <NavigationProvider>
-            <AgentsProvider>
-              <SkillsProvider>
-                <AIProvidersProvider>
-                  <ModelsProvider>
-                    <SkillEventsProvider>
-                      <SkillOptimizationClustersProvider>
-                        <SkillOptimizationArmsProvider>
-                          <SkillOptimizationEvaluationRunsProvider>
-                            <SkillOptimizationEvaluationsProvider>
-                              <LogsProvider>{children}</LogsProvider>
-                            </SkillOptimizationEvaluationsProvider>
-                          </SkillOptimizationEvaluationRunsProvider>
-                        </SkillOptimizationArmsProvider>
-                      </SkillOptimizationClustersProvider>
-                    </SkillEventsProvider>
-                  </ModelsProvider>
-                </AIProvidersProvider>
-              </SkillsProvider>
-            </AgentsProvider>
+            <AIProvidersProvider>
+              <ModelsProvider>
+                <SystemSettingsProvider>
+                  <AgentsProvider>
+                    <SkillsProvider>
+                      <SkillEventsProvider>
+                        <SkillOptimizationClustersProvider>
+                          <SkillOptimizationArmsProvider>
+                            <SkillOptimizationEvaluationRunsProvider>
+                              <SkillOptimizationEvaluationsProvider>
+                                <LogsProvider>{children}</LogsProvider>
+                              </SkillOptimizationEvaluationsProvider>
+                            </SkillOptimizationEvaluationRunsProvider>
+                          </SkillOptimizationArmsProvider>
+                        </SkillOptimizationClustersProvider>
+                      </SkillEventsProvider>
+                    </SkillsProvider>
+                  </AgentsProvider>
+                </SystemSettingsProvider>
+              </ModelsProvider>
+            </AIProvidersProvider>
           </NavigationProvider>
         </SSEProvider>
       </ErrorBoundary>

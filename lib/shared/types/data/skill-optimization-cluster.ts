@@ -32,6 +32,9 @@ export const SkillOptimizationCluster = z.object({
    */
   centroid: z.array(z.number()),
 
+  /** The embedding model used for computing centroids in this cluster. */
+  embedding_model_id: z.uuid().nullable(),
+
   /** Lock timestamp to prevent concurrent system prompt reflection for this cluster.
    * If set and recent (< 10 minutes old), reflection is in progress. */
   reflection_lock_acquired_at: z.iso.datetime({ offset: true }).nullable(),
@@ -64,6 +67,7 @@ export const SkillOptimizationClusterCreateParams = z
     total_steps: z.number().min(0),
     observability_total_requests: z.number().min(0).default(0),
     centroid: z.array(z.number()),
+    embedding_model_id: z.uuid().nullable().optional(),
   })
   .strict();
 
@@ -77,6 +81,7 @@ export const SkillOptimizationClusterUpdateParams = z
     total_steps: z.number().min(0).optional(),
     observability_total_requests: z.number().min(0).optional(),
     centroid: z.array(z.number()).optional(),
+    embedding_model_id: z.uuid().nullable().optional(),
     reflection_lock_acquired_at: z.iso
       .datetime({ offset: true })
       .nullable()

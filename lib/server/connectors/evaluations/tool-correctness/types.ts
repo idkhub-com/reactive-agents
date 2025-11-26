@@ -18,17 +18,14 @@ export const ToolUsageSchema = z.object({
 
 export type ToolUsage = z.infer<typeof ToolUsageSchema>;
 
-// Default evaluation model - can be overridden by users
-export const TOOL_CORRECTNESS_EVALUATION_MODEL_DEFAULT = 'gpt-5-mini';
-
 // AI-modifiable parameters - none needed, evaluation works automatically
 export const ToolCorrectnessEvaluationAIParameters = z.object({}).strict();
 
 // Full parameters including user-modifiable settings
+// Note: model is configured via evaluation.model_id, not in parameters
 export const ToolCorrectnessEvaluationParameters =
   ToolCorrectnessEvaluationAIParameters.extend({
     threshold: z.number().min(0).max(1).default(0.5),
-    model: z.string().default(TOOL_CORRECTNESS_EVALUATION_MODEL_DEFAULT),
     evaluation_params: z
       .array(z.enum(['INPUT_PARAMETERS', 'OUTPUT']))
       .default([]),

@@ -1,7 +1,11 @@
 import { modelsRouter } from '@server/api/v1/reactive-agents/models';
+import { BEARER_TOKEN, JWT_SECRET } from '@server/constants';
+import { authenticatedMiddleware } from '@server/middlewares/auth';
 import type { AppEnv } from '@server/types/hono';
 import type { Model } from '@shared/types/data/model';
 import { Hono } from 'hono';
+import { createFactory } from 'hono/factory';
+import { sign } from 'hono/jwt';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -104,6 +108,9 @@ const mockUserDataStorageConnector = {
   getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
+  // System Settings methods
+  getSystemSettings: vi.fn(),
+  updateSystemSettings: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector
@@ -128,6 +135,8 @@ describe('Models API Status Codes', () => {
           id: '123e4567-e89b-12d3-a456-426614174000',
           ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
           model_name: 'gpt-4',
+          model_type: 'text',
+          embedding_dimensions: null,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
         },
@@ -297,6 +306,220 @@ describe('Models API Status Codes', () => {
       });
 
       expect(res.status).toBe(400);
+    });
+  });
+});
+
+/**
+ * Authentication Integration Tests for Models API
+ *
+ * These tests verify that the models endpoints are properly protected
+ * by the authenticatedMiddleware when deployed in production.
+ */
+describe('Models API - Authentication Integration', () => {
+  const factory = createFactory<AppEnv>();
+
+  // Create app with auth middleware to test authentication
+  const createAuthenticatedApp = () => {
+    return new Hono<AppEnv>()
+      .use('*', authenticatedMiddleware(factory))
+      .use('*', async (c, next) => {
+        c.set('user_data_storage_connector', mockUserDataStorageConnector);
+        await next();
+      })
+      .route('/models', modelsRouter);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUserDataStorageConnector.getModels.mockResolvedValue([]);
+  });
+
+  describe('GET /models', () => {
+    it('should reject requests without any authentication', async () => {
+      const app = createAuthenticatedApp();
+      const req = new Request('http://localhost/models');
+      const response = await app.fetch(req);
+
+      expect(response.status).toBe(401);
+      const text = await response.text();
+      expect(text).toBe('Unauthorized');
+    });
+
+    it('should reject requests with invalid bearer token', async () => {
+      const app = createAuthenticatedApp();
+      const req = new Request('http://localhost/models', {
+        headers: {
+          Authorization: 'Bearer invalid-token-12345',
+        },
+      });
+      const response = await app.fetch(req);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should accept requests with valid bearer token', async () => {
+      const app = createAuthenticatedApp();
+      const req = new Request('http://localhost/models', {
+        headers: {
+          Authorization: `Bearer ${BEARER_TOKEN}`,
+        },
+      });
+      const response = await app.fetch(req);
+
+      expect(response.status).not.toBe(401);
+      expect(response.status).toBe(200);
+    });
+
+    it('should accept requests with valid JWT cookie', async () => {
+      const token = await sign(
+        { sub: 'test-user-123', exp: Math.floor(Date.now() / 1000) + 3600 },
+        JWT_SECRET,
+      );
+
+      const app = createAuthenticatedApp();
+      const req = new Request('http://localhost/models', {
+        headers: {
+          Cookie: `access_token=${token}`,
+        },
+      });
+      const response = await app.fetch(req);
+
+      expect(response.status).not.toBe(401);
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe('POST /models', () => {
+    it('should reject unauthenticated POST requests', async () => {
+      const app = createAuthenticatedApp();
+      const req = new Request('http://localhost/models', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
+          model_name: 'gpt-4',
+        }),
+      });
+      const response = await app.fetch(req);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should accept authenticated POST requests', async () => {
+      const mockModel: Model = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
+        model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+      mockUserDataStorageConnector.createModel.mockResolvedValue(mockModel);
+
+      const app = createAuthenticatedApp();
+      const req = new Request('http://localhost/models', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${BEARER_TOKEN}`,
+        },
+        body: JSON.stringify({
+          ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
+          model_name: 'gpt-4',
+        }),
+      });
+      const response = await app.fetch(req);
+
+      expect(response.status).not.toBe(401);
+    });
+  });
+
+  describe('PATCH /models/:id', () => {
+    it('should reject unauthenticated PATCH requests', async () => {
+      const app = createAuthenticatedApp();
+      const req = new Request(
+        'http://localhost/models/123e4567-e89b-12d3-a456-426614174000',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model_name: 'gpt-4-turbo',
+          }),
+        },
+      );
+      const response = await app.fetch(req);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should accept authenticated PATCH requests', async () => {
+      const mockModel: Model = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
+        model_name: 'gpt-4-turbo',
+        model_type: 'text',
+        embedding_dimensions: null,
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+      mockUserDataStorageConnector.updateModel.mockResolvedValue(mockModel);
+
+      const app = createAuthenticatedApp();
+      const req = new Request(
+        'http://localhost/models/123e4567-e89b-12d3-a456-426614174000',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${BEARER_TOKEN}`,
+          },
+          body: JSON.stringify({
+            model_name: 'gpt-4-turbo',
+          }),
+        },
+      );
+      const response = await app.fetch(req);
+
+      expect(response.status).not.toBe(401);
+    });
+  });
+
+  describe('DELETE /models/:id', () => {
+    it('should reject unauthenticated DELETE requests', async () => {
+      const app = createAuthenticatedApp();
+      const req = new Request(
+        'http://localhost/models/123e4567-e89b-12d3-a456-426614174000',
+        {
+          method: 'DELETE',
+        },
+      );
+      const response = await app.fetch(req);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should accept authenticated DELETE requests', async () => {
+      mockUserDataStorageConnector.deleteModel.mockResolvedValue(undefined);
+
+      const app = createAuthenticatedApp();
+      const req = new Request(
+        'http://localhost/models/123e4567-e89b-12d3-a456-426614174000',
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${BEARER_TOKEN}`,
+          },
+        },
+      );
+      const response = await app.fetch(req);
+
+      expect(response.status).not.toBe(401);
     });
   });
 });

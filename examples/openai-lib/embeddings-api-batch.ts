@@ -23,6 +23,8 @@ const batchInputs = [
 
 logger.printWithHeader('Batch Inputs', batchInputs.join(' | '));
 
+// Note: The OpenAI library automatically truncates embeddings when `dimensions` is specified.
+// For non-OpenAI providers (e.g., Google Gemini), use fetch directly to avoid incorrect truncation.
 const batchResponse = await client
   .withOptions({
     defaultHeaders: {

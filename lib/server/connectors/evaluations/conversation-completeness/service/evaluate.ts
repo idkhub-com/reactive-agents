@@ -2,7 +2,12 @@ import type {
   ConversationCompletenessEvaluationParameters,
   ConversationCompletenessResult,
 } from '@server/connectors/evaluations/conversation-completeness/types';
-import { createLLMJudge } from '@server/evaluations/llm-judge';
+import {
+  createLLMJudge,
+  type LLMJudgeModelConfig,
+} from '@server/evaluations/llm-judge';
+import type { UserDataStorageConnector } from '@server/types/connector';
+import { resolveEvaluationModelConfig } from '@server/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@server/utils/messages';
 import { extractMessagesFromRequestData } from '@server/utils/reactive-agents/requests';
 import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
@@ -26,13 +31,16 @@ import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data'
 export async function evaluateConversationCompleteness(
   log: Log,
   params: ConversationCompletenessEvaluationParameters,
+  modelConfig?: LLMJudgeModelConfig | null,
 ): Promise<ConversationCompletenessResult> {
-  // Create LLM judge instance
-  const llmJudge = createLLMJudge({
-    model: params.model,
-    temperature: params.temperature,
-    max_tokens: params.max_tokens,
-  });
+  // Create LLM judge instance with resolved model config
+  const llmJudge = createLLMJudge(
+    {
+      temperature: params.temperature,
+      max_tokens: params.max_tokens,
+    },
+    modelConfig ?? undefined,
+  );
 
   // Extract messages and outputs using standard utilities
   const raRequestData = produceReactiveAgentsRequestData(
@@ -82,16 +90,29 @@ export async function evaluateConversationCompleteness(
 export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
+  storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params =
     evaluation.params as ConversationCompletenessEvaluationParameters;
 
   const start_time = Date.now();
 
+  // Resolve model configuration from evaluation.model_id or system settings
+  const modelConfig = await resolveEvaluationModelConfig(
+    evaluation,
+    storageConnector,
+  );
+
   // Evaluate the log using the existing function
-  const result = await evaluateConversationCompleteness(log, params);
+  const result = await evaluateConversationCompleteness(
+    log,
+    params,
+    modelConfig,
+  );
 
   const execution_time = Date.now() - start_time;
+  const judgeModelName = modelConfig?.model ?? null;
+  const judgeModelProvider = modelConfig?.provider ?? null;
 
   const evaluationResult: SkillOptimizationEvaluationResult = {
     evaluation_id: evaluation.id,
@@ -118,6 +139,8 @@ export async function evaluateLog(
           ]
         : []),
     ],
+    judge_model_name: judgeModelName,
+    judge_model_provider: judgeModelProvider,
   };
 
   return evaluationResult;

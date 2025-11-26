@@ -103,6 +103,9 @@ const mockUserDataStorageConnector = {
   getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
+  // System Settings methods
+  getSystemSettings: vi.fn(),
+  updateSystemSettings: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector
@@ -147,7 +150,9 @@ describe('Agents API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to fetch agents' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
   });
 
@@ -182,7 +187,9 @@ describe('Agents API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to update agent' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {
@@ -219,7 +226,9 @@ describe('Agents API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to delete agent' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {
@@ -262,7 +271,9 @@ describe('Agents API Status Codes', () => {
 
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data).toEqual({ error: 'Failed to fetch skills' });
+      expect(data).toEqual({
+        error: 'An unexpected database error occurred. Please try again.',
+      });
     });
 
     it('should return 400 for invalid UUID', async () => {

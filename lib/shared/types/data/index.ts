@@ -20,5 +20,7 @@ export * from './skill-optimization-cluster';
 export * from './skill-optimization-evaluation';
 // Skill Optimization Evaluation Run types
 export * from './skill-optimization-evaluation-run';
+// System Settings types
+export * from './system-settings';
 // Tool types
 export * from './tool';

@@ -1,4 +1,7 @@
-import type { EvaluationMethodConnector } from '@server/types/connector';
+import type {
+  EvaluationMethodConnector,
+  UserDataStorageConnector,
+} from '@server/types/connector';
 import { info, warn } from '@shared/console-logging';
 import type {
   Log,
@@ -516,6 +519,7 @@ const evaluateLogInternal = (
 export function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
+  _storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params = ToolCorrectnessEvaluationParameters.parse(evaluation.params);
 
@@ -581,6 +585,8 @@ export function evaluateLog(
       evaluated_at: new Date().toISOString(),
     },
     display_info: displayInfoSections,
+    judge_model_name: null,
+    judge_model_provider: null,
   };
 
   return Promise.resolve(evaluationResult);

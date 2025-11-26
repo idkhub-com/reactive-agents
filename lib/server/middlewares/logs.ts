@@ -474,6 +474,7 @@ async function processLogs({
                 insertedLog,
                 evaluations,
                 evaluationConnectorsMap,
+                userDataStorageConnector,
               );
             }
             return [];

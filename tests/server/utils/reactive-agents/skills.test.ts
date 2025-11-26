@@ -111,6 +111,9 @@ describe('getSkill', () => {
       deleteSkillOptimizationEvaluationRun: vi.fn(),
       getSkillEvents: vi.fn(),
       createSkillEvent: vi.fn(),
+      // System Settings methods
+      getSystemSettings: vi.fn(),
+      updateSystemSettings: vi.fn(),
     } as UserDataStorageConnector;
   });
 

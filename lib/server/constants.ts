@@ -45,8 +45,6 @@ export const JWT_SECRET =
   process.env.JWT_SECRET ?? 'you-should-change-this-in-production';
 export const BEARER_TOKEN = process.env.BEARER_TOKEN ?? 'reactive-agents';
 
-export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'demo-key';
-
 /**
  * Encryption key for AI provider API keys.
  *
@@ -68,5 +66,3 @@ export const RA_SKILLS = [
   'system-prompt-reflection',
   'embedding',
 ];
-
-export const EMBEDDINGS_DIMENSIONS = 1536;

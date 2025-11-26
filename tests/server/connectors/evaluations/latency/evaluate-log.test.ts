@@ -7,10 +7,12 @@ import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createMockStorageConnector } from '../__mocks__/mock-storage-connector';
 
 describe('Latency - evaluateLog', () => {
   let baseLog: Log;
   let baseEvaluation: SkillOptimizationEvaluation;
+  const mockStorageConnector = createMockStorageConnector();
 
   beforeEach(() => {
     baseLog = {
@@ -84,6 +86,7 @@ describe('Latency - evaluateLog', () => {
         max_latency_ms: 3000,
       },
       weight: 1.0,
+      model_id: null,
       created_at: '2024-01-01T00:00:00.000Z',
       updated_at: '2024-01-01T00:00:00.000Z',
     };
@@ -99,7 +102,11 @@ describe('Latency - evaluateLog', () => {
         duration: 2000,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.method).toBe(EvaluationMethodName.LATENCY);
       expect(result.score).toBe(1.0);
@@ -118,7 +125,11 @@ describe('Latency - evaluateLog', () => {
         duration: 4000,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.method).toBe(EvaluationMethodName.LATENCY);
       expect(result.score).toBe(0.0);
@@ -139,7 +150,11 @@ describe('Latency - evaluateLog', () => {
         duration: 4000,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.method).toBe(EvaluationMethodName.LATENCY);
       expect(result.score).toBeCloseTo(0.5, 2);
@@ -156,7 +171,11 @@ describe('Latency - evaluateLog', () => {
         duration: 2000,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.score).toBe(1.0);
       expect(result.extra_data.latency_ms).toBe(300);
@@ -171,7 +190,11 @@ describe('Latency - evaluateLog', () => {
         duration: 4000,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.score).toBe(0.0);
       expect(result.extra_data.latency_ms).toBe(3000);
@@ -188,7 +211,11 @@ describe('Latency - evaluateLog', () => {
         duration: 250,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.method).toBe(EvaluationMethodName.LATENCY);
       expect(result.score).toBe(1.0); // 250ms is below 300ms target
@@ -205,7 +232,11 @@ describe('Latency - evaluateLog', () => {
         duration: 1650,
       };
 
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.score).toBeCloseTo(0.5, 2);
       expect(result.extra_data.latency_ms).toBe(1650);
@@ -225,7 +256,11 @@ describe('Latency - evaluateLog', () => {
       };
 
       // Mock extractLatency to return null
-      const result = await evaluateLog(baseEvaluation, log);
+      const result = await evaluateLog(
+        baseEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.method).toBe(EvaluationMethodName.LATENCY);
       // Should still work with duration of 0
@@ -240,7 +275,11 @@ describe('Latency - evaluateLog', () => {
         },
       };
 
-      const result = await evaluateLog(invalidEvaluation, baseLog);
+      const result = await evaluateLog(
+        invalidEvaluation,
+        baseLog,
+        mockStorageConnector,
+      );
 
       expect(result.method).toBe(EvaluationMethodName.LATENCY);
       expect(result.score).toBe(0.5); // Neutral score on error
@@ -248,7 +287,11 @@ describe('Latency - evaluateLog', () => {
     });
 
     it('should include execution time in extra_data', async () => {
-      const result = await evaluateLog(baseEvaluation, baseLog);
+      const result = await evaluateLog(
+        baseEvaluation,
+        baseLog,
+        mockStorageConnector,
+      );
 
       expect(result.extra_data.execution_time).toBeDefined();
       expect(typeof result.extra_data.execution_time).toBe('number');
@@ -274,7 +317,11 @@ describe('Latency - evaluateLog', () => {
         duration: 1000,
       };
 
-      const result = await evaluateLog(customEvaluation, log);
+      const result = await evaluateLog(
+        customEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.score).toBe(1.0); // Below 500ms target
     });
@@ -296,7 +343,11 @@ describe('Latency - evaluateLog', () => {
         duration: 2000,
       };
 
-      const result = await evaluateLog(customEvaluation, log);
+      const result = await evaluateLog(
+        customEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       expect(result.score).toBe(0.0); // Above 1000ms max
     });
@@ -315,7 +366,11 @@ describe('Latency - evaluateLog', () => {
         duration: 1000,
       };
 
-      const result = await evaluateLog(defaultEvaluation, log);
+      const result = await evaluateLog(
+        defaultEvaluation,
+        log,
+        mockStorageConnector,
+      );
 
       // Default target is 10000ms, so 250ms should score 1.0
       expect(result.score).toBe(1.0);

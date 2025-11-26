@@ -2,6 +2,7 @@ import { handleGenerateArms } from '@server/optimization/skill-optimizations';
 import type { UserDataStorageConnector } from '@server/types/connector';
 import type { AppContext } from '@server/types/hono';
 import { generateEmbeddingForRequest } from '@server/utils/embeddings';
+import { resolveEmbeddingModelConfig } from '@server/utils/evaluation-model-resolver';
 import {
   cosineSimilarity,
   getInitialClusterCentroids,
@@ -209,38 +210,48 @@ async function validateTargetConfiguration(
           skill_id: skill.id,
         });
 
+      // Get embedding model config for cluster centroids
+      const embeddingConfig = await resolveEmbeddingModelConfig(
+        userDataStorageConnector,
+      );
+
       if (clusters.length === 0) {
-        try {
-          // Create initial clusters with equally spaced centroids
-          const initialCentroids = getInitialClusterCentroids(
-            skill.configuration_count,
-          );
-          const clusterParams: SkillOptimizationClusterCreateParams[] =
-            initialCentroids.map((centroid, index) => ({
-              agent_id: skill.agent_id,
-              skill_id: skill.id,
-              name: `${index + 1}`,
-              total_steps: 0,
-              observability_total_requests: 0,
-              centroid,
-            }));
-
-          clusters =
-            await userDataStorageConnector.createSkillOptimizationClusters(
-              clusterParams,
+        // Only create clusters if embedding model is configured
+        if (embeddingConfig) {
+          try {
+            // Create initial clusters with equally spaced centroids
+            const initialCentroids = getInitialClusterCentroids(
+              skill.configuration_count,
+              embeddingConfig.dimensions,
             );
+            const clusterParams: SkillOptimizationClusterCreateParams[] =
+              initialCentroids.map((centroid, index) => ({
+                agent_id: skill.agent_id,
+                skill_id: skill.id,
+                name: `${index + 1}`,
+                total_steps: 0,
+                observability_total_requests: 0,
+                centroid,
+                embedding_model_id: embeddingConfig.modelId,
+              }));
 
-          await handleGenerateArms(c, userDataStorageConnector, skill.id);
-        } catch (_error) {
-          // If cluster creation fails (e.g., duplicate from concurrent request),
-          // fetch the existing clusters instead
-          clusters =
-            await userDataStorageConnector.getSkillOptimizationClusters({
-              skill_id: skill.id,
-            });
-          // If we still have no clusters, throw the original error
-          if (clusters.length === 0) {
-            throw _error;
+            clusters =
+              await userDataStorageConnector.createSkillOptimizationClusters(
+                clusterParams,
+              );
+
+            await handleGenerateArms(c, userDataStorageConnector, skill.id);
+          } catch (_error) {
+            // If cluster creation fails (e.g., duplicate from concurrent request),
+            // fetch the existing clusters instead
+            clusters =
+              await userDataStorageConnector.getSkillOptimizationClusters({
+                skill_id: skill.id,
+              });
+            // If we still have no clusters, throw the original error
+            if (clusters.length === 0) {
+              throw _error;
+            }
           }
         }
       }
@@ -433,7 +444,10 @@ export const raConfigurationInjectorMiddleware = createMiddleware(
             raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE)
         ) {
           try {
-            embedding = await generateEmbeddingForRequest(raRequestData);
+            embedding = await generateEmbeddingForRequest(
+              raRequestData,
+              c.get('user_data_storage_connector'),
+            );
           } catch {
             embedding = null;
           }

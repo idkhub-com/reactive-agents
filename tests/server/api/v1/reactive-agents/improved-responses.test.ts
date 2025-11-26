@@ -118,6 +118,10 @@ const mockUserDataStorageConnector = {
   deleteSkillOptimizationEvaluationRun: vi.fn(),
   getSkillEvents: vi.fn(),
   createSkillEvent: vi.fn(),
+
+  // System Settings methods
+  getSystemSettings: vi.fn(),
+  updateSystemSettings: vi.fn(),
 } as UserDataStorageConnector;
 
 // Mock for crypto.randomUUID
@@ -593,7 +597,7 @@ describe('Improved Responses API', () => {
       const data = await res.json();
       expect(data).toHaveProperty(
         'error',
-        'Failed to update improved response',
+        'An unexpected database error occurred. Please try again.',
       );
     });
   });
@@ -666,7 +670,7 @@ describe('Improved Responses API', () => {
       const data = await res.json();
       expect(data).toHaveProperty(
         'error',
-        'Failed to retrieve improved response',
+        'An unexpected database error occurred. Please try again.',
       );
     });
 
@@ -695,7 +699,7 @@ describe('Improved Responses API', () => {
       const data = await res.json();
       expect(data).toHaveProperty(
         'error',
-        'Failed to create improved response',
+        'An unexpected database error occurred. Please try again.',
       );
     });
 

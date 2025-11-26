@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator';
 import { providerConfigs } from '@server/ai-providers';
 import type { AppEnv } from '@server/types/hono';
+import { parseDatabaseError } from '@server/utils/database-error';
 import {
   AIProviderConfigCreateParams,
   AIProviderConfigQueryParams,
@@ -80,7 +81,8 @@ export const aiProvidersRouter = new Hono<AppEnv>()
       return c.json(providers);
     } catch (error) {
       console.error('Error fetching AI providers:', error);
-      return c.json({ error: 'Failed to fetch AI providers' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
 
@@ -96,7 +98,8 @@ export const aiProvidersRouter = new Hono<AppEnv>()
       return c.json(createdProvider, 201);
     } catch (error) {
       console.error('Error creating AI provider:', error);
-      return c.json({ error: 'Failed to create AI provider' }, 500);
+      const errorInfo = parseDatabaseError(error);
+      return c.json({ error: errorInfo.message }, errorInfo.statusCode);
     }
   })
 
@@ -119,7 +122,8 @@ export const aiProvidersRouter = new Hono<AppEnv>()
         return c.json(updatedProvider);
       } catch (error) {
         console.error('Error updating AI provider:', error);
-        return c.json({ error: 'Failed to update AI provider' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   )
@@ -138,7 +142,8 @@ export const aiProvidersRouter = new Hono<AppEnv>()
         return c.json({ success: true }, 200);
       } catch (error) {
         console.error('Error deleting AI provider:', error);
-        return c.json({ error: 'Failed to delete AI provider' }, 500);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }
     },
   );

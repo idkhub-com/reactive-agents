@@ -119,7 +119,8 @@ export async function addModelsToSkill(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to add models to skill');
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to add models to skill');
   }
 }
 
@@ -137,7 +138,8 @@ export async function removeModelsFromSkill(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to remove models from skill');
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to remove models from skill');
   }
 }
 
@@ -326,7 +328,11 @@ export async function createSkillEvaluation(
 export async function updateSkillEvaluation(
   skillId: string,
   evaluationId: string,
-  params: { weight: number; params?: Record<string, unknown> },
+  params: {
+    weight: number;
+    params?: Record<string, unknown>;
+    model_id?: string | null;
+  },
 ): Promise<SkillOptimizationEvaluation> {
   const response = await client.v1['reactive-agents'].skills[
     ':skillId'

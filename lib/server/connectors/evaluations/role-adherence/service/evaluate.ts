@@ -1,6 +1,8 @@
 import { getRoleAdherenceMainTemplate } from '@server/connectors/evaluations/role-adherence/templates/main';
 import { RoleAdherenceEvaluationParameters } from '@server/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
+import type { UserDataStorageConnector } from '@server/types/connector';
+import { resolveEvaluationModelConfig } from '@server/utils/evaluation-model-resolver';
 import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
 import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
 import type {
@@ -43,14 +45,23 @@ function pickRoleData(
 export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
+  storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params = RoleAdherenceEvaluationParameters.parse(evaluation.params);
 
-  const llmJudge = createLLMJudge({
-    model: params.model,
-    temperature: params.temperature,
-    max_tokens: params.max_tokens,
-  });
+  // Resolve model configuration from evaluation.model_id or system settings
+  const modelConfig = await resolveEvaluationModelConfig(
+    evaluation,
+    storageConnector,
+  );
+
+  const llmJudge = createLLMJudge(
+    {
+      temperature: params.temperature,
+      max_tokens: params.max_tokens,
+    },
+    modelConfig ?? undefined,
+  );
 
   const start_time = Date.now();
 
@@ -78,6 +89,8 @@ export async function evaluateLog(
   }
 
   const execution_time = Date.now() - start_time;
+  const judgeModelName = modelConfig?.model ?? null;
+  const judgeModelProvider = modelConfig?.provider ?? null;
 
   const evaluationResult: SkillOptimizationEvaluationResult = {
     evaluation_id: evaluation.id,
@@ -116,6 +129,8 @@ export async function evaluateLog(
         content: assistant_output,
       },
     ],
+    judge_model_name: judgeModelName,
+    judge_model_provider: judgeModelProvider,
   };
 
   return evaluationResult;

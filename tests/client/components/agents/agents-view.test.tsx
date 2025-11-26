@@ -37,6 +37,26 @@ vi.mock('@client/api/v1/reactive-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
+// Mock the system settings provider
+vi.mock('@client/providers/system-settings', () => ({
+  useSystemSettings: vi.fn(() => ({
+    systemSettings: {
+      embedding_model_id: null,
+      judge_model_id: null,
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    updateSystemSettings: vi.fn(),
+    isUpdating: false,
+    updateError: null,
+  })),
+  SystemSettingsProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+}));
+
 // Mock all agent view components
 vi.mock('@client/components/agents/agents-list-view', () => ({
   AgentsListView: () => <div data-testid="agents-list-view">Agents List</div>,

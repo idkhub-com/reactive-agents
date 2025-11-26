@@ -129,6 +129,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
         const createData: ModelCreateParams = {
           model_name: data.model_name,
           ai_provider_id: data.ai_provider_id,
+          model_type: 'text',
         };
         await createModel(createData);
 

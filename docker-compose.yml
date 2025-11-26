@@ -67,9 +67,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
 
-      # AI Provider Keys (optional - can be stored in database)
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-
       NODE_ENV: production
     depends_on:
       postgres:
