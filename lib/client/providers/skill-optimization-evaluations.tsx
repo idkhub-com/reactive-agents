@@ -35,7 +35,11 @@ interface SkillOptimizationEvaluationsContextType {
   updateEvaluation: (
     skillId: string,
     evaluationId: string,
-    params: { weight: number; params?: Record<string, unknown> },
+    params: {
+      weight: number;
+      params?: Record<string, unknown>;
+      model_id?: string | null;
+    },
   ) => Promise<SkillOptimizationEvaluation>;
   deleteEvaluation: (skillId: string, evaluationId: string) => Promise<void>;
 }
@@ -96,7 +100,11 @@ export function SkillOptimizationEvaluationsProvider({
     }: {
       skillId: string;
       evaluationId: string;
-      params: { weight: number; params?: Record<string, unknown> };
+      params: {
+        weight: number;
+        params?: Record<string, unknown>;
+        model_id?: string | null;
+      };
     }) => updateSkillEvaluation(skillId, evaluationId, params),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -132,7 +140,11 @@ export function SkillOptimizationEvaluationsProvider({
     async (
       skillId: string,
       evaluationId: string,
-      params: { weight: number; params?: Record<string, unknown> },
+      params: {
+        weight: number;
+        params?: Record<string, unknown>;
+        model_id?: string | null;
+      },
     ) => {
       return await updateMutation.mutateAsync({
         skillId,

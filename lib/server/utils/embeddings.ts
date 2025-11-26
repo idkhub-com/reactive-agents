@@ -1,4 +1,7 @@
-import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import { API_URL, BEARER_TOKEN } from '@server/constants';
+import type { UserDataStorageConnector } from '@server/types/connector';
+import { resolveEmbeddingModelConfig } from '@server/utils/evaluation-model-resolver';
+import { warn } from '@shared/console-logging';
 import {
   type ChatCompletionRequestData,
   FunctionName,
@@ -8,7 +11,6 @@ import {
 import type { ChatCompletionMessage } from '@shared/types/api/routes/shared/messages';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import { nanoid } from 'nanoid';
-import OpenAI from 'openai';
 
 export class RequestEmbeddingError extends Error {
   constructor(message: string) {
@@ -195,12 +197,36 @@ export async function generateEmbeddingForRequest(
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
+  connector: UserDataStorageConnector,
 ): Promise<number[]> {
-  // Check if OpenAI API key is available
-  const apiKey = OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      `[EMBEDDING] can't generate embedding - No OPENAI_API_KEY found`,
+  // Resolve embedding model from system settings (includes dimensions)
+  const embeddingConfig = await resolveEmbeddingModelConfig(connector);
+
+  if (!embeddingConfig) {
+    warn('[EMBEDDING] No embedding model configured in system settings');
+    throw new RequestEmbeddingError(
+      'No embedding model configured in system settings',
+    );
+  }
+
+  // Look up the provider to get the API key
+  const providers = await connector.getAIProviderAPIKeys({
+    id: embeddingConfig.model.ai_provider_id,
+  });
+  if (providers.length === 0) {
+    warn(
+      `[EMBEDDING] Provider not found for model: ${embeddingConfig.model.ai_provider_id}`,
+    );
+    throw new RequestEmbeddingError('Embedding model provider not found');
+  }
+  const providerConfig = providers[0];
+
+  if (!providerConfig.api_key) {
+    warn(
+      `[EMBEDDING] No API key configured for provider: ${embeddingConfig.model.ai_provider_id}`,
+    );
+    throw new RequestEmbeddingError(
+      'No API key configured for embedding provider',
     );
   }
 
@@ -214,41 +240,53 @@ export async function generateEmbeddingForRequest(
       );
     }
 
-    const client = new OpenAI({
-      apiKey: BEARER_TOKEN,
-      baseURL: `${API_URL}/v1`,
-    });
-
     const raConfig = {
       targets: [
         {
-          provider: 'openai',
-          model: 'text-embedding-3-small',
-          api_key: apiKey,
+          provider: providerConfig.ai_provider,
+          model: embeddingConfig.model.model_name,
+          api_key: providerConfig.api_key,
         },
       ],
       agent_name: 'reactive-agents',
       skill_name: 'embedding',
     };
 
-    const response = await client
-      .withOptions({
-        defaultHeaders: {
-          'ra-config': JSON.stringify(raConfig),
-        },
-      })
-      .embeddings.create({
-        model: 'text-embedding-3-small',
+    // We use the fetch instead of the openai library because the openai
+    // library attempts to automatically truncate the embeddings to fit their models'
+    // dimensions.
+    const response = await fetch(`${API_URL}/v1/embeddings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${BEARER_TOKEN}`,
+        'ra-config': JSON.stringify(raConfig),
+      },
+      body: JSON.stringify({
+        model: embeddingConfig.model.model_name,
         input: inputText,
-      });
+        dimensions: embeddingConfig.dimensions,
+      }),
+    });
 
-    if (!response.data || response.data.length === 0) {
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new RequestEmbeddingError(
+        `Embedding API returned ${response.status}: ${errorText}`,
+      );
+    }
+
+    const data = (await response.json()) as {
+      data?: { embedding: number[] }[];
+    };
+
+    if (!data.data || data.data.length === 0) {
       throw new RequestEmbeddingError(
         'No embedding data returned from AI Provider',
       );
     }
 
-    const embeddingData = response.data[0];
+    const embeddingData = data.data[0];
 
     return embeddingData.embedding;
   } catch (error) {

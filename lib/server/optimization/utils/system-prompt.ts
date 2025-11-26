@@ -1,4 +1,7 @@
-import { API_URL, BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import { API_URL, BEARER_TOKEN } from '@server/constants';
+import type { UserDataStorageConnector } from '@server/types/connector';
+import { resolveSystemSettingsModel } from '@server/utils/evaluation-model-resolver';
+import { warn } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
@@ -68,11 +71,22 @@ Analyze these examples to understand the task better and incorporate any pattern
 /**
  * Shared function to create and configure OpenAI client for system prompt generation.
  */
-function createSystemPromptClient(skillName: string) {
-  const apiKey = OPENAI_API_KEY;
-  if (!apiKey) {
+async function createSystemPromptClient(
+  skillName: string,
+  connector: UserDataStorageConnector,
+) {
+  // Resolve system prompt reflection model from system settings
+  const modelConfig = await resolveSystemSettingsModel(
+    'system_prompt_reflection',
+    connector,
+  );
+
+  if (!modelConfig) {
+    warn(
+      '[OPTIMIZER] No system prompt reflection model configured in system settings',
+    );
     throw new Error(
-      `[OPTIMIZER] can't generate system prompt - No OPENAI_API_KEY found`,
+      'No system prompt reflection model configured in system settings',
     );
   }
 
@@ -84,16 +98,16 @@ function createSystemPromptClient(skillName: string) {
   const raConfig = {
     targets: [
       {
-        provider: 'openai',
-        model: 'gpt-5',
-        api_key: apiKey,
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        api_key: modelConfig.apiKey,
       },
     ],
     agent_name: 'reactive-agents',
     skill_name: skillName,
   };
 
-  return { client, raConfig };
+  return { client, raConfig, model: modelConfig.model };
 }
 
 /**
@@ -102,6 +116,7 @@ function createSystemPromptClient(skillName: string) {
 async function callSystemPromptAPI(
   client: OpenAI,
   raConfig: unknown,
+  model: string,
   systemPrompt: string,
   userMessage: string,
 ): Promise<string> {
@@ -112,7 +127,7 @@ async function callSystemPromptAPI(
       },
     })
     .chat.completions.parse({
-      model: 'gpt-5',
+      model,
       messages: [
         { role: 'system', content: systemPrompt },
         {
@@ -192,26 +207,38 @@ Return the system prompt in a JSON object.`;
   return firstMessage;
 }
 
-export async function generateSeedSystemPromptForSkill(skill: Skill) {
-  const { client, raConfig } = createSystemPromptClient(
+export async function generateSeedSystemPromptForSkill(
+  skill: Skill,
+  connector: UserDataStorageConnector,
+) {
+  const { client, raConfig, model } = await createSystemPromptClient(
     'system-prompt-seeding',
+    connector,
   );
 
   const systemPrompt = getSeederSystemPrompt();
   const userMessage = getSeederFirstMessage(skill.description);
 
-  return await callSystemPromptAPI(client, raConfig, systemPrompt, userMessage);
+  return await callSystemPromptAPI(
+    client,
+    raConfig,
+    model,
+    systemPrompt,
+    userMessage,
+  );
 }
 
 export async function generateSeedSystemPromptWithContext(
   agentDescription: string,
   skillDescription: string,
   examples: string[],
+  connector: UserDataStorageConnector,
   responseFormat?: unknown,
   allowedTemplateVariables?: string[],
 ) {
-  const { client, raConfig } = createSystemPromptClient(
+  const { client, raConfig, model } = await createSystemPromptClient(
     'system-prompt-seeding-with-context',
+    connector,
   );
 
   const systemPrompt = getSeederSystemPrompt();
@@ -223,7 +250,13 @@ export async function generateSeedSystemPromptWithContext(
     allowedTemplateVariables,
   );
 
-  return await callSystemPromptAPI(client, raConfig, systemPrompt, userMessage);
+  return await callSystemPromptAPI(
+    client,
+    raConfig,
+    model,
+    systemPrompt,
+    userMessage,
+  );
 }
 
 function getReflectorSystemPrompt() {
@@ -296,9 +329,11 @@ export async function generateReflectiveSystemPromptForSkill(
   agentDescription: string,
   skillDescription: string,
   allowedTemplateVariables: string[],
+  connector: UserDataStorageConnector,
 ) {
-  const { client, raConfig } = createSystemPromptClient(
+  const { client, raConfig, model } = await createSystemPromptClient(
     'system-prompt-reflection',
+    connector,
   );
 
   const systemPrompt = getReflectorSystemPrompt();
@@ -311,5 +346,11 @@ export async function generateReflectiveSystemPromptForSkill(
     allowedTemplateVariables,
   );
 
-  return await callSystemPromptAPI(client, raConfig, systemPrompt, userMessage);
+  return await callSystemPromptAPI(
+    client,
+    raConfig,
+    model,
+    systemPrompt,
+    userMessage,
+  );
 }

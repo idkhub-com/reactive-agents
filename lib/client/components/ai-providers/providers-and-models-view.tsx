@@ -33,25 +33,27 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@client/components/ui/tooltip';
+import { useSettingsValidation } from '@client/hooks/use-settings-validation';
 import { useToast } from '@client/hooks/use-toast';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
+import { compareModels } from '@client/utils/model-sorting';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { Model } from '@shared/types/data/model';
 import { format } from 'date-fns';
 import {
+  AlertCircleIcon,
   CalendarIcon,
   CpuIcon,
   MoreHorizontalIcon,
   PlusIcon,
-  RefreshCwIcon,
   SearchIcon,
   TrashIcon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface ProvidersAndModelsViewProps {
   selectedProviderId?: string;
@@ -64,6 +66,12 @@ export function ProvidersAndModelsView({
   const { toast } = useToast();
   const { aiProviderConfigs: apiKeys } = useAIProviders();
   const { models, isLoading, setQueryParams, refetch } = useModels();
+  const {
+    hasTextModels,
+    hasEmbedModels,
+    hasRequiredModelTypes,
+    isLoading: isLoadingValidation,
+  } = useSettingsValidation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -101,26 +109,35 @@ export function ProvidersAndModelsView({
     }
   }, [activeProvider, apiKeys]);
 
-  // Filter models by active provider
-  const filteredModels = models.filter((model) => {
-    // Filter by active provider
-    if (activeProvider && model.ai_provider_id !== activeProvider) {
-      return false;
-    }
+  // Filter models by active provider and sort alphabetically
+  const filteredModels = models
+    .filter((model) => {
+      // Filter by active provider
+      if (activeProvider && model.ai_provider_id !== activeProvider) {
+        return false;
+      }
 
-    // Filter by search query
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase();
-      const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
-      return (
-        model.model_name.toLowerCase().includes(searchLower) ||
-        apiKey?.ai_provider?.toLowerCase().includes(searchLower) ||
-        apiKey?.name?.toLowerCase().includes(searchLower)
+      // Filter by search query
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        const apiKey = apiKeys.find((key) => key.id === model.ai_provider_id);
+        return (
+          model.model_name.toLowerCase().includes(searchLower) ||
+          apiKey?.ai_provider?.toLowerCase().includes(searchLower) ||
+          apiKey?.name?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const providerA = apiKeys.find((k) => k.id === a.ai_provider_id);
+      const providerB = apiKeys.find((k) => k.id === b.ai_provider_id);
+      return compareModels(
+        { modelName: a.model_name, providerName: providerA?.name || '' },
+        { modelName: b.model_name, providerName: providerB?.name || '' },
       );
-    }
-
-    return true;
-  });
+    });
 
   const handleDeleteClick = (model: Model) => {
     setModelToDelete(model);
@@ -169,54 +186,98 @@ export function ProvidersAndModelsView({
     ? apiKeys.find((key) => key.id === activeProvider)
     : null;
 
+  // Compute missing model types
+  const missingModelTypes = useMemo(() => {
+    if (isLoadingValidation) return [];
+    const missing: string[] = [];
+    if (!hasTextModels) missing.push('text');
+    if (!hasEmbedModels) missing.push('embedding');
+    return missing;
+  }, [isLoadingValidation, hasTextModels, hasEmbedModels]);
+
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       {/* AI Providers Section */}
       <AIProvidersListView
         onProviderSelect={setActiveProvider}
         selectedProviderId={activeProvider}
       />
 
+      {/* Warning Banner for Missing Model Types */}
+      {!isLoadingValidation && !hasRequiredModelTypes && models.length > 0 && (
+        <div className="px-6">
+          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircleIcon className="h-5 w-5 text-amber-500 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="font-medium">Missing model types</p>
+                  <p className="text-sm text-muted-foreground">
+                    To use all features, you need at least one{' '}
+                    {missingModelTypes.join(' and one ')} model. Add more models
+                    to your AI providers to unlock full functionality.
+                  </p>
+                  {activeProvider && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        router.push(
+                          `/ai-providers/${activeProvider}/add-models`,
+                        )
+                      }
+                    >
+                      <PlusIcon className="h-4 w-4 mr-2" />
+                      Add Models
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Models Section */}
-      <div ref={modelsRef} className="p-6">
+      <div ref={modelsRef} className="px-6 pb-6">
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <CpuIcon className="h-5 w-5" />
-                  Models
-                  {activeProviderInfo && (
-                    <>
-                      <span className="text-muted-foreground">for</span>
-                      <Badge variant="outline">
-                        {PrettyAIProvider[
-                          activeProviderInfo.ai_provider as AIProvider
-                        ] || activeProviderInfo.ai_provider}
-                      </Badge>
-                    </>
+          <CardHeader className="flex w-full">
+            <div className="flex items-start justify-between w-full">
+              <div className="w-full">
+                <CardTitle className="flex items-center gap-2 w-full p-0 m-0">
+                  <div className="flex items-center gap-2 w-full">
+                    <CpuIcon className="h-5 w-5" />
+                    Models
+                    {activeProviderInfo && (
+                      <>
+                        <span className="text-muted-foreground">for</span>
+                        <Badge variant="outline" className="text-lg">
+                          {PrettyAIProvider[
+                            activeProviderInfo.ai_provider as AIProvider
+                          ] || activeProviderInfo.ai_provider}
+                        </Badge>
+                      </>
+                    )}
+                  </div>
+                  {activeProvider && (
+                    <Button
+                      onClick={() =>
+                        router.push(
+                          `/ai-providers/${activeProvider}/add-models`,
+                        )
+                      }
+                    >
+                      <PlusIcon className="h-4 w-4 mr-2" />
+                      Add Models
+                    </Button>
                   )}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="p-0 m-0">
                   {activeProvider
                     ? `Models using the selected AI provider (${filteredModels.length})`
                     : 'Select a provider above to view its models'}
                 </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={refetch}>
-                  <RefreshCwIcon className="h-4 w-4" />
-                </Button>
-                {activeProvider && (
-                  <Button
-                    onClick={() =>
-                      router.push(`/ai-providers/${activeProvider}/add-models`)
-                    }
-                  >
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Add Models
-                  </Button>
-                )}
               </div>
             </div>
           </CardHeader>
@@ -280,6 +341,7 @@ export function ProvidersAndModelsView({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Model</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Provider</TableHead>
                       <TableHead>Added</TableHead>
                       <TableHead className="w-20">Actions</TableHead>
@@ -306,6 +368,13 @@ export function ProvidersAndModelsView({
                                 </div>
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {model.model_type === 'embed'
+                                ? `Embed (${model.embedding_dimensions})`
+                                : 'Text'}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">

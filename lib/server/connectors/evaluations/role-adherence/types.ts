@@ -77,17 +77,14 @@ export interface RoleAdherenceAverageResult {
   evaluation_run_id: string;
 }
 
-// Default evaluation model - can be overridden by users
-export const ROLE_ADHERENCE_EVALUATION_MODEL_DEFAULT = 'gpt-5-mini';
-
 // AI-modifiable parameters - none needed, evaluation works automatically
 export const RoleAdherenceEvaluationAIParameters = z.object({});
 
 // Full parameters including user-modifiable settings
+// Note: model is configured via evaluation.model_id, not in parameters
 export const RoleAdherenceEvaluationParameters =
   RoleAdherenceEvaluationAIParameters.extend({
     threshold: z.number().min(0).max(1).default(0.7),
-    model: z.string().default(ROLE_ADHERENCE_EVALUATION_MODEL_DEFAULT),
     include_reason: z.boolean().default(true),
     strict_mode: z.boolean().default(false),
     async_mode: z.boolean().default(false),

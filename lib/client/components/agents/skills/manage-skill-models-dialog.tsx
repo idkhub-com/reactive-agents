@@ -19,6 +19,7 @@ import {
 import { useToast } from '@client/hooks/use-toast';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
+import { compareModels } from '@client/utils/model-sorting';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { Model } from '@shared/types/data/model';
 import { useQueryClient } from '@tanstack/react-query';
@@ -166,8 +167,11 @@ export function ManageSkillModelsDialog({
     return { providerType, providerName };
   };
 
-  // Group models by provider
-  const modelsByProvider = models.reduce(
+  // Filter out embedding models - only show text models for skills
+  const textModels = models.filter((model) => model.model_type === 'text');
+
+  // Group models by provider, with models sorted alphabetically within each group
+  const modelsByProvider = textModels.reduce(
     (acc, model) => {
       if (!acc[model.ai_provider_id]) {
         acc[model.ai_provider_id] = [];
@@ -176,6 +180,22 @@ export function ManageSkillModelsDialog({
       return acc;
     },
     {} as Record<string, Model[]>,
+  );
+
+  // Sort models within each provider group by model name
+  for (const providerId of Object.keys(modelsByProvider)) {
+    modelsByProvider[providerId].sort((a, b) =>
+      compareModels({ modelName: a.model_name }, { modelName: b.model_name }),
+    );
+  }
+
+  // Sort provider groups alphabetically by provider name
+  const sortedProviderEntries = Object.entries(modelsByProvider).sort(
+    ([providerIdA], [providerIdB]) => {
+      const { providerName: nameA } = getProviderInfo(providerIdA);
+      const { providerName: nameB } = getProviderInfo(providerIdB);
+      return nameA.toLowerCase().localeCompare(nameB.toLowerCase());
+    },
   );
 
   return (
@@ -200,7 +220,7 @@ export function ManageSkillModelsDialog({
                 className="animate-spin text-muted-foreground"
               />
             </div>
-          ) : Object.keys(modelsByProvider).length === 0 ? (
+          ) : sortedProviderEntries.length === 0 ? (
             <div className="text-center py-8">
               <CpuIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
@@ -212,55 +232,49 @@ export function ManageSkillModelsDialog({
               </p>
             </div>
           ) : (
-            Object.entries(modelsByProvider).map(
-              ([providerId, providerModels]) => {
-                const { providerType, providerName } =
-                  getProviderInfo(providerId);
+            sortedProviderEntries.map(([providerId, providerModels]) => {
+              const { providerType, providerName } =
+                getProviderInfo(providerId);
 
-                return (
-                  <div key={providerId} className="space-y-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium">
-                        {providerName}
-                      </span>
-                      <Badge variant="secondary">{providerType}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        • {providerModels.length} model(s)
-                      </span>
-                    </div>
-                    {providerModels.map((model) => (
-                      <Card
-                        key={model.id}
-                        className={`cursor-pointer transition-all ${
-                          selectedModelIds.has(model.id)
-                            ? 'border-primary bg-primary/5'
-                            : 'hover:border-primary/50'
-                        } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
-                        onClick={() => handleToggleModel(model.id)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedModelIds.has(model.id)}
-                              onCheckedChange={() =>
-                                handleToggleModel(model.id)
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              disabled={isProcessing}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">
-                                {model.model_name}
-                              </div>
+              return (
+                <div key={providerId} className="space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium">{providerName}</span>
+                    <Badge variant="secondary">{providerType}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      • {providerModels.length} model(s)
+                    </span>
+                  </div>
+                  {providerModels.map((model) => (
+                    <Card
+                      key={model.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedModelIds.has(model.id)
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:border-primary/50'
+                      } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                      onClick={() => handleToggleModel(model.id)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedModelIds.has(model.id)}
+                            onCheckedChange={() => handleToggleModel(model.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={isProcessing}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">
+                              {model.model_name}
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                );
-              },
-            )
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            })
           )}
         </div>
 

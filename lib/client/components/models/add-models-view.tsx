@@ -12,9 +12,17 @@ import {
 import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
 import { PageHeader } from '@client/components/ui/page-header';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@client/components/ui/select';
 import { useToast } from '@client/hooks/use-toast';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
+import { getKnownEmbeddingDimensions } from '@shared/constants/embedding-models';
 import type { AIProvider } from '@shared/types/constants';
 import { PrettyAIProvider } from '@shared/types/constants';
 import {
@@ -36,7 +44,11 @@ interface AddModelsViewProps {
 interface ModelField {
   id: string;
   modelName: string;
+  modelType: 'text' | 'embed';
+  embeddingDimensions: string;
+  dimensionsAutoFilled?: boolean; // Track if we auto-filled dimensions
   error?: string;
+  dimensionsError?: string;
 }
 
 export function AddModelsView({
@@ -48,7 +60,7 @@ export function AddModelsView({
   const { refetch } = useModels();
 
   const [modelFields, setModelFields] = useState<ModelField[]>([
-    { id: nanoid(), modelName: '' },
+    { id: nanoid(), modelName: '', modelType: 'text', embeddingDimensions: '' },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,7 +77,15 @@ export function AddModelsView({
   }
 
   const handleAddField = () => {
-    setModelFields([...modelFields, { id: nanoid(), modelName: '' }]);
+    setModelFields([
+      ...modelFields,
+      {
+        id: nanoid(),
+        modelName: '',
+        modelType: 'text',
+        embeddingDimensions: '',
+      },
+    ]);
   };
 
   const handleRemoveField = (id: string) => {
@@ -75,9 +95,73 @@ export function AddModelsView({
 
   const handleModelNameChange = (id: string, value: string) => {
     setModelFields(
+      modelFields.map((field) => {
+        if (field.id !== id) return field;
+
+        const updatedField = { ...field, modelName: value, error: undefined };
+
+        // Auto-fill dimensions for known embedding models
+        if (field.modelType === 'embed') {
+          const knownDimensions = getKnownEmbeddingDimensions(value);
+          if (knownDimensions !== undefined) {
+            // Auto-fill with known dimensions
+            updatedField.embeddingDimensions = String(knownDimensions);
+            updatedField.dimensionsAutoFilled = true;
+            updatedField.dimensionsError = undefined;
+          } else if (field.dimensionsAutoFilled) {
+            // Model no longer matches - clear auto-filled dimensions
+            updatedField.embeddingDimensions = '';
+            updatedField.dimensionsAutoFilled = false;
+          }
+        }
+
+        return updatedField;
+      }),
+    );
+  };
+
+  const handleModelTypeChange = (id: string, value: 'text' | 'embed') => {
+    setModelFields(
+      modelFields.map((field) => {
+        if (field.id !== id) return field;
+
+        if (value === 'text') {
+          // Clear dimensions when switching to text
+          return {
+            ...field,
+            modelType: value,
+            embeddingDimensions: '',
+            dimensionsAutoFilled: false,
+            dimensionsError: undefined,
+          };
+        }
+
+        // Switching to embed - try to auto-fill dimensions from known models
+        const knownDimensions = getKnownEmbeddingDimensions(field.modelName);
+        const shouldAutoFill = knownDimensions !== undefined;
+        return {
+          ...field,
+          modelType: value,
+          embeddingDimensions: shouldAutoFill
+            ? String(knownDimensions)
+            : field.embeddingDimensions,
+          dimensionsAutoFilled: shouldAutoFill,
+          dimensionsError: undefined,
+        };
+      }),
+    );
+  };
+
+  const handleEmbeddingDimensionsChange = (id: string, value: string) => {
+    setModelFields(
       modelFields.map((field) =>
         field.id === id
-          ? { ...field, modelName: value, error: undefined }
+          ? {
+              ...field,
+              embeddingDimensions: value,
+              dimensionsAutoFilled: false, // User manually edited
+              dimensionsError: undefined,
+            }
           : field,
       ),
     );
@@ -85,24 +169,41 @@ export function AddModelsView({
 
   const handleSubmit = async () => {
     // Validate all fields
-    const updatedFields = modelFields.map((field) => ({
-      ...field,
-      error:
-        field.modelName.trim() === '' ? 'Model name is required' : undefined,
-    }));
+    const updatedFields = modelFields.map((field) => {
+      let error: string | undefined;
+      let dimensionsError: string | undefined;
+
+      if (field.modelName.trim() === '') {
+        error = 'Model name is required';
+      }
+
+      if (field.modelType === 'embed') {
+        const dims = field.embeddingDimensions.trim();
+        if (dims === '') {
+          dimensionsError = 'Embedding dimensions is required for embed models';
+        } else {
+          const parsed = Number.parseInt(dims, 10);
+          if (Number.isNaN(parsed) || parsed <= 0) {
+            dimensionsError = 'Must be a positive integer';
+          }
+        }
+      }
+
+      return { ...field, error, dimensionsError };
+    });
 
     setModelFields(updatedFields);
 
     // Check if any field has an error
-    if (updatedFields.some((field) => field.error)) {
+    if (updatedFields.some((field) => field.error || field.dimensionsError)) {
       return;
     }
 
-    // Get unique model names
+    // Check for duplicate model names
     const modelNames = updatedFields.map((field) => field.modelName.trim());
-    const uniqueModelNames = Array.from(new Set(modelNames));
+    const uniqueModelNames = new Set(modelNames);
 
-    if (uniqueModelNames.length !== modelNames.length) {
+    if (uniqueModelNames.size !== modelNames.length) {
       toast({
         title: 'Duplicate model names',
         description: 'Please ensure all model names are unique.',
@@ -116,17 +217,22 @@ export function AddModelsView({
     try {
       // Create all models
       await Promise.all(
-        uniqueModelNames.map((modelName) =>
+        updatedFields.map((field) =>
           createModel({
-            model_name: modelName,
+            model_name: field.modelName.trim(),
             ai_provider_id: provider.id,
+            model_type: field.modelType,
+            embedding_dimensions:
+              field.modelType === 'embed'
+                ? Number.parseInt(field.embeddingDimensions, 10)
+                : null,
           }),
         ),
       );
 
       toast({
         title: 'Models added successfully',
-        description: `Added ${uniqueModelNames.length} model(s) to ${provider.name}.`,
+        description: `Added ${uniqueModelNames.size} model(s) to ${provider.name}.`,
       });
 
       // Navigate back to providers page with provider selected
@@ -199,11 +305,11 @@ export function AddModelsView({
                       </span>
                     )}
                   </Label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 space-y-1">
                       <Input
                         id={`model-${field.id}`}
-                        placeholder="e.g., gpt-5, claude-sonnet-4-5"
+                        placeholder="e.g., gpt-5, text-embedding-3-small"
                         value={field.modelName}
                         onChange={(e) =>
                           handleModelNameChange(field.id, e.target.value)
@@ -211,11 +317,50 @@ export function AddModelsView({
                         className={field.error ? 'border-destructive' : ''}
                       />
                       {field.error && (
-                        <p className="text-xs text-destructive mt-1">
+                        <p className="text-xs text-destructive">
                           {field.error}
                         </p>
                       )}
                     </div>
+                    <div className="w-[120px]">
+                      <Select
+                        value={field.modelType}
+                        onValueChange={(value: 'text' | 'embed') =>
+                          handleModelTypeChange(field.id, value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">Text</SelectItem>
+                          <SelectItem value="embed">Embed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {field.modelType === 'embed' && (
+                      <div className="w-[140px] space-y-1">
+                        <Input
+                          id={`dimensions-${field.id}`}
+                          placeholder="Dimensions"
+                          value={field.embeddingDimensions}
+                          onChange={(e) =>
+                            handleEmbeddingDimensionsChange(
+                              field.id,
+                              e.target.value,
+                            )
+                          }
+                          className={
+                            field.dimensionsError ? 'border-destructive' : ''
+                          }
+                        />
+                        {field.dimensionsError && (
+                          <p className="text-xs text-destructive">
+                            {field.dimensionsError}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="flex gap-1">
                       {index === modelFields.length - 1 && (
                         <Button

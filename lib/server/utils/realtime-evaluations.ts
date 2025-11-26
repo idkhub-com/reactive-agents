@@ -1,4 +1,7 @@
-import type { EvaluationMethodConnector } from '@server/types/connector';
+import type {
+  EvaluationMethodConnector,
+  UserDataStorageConnector,
+} from '@server/types/connector';
 import { error } from '@shared/console-logging';
 import type {
   Log,
@@ -16,6 +19,7 @@ export async function runEvaluationsForLog(
   evaluationConnectorsMap: Partial<
     Record<EvaluationMethodName, EvaluationMethodConnector>
   >,
+  storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult[]> {
   if (skillOptimizationEvaluations.length === 0) {
     return [];
@@ -34,7 +38,7 @@ export async function runEvaluationsForLog(
         }
 
         // Use the evaluation ID for skill optimization evaluations
-        return await connector.evaluateLog(evaluation, log);
+        return await connector.evaluateLog(evaluation, log, storageConnector);
       } catch (err) {
         // Don't throw - we want other evaluations to continue even if one fails
         error(

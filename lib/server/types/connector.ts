@@ -66,6 +66,10 @@ import type {
   SkillOptimizationEvaluationRunQueryParams,
 } from '@shared/types/data/skill-optimization-evaluation-run';
 import type {
+  SystemSettings,
+  SystemSettingsUpdateParams,
+} from '@shared/types/data/system-settings';
+import type {
   Tool,
   ToolCreateParams,
   ToolQueryParams,
@@ -256,6 +260,12 @@ export interface UserDataStorageConnector {
   createSkillEvent(
     params: SkillEventCreateParams,
   ): Promise<SkillEvent> | SkillEvent;
+
+  // System Settings
+  getSystemSettings(): Promise<SystemSettings> | SystemSettings;
+  updateSystemSettings(
+    update: SystemSettingsUpdateParams,
+  ): Promise<SystemSettings> | SystemSettings;
 }
 
 export interface LogsStorageConnector {
@@ -280,6 +290,7 @@ export interface EvaluationMethodConnector {
   evaluateLog: (
     evaluation: SkillOptimizationEvaluation,
     log: Log,
+    storageConnector: UserDataStorageConnector,
   ) => Promise<SkillOptimizationEvaluationResult>;
   getParameterSchema: z.ZodType;
   getAIParameterSchema?: z.ZodType; // Optional - not all evaluations need AI for parameter generation

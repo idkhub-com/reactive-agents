@@ -1,4 +1,7 @@
-import type { EvaluationMethodConnector } from '@server/types/connector';
+import type {
+  EvaluationMethodConnector,
+  UserDataStorageConnector,
+} from '@server/types/connector';
 import type { Log } from '@shared/types/data/log';
 import type { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
 import {
@@ -8,6 +11,9 @@ import {
 
 import { describe, expect, it, type MockedFunction, vi } from 'vitest';
 import { z } from 'zod';
+
+// Mock storage connector for tests
+const mockStorageConnector = {} as UserDataStorageConnector;
 
 describe('Connector Interfaces', () => {
   describe('EvaluationMethodConnector Interface', () => {
@@ -63,6 +69,7 @@ describe('Connector Interfaces', () => {
         evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
         params: { threshold: 0.5 },
         weight: 1.0,
+        model_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -75,9 +82,17 @@ describe('Connector Interfaces', () => {
         metadata: { ground_truth: { text: 'expected output' } },
       } as unknown as Log;
 
-      const result = await connector.evaluateLog(evaluation, log);
+      const result = await connector.evaluateLog(
+        evaluation,
+        log,
+        mockStorageConnector,
+      );
 
-      expect(connector.evaluateLog).toHaveBeenCalledWith(evaluation, log);
+      expect(connector.evaluateLog).toHaveBeenCalledWith(
+        evaluation,
+        log,
+        mockStorageConnector,
+      );
       expect(connector.evaluateLog).toHaveBeenCalledTimes(1);
       expect(result).toHaveProperty('method');
       expect(result).toHaveProperty('score');
@@ -108,16 +123,18 @@ describe('Connector Interfaces', () => {
           evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           params: {},
           weight: 1.0,
+          model_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
         const log = {} as unknown as Log;
 
-        await connector.evaluateLog(evaluation, log);
+        await connector.evaluateLog(evaluation, log, mockStorageConnector);
 
         expect(connector.evaluateLog).toHaveBeenCalledWith(
           evaluation,
           expect.any(Object),
+          mockStorageConnector,
         );
 
         // Verify first argument has evaluation properties
@@ -137,6 +154,7 @@ describe('Connector Interfaces', () => {
           evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           params: {},
           weight: 1.0,
+          model_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -148,13 +166,14 @@ describe('Connector Interfaces', () => {
           metadata: {},
         } as unknown as Log;
 
-        await connector.evaluateLog(evaluation, log);
+        await connector.evaluateLog(evaluation, log, mockStorageConnector);
 
         const callArgs = (
           connector.evaluateLog as MockedFunction<typeof connector.evaluateLog>
         ).mock.calls[0];
         expect(callArgs[1]).toBe(log);
         expect(callArgs[1]).toHaveProperty('id');
+        expect(callArgs[2]).toBe(mockStorageConnector);
       });
 
       it('should return Promise<SkillOptimizationEvaluationResult>', async () => {
@@ -166,11 +185,16 @@ describe('Connector Interfaces', () => {
           evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           params: {},
           weight: 1.0,
+          model_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
 
-        const result = connector.evaluateLog(evaluation, {} as unknown as Log);
+        const result = connector.evaluateLog(
+          evaluation,
+          {} as unknown as Log,
+          mockStorageConnector,
+        );
 
         expect(result).toBeInstanceOf(Promise);
         const resolvedResult = await result;
@@ -209,7 +233,7 @@ describe('Connector Interfaces', () => {
           name: 'Test',
           description: 'Test method',
         }),
-        evaluateLog: async (evaluation, _log) => ({
+        evaluateLog: async (evaluation, _log, _storageConnector) => ({
           evaluation_id: evaluation.id,
           method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           score: 0.5,

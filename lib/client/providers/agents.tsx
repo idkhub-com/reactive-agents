@@ -8,6 +8,7 @@ import {
 } from '@client/api/v1/reactive-agents/agents';
 import { useToast } from '@client/hooks/use-toast';
 import { useNavigation } from '@client/providers/navigation';
+import { useSystemSettings } from '@client/providers/system-settings';
 import type {
   Agent,
   AgentCreateParams,
@@ -88,6 +89,7 @@ export const AgentsProvider = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { navigationState } = useNavigation();
+  const { settings } = useSystemSettings();
 
   const [queryParams, setQueryParams] = useState<AgentQueryParams>({});
   const [isCreateAgentDialogOpen, setIsCreateAgentDialogOpen] = useState(false);
@@ -119,12 +121,15 @@ export const AgentsProvider = ({
     initialPageParam: 0,
   });
 
-  // Flatten pages into single array and filter out internal agents
+  // Flatten pages into single array and conditionally filter internal agents
   const agents: Agent[] = useMemo(() => {
     const allAgents = data?.pages?.flat() ?? [];
-    // Filter out internal agents (e.g., 'reactive-agents')
+    // Show all agents when developer mode is enabled, otherwise filter out internal agents
+    if (settings?.developer_mode) {
+      return allAgents;
+    }
     return allAgents.filter((agent) => agent.name !== 'reactive-agents');
-  }, [data]);
+  }, [data, settings?.developer_mode]);
 
   // Fetch individual agent by name when URL has a selected agent
   const { data: selectedAgentData } = useQuery({

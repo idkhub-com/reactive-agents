@@ -31,6 +31,7 @@ import { useAIProviders } from '@client/providers/ai-providers';
 import type { AIProviderConfig } from '@shared/types/data/ai-provider';
 import { format } from 'date-fns';
 import {
+  CableIcon,
   CheckIcon,
   CopyIcon,
   KeyIcon,
@@ -168,7 +169,7 @@ export function AIProvidersListView({
             </div>
           }
         />
-        <div className="p-6 space-y-6">
+        <div className="px-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -201,23 +202,23 @@ export function AIProvidersListView({
         title="AI Providers & Models"
         description="Configure AI providers and manage available models"
         showBackButton={false}
-        actions={
-          <div className="flex gap-2">
-            <Button onClick={() => router.push('/ai-providers/create')}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add AI Provider
-            </Button>
-          </div>
-        }
       />
-      <div className="p-6 space-y-6">
+      <div className="px-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <KeyIcon className="h-5 w-5" />
-              AI Providers ({filteredAPIKeys.length})
+            <CardTitle className="flex items-center gap-2 w-full p-0 m-0">
+              <div className="flex items-center gap-2 w-full p-0 m-0">
+                <CableIcon className="h-5 w-5" /> AI Providers (
+                {filteredAPIKeys.length})
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => router.push('/ai-providers/create')}>
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Add AI Provider
+                </Button>
+              </div>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="p-0 m-0">
               {onProviderSelect
                 ? 'Select a provider to view and manage its models below'
                 : 'Manage your AI providers. API keys are encrypted and stored securely.'}

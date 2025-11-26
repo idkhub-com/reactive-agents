@@ -7,10 +7,10 @@ import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockStorageConnector } from '../__mocks__/mock-storage-connector';
 
 // Mock the constants
 vi.mock('@server/constants', () => ({
-  OPENAI_API_KEY: 'test-api-key',
   API_URL: 'http://localhost:3000',
   BEARER_TOKEN: 'reactive-agents',
 }));
@@ -86,6 +86,7 @@ describe('Task Completion - evaluateLog', () => {
         strict_mode: false,
       },
       weight: 1.0,
+      model_id: null,
       created_at: '2024-01-01T00:00:00.000Z',
       updated_at: '2024-01-01T00:00:00.000Z',
     };
@@ -175,7 +176,12 @@ describe('Task Completion - evaluateLog', () => {
       json: () => Promise.resolve(mockVerdictResponse),
     });
 
-    const result = await evaluateLog(mockEvaluation, mockLog);
+    const mockStorageConnector = createMockStorageConnector();
+    const result = await evaluateLog(
+      mockEvaluation,
+      mockLog,
+      mockStorageConnector,
+    );
 
     expect(result.method).toBe(EvaluationMethodName.TASK_COMPLETION);
     expect(result.score).toBe(1.0);
@@ -212,6 +218,7 @@ describe('Task Completion - evaluateLog', () => {
         strict_mode: false,
       },
       weight: 1.0,
+      model_id: null,
       created_at: '2024-01-01T00:00:00.000Z',
       updated_at: '2024-01-01T00:00:00.000Z',
     };
@@ -300,7 +307,12 @@ describe('Task Completion - evaluateLog', () => {
       json: () => Promise.resolve(mockVerdictResponse),
     });
 
-    const result = await evaluateLog(mockEvaluation, mockLog);
+    const mockStorageConnector = createMockStorageConnector();
+    const result = await evaluateLog(
+      mockEvaluation,
+      mockLog,
+      mockStorageConnector,
+    );
 
     expect(result.method).toBe(EvaluationMethodName.TASK_COMPLETION);
     expect(result.score).toBe(0.0);

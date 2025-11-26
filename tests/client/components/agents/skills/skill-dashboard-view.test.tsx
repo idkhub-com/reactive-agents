@@ -23,6 +23,16 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/agents/Test%20Agent/Test%20Skill',
 }));
 
+// Mock the skills API to prevent real HTTP calls
+vi.mock('@client/api/v1/reactive-agents/skills', () => ({
+  getSkillEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
+  getSkills: vi.fn().mockResolvedValue([]),
+  getSkillClusterStates: vi.fn().mockResolvedValue([]),
+  getSkillModels: vi.fn().mockResolvedValue([]),
+  getSkillEvaluations: vi.fn().mockResolvedValue([]),
+  getSkillEvaluationRuns: vi.fn().mockResolvedValue([]),
+}));
+
 // Mock agent and skill objects
 const mockAgent = {
   id: 'agent-1',

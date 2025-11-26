@@ -129,6 +129,26 @@ vi.mock('@client/hooks/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
+// Mock the system settings provider
+vi.mock('@client/providers/system-settings', () => ({
+  useSystemSettings: vi.fn(() => ({
+    systemSettings: {
+      embedding_model_id: null,
+      judge_model_id: null,
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    updateSystemSettings: vi.fn(),
+    isUpdating: false,
+    updateError: null,
+  })),
+  SystemSettingsProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+}));
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};

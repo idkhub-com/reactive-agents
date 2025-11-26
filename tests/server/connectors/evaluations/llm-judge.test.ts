@@ -1,4 +1,5 @@
 import { createLLMJudge } from '@server/evaluations/llm-judge';
+import { AIProvider } from '@shared/types/constants';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock OpenAI client
@@ -26,10 +27,16 @@ vi.mock('openai', () => {
 
 // Mock the constants
 vi.mock('@server/constants', () => ({
-  OPENAI_API_KEY: 'test-api-key',
   API_URL: 'http://localhost:3000',
   BEARER_TOKEN: 'reactive-agents',
 }));
+
+// Model config with API key for tests
+const mockModelConfig = {
+  model: 'gpt-5-mini',
+  provider: AIProvider.OPENAI,
+  apiKey: 'test-api-key',
+};
 
 describe('LLM Judge', () => {
   let llmJudge: ReturnType<typeof createLLMJudge>;
@@ -37,7 +44,7 @@ describe('LLM Judge', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    llmJudge = createLLMJudge();
+    llmJudge = createLLMJudge({}, mockModelConfig);
   });
 
   afterEach(() => {
@@ -111,7 +118,6 @@ describe('LLM Judge', () => {
       const actual = await importOriginal<typeof import('@server/constants')>();
       return {
         ...actual,
-        OPENAI_API_KEY: '',
       };
     });
 
@@ -185,7 +191,7 @@ describe('LLM Judge', () => {
     expect(result.metadata).toEqual({
       fallback: true,
       errorType: 'parse_error',
-      errorDetails: 'No parsed response from OpenAI',
+      errorDetails: 'No parsed response from AI provider',
     });
   });
 
@@ -391,7 +397,7 @@ describe('LLM Judge', () => {
     expect(result.metadata).toEqual({
       fallback: true,
       errorType: 'parse_error',
-      errorDetails: 'No parsed response from OpenAI',
+      errorDetails: 'No parsed response from AI provider',
     });
 
     // Verify was called only once (no retries for parse errors)
@@ -431,7 +437,7 @@ describe('LLM Judge', () => {
       expect(result.metadata).toEqual({
         fallback: true,
         errorType: 'parse_error',
-        errorDetails: 'No parsed response from OpenAI',
+        errorDetails: 'No parsed response from AI provider',
         retryInfo: {
           retryCount: 1,
           maxRetries: 3,

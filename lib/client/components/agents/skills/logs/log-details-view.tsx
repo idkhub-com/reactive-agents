@@ -20,6 +20,7 @@ import { useSkillOptimizationClusters } from '@client/providers/skill-optimizati
 import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@client/providers/skills';
 import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 import { format } from 'date-fns';
@@ -152,6 +153,8 @@ export function LogDetailsView(): ReactElement {
       method: EvaluationMethodName;
       score: number;
       sections: Array<{ label: string; content: string }>;
+      judgeModelName: string | null;
+      judgeModelProvider: string | null;
     }> = [];
 
     evaluationRuns.forEach((run) => {
@@ -160,6 +163,8 @@ export function LogDetailsView(): ReactElement {
           method: result.method,
           score: result.score,
           sections: result.display_info,
+          judgeModelName: result.judge_model_name ?? null,
+          judgeModelProvider: result.judge_model_provider ?? null,
         });
       });
     });
@@ -380,6 +385,16 @@ export function LogDetailsView(): ReactElement {
                         <Badge variant="outline" className="text-xs">
                           {(evaluation.score * 100).toFixed(1)}%
                         </Badge>
+                        {evaluation.judgeModelName && (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs text-muted-foreground"
+                          >
+                            {evaluation.judgeModelProvider
+                              ? `${PrettyAIProvider[evaluation.judgeModelProvider as AIProvider] || evaluation.judgeModelProvider}/${evaluation.judgeModelName}`
+                              : evaluation.judgeModelName}
+                          </Badge>
+                        )}
                       </div>
                       {isEvalExpanded ? (
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />

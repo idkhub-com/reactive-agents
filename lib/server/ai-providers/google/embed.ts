@@ -45,6 +45,11 @@ export const googleEmbedConfig: AIProviderFunctionConfig = {
     required: true,
     default: 'embedding-001',
   },
+  // Map OpenAI-style 'dimensions' to Google's 'output_dimensionality'
+  dimensions: {
+    param: 'output_dimensionality',
+    required: false,
+  },
 };
 
 export const googleEmbedResponseTransform: ResponseTransformFunction = (

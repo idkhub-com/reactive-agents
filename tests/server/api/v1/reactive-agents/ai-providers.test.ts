@@ -104,6 +104,9 @@ const mockUserDataStorageConnector = {
   getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
+  // System Settings methods
+  getSystemSettings: vi.fn(),
+  updateSystemSettings: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector

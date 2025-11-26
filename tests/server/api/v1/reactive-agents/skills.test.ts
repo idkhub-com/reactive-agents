@@ -116,6 +116,9 @@ const mockUserDataStorageConnector = {
   getSkillsByModelId: vi.fn(),
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
+  // System Settings methods
+  getSystemSettings: vi.fn(),
+  updateSystemSettings: vi.fn(),
 };
 
 // Create a test app with the middleware that injects the mock connector
@@ -131,6 +134,14 @@ describe('Skills API Status Codes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock getSystemSettings to return empty (no embedding model configured)
+    // This allows skills to be created without embedding model
+    mockUserDataStorageConnector.getSystemSettings.mockResolvedValue({
+      embedding_model_id: null,
+      judge_model_id: null,
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+    });
   });
 
   describe('POST /', () => {

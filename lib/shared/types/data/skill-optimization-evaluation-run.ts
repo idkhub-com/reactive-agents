@@ -20,6 +20,10 @@ export const SkillOptimizationEvaluationResult = z.object({
   extra_data: z.record(z.string(), z.unknown()),
   /** Standardized display information for UI presentation */
   display_info: z.array(EvaluationDisplayInfo),
+  /** The name of the model used for judging (null for non-LLM evaluations) */
+  judge_model_name: z.string().nullable().optional(),
+  /** The provider of the model used for judging (null for non-LLM evaluations) */
+  judge_model_provider: z.string().nullable().optional(),
 });
 export type SkillOptimizationEvaluationResult = z.infer<
   typeof SkillOptimizationEvaluationResult

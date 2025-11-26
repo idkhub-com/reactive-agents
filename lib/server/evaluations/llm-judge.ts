@@ -1,4 +1,4 @@
-import { BEARER_TOKEN, OPENAI_API_KEY } from '@server/constants';
+import { BEARER_TOKEN } from '@server/constants';
 import {
   evaluationCriteria,
   scoringGuidelinesText,
@@ -10,7 +10,10 @@ import {
   LLMJudgeResult,
 } from '@server/types/evaluations/llm-judge';
 import { error, warn } from '@shared/console-logging';
-import { AIProvider } from '@shared/types/constants';
+import {
+  type AIProvider,
+  AIProvider as AIProviderEnum,
+} from '@shared/types/constants';
 import { CacheMode } from '@shared/types/middleware/cache';
 import OpenAI from 'openai';
 import { z } from 'zod';
@@ -18,28 +21,6 @@ import { z } from 'zod';
 // Constants for retry logic
 const LLM_JUDGE_MAX_RETRIES = 3;
 const LLM_JUDGE_RETRY_DELAY_BASE = 1000; // 1 second base delay
-
-/**
- * Models that support strict structured outputs (json_schema with strict: true)
- * See: https://platform.openai.com/docs/guides/structured-outputs
- */
-const MODELS_WITH_STRUCTURED_OUTPUT_SUPPORT = new Set([
-  'gpt-4o',
-  'gpt-4o-mini',
-  'gpt-4o-2024-08-06',
-  'gpt-4o-2024-11-20',
-  'gpt-4o-mini-2024-07-18',
-  'gpt-5-mini',
-  'gpt-5-turbo',
-  'chatgpt-4o-latest',
-]);
-
-/**
- * Check if a model supports strict structured outputs
- */
-function supportsStructuredOutputs(model: string): boolean {
-  return MODELS_WITH_STRUCTURED_OUTPUT_SUPPORT.has(model);
-}
 
 /**
  * Check if an error is retryable for LLM judge requests
@@ -127,16 +108,30 @@ const EvaluationResultSchema = z.object({
   reasoning: z.string().describe('Detailed reasoning for the evaluation'),
 });
 
+/**
+ * Model configuration for LLM judge
+ */
+export interface LLMJudgeModelConfig {
+  model: string;
+  provider: AIProvider;
+  apiKey: string;
+}
+
 export function createLLMJudge(
   config: Partial<LLMJudgeConfig> = {},
+  modelConfig?: LLMJudgeModelConfig,
   openaiClient?: OpenAI,
 ): LLMJudge {
   const judgeConfig = {
-    model: config.model || 'gpt-5-mini',
+    model: modelConfig?.model || config.model || 'gpt-5-mini',
     temperature: config.temperature || 0.1,
     max_tokens: config.max_tokens || 1000,
     timeout: config.timeout || 30000,
   };
+
+  // Provider and API key from model config or defaults
+  const provider = modelConfig?.provider || AIProviderEnum.OPENAI;
+  const apiKey = modelConfig?.apiKey || '';
 
   // Create OpenAI client once (or use injected client for testing)
   const client =
@@ -201,10 +196,8 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
    * Core evaluation method using OpenAI library
    */
   async function evaluate(input: EvaluationInput): Promise<LLMJudgeResult> {
-    const api_key = OPENAI_API_KEY;
-
-    if (!api_key || api_key === 'demo-key' || api_key.trim() === '') {
-      warn('[LLM_JUDGE] OpenAI API key not configured');
+    if (!apiKey || apiKey.trim() === '') {
+      warn('[LLM_JUDGE] API key not configured for evaluation model');
       return getFallbackResult('no_api_key', undefined, {
         retryCount: 0,
         maxRetries: LLM_JUDGE_MAX_RETRIES,
@@ -214,12 +207,12 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
     const raConfig = {
       targets: [
         {
-          provider: AIProvider.OPENAI,
+          provider: provider,
           model: judgeConfig.model,
           cache: {
             mode: CacheMode.SIMPLE,
           },
-          api_key,
+          api_key: apiKey,
         },
       ],
       agent_name: 'reactive-agents',
@@ -237,58 +230,27 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           },
         });
 
-        // Check if model supports structured outputs
-        const useStructuredOutput = supportsStructuredOutputs(
-          judgeConfig.model,
-        );
-
         let parsed: unknown;
 
-        if (useStructuredOutput) {
-          // Use strict structured outputs for supported models
-          const response = await clientWithHeaders.chat.completions.parse({
-            model: judgeConfig.model,
-            messages: [
-              { role: 'system', content: prompt.systemPrompt },
-              { role: 'user', content: prompt.userPrompt },
-            ],
-            response_format: {
-              type: 'json_schema',
-              json_schema: {
-                name: 'evaluation_result',
-                strict: true,
-                schema: z.toJSONSchema(EvaluationResultSchema),
-              },
+        const response = await clientWithHeaders.chat.completions.parse({
+          model: judgeConfig.model,
+          messages: [
+            { role: 'system', content: prompt.systemPrompt },
+            { role: 'user', content: prompt.userPrompt },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'evaluation_result',
+              strict: true,
+              schema: z.toJSONSchema(EvaluationResultSchema),
             },
-          });
+          },
+        });
 
-          parsed = response.choices[0].message.parsed;
-          if (!parsed) {
-            throw new Error('No parsed response from OpenAI');
-          }
-        } else {
-          // Fall back to JSON mode for older models
-          const response = await clientWithHeaders.chat.completions.create({
-            model: judgeConfig.model,
-            messages: [
-              { role: 'system', content: prompt.systemPrompt },
-              { role: 'user', content: prompt.userPrompt },
-            ],
-            response_format: { type: 'json_object' },
-          });
-
-          const content = response.choices[0].message.content;
-          if (!content) {
-            throw new Error('No content in response from OpenAI');
-          }
-
-          try {
-            parsed = JSON.parse(content);
-          } catch (parseError) {
-            throw new Error(
-              `Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-            );
-          }
+        parsed = response.choices[0].message.parsed;
+        if (!parsed) {
+          throw new Error('No parsed response from AI provider');
         }
 
         // For structured output (like task/outcome extraction), return as metadata

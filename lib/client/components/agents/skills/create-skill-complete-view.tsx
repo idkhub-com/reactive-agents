@@ -223,8 +223,11 @@ export function CreateSkillCompleteView(): ReactElement {
     );
   }
 
+  // Filter out embedding models - only show text models for skills
+  const textModels = models.filter((model) => model.model_type === 'text');
+
   // Group models by provider
-  const modelsByProvider = models.reduce(
+  const modelsByProvider = textModels.reduce(
     (acc, model) => {
       if (!acc[model.ai_provider_id]) {
         acc[model.ai_provider_id] = [];
@@ -232,7 +235,7 @@ export function CreateSkillCompleteView(): ReactElement {
       acc[model.ai_provider_id].push(model);
       return acc;
     },
-    {} as Record<string, typeof models>,
+    {} as Record<string, typeof textModels>,
   );
 
   return (

@@ -326,7 +326,11 @@ export async function createSkillEvaluation(
 export async function updateSkillEvaluation(
   skillId: string,
   evaluationId: string,
-  params: { weight: number; params?: Record<string, unknown> },
+  params: {
+    weight: number;
+    params?: Record<string, unknown>;
+    model_id?: string | null;
+  },
 ): Promise<SkillOptimizationEvaluation> {
   const response = await client.v1['reactive-agents'].skills[
     ':skillId'

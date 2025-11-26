@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { handleGenerateArms } from '@server/optimization/skill-optimizations';
 import { generateEvaluationCreateParams } from '@server/optimization/utils/evaluations';
 import type { AppEnv } from '@server/types/hono';
+import { resolveEmbeddingModelConfig } from '@server/utils/evaluation-model-resolver';
 import { getInitialClusterCentroids } from '@server/utils/math';
 import { emitSSEEvent } from '@server/utils/sse-event-manager';
 import type { SkillOptimizationClusterCreateParams } from '@shared/types/data';
@@ -32,23 +33,32 @@ export const skillsRouter = new Hono<AppEnv>()
 
       const newSkill = await userDataStorageConnector.createSkill(data);
 
-      // Create initial clusters with equally spaced centroids
-      const initialCentroids = getInitialClusterCentroids(
-        newSkill.configuration_count,
+      // Get embedding model config for cluster centroids
+      const embeddingConfig = await resolveEmbeddingModelConfig(
+        userDataStorageConnector,
       );
-      const clusterParams: SkillOptimizationClusterCreateParams[] =
-        initialCentroids.map((centroid, index) => ({
-          agent_id: newSkill.agent_id,
-          skill_id: newSkill.id,
-          name: `${index + 1}`,
-          total_steps: 0,
-          observability_total_requests: 0,
-          centroid,
-        }));
 
-      await userDataStorageConnector.createSkillOptimizationClusters(
-        clusterParams,
-      );
+      // Only create clusters if embedding model is configured
+      if (embeddingConfig) {
+        const initialCentroids = getInitialClusterCentroids(
+          newSkill.configuration_count,
+          embeddingConfig.dimensions,
+        );
+        const clusterParams: SkillOptimizationClusterCreateParams[] =
+          initialCentroids.map((centroid, index) => ({
+            agent_id: newSkill.agent_id,
+            skill_id: newSkill.id,
+            name: `${index + 1}`,
+            total_steps: 0,
+            observability_total_requests: 0,
+            centroid,
+            embedding_model_id: embeddingConfig.modelId,
+          }));
+
+        await userDataStorageConnector.createSkillOptimizationClusters(
+          clusterParams,
+        );
+      }
 
       return c.json(newSkill, 201);
     } catch (error) {
@@ -149,23 +159,32 @@ export const skillsRouter = new Hono<AppEnv>()
             );
           }
 
-          // Create new clusters with fresh counters
-          const initialCentroids = getInitialClusterCentroids(
-            updatedSkill.configuration_count,
+          // Get embedding model config for cluster centroids
+          const embeddingConfig = await resolveEmbeddingModelConfig(
+            userDataStorageConnector,
           );
-          const clusterParams: SkillOptimizationClusterCreateParams[] =
-            initialCentroids.map((centroid, index) => ({
-              agent_id: updatedSkill.agent_id,
-              skill_id: updatedSkill.id,
-              name: `${index + 1}`,
-              total_steps: 0,
-              observability_total_requests: 0, // Reset to 0 since this is a new cluster configuration
-              centroid,
-            }));
 
-          await userDataStorageConnector.createSkillOptimizationClusters(
-            clusterParams,
-          );
+          // Only create clusters if embedding model is configured
+          if (embeddingConfig) {
+            const initialCentroids = getInitialClusterCentroids(
+              updatedSkill.configuration_count,
+              embeddingConfig.dimensions,
+            );
+            const clusterParams: SkillOptimizationClusterCreateParams[] =
+              initialCentroids.map((centroid, index) => ({
+                agent_id: updatedSkill.agent_id,
+                skill_id: updatedSkill.id,
+                name: `${index + 1}`,
+                total_steps: 0,
+                observability_total_requests: 0, // Reset to 0 since this is a new cluster configuration
+                centroid,
+                embedding_model_id: embeddingConfig.modelId,
+              }));
+
+            await userDataStorageConnector.createSkillOptimizationClusters(
+              clusterParams,
+            );
+          }
 
           // Create event for partition reclustering
           await userDataStorageConnector.createSkillEvent({
@@ -432,14 +451,15 @@ export const skillsRouter = new Hono<AppEnv>()
         const { log_id, created_after, created_before } = c.req.valid('query');
         const connector = c.get('user_data_storage_connector');
 
-        const arms = await connector.getSkillOptimizationEvaluationRuns({
-          skill_id: skillId,
-          ...(log_id && { log_id }),
-          ...(created_after && { created_after }),
-          ...(created_before && { created_before }),
-        });
+        const evaluationRuns =
+          await connector.getSkillOptimizationEvaluationRuns({
+            skill_id: skillId,
+            ...(log_id && { log_id }),
+            ...(created_after && { created_after }),
+            ...(created_before && { created_before }),
+          });
 
-        return c.json(arms);
+        return c.json(evaluationRuns);
       } catch (error) {
         console.error('Error getting evaluation runs:', error);
         return c.json({ error: 'Failed to get evaluation runs' }, 500);
@@ -550,6 +570,7 @@ export const skillsRouter = new Hono<AppEnv>()
             evaluationConnector,
             method,
             agent.description,
+            userDataStorageConnector,
             // No examples on initial creation
             undefined,
           );
@@ -785,43 +806,58 @@ export const skillsRouter = new Hono<AppEnv>()
         skill_id: skillId,
       });
 
-      // Update clusters in-place with fresh centroids
-      const initialCentroids = getInitialClusterCentroids(
-        skill.configuration_count,
-      );
+      // Get embedding model config for cluster centroids
+      const embeddingConfig = await resolveEmbeddingModelConfig(connector);
 
-      // Match existing clusters to new centroids
-      for (let i = 0; i < initialCentroids.length; i++) {
-        const centroid = initialCentroids[i];
-        if (i < existingClusters.length) {
-          // Update existing cluster
-          await connector.updateSkillOptimizationCluster(
-            existingClusters[i].id,
-            {
-              centroid,
+      // Only reset clusters if embedding model is configured
+      if (embeddingConfig) {
+        // Update clusters in-place with fresh centroids
+        const initialCentroids = getInitialClusterCentroids(
+          skill.configuration_count,
+          embeddingConfig.dimensions,
+        );
+
+        // Match existing clusters to new centroids
+        for (let i = 0; i < initialCentroids.length; i++) {
+          const centroid = initialCentroids[i];
+          if (i < existingClusters.length) {
+            // Update existing cluster
+            await connector.updateSkillOptimizationCluster(
+              existingClusters[i].id,
+              {
+                centroid,
+                total_steps: 0,
+                observability_total_requests: clearObservabilityCount
+                  ? 0
+                  : existingClusters[i].observability_total_requests,
+                embedding_model_id: embeddingConfig.modelId,
+              },
+            );
+          } else {
+            // Create new cluster if configuration_count increased
+            const clusterParams: SkillOptimizationClusterCreateParams = {
+              agent_id: skill.agent_id,
+              skill_id: skillId,
+              name: `${i + 1}`,
               total_steps: 0,
-              observability_total_requests: clearObservabilityCount
-                ? 0
-                : existingClusters[i].observability_total_requests,
-            },
-          );
-        } else {
-          // Create new cluster if configuration_count increased
-          const clusterParams: SkillOptimizationClusterCreateParams = {
-            agent_id: skill.agent_id,
-            skill_id: skillId,
-            name: `${i + 1}`,
-            total_steps: 0,
-            observability_total_requests: 0,
-            centroid,
-          };
-          await connector.createSkillOptimizationClusters([clusterParams]);
+              observability_total_requests: 0,
+              centroid,
+              embedding_model_id: embeddingConfig.modelId,
+            };
+            await connector.createSkillOptimizationClusters([clusterParams]);
+          }
         }
-      }
 
-      // Delete extra clusters if configuration_count decreased
-      for (let i = initialCentroids.length; i < existingClusters.length; i++) {
-        await connector.deleteSkillOptimizationCluster(existingClusters[i].id);
+        // Delete extra clusters if configuration_count decreased
+        for (
+          let i = initialCentroids.length;
+          i < existingClusters.length;
+          i++
+        ) {
+          await connector.deleteSkillOptimizationCluster(
+            existingClusters[i].id,
+          );
+        }
       }
 
       // Regenerate evaluations with the same methods in-place
@@ -850,6 +886,7 @@ export const skillsRouter = new Hono<AppEnv>()
             evaluationConnector,
             method,
             agent.description,
+            connector,
             undefined, // No examples on reset
           );
 
@@ -880,7 +917,7 @@ export const skillsRouter = new Hono<AppEnv>()
         cluster_id: null, // Skill-wide event
         event_type: SkillEventType.PARTITION_RESET,
         metadata: {
-          cluster_count: initialCentroids.length,
+          cluster_count: skill.configuration_count,
           evaluation_count: existingEvaluations.length,
         },
       });
@@ -888,7 +925,7 @@ export const skillsRouter = new Hono<AppEnv>()
       // Emit SSE event for skill reset
       emitSSEEvent('skill:reset', {
         skillId,
-        clusterCount: initialCentroids.length,
+        clusterCount: skill.configuration_count,
         evaluationCount: existingEvaluations.length,
       });
 

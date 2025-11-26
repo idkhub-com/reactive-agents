@@ -5,6 +5,8 @@ import {
   AGENT_SHORTCUT_KEYS,
   MAX_AGENT_SHORTCUTS,
 } from '@client/components/agents/constants';
+import { AIProvidersStatusIndicator } from '@client/components/ai-providers/ai-providers-status-indicator';
+import { SettingsStatusIndicator } from '@client/components/settings/settings-status-indicator';
 import {
   Collapsible,
   CollapsibleContent,
@@ -214,6 +216,9 @@ export function NavMain({
               >
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
+                {/* Show status indicators for nav items */}
+                {item.url === '/ai-providers' && <AIProvidersStatusIndicator />}
+                {item.url === '/settings' && <SettingsStatusIndicator />}
                 {item.external && (
                   <ExternalLink className="ml-auto size-3 text-muted-foreground" />
                 )}

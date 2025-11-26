@@ -2,7 +2,9 @@ import { getArgumentCorrectnessTemplate } from '@server/connectors/evaluations/a
 import { ArgumentCorrectnessEvaluationParameters } from '@server/connectors/evaluations/argument-correctness/types';
 import type { ToolUsage } from '@server/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
+import type { UserDataStorageConnector } from '@server/types/connector';
 import { extractMessagesFromRequestData } from '@server/utils/embeddings';
+import { resolveEvaluationModelConfig } from '@server/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@server/utils/messages';
 import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
 import type {
@@ -39,12 +41,19 @@ function buildPromptForToolArgs(
 export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
+  storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params = ArgumentCorrectnessEvaluationParameters.parse(
     evaluation.params,
   );
 
   const start_time = Date.now();
+
+  // Resolve model configuration from evaluation.model_id or system settings
+  const modelConfig = await resolveEvaluationModelConfig(
+    evaluation,
+    storageConnector,
+  );
   const raRequestData = produceReactiveAgentsRequestData(
     log.ai_provider_request_log.method,
     log.ai_provider_request_log.request_url,
@@ -80,11 +89,13 @@ export async function evaluateLog(
       tools_called = [t as ToolUsage];
   }
 
-  const llmJudge = createLLMJudge({
-    model: params.model,
-    temperature: params.temperature,
-    max_tokens: params.max_tokens,
-  });
+  const llmJudge = createLLMJudge(
+    {
+      temperature: params.temperature,
+      max_tokens: params.max_tokens,
+    },
+    modelConfig ?? undefined,
+  );
 
   const { systemPrompt, userPrompt } = buildPromptForToolArgs(
     input,
@@ -113,6 +124,8 @@ export async function evaluateLog(
 
   const final_score = computed_score ?? judgeResult.score;
   const execution_time = Date.now() - start_time;
+  const judgeModelName = modelConfig?.model ?? null;
+  const judgeModelProvider = modelConfig?.provider ?? null;
 
   // Format tool correctness information for display
   const displayInfoSections = [];
@@ -168,6 +181,8 @@ export async function evaluateLog(
       ...(judgeResult.metadata ? { judge_metadata: judgeResult.metadata } : {}),
     },
     display_info: displayInfoSections,
+    judge_model_name: judgeModelName,
+    judge_model_provider: judgeModelProvider,
   };
 
   return result;

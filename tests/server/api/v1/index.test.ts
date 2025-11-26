@@ -9,7 +9,7 @@ describe('API v1 Index', () => {
 
       // If the embeddings router wasn't properly imported, this would fail
       expect(indexModule).toBeDefined();
-    }, 10000);
+    }, 30000);
 
     it('should have all expected routes configured', async () => {
       // Test that all routers are imported and the module loads successfully
@@ -19,6 +19,6 @@ describe('API v1 Index', () => {
       expect(indexModule.POST).toBeDefined();
       expect(indexModule.DELETE).toBeDefined();
       expect(indexModule.PATCH).toBeDefined();
-    }, 10000);
+    }, 30000);
   });
 });

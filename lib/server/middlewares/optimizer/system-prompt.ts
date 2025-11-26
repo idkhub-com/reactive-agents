@@ -691,6 +691,7 @@ async function autoGenerateSystemPromptsForCluster(
       agentDescription,
       skill.description,
       skill.allowed_template_variables,
+      userDataStorageConnector,
     );
 
     // Perform reflection: update arms with new prompt and reset stats

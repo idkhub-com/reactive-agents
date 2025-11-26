@@ -18,6 +18,8 @@ const raConfig = {
 const inputText1 = 'Hello, world! This is a sample text for embedding.';
 logger.printWithHeader('Input', inputText1);
 
+// Note: The OpenAI library automatically truncates embeddings when `dimensions` is specified.
+// For non-OpenAI providers (e.g., Google Gemini), use fetch directly to avoid incorrect truncation.
 const response1 = await client
   .withOptions({
     defaultHeaders: {

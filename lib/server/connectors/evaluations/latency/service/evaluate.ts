@@ -1,4 +1,5 @@
 import { LatencyEvaluationParameters } from '@server/connectors/evaluations/latency/types';
+import type { UserDataStorageConnector } from '@server/types/connector';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
@@ -51,6 +52,7 @@ function extractLatency(log: Log): number | null {
 export function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
+  _storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult> {
   const start_time = Date.now();
 
@@ -76,6 +78,8 @@ export function evaluateLog(
             content: 'Could not extract latency from log',
           },
         ],
+        judge_model_name: null,
+        judge_model_provider: null,
       });
     }
 
@@ -121,6 +125,8 @@ export function evaluateLog(
           content: `${latencyType}: ${latency_ms}ms\nTarget: ${params.target_latency_ms}ms\nMaximum: ${params.max_latency_ms}ms\nScore: ${(score * 100).toFixed(1)}%`,
         },
       ],
+      judge_model_name: null,
+      judge_model_provider: null,
     };
 
     return Promise.resolve(result);
@@ -141,6 +147,8 @@ export function evaluateLog(
           content: errorMessage,
         },
       ],
+      judge_model_name: null,
+      judge_model_provider: null,
     });
   }
 }

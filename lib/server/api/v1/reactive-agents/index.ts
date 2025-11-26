@@ -12,6 +12,7 @@ import { modelsRouter } from './models';
 import { observabilityRouter } from './observability';
 import { skillEventsRouter } from './skill-events';
 import { skillsRouter } from './skills';
+import { systemSettingsRouter } from './system-settings';
 
 export const reactiveAgentsRouter = new Hono<AppEnv>()
   // Apply SSE events middleware to all reactive-agents routes
@@ -28,4 +29,5 @@ export const reactiveAgentsRouter = new Hono<AppEnv>()
   // Keep old endpoint for backward compatibility
   .route('/ai-providers', aiProvidersRouter)
   .route('/events', eventsRouter)
-  .route('/evaluation-methods', evaluationMethodsRouter);
+  .route('/evaluation-methods', evaluationMethodsRouter)
+  .route('/system-settings', systemSettingsRouter);

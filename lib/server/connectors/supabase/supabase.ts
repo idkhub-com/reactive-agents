@@ -71,6 +71,10 @@ import {
   type SkillOptimizationEvaluationRunQueryParams,
 } from '@shared/types/data/skill-optimization-evaluation-run';
 import {
+  SystemSettings,
+  type SystemSettingsUpdateParams,
+} from '@shared/types/data/system-settings';
+import {
   Tool,
   type ToolCreateParams,
   type ToolQueryParams,
@@ -1090,6 +1094,37 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     });
 
     return createdEvent[0];
+  },
+
+  // System Settings (singleton - only one row exists)
+  async getSystemSettings(): Promise<SystemSettings> {
+    const settings = await selectFromSupabase(
+      'system_settings',
+      { limit: '1' },
+      z.array(SystemSettings),
+    );
+    // There should always be exactly one row (created by migration)
+    return settings[0];
+  },
+
+  async updateSystemSettings(
+    update: SystemSettingsUpdateParams,
+  ): Promise<SystemSettings> {
+    // Get the singleton settings row first
+    const currentSettings = await selectFromSupabase(
+      'system_settings',
+      { limit: '1' },
+      z.array(SystemSettings),
+    );
+    const settingsId = currentSettings[0].id;
+
+    const updatedSettings = await updateInSupabase(
+      'system_settings',
+      settingsId,
+      update,
+      z.array(SystemSettings),
+    );
+    return updatedSettings[0];
   },
 };
 

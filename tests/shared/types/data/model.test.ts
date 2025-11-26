@@ -358,6 +358,24 @@ describe('Model Data Transforms and Validation', () => {
         id: testModelId,
         ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+
+      const result = Model.parse(modelData);
+
+      expect(result).toEqual(modelData);
+    });
+
+    it('should validate an embedding model object', () => {
+      const modelData = {
+        id: testModelId,
+        ai_provider_id: testApiKeyId,
+        model_name: 'text-embedding-ada-002',
+        model_type: 'embed',
+        embedding_dimensions: 1536,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -372,6 +390,8 @@ describe('Model Data Transforms and Validation', () => {
         id: 'invalid-uuid',
         ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -384,6 +404,8 @@ describe('Model Data Transforms and Validation', () => {
         id: testModelId,
         ai_provider_id: 'invalid-uuid',
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -396,6 +418,8 @@ describe('Model Data Transforms and Validation', () => {
         id: testModelId,
         ai_provider_id: testApiKeyId,
         model_name: '',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -408,6 +432,8 @@ describe('Model Data Transforms and Validation', () => {
         id: testModelId,
         ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: 'invalid-date',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -420,6 +446,8 @@ describe('Model Data Transforms and Validation', () => {
         id: testModelId,
         ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00', // Missing timezone offset
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -431,6 +459,8 @@ describe('Model Data Transforms and Validation', () => {
       const modelDataMissingId = {
         ai_provider_id: testApiKeyId,
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -438,6 +468,8 @@ describe('Model Data Transforms and Validation', () => {
       const modelDataMissingApiKeyId = {
         id: testModelId,
         model_name: 'gpt-4',
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -445,6 +477,8 @@ describe('Model Data Transforms and Validation', () => {
       const modelDataMissingModelName = {
         id: testModelId,
         ai_provider_id: testApiKeyId,
+        model_type: 'text',
+        embedding_dimensions: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -467,7 +501,6 @@ describe('Model Data Transforms and Validation', () => {
         'llama-2-70b-chat',
         'mistral-7b-instruct',
         'text-davinci-003',
-        'text-embedding-ada-002',
       ];
 
       for (const modelName of modelNames) {
@@ -475,6 +508,8 @@ describe('Model Data Transforms and Validation', () => {
           id: testModelId,
           ai_provider_id: testApiKeyId,
           model_name: modelName,
+          model_type: 'text',
+          embedding_dimensions: null,
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
         };

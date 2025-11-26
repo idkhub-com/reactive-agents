@@ -1,9 +1,8 @@
-import { EMBEDDINGS_DIMENSIONS } from '@server/constants';
 import type { ClusterResult } from '@shared/utils/math';
 
 export function getInitialClusterCentroids(
   numberOfClusters: number,
-  dimension = EMBEDDINGS_DIMENSIONS,
+  dimension: number,
 ): number[][] {
   const centroids: number[][] = [];
 

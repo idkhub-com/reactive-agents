@@ -2,7 +2,9 @@ import { extractTaskAndOutcome } from '@server/connectors/evaluations/task-compl
 import getTaskCompletionVerdictTemplate from '@server/connectors/evaluations/task-completion/templates/verdict';
 import { TaskCompletionEvaluationParameters } from '@server/connectors/evaluations/task-completion/types';
 import { createLLMJudge } from '@server/evaluations/llm-judge';
+import type { UserDataStorageConnector } from '@server/types/connector';
 import type { LLMJudge } from '@server/types/evaluations/llm-judge';
+import { resolveEvaluationModelConfig } from '@server/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@server/utils/messages';
 import { extractMessagesFromRequestData } from '@server/utils/reactive-agents/requests';
 import { extractOutputFromResponseBody } from '@server/utils/reactive-agents/responses';
@@ -41,6 +43,7 @@ async function generateVerdict(
 async function getTaskAndOutcome(
   params: TaskCompletionEvaluationParameters,
   log: Log,
+  connector: UserDataStorageConnector,
 ): Promise<{ task: string; outcome: string }> {
   const raRequestData = produceReactiveAgentsRequestData(
     log.ai_provider_request_log.method,
@@ -61,26 +64,44 @@ async function getTaskAndOutcome(
   const input = formatMessagesForExtraction(messages);
   const output = extractOutputFromResponseBody(responseBody);
 
-  const { task, outcome } = await extractTaskAndOutcome(params, input, output);
+  const { task, outcome } = await extractTaskAndOutcome(
+    params,
+    input,
+    output,
+    connector,
+  );
   return { task: params.task || task, outcome };
 }
 
 export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
+  storageConnector: UserDataStorageConnector,
 ): Promise<SkillOptimizationEvaluationResult> {
   const start_time = Date.now();
 
   try {
     const params = TaskCompletionEvaluationParameters.parse(evaluation.params);
 
-    const llmJudge = createLLMJudge({
-      model: params.model,
-      temperature: params.temperature,
-      max_tokens: params.max_tokens,
-    });
+    // Resolve model configuration from evaluation.model_id or system settings
+    const modelConfig = await resolveEvaluationModelConfig(
+      evaluation,
+      storageConnector,
+    );
 
-    const { task, outcome } = await getTaskAndOutcome(params, log);
+    const llmJudge = createLLMJudge(
+      {
+        temperature: params.temperature,
+        max_tokens: params.max_tokens,
+      },
+      modelConfig ?? undefined,
+    );
+
+    const { task, outcome } = await getTaskAndOutcome(
+      params,
+      log,
+      storageConnector,
+    );
 
     // Step 2: Generate verdict
     const { verdict, reason } = await generateVerdict(
@@ -90,6 +111,9 @@ export async function evaluateLog(
     const verdict_llm_output = JSON.stringify({ verdict, reason });
 
     const execution_time = Date.now() - start_time;
+
+    const judgeModelName = modelConfig?.model ?? null;
+    const judgeModelProvider = modelConfig?.provider ?? null;
 
     const result: SkillOptimizationEvaluationResult = {
       evaluation_id: evaluation.id,
@@ -122,6 +146,8 @@ export async function evaluateLog(
           content: `Score: ${verdict}\n\nReason:\n${reason}`,
         },
       ],
+      judge_model_name: judgeModelName,
+      judge_model_provider: judgeModelProvider,
     };
 
     return result;
@@ -159,6 +185,8 @@ export async function evaluateLog(
           content: `Evaluation failed: ${errorMessage}`,
         },
       ],
+      judge_model_name: null,
+      judge_model_provider: null,
     };
   }
 }

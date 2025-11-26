@@ -186,6 +186,7 @@ export async function checkAndRegenerateEvaluationsEarly(
       agentDescription,
       skill.description,
       examples,
+      userDataStorageConnector,
       responseFormat,
       skill.allowed_template_variables,
     );
@@ -206,6 +207,7 @@ export async function checkAndRegenerateEvaluationsEarly(
       examples,
       evaluationConnectorsMap,
       existingEvaluationMethods,
+      userDataStorageConnector,
     );
 
     // Update evaluations in-place to preserve their IDs and relationships

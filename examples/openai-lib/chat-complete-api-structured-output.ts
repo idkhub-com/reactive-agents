@@ -39,7 +39,6 @@ const response1 = await client
   .chat.completions.parse({
     model: 'gpt-4o-mini',
     messages: [
-      { role: 'system', content: 'Extract the event information.' },
       {
         role: 'user',
         content: userMessage1,
