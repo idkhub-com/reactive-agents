@@ -44,7 +44,7 @@ services:
 
   # PostgREST API Server
   postgrest:
-    image: postgrest/postgrest:latest
+    image: postgrest/postgrest:v14.1
     container_name: ra-postgrest
     restart: unless-stopped
     ports:
@@ -66,11 +66,7 @@ services:
 
   # Next.js Application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_ENV: production
+    image: ghcr.io/idkhub-com/reactive-agents:${RA_VERSION:-latest}
     container_name: reactive-agents
     restart: unless-stopped
     ports:
