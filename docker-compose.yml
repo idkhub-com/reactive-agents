@@ -14,13 +14,31 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
-      - ./supabase/migrations/20250610025959_base_functions.sql:/docker-entrypoint-initdb.d/02-base-functions.sql:ro
-      - ./supabase/migrations/20250703100411_initial_schema.sql:/docker-entrypoint-initdb.d/03-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ra-network
+
+  # Database Migrations
+  migrations:
+    image: postgres:17-alpine
+    container_name: ra-migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./supabase/migrations:/migrations:ro
+      - ./docker/postgres/migrations/run-migrations.sh:/run-migrations.sh:ro
+    entrypoint: ["/bin/sh", "/run-migrations.sh"]
     networks:
       - ra-network
 
@@ -41,6 +59,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     networks:
       - ra-network
 
