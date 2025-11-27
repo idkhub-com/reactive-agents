@@ -19,20 +19,45 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Validate tag format
         run: |
+          set -euo pipefail
           TAG="${GITHUB_REF#refs/tags/}"
+
+          # Validate semver format
           if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
-            echo "Error: Tag '$TAG' does not match semver format (vX.Y.Z or vX.Y.Z-prerelease)"
+            echo "::error::Tag '$TAG' does not match semver format (vX.Y.Z or vX.Y.Z-prerelease)"
             exit 1
           fi
-          echo "Valid tag: $TAG"
+          echo "Valid semver tag: $TAG"
+
+          # Verify tag exists and points to a valid commit
+          if ! git rev-parse "$TAG" > /dev/null 2>&1; then
+            echo "::error::Tag '$TAG' does not point to a valid commit"
+            exit 1
+          fi
+
+          # Verify tag is annotated (recommended for releases)
+          TAG_TYPE=$(git cat-file -t "$TAG" 2>/dev/null || echo "unknown")
+          if [ "$TAG_TYPE" = "tag" ]; then
+            echo "Tag is annotated (recommended)"
+          else
+            echo "::warning::Tag is lightweight. Consider using annotated tags for releases: git tag -a $TAG -m 'Release $TAG'"
+          fi
+
+          echo "Tag validation passed: $TAG"
 
       - name: Get version from tag
         id: get_version
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
 
   create-release:
     runs-on: ubuntu-latest
@@ -47,51 +72,23 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          REPO_URL: https://github.com/${{ github.repository }}
         run: |
-          # Get the previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
-
-          echo "Previous tag: $PREV_TAG"
-          echo "Current tag: $CURRENT_TAG"
-
-          # Generate changelog
-          {
-            echo "## What's Changed"
-            echo ""
-
-            if [ -n "$PREV_TAG" ]; then
-              # Get commits between tags, grouped by type
-              echo "### Features"
-              git log --pretty=format:"* %s (%h)" "$PREV_TAG..$CURRENT_TAG" | grep -iE "^\\* (feat|feature)" || echo "_No new features_"
-              echo ""
-
-              echo "### Bug Fixes"
-              git log --pretty=format:"* %s (%h)" "$PREV_TAG..$CURRENT_TAG" | grep -iE "^\\* fix" || echo "_No bug fixes_"
-              echo ""
-
-              echo "### Other Changes"
-              git log --pretty=format:"* %s (%h)" "$PREV_TAG..$CURRENT_TAG" | grep -viE "^\\* (feat|feature|fix)" || echo "_No other changes_"
-              echo ""
-
-              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...$CURRENT_TAG"
-            else
-              echo "Initial release"
-              echo ""
-              git log --pretty=format:"* %s (%h)" | head -50
-            fi
-          } > changelog.md
-
+          ./scripts/generate-changelog.sh "$TAG_NAME" "$REPO_URL" > changelog.md
+          echo "Generated changelog:"
           cat changelog.md
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (Draft)
         id: create_release
-        uses: softprops/action-gh-release@v2
+        # Pinned to v2.3.2 SHA for security
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body_path: changelog.md
-          draft: false
+          draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: false
 
@@ -120,11 +117,11 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Note: 'latest' tag is only added when the release is published (see release-publish.yml)
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -138,7 +135,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Update release with Docker info
-        uses: softprops/action-gh-release@v2
+        # Pinned to v2.3.2 SHA for security
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
         with:
           tag_name: ${{ github.ref_name }}
           append_body: true
@@ -156,3 +154,17 @@ jobs:
             ```bash
             RA_VERSION=${{ needs.validate-tag.outputs.version }} docker-compose -f docker-compose.yml up
             ```
+
+            > **Note:** This is a draft release. Publishing this release will tag the Docker image as `latest`.
+
+      - name: Summary
+        run: |
+          echo "## Draft Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.validate-tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Image:** \`ghcr.io/${{ github.repository }}:${{ needs.validate-tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the [draft release](${{ needs.create-release.outputs.release_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "2. Edit release notes if needed" >> $GITHUB_STEP_SUMMARY
+          echo "3. Click **Publish release** to make it public and tag Docker image as \`latest\`" >> $GITHUB_STEP_SUMMARY

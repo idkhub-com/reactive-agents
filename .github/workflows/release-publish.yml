@@ -1,0 +1,54 @@
+name: Publish Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  tag-latest:
+    # Only tag 'latest' for non-prerelease versions
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: version
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Tag image as latest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          SOURCE="${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+          TARGET="${REGISTRY}/${IMAGE_NAME}:latest"
+
+          echo "Tagging $SOURCE as $TARGET"
+
+          # Pull, tag, and push for both architectures
+          docker buildx imagetools create -t "$TARGET" "$SOURCE"
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "## Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Docker image \`${REGISTRY}/${IMAGE_NAME}:${VERSION}\` is now tagged as \`latest\`" >> $GITHUB_STEP_SUMMARY
