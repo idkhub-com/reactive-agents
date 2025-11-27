@@ -1,4 +1,6 @@
 name: CI - Pull Request
+permissions:
+  contents: read
 
 on:
   pull_request:
@@ -129,3 +131,127 @@ jobs:
 
       - name: Test
         run: pnpm turbo test
+
+  migrations:
+    name: Test Migrations
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: pr
+
+      - name: Check out base branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Verify existing migrations unchanged
+        run: |
+          echo "Comparing migration checksums between base and PR branch..."
+
+          # Get checksums of migrations in base branch
+          if [ -d "base/supabase/migrations" ]; then
+            cd base/supabase/migrations
+            find . -name "*.sql" -type f | sort | while read file; do
+              sha256sum "$file"
+            done > /tmp/base_checksums.txt
+            cd - > /dev/null
+          else
+            touch /tmp/base_checksums.txt
+          fi
+
+          # Check each base migration exists unchanged in PR
+          changed_migrations=""
+          while read checksum filename; do
+            [ -z "$checksum" ] && continue
+            pr_file="pr/supabase/migrations/$filename"
+            if [ -f "$pr_file" ]; then
+              pr_checksum=$(sha256sum "$pr_file" | cut -d' ' -f1)
+              if [ "$checksum" != "$pr_checksum" ]; then
+                changed_migrations="$changed_migrations\n  - $filename"
+              fi
+            else
+              changed_migrations="$changed_migrations\n  - $filename (deleted)"
+            fi
+          done < /tmp/base_checksums.txt
+
+          if [ -n "$changed_migrations" ]; then
+            echo "ERROR: Existing migrations were modified or deleted!"
+            echo "Changed migrations:$changed_migrations"
+            echo ""
+            echo "Migrations are immutable once merged. Create a new migration instead."
+            exit 1
+          fi
+
+          echo "All existing migrations unchanged. Checking for new migrations..."
+
+          # List new migrations
+          cd pr/supabase/migrations
+          find . -name "*.sql" -type f | sort | while read file; do
+            if ! grep -q "$file" /tmp/base_checksums.txt 2>/dev/null; then
+              echo "  New migration: $file"
+            fi
+          done
+
+          echo "Migration integrity check passed!"
+
+      - name: Test migrations with docker-compose
+        working-directory: pr
+        run: |
+          # Start postgres and run migrations
+          docker compose up -d postgres
+
+          # Wait for postgres to be healthy
+          echo "Waiting for PostgreSQL to be ready..."
+          timeout 60 sh -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 2; done'
+
+          # Run migrations container
+          docker compose up migrations
+
+          # Check migrations container exit code
+          exit_code=$(docker compose ps -a migrations --format json | jq -r 'if type == "array" then .[0].ExitCode else .ExitCode end // 0')
+          if [ "$exit_code" != "0" ]; then
+            echo "ERROR: Migrations failed with exit code $exit_code"
+            docker compose logs migrations
+            exit 1
+          fi
+
+          echo "Migrations completed successfully!"
+
+      - name: Verify migrations applied
+        working-directory: pr
+        run: |
+          # Count applied migrations
+          applied_count=$(docker compose exec -T postgres psql -U postgres -d postgres -tAc \
+            "SELECT COUNT(*) FROM schema_migrations")
+
+          # Count migration files
+          file_count=$(find supabase/migrations -name "*.sql" -type f | wc -l)
+
+          echo "Applied migrations: $applied_count"
+          echo "Migration files: $file_count"
+
+          if [ "$applied_count" -ne "$file_count" ]; then
+            echo "ERROR: Migration count mismatch!"
+            docker compose logs migrations
+            exit 1
+          fi
+
+          # Show applied migrations
+          echo ""
+          echo "Applied migrations:"
+          docker compose exec -T postgres psql -U postgres -d postgres -c \
+            "SELECT version, applied_at FROM schema_migrations ORDER BY version"
+
+          echo ""
+          echo "All migrations applied successfully!"
+
+      - name: Cleanup
+        if: always()
+        working-directory: pr
+        run: docker compose down -v
