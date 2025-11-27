@@ -11,7 +11,8 @@
       "!**/.turbo/**/*",
       "!**/.open-next/**/*",
       "!**/.next",
-      "!**/.claude"
+      "!**/.claude",
+      "!next-env.d.ts"
     ]
   },
   "formatter": {

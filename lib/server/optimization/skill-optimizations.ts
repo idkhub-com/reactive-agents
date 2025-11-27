@@ -194,16 +194,27 @@ export async function handleGenerateArms(
     );
   }
 
-  // Build expected arms structure
-  const expectedArms: Array<{
-    cluster_id: string;
-    model_id: string;
-    baseArmIndex: number;
-    armParams: SkillOptimizationArmParams;
-  }> = [];
+  // Build a map of existing arms by cluster_id -> list of arms (not just IDs)
+  const existingArmsByCluster = new Map<string, (typeof existingArms)[0][]>();
+  for (const arm of existingArms) {
+    if (!existingArmsByCluster.has(arm.cluster_id)) {
+      existingArmsByCluster.set(arm.cluster_id, []);
+    }
+    existingArmsByCluster.get(arm.cluster_id)!.push(arm);
+  }
+
+  // Process each cluster independently to ensure arms are named 1-n per cluster
+  const updatedArms: string[] = [];
+  const armsToCreate: SkillOptimizationArmCreateParams[] = [];
+  const matchedArmIds = new Set<string>();
 
   for (const cluster of skillClusters) {
-    let baseArmIndex = 0;
+    const availableArms = existingArmsByCluster.get(cluster.id) || [];
+    // Track used names in this cluster to avoid conflicts
+    const usedNames = new Set<string>();
+    // Track next available name counter for new arms
+    let nextNameCounter = 1;
+
     for (const model of skillModels) {
       for (const baseArm of BaseArmsParams) {
         const armParams: SkillOptimizationArmParams = {
@@ -211,44 +222,44 @@ export async function handleGenerateArms(
           model_id: model.id,
           system_prompt: systemPrompt,
         };
-        expectedArms.push({
-          cluster_id: cluster.id,
-          model_id: model.id,
-          baseArmIndex,
-          armParams,
-        });
-        baseArmIndex++;
+
+        // Try to reuse an existing arm for this cluster
+        const existingArm = availableArms.shift();
+
+        if (existingArm) {
+          // Update existing arm in-place, keeping its original name
+          await userStorageConnector.updateSkillOptimizationArm(
+            existingArm.id,
+            {
+              params: armParams,
+            },
+          );
+          // Delete arm stats to reset performance history
+          await userStorageConnector.deleteSkillOptimizationArmStats({
+            arm_id: existingArm.id,
+          });
+          updatedArms.push(existingArm.id);
+          matchedArmIds.add(existingArm.id);
+          usedNames.add(existingArm.name);
+        } else {
+          // Find next available name that doesn't conflict with existing arms
+          while (usedNames.has(`${nextNameCounter}`)) {
+            nextNameCounter++;
+          }
+          const newName = `${nextNameCounter}`;
+          usedNames.add(newName);
+          nextNameCounter++;
+
+          // Need to create new arm
+          armsToCreate.push({
+            agent_id: skill.agent_id,
+            skill_id: skill.id,
+            cluster_id: cluster.id,
+            name: newName,
+            params: armParams,
+          });
+        }
       }
-    }
-  }
-
-  // Match existing arms to expected arms and update/create as needed
-  const updatedArms: string[] = [];
-  const armsToCreate: SkillOptimizationArmCreateParams[] = [];
-
-  for (let i = 0; i < expectedArms.length; i++) {
-    const expected = expectedArms[i];
-    const existing = existingArms[i]; // Match by position (same ordering)
-
-    if (existing && existing.cluster_id === expected.cluster_id) {
-      // Update existing arm in-place
-      await userStorageConnector.updateSkillOptimizationArm(existing.id, {
-        params: expected.armParams,
-      });
-      // Delete arm stats to reset performance history
-      await userStorageConnector.deleteSkillOptimizationArmStats({
-        arm_id: existing.id,
-      });
-      updatedArms.push(existing.id);
-    } else {
-      // Need to create new arm (shouldn't happen if models/clusters unchanged)
-      armsToCreate.push({
-        agent_id: skill.agent_id,
-        skill_id: skill.id,
-        cluster_id: expected.cluster_id,
-        name: `${i + 1}`,
-        params: expected.armParams,
-      });
     }
   }
 
@@ -259,9 +270,14 @@ export async function handleGenerateArms(
     updatedArms.push(...createdArms.map((a) => a.id));
   }
 
-  // Delete any extra arms that no longer match expected structure
-  for (let i = expectedArms.length; i < existingArms.length; i++) {
-    await userStorageConnector.deleteSkillOptimizationArm(existingArms[i].id);
+  // Delete any orphaned arms that don't match expected structure
+  for (const arm of existingArms) {
+    if (!matchedArmIds.has(arm.id)) {
+      await userStorageConnector.deleteSkillOptimizationArmStats({
+        arm_id: arm.id,
+      });
+      await userStorageConnector.deleteSkillOptimizationArm(arm.id);
+    }
   }
 
   return c.json({ updatedArms }, 200);
