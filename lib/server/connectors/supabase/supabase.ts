@@ -999,43 +999,23 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     const { EvaluationScoresByTimeBucketResult } = await import(
       '@shared/types/data/evaluation-runs-with-scores'
     );
-    const { SUPABASE_URL, SUPABASE_SECRET_KEY } = await import(
-      '@server/constants'
-    );
 
     // Call PostgreSQL function to get time-bucketed scores
     const interval = `${params.interval_minutes} minutes`;
-    const rpcParams = {
-      p_agent_id: params.agent_id || null,
-      p_skill_id: params.skill_id || null,
-      p_cluster_id: params.cluster_id || null,
-      p_interval: interval,
-      p_start_time: params.start_time,
-      p_end_time: params.end_time,
-    };
-
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/rpc/get_evaluation_scores_by_time_bucket`,
+    const result = await rpcFunctionWithResponse(
+      'get_evaluation_scores_by_time_bucket',
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_SECRET_KEY!,
-          Authorization: `Bearer ${SUPABASE_SECRET_KEY}`,
-        },
-        body: JSON.stringify(rpcParams),
+        p_agent_id: params.agent_id || null,
+        p_skill_id: params.skill_id || null,
+        p_cluster_id: params.cluster_id || null,
+        p_interval: interval,
+        p_start_time: params.start_time,
+        p_end_time: params.end_time,
       },
+      z.array(EvaluationScoresByTimeBucketResult),
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to fetch from PostgREST:\n${response.status} - ${response.statusText}\n${errorText}`,
-      );
-    }
-
-    const data = await response.json();
-    return z.array(EvaluationScoresByTimeBucketResult).parse(data);
+    return result;
   },
 
   // Skill Events

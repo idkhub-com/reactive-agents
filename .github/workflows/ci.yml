@@ -1,4 +1,6 @@
 name: Build
+permissions:
+  contents: read
 
 on:
   push:
@@ -133,3 +135,67 @@ jobs:
 
       - name: Test
         run: pnpm turbo test
+
+  migrations:
+    name: Test Migrations
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Test migrations with docker-compose
+        run: |
+          # Start postgres and run migrations
+          docker compose up -d postgres
+
+          # Wait for postgres to be healthy
+          echo "Waiting for PostgreSQL to be ready..."
+          timeout 60 sh -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 2; done'
+
+          # Run migrations container
+          docker compose up migrations
+
+          # Check migrations container exit code
+          exit_code=$(docker compose ps -a migrations --format json | jq -r 'if type == "array" then .[0].ExitCode else .ExitCode end // 0')
+          if [ "$exit_code" != "0" ]; then
+            echo "ERROR: Migrations failed with exit code $exit_code"
+            docker compose logs migrations
+            exit 1
+          fi
+
+          echo "Migrations completed successfully!"
+
+      - name: Verify migrations applied
+        run: |
+          # Count applied migrations
+          applied_count=$(docker compose exec -T postgres psql -U postgres -d postgres -tAc \
+            "SELECT COUNT(*) FROM schema_migrations")
+
+          # Count migration files
+          file_count=$(find supabase/migrations -name "*.sql" -type f | wc -l)
+
+          echo "Applied migrations: $applied_count"
+          echo "Migration files: $file_count"
+
+          if [ "$applied_count" -ne "$file_count" ]; then
+            echo "ERROR: Migration count mismatch!"
+            docker compose logs migrations
+            exit 1
+          fi
+
+          # Show applied migrations
+          echo ""
+          echo "Applied migrations:"
+          docker compose exec -T postgres psql -U postgres -d postgres -c \
+            "SELECT version, applied_at FROM schema_migrations ORDER BY version"
+
+          echo ""
+          echo "All migrations applied successfully!"
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
