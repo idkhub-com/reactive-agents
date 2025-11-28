@@ -58,3 +58,4 @@ next-env.d.ts
 
 # Docker
 .env.docker
+docker-compose.override.yml
