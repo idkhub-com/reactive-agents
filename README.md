@@ -27,13 +27,19 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 
 **Quick Start:**
 
-1. Start the application:
+1. Download the repo:
+   ```bash
+   git clone https://github.com/idkhub-com/reactive-agents.git
+   cd reactive-agents
+   ```
+   
+2. Start the application (Requires [Docker Compose](https://docs.docker.com/compose/install/)):
    ```bash
    docker-compose up
    ```
    The application will be available at `http://localhost:3000`.
 
-2. Configure your application from the UI. 
+3. Configure your application from the UI. 
     
     1. In the "AI Providers & Models" section, add the models you want to use. You will be able to select these models within the app settings and within each of your agent's skills later on. You will need at least one LLM model and one embedding model from any provider to configure the application.
     
