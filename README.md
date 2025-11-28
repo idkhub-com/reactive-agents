@@ -35,7 +35,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
    
 2. Start the application (Requires [Docker Compose](https://docs.docker.com/compose/install/)):
    ```bash
-   docker-compose up
+   docker compose up
    ```
    The application will be available at `http://localhost:3000`.
 
