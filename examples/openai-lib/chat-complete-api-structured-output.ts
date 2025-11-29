@@ -11,7 +11,6 @@ const client = new OpenAI({
 });
 
 const raConfig = {
-  targets: [{ optimization: 'auto' }],
   agent_name: 'calendar_event_planner',
   // You can use the following description for the agent: "Plan calendar events for a user"
   skill_name: 'generate',

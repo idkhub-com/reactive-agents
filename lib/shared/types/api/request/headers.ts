@@ -346,7 +346,10 @@ export type ReactiveAgentsConfig = z.infer<typeof ReactiveAgentsConfig>;
 
 export const ReactiveAgentsConfigPreProcessed = BaseReactiveAgentsConfig.extend(
   {
-    targets: z.array(ReactiveAgentsTargetPreProcessed),
+    targets: z.preprocess(
+      (val) => val ?? [{ optimization: OptimizationType.AUTO }],
+      z.array(ReactiveAgentsTargetPreProcessed),
+    ),
   },
 );
 

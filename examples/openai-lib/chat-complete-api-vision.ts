@@ -10,7 +10,6 @@ const client = new OpenAI({
 });
 
 const raConfig = {
-  targets: [{ optimization: 'auto' }],
   agent_name: 'vision_assistant',
   skill_name: 'image_analysis',
 };
