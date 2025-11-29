@@ -137,7 +137,7 @@ export function createLLMJudge(
   const client =
     openaiClient ||
     new OpenAI({
-      apiKey: BEARER_TOKEN ?? 'reactive-agents',
+      apiKey: BEARER_TOKEN ?? '',
       baseURL: 'http://localhost:3000/v1',
       dangerouslyAllowBrowser: true, // Safe in server-side Node.js context
     });

@@ -1,5 +1,5 @@
 import { modelsRouter } from '@server/api/v1/reactive-agents/models';
-import { BEARER_TOKEN, JWT_SECRET } from '@server/constants';
+import { JWT_SECRET } from '@server/constants';
 import { authenticatedMiddleware } from '@server/middlewares/auth';
 import type { AppEnv } from '@server/types/hono';
 import type { Model } from '@shared/types/data/model';
@@ -8,6 +8,20 @@ import { createFactory } from 'hono/factory';
 import { sign } from 'hono/jwt';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Hoist the test constant so it's available during mock setup
+const { TEST_BEARER_TOKEN } = vi.hoisted(() => ({
+  TEST_BEARER_TOKEN: 'test-bearer-token',
+}));
+
+// Mock the constants module to provide a test BEARER_TOKEN
+vi.mock('@server/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@server/constants')>();
+  return {
+    ...actual,
+    BEARER_TOKEN: TEST_BEARER_TOKEN,
+  };
+});
 
 // Create a mock UserDataStorageConnector with all required methods
 const mockUserDataStorageConnector = {
@@ -362,7 +376,7 @@ describe('Models API - Authentication Integration', () => {
       const app = createAuthenticatedApp();
       const req = new Request('http://localhost/models', {
         headers: {
-          Authorization: `Bearer ${BEARER_TOKEN}`,
+          Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
         },
       });
       const response = await app.fetch(req);
@@ -425,7 +439,7 @@ describe('Models API - Authentication Integration', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${BEARER_TOKEN}`,
+          Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
         },
         body: JSON.stringify({
           ai_provider_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -477,7 +491,7 @@ describe('Models API - Authentication Integration', () => {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${BEARER_TOKEN}`,
+            Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
           },
           body: JSON.stringify({
             model_name: 'gpt-4-turbo',
@@ -513,7 +527,7 @@ describe('Models API - Authentication Integration', () => {
         {
           method: 'DELETE',
           headers: {
-            Authorization: `Bearer ${BEARER_TOKEN}`,
+            Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
           },
         },
       );

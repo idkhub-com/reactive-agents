@@ -43,7 +43,14 @@ export const POSTGREST_SERVICE_ROLE_KEY =
 export const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD ?? 'reactive-agents';
 export const JWT_SECRET =
   process.env.JWT_SECRET ?? 'you-should-change-this-in-production';
-export const BEARER_TOKEN = process.env.BEARER_TOKEN ?? 'reactive-agents';
+
+/**
+ * Bearer token for API authentication.
+ *
+ * If not set, API requests without JWT authentication will be allowed through.
+ * Set this to require Bearer token authentication for API access.
+ */
+export const BEARER_TOKEN = process.env.BEARER_TOKEN;
 
 /**
  * Encryption key for AI provider API keys.

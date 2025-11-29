@@ -14,6 +14,8 @@ import { type NextRequest, NextResponse } from 'next/server';
  *
  * If the user is authenticated, the request will be passed to the next middleware
  * If the user is not authenticated, the request will be rejected with a 401 Unauthorized status
+ *
+ * If BEARER_TOKEN is not configured, API requests without JWT authentication will be allowed through.
  */
 export const authenticatedMiddleware = (
   factory: Factory<AppEnv>,
@@ -27,6 +29,11 @@ export const authenticatedMiddleware = (
 
     if (accessTokenCookie) {
       return jwt({ cookie: 'access_token', secret: JWT_SECRET })(c, next);
+    }
+
+    // If BEARER_TOKEN is not configured, allow requests through without authentication
+    if (!BEARER_TOKEN) {
+      return next();
     }
 
     const bearerHeaderString = c.req.header('authorization');

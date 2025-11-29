@@ -79,7 +79,7 @@ services:
       # App Config
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
       ACCESS_PASSWORD: ${ACCESS_PASSWORD:-reactive-agents}
-      BEARER_TOKEN: ${BEARER_TOKEN:-reactive-agents}
+      BEARER_TOKEN: ${BEARER_TOKEN}
       JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
 

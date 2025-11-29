@@ -105,6 +105,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
     # from pydantic import BaseModel
     
     # client = OpenAI(
+          apiKey: '',
           base_url="http://localhost:3000/v1",
     # )
 
