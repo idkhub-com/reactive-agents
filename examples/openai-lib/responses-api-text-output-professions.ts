@@ -10,7 +10,6 @@ const client = new OpenAI({
 });
 
 const raConfig = {
-  targets: [{ optimization: 'auto' }],
   agent_name: 'sales_agent',
   skill_name: 'outreach',
 };

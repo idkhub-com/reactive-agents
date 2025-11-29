@@ -10,7 +10,6 @@ const client = new OpenAI({
 });
 
 const raConfig = {
-  targets: [{ optimization: 'auto' }],
   agent_name: 'captain_code',
   skill_name: 'programming',
 };

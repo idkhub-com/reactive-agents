@@ -847,7 +847,25 @@ describe('Request Headers Types', () => {
   });
 
   describe('ReactiveAgentsConfigPreProcessed', () => {
-    it('should validate minimal Reactive Agents config pre-processed', () => {
+    it('should default targets to optimization auto when not provided', () => {
+      const config = {
+        agent_name: 'test-agent',
+        skill_name: 'test-skill',
+      };
+
+      expect(() =>
+        ReactiveAgentsConfigPreProcessed.parse(config),
+      ).not.toThrow();
+      const parsed = ReactiveAgentsConfigPreProcessed.parse(config);
+      expect(parsed.agent_name).toBe('test-agent');
+      expect(parsed.targets).toHaveLength(1);
+      expect(parsed.targets[0].optimization).toBe(OptimizationType.AUTO);
+      expect(parsed.strategy.mode).toBe(StrategyModes.SINGLE); // default
+      expect(parsed.hooks).toEqual([]); // default
+      expect(parsed.trace_id).toBeDefined(); // auto-generated
+    });
+
+    it('should validate Reactive Agents config pre-processed with explicit targets', () => {
       const config = {
         agent_name: 'test-agent',
         skill_name: 'test-skill',
