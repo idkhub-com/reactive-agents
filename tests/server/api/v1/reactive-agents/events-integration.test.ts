@@ -1,17 +1,34 @@
 import { eventsRouter } from '@server/api/v1/reactive-agents/events';
-import { BEARER_TOKEN, JWT_SECRET } from '@server/constants';
+import { JWT_SECRET } from '@server/constants';
 import { authenticatedMiddleware } from '@server/middlewares/auth';
 import type { AppEnv } from '@server/types/hono';
 import { Hono } from 'hono';
 import { createFactory } from 'hono/factory';
 import { sign } from 'hono/jwt';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Hoist the test constant so it's available during mock setup
+const { TEST_BEARER_TOKEN } = vi.hoisted(() => ({
+  TEST_BEARER_TOKEN: 'test-bearer-token',
+}));
+
+// Mock the constants module to provide a test BEARER_TOKEN
+vi.mock('@server/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@server/constants')>();
+  return {
+    ...actual,
+    BEARER_TOKEN: TEST_BEARER_TOKEN,
+  };
+});
 
 /**
  * Integration Tests for SSE Events Endpoint with Authentication Middleware
  *
  * These tests verify the complete authentication flow including the
  * authenticatedMiddleware that protects the SSE endpoint in production.
+ *
+ * Note: These tests mock BEARER_TOKEN to a test value since BEARER_TOKEN
+ * is undefined by default (making auth optional when not configured).
  */
 describe('SSE Events Endpoint - Full Authentication Integration', () => {
   const factory = createFactory<AppEnv>();
@@ -20,7 +37,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
     // Clear any test state
   });
 
-  it('should reject requests without any authentication', async () => {
+  it('should reject requests without any authentication when BEARER_TOKEN is configured', async () => {
     const app = new Hono<AppEnv>()
       .use('*', authenticatedMiddleware(factory))
       .route('/events', eventsRouter);
@@ -33,7 +50,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
     expect(text).toBe('Unauthorized');
   });
 
-  it('should reject requests with invalid bearer token', async () => {
+  it('should reject requests with invalid bearer token when BEARER_TOKEN is configured', async () => {
     const app = new Hono<AppEnv>()
       .use('*', authenticatedMiddleware(factory))
       .route('/events', eventsRouter);
@@ -57,7 +74,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
     // Create a raw request with the bearer token
     const req = new Request('http://localhost/events/', {
       headers: {
-        Authorization: `Bearer ${BEARER_TOKEN}`,
+        Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
       },
     });
 
@@ -140,7 +157,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
     // Create request with bearer token
     const req = new Request('http://localhost/events/', {
       headers: {
-        Authorization: `Bearer ${BEARER_TOKEN}`,
+        Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
       },
     });
 
@@ -154,7 +171,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
 /**
  * Security Test Documentation
  *
- * These tests verify that:
+ * These tests verify that when BEARER_TOKEN is configured:
  *
  * 1. Unauthenticated requests are rejected with 401
  * 2. Invalid bearer tokens are rejected with 401
@@ -162,6 +179,9 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
  * 4. Valid JWT tokens are accepted
  * 5. JWT tokens properly set the jwtPayload context variable
  * 6. Bearer tokens do NOT set jwtPayload (using "default" userId instead)
+ *
+ * Note: When BEARER_TOKEN is not configured (undefined), API requests
+ * without JWT authentication are allowed through without requiring a bearer token.
  *
  * This ensures the SSE endpoint has proper authentication and authorization
  * before allowing clients to establish real-time connections.

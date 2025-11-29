@@ -23,7 +23,7 @@ export function zodTextFormat<ZodInput extends ZodType>(
 const client = new OpenAI({
   // This is the API key to Reactive Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
-  apiKey: process.env.BEARER_TOKEN ?? 'reactive-agents',
+  apiKey: process.env.BEARER_TOKEN ?? '',
   baseURL: 'http://localhost:3000/v1',
 });
 
