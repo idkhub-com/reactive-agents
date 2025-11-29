@@ -5,7 +5,7 @@ services:
     container_name: ra-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:5432:5432"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -48,7 +48,7 @@ services:
     container_name: ra-postgrest
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:3001:3000"
     environment:
       PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD:-postgres}@postgres:5432/postgres
       PGRST_DB_SCHEMAS: public
@@ -70,7 +70,7 @@ services:
     container_name: reactive-agents
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
     environment:
       # Database - connect directly to PostgREST
       POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:3000}
