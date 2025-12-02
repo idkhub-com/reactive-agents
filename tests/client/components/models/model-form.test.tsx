@@ -1,8 +1,10 @@
 import { ModelForm } from '@client/components/models/model-form';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // Mock dependencies
@@ -35,10 +37,20 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }));
 
+// Mock models.dev hooks
+vi.mock('@client/hooks/use-models-dev', () => ({
+  useModelsDevFiltered: vi.fn(() => ({
+    models: [],
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 // Mock Lucide icons
 vi.mock('lucide-react', () => ({
   ArrowLeft: () => <div data-testid="arrow-left-icon" />,
   BookOpenIcon: () => <div data-testid="book-open-icon" />,
+  ChevronsUpDownIcon: () => <div data-testid="chevrons-up-down-icon" />,
   CpuIcon: () => <div data-testid="cpu-icon" />,
   KeyIcon: () => <div data-testid="key-icon" />,
   LoaderIcon: () => <div data-testid="loader-icon" />,
@@ -70,6 +82,19 @@ const mockModel = {
   updated_at: '2023-01-01T00:00:00.000Z',
 };
 
+const renderWithQueryClient = (component: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>,
+  );
+};
+
 describe('ModelForm', () => {
   const mockPush = vi.fn();
   const mockRefetch = vi.fn();
@@ -94,7 +119,7 @@ describe('ModelForm', () => {
 
   describe('Create Mode', () => {
     it('should render create form with correct title', () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       expect(screen.getByText('Add Model')).toBeInTheDocument();
       expect(
@@ -103,7 +128,7 @@ describe('ModelForm', () => {
     });
 
     it('should render form fields', () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       expect(screen.getByLabelText(/AI Provider API Key/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Model Name/i)).toBeInTheDocument();
@@ -113,9 +138,14 @@ describe('ModelForm', () => {
     });
 
     it('should populate AI provider dropdown with API keys', () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
-      const dropdown = screen.getByRole('combobox');
+      // There are two comboboxes: model name autocomplete and AI provider dropdown
+      // Find the AI provider dropdown by its label
+      const providerLabel = screen.getByText('AI Provider API Key');
+      const dropdown = providerLabel
+        .closest('[data-slot="form-item"]')
+        ?.querySelector('button[role="combobox"]');
       expect(dropdown).toBeInTheDocument();
 
       // The dropdown should show a placeholder when keys are available
@@ -129,7 +159,7 @@ describe('ModelForm', () => {
         error: null,
       });
 
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       expect(screen.getByText('Loading API keys...')).toBeInTheDocument();
     });
@@ -141,13 +171,13 @@ describe('ModelForm', () => {
         error: 'Failed to load API keys',
       });
 
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       expect(screen.getByText('No API keys available')).toBeInTheDocument();
     });
 
     it('should validate required fields', async () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       const submitButton = screen.getByRole('button', {
         name: /Create Model/i,
@@ -160,7 +190,7 @@ describe('ModelForm', () => {
     });
 
     it('should validate model name length', () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       const modelNameInput = screen.getByLabelText(/Model Name/i);
       fireEvent.change(modelNameInput, { target: { value: 'a'.repeat(101) } });
@@ -172,13 +202,17 @@ describe('ModelForm', () => {
 
   describe('Edit Mode', () => {
     it('should render edit form with correct title when editing', () => {
-      render(<ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />);
+      renderWithQueryClient(
+        <ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />,
+      );
 
       expect(screen.getByText('Edit Model')).toBeInTheDocument();
     });
 
     it('should show loading state when fetching model data', () => {
-      render(<ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />);
+      renderWithQueryClient(
+        <ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />,
+      );
 
       // Component shows skeleton loading state, not a loader icon
       expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(
@@ -187,7 +221,9 @@ describe('ModelForm', () => {
     });
 
     it('should display update button in edit mode', () => {
-      render(<ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />);
+      renderWithQueryClient(
+        <ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />,
+      );
 
       // Component is in edit mode (loading state shows skeletons)
       expect(screen.getByText('Edit Model')).toBeInTheDocument();
@@ -204,7 +240,7 @@ describe('ModelForm', () => {
       );
       (createModel as Mock).mockResolvedValue(mockModel);
 
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       // Fill only the model name input (dropdown is complex to test)
       const modelNameInput = screen.getByLabelText(/Model Name/i);
@@ -215,7 +251,9 @@ describe('ModelForm', () => {
     });
 
     it('should update model on form submission in edit mode', () => {
-      render(<ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />);
+      renderWithQueryClient(
+        <ModelForm modelId="123e4567-e89b-12d3-a456-426614174000" />,
+      );
 
       // Component is in edit mode (shows skeletons while loading)
       expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(
@@ -225,7 +263,7 @@ describe('ModelForm', () => {
     });
 
     it('should handle form submission errors', () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       // Just test that the form renders correctly with error potential
       const modelNameInput = screen.getByLabelText(/Model Name/i);
@@ -240,7 +278,7 @@ describe('ModelForm', () => {
 
   describe('Navigation', () => {
     it('should navigate back on successful creation', () => {
-      render(<ModelForm />);
+      renderWithQueryClient(<ModelForm />);
 
       // Test that the back button is present
       const backButton = screen.getByLabelText('Go back');

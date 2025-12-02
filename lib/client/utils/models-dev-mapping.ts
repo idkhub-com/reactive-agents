@@ -1,0 +1,68 @@
+import { AIProvider } from '@shared/types/constants';
+
+/**
+ * Maps internal AIProvider enum values to models.dev provider identifiers
+ * Returns null if no mapping exists
+ */
+export const mapAIProviderToModelsDev = (
+  provider: AIProvider,
+): string | null => {
+  const mapping: Record<AIProvider, string | null> = {
+    [AIProvider.AI21]: null,
+    [AIProvider.ANTHROPIC]: 'anthropic',
+    [AIProvider.ANYSCALE]: null,
+    [AIProvider.AZURE_AI_FOUNDRY]: null,
+    [AIProvider.AZURE_OPENAI]: null,
+    [AIProvider.BEDROCK]: 'amazon-bedrock',
+    [AIProvider.CEREBRAS]: 'cerebras',
+    [AIProvider.COHERE]: 'cohere',
+    [AIProvider.CORTEX]: null,
+    [AIProvider.DASHSCOPE]: 'alibaba',
+    [AIProvider.DEEPBRICKS]: null,
+    [AIProvider.DEEPINFRA]: 'deepinfra',
+    [AIProvider.DEEPSEEK]: 'deepseek',
+    [AIProvider.FIREWORKS_AI]: 'fireworks-ai',
+    [AIProvider.GITHUB]: 'github-models',
+    [AIProvider.GOOGLE]: 'google',
+    [AIProvider.GOOGLE_VERTEX_AI]: 'google-vertex',
+    [AIProvider.GROQ]: 'groq',
+    [AIProvider.HUGGINGFACE]: 'huggingface',
+    [AIProvider.INFERENCE_NET]: null,
+    [AIProvider.JINA]: null,
+    [AIProvider.LAMBDA]: null,
+    [AIProvider.LEMONFOX_AI]: null,
+    [AIProvider.LEPTON]: null,
+    [AIProvider.LINGYI]: null,
+    [AIProvider.MILVUS]: null,
+    [AIProvider.MISTRAL_AI]: 'mistral',
+    [AIProvider.MONSTERAPI]: null,
+    [AIProvider.MOONSHOT]: 'moonshotai',
+    [AIProvider.NCOMPASS]: null,
+    [AIProvider.NEBIUS]: 'nebius',
+    [AIProvider.NOMIC]: null,
+    [AIProvider.NOVITA_AI]: null,
+    [AIProvider.OLLAMA]: 'ollama-cloud',
+    [AIProvider.OPENAI]: 'openai',
+    [AIProvider.OPENROUTER]: 'openrouter',
+    [AIProvider.PALM]: null,
+    [AIProvider.PERPLEXITY_AI]: 'perplexity',
+    [AIProvider.PREDIBASE]: null,
+    [AIProvider.RECRFT_AI]: null,
+    [AIProvider.REKA_AI]: null,
+    [AIProvider.REPLICATE]: null,
+    [AIProvider.SAGEMAKER]: null,
+    [AIProvider.SAMBANOVA]: null,
+    [AIProvider.SEGMIND]: null,
+    [AIProvider.SILICONFLOW]: 'siliconflow',
+    [AIProvider.STABILITY_AI]: null,
+    [AIProvider.TOGETHER_AI]: 'togetherai',
+    [AIProvider.TRITON]: null,
+    [AIProvider.UPSTAGE]: 'upstage',
+    [AIProvider.VOYAGE]: null,
+    [AIProvider.WORKERS_AI]: 'cloudflare-workers-ai',
+    [AIProvider.XAI]: 'xai',
+    [AIProvider.ZHIPU]: 'zhipuai',
+  };
+
+  return mapping[provider] ?? null;
+};
