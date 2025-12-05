@@ -83,7 +83,7 @@ jobs:
       - name: Create GitHub Release (Draft)
         id: create_release
         # Pinned to v2.3.2 SHA for security
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
@@ -194,7 +194,7 @@ jobs:
 
       - name: Update release with Docker info
         # Pinned to v2.3.2 SHA for security
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
         with:
           tag_name: ${{ github.ref_name }}
           append_body: true
