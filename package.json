@@ -94,7 +94,7 @@
     "next": "16.0.7",
     "next-themes": "^0.4.6",
     "openai": "^6.7.0",
-    "react": "19.2.0",
+    "react": "19.2.1",
     "react-chartjs-2": "^5.3.0",
     "react-day-picker": "^9.11.1",
     "react-dom": "19.2.0",
@@ -115,7 +115,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/async-retry": "^1.4.9",
     "@types/node": "^24.3.1",
-    "@types/react": "19.2.3",
+    "@types/react": "19.2.7",
     "@types/react-dom": "19.2.2",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
@@ -135,7 +135,7 @@
     "overrides": {
       "react-is": "^19.1.0",
       "markdown-it": "13.0.2",
-      "@types/react": "19.2.3",
+      "@types/react": "19.2.7",
       "@types/react-dom": "19.2.2"
     }
   }
