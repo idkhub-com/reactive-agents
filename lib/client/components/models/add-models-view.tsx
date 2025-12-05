@@ -11,6 +11,7 @@ import {
 } from '@client/components/ui/card';
 import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
+import { ModelAutocompleteInput } from '@client/components/ui/model-autocomplete-input';
 import { PageHeader } from '@client/components/ui/page-header';
 import {
   Select,
@@ -307,14 +308,17 @@ export function AddModelsView({
                   </Label>
                   <div className="flex items-start gap-2">
                     <div className="flex-1 space-y-1">
-                      <Input
+                      <ModelAutocompleteInput
                         id={`model-${field.id}`}
                         placeholder="e.g., gpt-5, text-embedding-3-small"
                         value={field.modelName}
-                        onChange={(e) =>
-                          handleModelNameChange(field.id, e.target.value)
+                        onChange={(newValue) =>
+                          handleModelNameChange(field.id, newValue)
                         }
+                        provider={provider.ai_provider as AIProvider}
+                        modelType={field.modelType}
                         className={field.error ? 'border-destructive' : ''}
+                        aria-invalid={!!field.error}
                       />
                       {field.error && (
                         <p className="text-xs text-destructive">

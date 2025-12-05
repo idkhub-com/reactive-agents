@@ -22,7 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@client/components/ui/form';
-import { Input } from '@client/components/ui/input';
+import { ModelAutocompleteInput } from '@client/components/ui/model-autocomplete-input';
 import { PageHeader } from '@client/components/ui/page-header';
 import {
   Select,
@@ -37,6 +37,7 @@ import { useToast } from '@client/hooks/use-toast';
 import { useAIProviders } from '@client/providers/ai-providers';
 import { useModels } from '@client/providers/models';
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { AIProvider } from '@shared/types/constants';
 import type {
   ModelCreateParams,
   ModelUpdateParams,
@@ -227,21 +228,37 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
                 <FormField
                   control={form.control}
                   name="model_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., gpt-5, claude-sonnet-4-5, gemini-2.5-pro"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The name of the AI model as provided by the AI provider.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const selectedProviderId = form.watch('ai_provider_id');
+                    const selectedProvider = availableAPIKeys.find(
+                      (key) => key.id === selectedProviderId,
+                    );
+                    const provider = selectedProvider?.ai_provider as
+                      | AIProvider
+                      | undefined;
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Model Name</FormLabel>
+                        <FormControl>
+                          <ModelAutocompleteInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            provider={provider}
+                            placeholder="e.g., gpt-5, claude-sonnet-4-5, gemini-2.5-pro"
+                            disabled={isEdit}
+                            aria-invalid={!!form.formState.errors.model_name}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          The name of the AI model as provided by the AI
+                          provider.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField

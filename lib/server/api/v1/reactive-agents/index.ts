@@ -9,6 +9,7 @@ import { eventsRouter } from './events';
 import { feedbacksRouter } from './feedbacks';
 import { improvedResponsesRouter } from './improved-responses';
 import { modelsRouter } from './models';
+import { modelsDevRouter } from './models-dev';
 import { observabilityRouter } from './observability';
 import { skillEventsRouter } from './skill-events';
 import { skillsRouter } from './skills';
@@ -23,6 +24,7 @@ export const reactiveAgentsRouter = new Hono<AppEnv>()
   .route('/skills', skillsRouter)
   .route('/skill-events', skillEventsRouter)
   .route('/models', modelsRouter)
+  .route('/models-dev', modelsDevRouter)
   .route('/feedbacks', feedbacksRouter)
   .route('/improved-responses', improvedResponsesRouter)
   .route('/ai-providers', aiProvidersRouter)
