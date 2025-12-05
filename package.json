@@ -110,7 +110,7 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.4",
+    "@biomejs/biome": "2.3.8",
     "@tailwindcss/postcss": "^4.1.13",
     "@testing-library/user-event": "^14.6.1",
     "@types/async-retry": "^1.4.9",
