@@ -165,6 +165,11 @@
     },
     "globals": []
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "overrides": [
     {
       "includes": [
@@ -273,6 +278,9 @@
             "noVar": "off"
           }
         }
+      },
+      "formatter": {
+        "enabled": false
       }
     }
   ]
