@@ -13,6 +13,7 @@ import type {
   ParameterValueTypes,
 } from '@shared/types/api/response/body';
 import type { ChatCompletionRequestBody } from '@shared/types/api/routes/chat-completions-api/request';
+import { MCPServers } from '@shared/types/api/routes/shared/mcp-servers';
 import type { AIProvider } from '@shared/types/constants';
 
 /**
@@ -142,6 +143,18 @@ export const transformUsingProviderConfig = (
           setNestedProperty(transformedRequest, paramConfig.param, value);
         }
       }
+    }
+  }
+
+  // Process MCP servers if present
+  if ('mcp_servers' in idkRequestBody && idkRequestBody.mcp_servers) {
+    try {
+      const mcpServers = MCPServers.parse(idkRequestBody.mcp_servers);
+      // Add MCP servers as a header for the provider
+      transformedRequest['x-mcp-servers'] = JSON.stringify(mcpServers);
+    } catch (error) {
+      console.warn('Invalid MCP servers configuration:', error);
+      // Continue without MCP servers - don't break the request
     }
   }
 

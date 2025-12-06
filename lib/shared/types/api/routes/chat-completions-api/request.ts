@@ -1,3 +1,4 @@
+import { MCPServers } from '@shared/types/api/routes/shared/mcp-servers';
 import {
   ChatCompletionMessage,
   ChatCompletionThinking,
@@ -113,6 +114,8 @@ export const ChatCompletionRequestBody = z.object({
   anthropic_version: z.string().optional(),
   /** Anthropic specific thinking configuration. */
   thinking: ChatCompletionThinking.optional(),
+  /** MCP (Model Context Protocol) servers configuration */
+  mcp_servers: MCPServers.optional(),
 });
 
 export type ChatCompletionRequestBody = z.infer<

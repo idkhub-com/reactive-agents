@@ -632,4 +632,174 @@ describe('Chat Completions API Request Types', () => {
       expect(parsed.messages[2].role).toBe('tool');
     });
   });
+
+  describe('MCP Servers Support', () => {
+    it('should validate request with MCP servers', () => {
+      const request = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello, world!',
+          },
+        ],
+        mcp_servers: [
+          {
+            type: 'url',
+            url: 'https://example-server.modelcontextprotocol.io/sse',
+            name: 'example-mcp',
+            authorization_token: 'YOUR_TOKEN',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).not.toThrow();
+      const parsed = ChatCompletionRequestBody.parse(request);
+      expect(parsed.mcp_servers).toBeDefined();
+      expect(parsed.mcp_servers).toHaveLength(1);
+      expect(parsed.mcp_servers![0].type).toBe('url');
+      expect(parsed.mcp_servers![0].url).toBe(
+        'https://example-server.modelcontextprotocol.io/sse',
+      );
+      expect(parsed.mcp_servers![0].name).toBe('example-mcp');
+      expect(parsed.mcp_servers![0].authorization_token).toBe('YOUR_TOKEN');
+    });
+
+    it('should validate request with multiple MCP servers', () => {
+      const request = {
+        model: 'claude-3-sonnet-20240229',
+        messages: [
+          {
+            role: 'user',
+            content: 'Help me with data analysis',
+          },
+        ],
+        mcp_servers: [
+          {
+            type: 'url',
+            url: 'https://data-server.modelcontextprotocol.io/sse',
+            name: 'data-server',
+            authorization_token: 'DATA_TOKEN',
+          },
+          {
+            type: 'url',
+            url: 'https://analytics-server.modelcontextprotocol.io/sse',
+            name: 'analytics-server',
+            authorization_token: 'ANALYTICS_TOKEN',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).not.toThrow();
+      const parsed = ChatCompletionRequestBody.parse(request);
+      expect(parsed.mcp_servers).toHaveLength(2);
+      expect(parsed.mcp_servers![0].name).toBe('data-server');
+      expect(parsed.mcp_servers![1].name).toBe('analytics-server');
+    });
+
+    it('should validate request with minimal MCP server (only required fields)', () => {
+      const request = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello!',
+          },
+        ],
+        mcp_servers: [
+          {
+            type: 'url',
+            url: 'https://minimal-server.modelcontextprotocol.io/sse',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).not.toThrow();
+      const parsed = ChatCompletionRequestBody.parse(request);
+      expect(parsed.mcp_servers).toHaveLength(1);
+      expect(parsed.mcp_servers![0].type).toBe('url');
+      expect(parsed.mcp_servers![0].url).toBe(
+        'https://minimal-server.modelcontextprotocol.io/sse',
+      );
+      expect(parsed.mcp_servers![0].name).toBeUndefined();
+      expect(parsed.mcp_servers![0].authorization_token).toBeUndefined();
+    });
+
+    it('should validate request without MCP servers (backward compatibility)', () => {
+      const request = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello, world!',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).not.toThrow();
+      const parsed = ChatCompletionRequestBody.parse(request);
+      expect(parsed.mcp_servers).toBeUndefined();
+    });
+
+    it('should reject invalid MCP server URL', () => {
+      const request = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello!',
+          },
+        ],
+        mcp_servers: [
+          {
+            type: 'url',
+            url: 'invalid-url',
+            name: 'invalid-server',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).toThrow();
+    });
+
+    it('should reject MCP server without required type field', () => {
+      const request = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello!',
+          },
+        ],
+        mcp_servers: [
+          {
+            url: 'https://example-server.modelcontextprotocol.io/sse',
+            name: 'missing-type',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).toThrow();
+    });
+
+    it('should reject MCP server without required url field', () => {
+      const request = {
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello!',
+          },
+        ],
+        mcp_servers: [
+          {
+            type: 'url',
+            name: 'missing-url',
+          },
+        ],
+      };
+
+      expect(() => ChatCompletionRequestBody.parse(request)).toThrow();
+    });
+  });
 });
