@@ -9,10 +9,11 @@
       "!**/dist/**/*",
       "!**/.next/**/*",
       "!**/.turbo/**/*",
-      "!**/.open-next/**/*",
       "!**/.next",
       "!**/.claude",
-      "!next-env.d.ts"
+      "!next-env.d.ts",
+      "!**/.wrangler/**/*",
+      "!**/.wrangler-build/**/*"
     ]
   },
   "formatter": {
@@ -31,13 +32,14 @@
       "!**/dist/**/*",
       "!**/.next/**/*",
       "!**/.turbo/**/*",
-      "!**/.open-next/**/*",
       "!**/.next",
       "!**/*.yaml",
       "!**/*.yml",
       "!**/*.log",
       "!**/*.md",
-      "!**/*.webmanifest"
+      "!**/*.webmanifest",
+      "!**/.wrangler/**/*",
+      "!**/.wrangler-build/**/*"
     ]
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
@@ -143,12 +145,13 @@
       "!**/dist/**/*",
       "!**/.next/**/*",
       "!**/.turbo/**/*",
-      "!**/.open-next/**/*",
       "!**/.next",
       "!**/*.js",
       "!**/*.mjs",
       "!**/tsconfig.json",
-      "!**/*.md"
+      "!**/*.md",
+      "!**/.wrangler/**/*",
+      "!**/.wrangler-build/**/*"
     ]
   },
   "javascript": {
@@ -280,6 +283,15 @@
         }
       },
       "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["**/next-env.d.ts"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
         "enabled": false
       }
     }

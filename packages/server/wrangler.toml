@@ -1,0 +1,24 @@
+name = "reactive-agents-api"
+main = "src/index.ts"
+compatibility_date = "2025-04-24"
+compatibility_flags = ["nodejs_compat_v2"]
+workers_dev = true
+
+[dev]
+port = 8787
+
+[observability]
+enabled = true
+
+# Uncomment and configure for production deployment
+# [env.production]
+# vars = { ENVIRONMENT = "production" }
+# route = { pattern = "api.example.com/*", zone_name = "example.com" }
+
+# [vars]
+# SUPABASE_URL = ""
+# JWT_SECRET = ""
+
+# [[kv_namespaces]]
+# binding = "RA_CACHE"
+# id = "<your-kv-namespace-id>"

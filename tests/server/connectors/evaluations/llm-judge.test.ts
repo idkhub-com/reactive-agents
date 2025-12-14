@@ -27,7 +27,7 @@ vi.mock('openai', () => {
 
 // Mock the constants
 vi.mock('@server/constants', () => ({
-  API_URL: 'http://localhost:3000',
+  API_URL: 'http://localhost:8787',
   BEARER_TOKEN: 'reactive-agents',
 }));
 
@@ -152,7 +152,7 @@ describe('LLM Judge', () => {
     });
 
     // Fast-forward through retry delays (1s + 2s = 3s total)
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(8787);
 
     const result = await evaluatePromise;
 
@@ -331,7 +331,7 @@ describe('LLM Judge', () => {
     });
 
     // Fast-forward through the retry delays (1s + 2s = 3s total)
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(8787);
 
     const result = await evaluatePromise;
 
@@ -354,7 +354,7 @@ describe('LLM Judge', () => {
     });
 
     // Fast-forward through all retry delays (1s + 2s = 3s total)
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(8787);
 
     const result = await evaluatePromise;
 
@@ -472,7 +472,7 @@ describe('LLM Judge', () => {
       });
 
       // Fast-forward through the retry delays (1s + 2s = 3s total)
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(8787);
 
       const result = await evaluatePromise;
 
@@ -507,7 +507,7 @@ describe('LLM Judge', () => {
       });
 
       // Fast-forward through the retry delays (1s + 2s = 3s total)
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(8787);
 
       const result = await evaluatePromise;
 
@@ -542,7 +542,7 @@ describe('LLM Judge', () => {
       });
 
       // Fast-forward through the retry delays (1s + 2s = 3s total)
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(8787);
 
       const result = await evaluatePromise;
 
@@ -584,7 +584,7 @@ describe('LLM Judge', () => {
       });
 
       // Fast-forward through all retry delays (1s + 2s = 3s total)
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(8787);
 
       await evaluatePromise;
 

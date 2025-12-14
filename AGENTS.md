@@ -63,7 +63,7 @@ pnpm deploy     # Deploy to Cloudflare
 pnpm cf-typegen # Regenerate Cloudflare types when env changes
 
 # API testing
-curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer reactive-agents"
+curl "http://localhost:8787/v1/endpoint" -H "Authorization: Bearer reactive-agents"
 ```
 
 ## API Structure (Hono-based)

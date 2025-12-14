@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock environment variables
 process.env.OPENAI_API_KEY = 'test-key-sk-1234567890abcdef1234567890abcdef';
-process.env.RA_URL = 'http://localhost:3000';
+process.env.RA_URL = 'http://localhost:8787';
 process.env.RA_AUTH_TOKEN = 'test-token';
 
 describe('Language Tutor Agent - Validation Tests', () => {
@@ -215,7 +215,7 @@ describe('Language Tutor Agent - Validation Tests', () => {
     it('should validate URL format', () => {
       // Test URL validation by checking that new URL() would throw for invalid URLs
       expect(() => new URL('not-a-valid-url')).toThrow();
-      expect(() => new URL('http://localhost:3000')).not.toThrow();
+      expect(() => new URL('http://localhost:8787')).not.toThrow();
       expect(() => new URL('https://api.example.com')).not.toThrow();
     });
   });

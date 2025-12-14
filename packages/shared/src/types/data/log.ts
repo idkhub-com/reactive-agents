@@ -1,0 +1,174 @@
+import { FunctionName } from '@shared/types/api/request';
+import { AIProvider } from '@shared/types/constants';
+import { HttpMethod } from '@shared/types/http';
+import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
+import { Hook, HookResult } from '@shared/types/middleware/hooks';
+
+import { z } from 'zod';
+
+export const LogResponseBodyError = z.object({
+  message: z.string(),
+  response: z.string(),
+});
+
+export type LogResponseBodyError = z.infer<typeof LogResponseBodyError>;
+
+export const AIProviderRequestLog = z.object({
+  provider: z.enum(AIProvider),
+  function_name: z.enum(FunctionName),
+  method: z.enum(HttpMethod),
+  request_url: z.string(),
+  status: z.number(),
+  request_body: z.record(z.string(), z.unknown()),
+  response_body: z.record(z.string(), z.unknown()).nullable(), // Allow null for streaming responses
+  raw_request_body: z.string(),
+  raw_response_body: z.string(),
+  cache_mode: z.enum(CacheMode),
+  cache_status: z.enum(CacheStatus),
+});
+
+export type AIProviderRequestLog = z.infer<typeof AIProviderRequestLog>;
+
+export const HookLog = z.object({
+  trace_id: z.string(),
+  hook: Hook,
+  result: HookResult,
+  request_body: z.record(z.string(), z.unknown()).optional(),
+  response_body: z.record(z.string(), z.unknown()).optional(),
+  start_time: z.number(),
+  end_time: z.number(),
+  duration: z.number(),
+  cache_status: z.enum(CacheStatus),
+});
+
+export type HookLog = z.infer<typeof HookLog>;
+
+export const Log = z.object({
+  // Base info
+  id: z.uuid(),
+  agent_id: z.uuid(),
+  skill_id: z.uuid(),
+  cluster_id: z.uuid().nullable(),
+  method: z.enum(HttpMethod),
+  endpoint: z.string(),
+  function_name: z.enum(FunctionName),
+  status: z.number(),
+  start_time: z.number(),
+  first_token_time: z.number().nullable(),
+  end_time: z.number(),
+  duration: z.number(),
+  base_ra_config: z.record(z.string(), z.unknown()),
+
+  // Maybe redundant. Used for indexing.
+  ai_provider: z.enum(AIProvider),
+  model: z.string(),
+
+  // Main data
+  ai_provider_request_log: AIProviderRequestLog,
+  hook_logs: z.array(HookLog),
+  metadata: z.record(z.string(), z.unknown()),
+  embedding: z.array(z.number()).nullable(),
+
+  // Cache info
+  cache_status: z.enum(CacheStatus),
+
+  // Tracing info
+  trace_id: z.string().nullable(),
+  parent_span_id: z.string().nullable(),
+  span_id: z.string().nullable(),
+  span_name: z.string().nullable(),
+
+  // User metadata
+  app_id: z.string().nullable(),
+  external_user_id: z.string().nullable(),
+  external_user_human_name: z.string().nullable(),
+  user_metadata: z.record(z.string(), z.unknown()).nullable(),
+
+  // Computed fields from logs_with_eval_scores view (optional)
+  avg_eval_score: z.number().nullable().optional(),
+  eval_run_count: z.number().int().nullable().optional(),
+});
+
+export type Log = z.infer<typeof Log>;
+
+export type LogMessage = {
+  data: string;
+  event: string;
+  id: string;
+};
+
+export interface LogsClient {
+  sendLog: (logMessage: LogMessage) => Promise<void>;
+}
+
+export const LogsQueryParams = z.object({
+  id: z.uuid().optional(),
+  ids: z.array(z.uuid()).optional(),
+  agent_id: z.uuid().optional(),
+  skill_id: z.uuid().optional(),
+  cluster_id: z.uuid().optional(),
+  arm_id: z.uuid().optional(),
+  app_id: z.uuid().optional(),
+  after: z
+    .string()
+    .transform((val) => (val ? Number(val) : undefined))
+    .optional(),
+  before: z
+    .string()
+    .transform((val) => (val ? Number(val) : undefined))
+    .optional(),
+  method: z.enum(HttpMethod).optional(),
+  endpoint: z.string().optional(),
+  function_name: z.string().optional(),
+  status: z
+    .string()
+    .transform((val) => (val ? Number(val) : undefined))
+    .optional(),
+  cache_status: z.enum(CacheStatus).optional(),
+  embedding_not_null: z.coerce.boolean().optional(),
+  limit: z.string().default('50').transform(Number).optional(),
+  offset: z.string().default('0').transform(Number).optional(),
+});
+
+export type LogsQueryParams = z.infer<typeof LogsQueryParams>;
+
+export const LogCreateParams = z.object({
+  agent_id: z.uuid(),
+  skill_id: z.uuid(),
+  cluster_id: z.uuid().optional(),
+  method: z.enum(HttpMethod),
+  endpoint: z.string(),
+  function_name: z.enum(FunctionName),
+  status: z.int(),
+  start_time: z.number(),
+  first_token_time: z.number().optional(),
+  end_time: z.number(),
+  duration: z.number(),
+  base_ra_config: z.record(z.string(), z.unknown()),
+
+  // Maybe redundant. Used for indexing.
+  ai_provider: z.enum(AIProvider),
+  model: z.string(),
+
+  // Main data
+  ai_provider_request_log: AIProviderRequestLog,
+  hook_logs: z.array(HookLog),
+  metadata: z.record(z.string(), z.unknown()),
+  embedding: z.array(z.number()).optional(),
+
+  // Cache info
+  cache_status: z.enum(CacheStatus),
+
+  // Tracing info
+  trace_id: z.string().optional(),
+  parent_span_id: z.string().optional(),
+  span_id: z.string().optional(),
+  span_name: z.string().optional(),
+
+  // User metadata
+  app_id: z.string().optional(),
+  external_user_id: z.string().optional(),
+  external_user_human_name: z.string().optional(),
+  user_metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type LogCreateParams = z.infer<typeof LogCreateParams>;

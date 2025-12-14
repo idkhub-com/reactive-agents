@@ -83,7 +83,7 @@ describe('Latency - evaluateLog', () => {
       evaluation_method: EvaluationMethodName.LATENCY,
       params: {
         target_latency_ms: 300,
-        max_latency_ms: 3000,
+        max_latency_ms: 8787,
       },
       weight: 1.0,
       model_id: null,
@@ -98,7 +98,7 @@ describe('Latency - evaluateLog', () => {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1200, // 200ms TTFT (below 300ms target)
-        end_time: 3000,
+        end_time: 8787,
         duration: 2000,
       };
 
@@ -113,7 +113,7 @@ describe('Latency - evaluateLog', () => {
       expect(result.extra_data.latency_ms).toBe(200);
       expect(result.extra_data.has_first_token_time).toBe(true);
       expect(result.extra_data.target_latency_ms).toBe(300);
-      expect(result.extra_data.max_latency_ms).toBe(3000);
+      expect(result.extra_data.max_latency_ms).toBe(8787);
     });
 
     it('should score 0.0 for TTFT at or above max', async () => {
@@ -167,7 +167,7 @@ describe('Latency - evaluateLog', () => {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1300, // Exactly 300ms TTFT
-        end_time: 3000,
+        end_time: 8787,
         duration: 2000,
       };
 
@@ -197,7 +197,7 @@ describe('Latency - evaluateLog', () => {
       );
 
       expect(result.score).toBe(0.0);
-      expect(result.extra_data.latency_ms).toBe(3000);
+      expect(result.extra_data.latency_ms).toBe(8787);
     });
   });
 
@@ -339,7 +339,7 @@ describe('Latency - evaluateLog', () => {
         ...baseLog,
         start_time: 1000,
         first_token_time: 2200, // 1200ms TTFT
-        end_time: 3000,
+        end_time: 8787,
         duration: 2000,
       };
 

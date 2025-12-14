@@ -48,7 +48,7 @@ services:
     container_name: ra-postgrest
     restart: unless-stopped
     ports:
-      - "${DOCKER_HOST_IP:-127.0.0.1}:3001:3000"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:3001:8787"
     environment:
       PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD:-postgres}@postgres:5432/postgres
       PGRST_DB_SCHEMAS: public
@@ -70,14 +70,14 @@ services:
     container_name: reactive-agents
     restart: unless-stopped
     ports:
-      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:8787:8787"
     environment:
       # Database - connect directly to PostgREST
-      POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:3000}
+      POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:8787}
       POSTGREST_SERVICE_ROLE_KEY: ${POSTGREST_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
 
       # App Config
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8787}
       ACCESS_PASSWORD: ${ACCESS_PASSWORD:-reactive-agents}
       BEARER_TOKEN: ${BEARER_TOKEN}
       JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}

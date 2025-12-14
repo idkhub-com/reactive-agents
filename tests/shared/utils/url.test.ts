@@ -91,8 +91,8 @@ describe('URL Utilities', () => {
       expect(removeEndingPath('https://api.example.com')).toBe(
         'https://api.example.com',
       );
-      expect(removeEndingPath('http://localhost:3000')).toBe(
-        'http://localhost:3000',
+      expect(removeEndingPath('http://localhost:8787')).toBe(
+        'http://localhost:8787',
       );
     });
 
@@ -138,8 +138,8 @@ describe('URL Utilities', () => {
     });
 
     it('should handle URLs with ports', () => {
-      expect(removeEndingPath('https://localhost:3000/api/models')).toBe(
-        'https://localhost:3000/api',
+      expect(removeEndingPath('https://localhost:8787/api/models')).toBe(
+        'https://localhost:8787/api',
       );
       expect(removeEndingPath('http://api.example.com:8080/v1/models')).toBe(
         'http://api.example.com:8080/v1',
@@ -219,9 +219,9 @@ describe('URL Utilities', () => {
       const result1 = removeEndingPath(removeTrailingSlash(url1));
       expect(result1).toBe('https://example.com');
 
-      const url2 = 'http://localhost:3000';
+      const url2 = 'http://localhost:8787';
       const result2 = removeEndingPath(removeTrailingSlash(url2));
-      expect(result2).toBe('http://localhost:3000');
+      expect(result2).toBe('http://localhost:8787');
     });
 
     it('should handle complex Azure URLs in chained usage', () => {

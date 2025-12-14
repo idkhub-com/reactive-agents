@@ -163,11 +163,11 @@ describe('AI Provider Config Types', () => {
         name: 'Port Provider',
         object: 'provider',
         description: 'Provider with custom port',
-        base_url: 'http://api.example.com:3000',
+        base_url: 'http://api.example.com:8787',
       };
 
       const result = GatewayProvider.parse(portProvider);
-      expect(result.base_url).toBe('http://api.example.com:3000');
+      expect(result.base_url).toBe('http://api.example.com:8787');
     });
 
     it('should validate provider with special characters in description', () => {

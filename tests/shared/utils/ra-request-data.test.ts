@@ -4,7 +4,7 @@ import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data'
 import { describe, expect, it, vi } from 'vitest';
 
 describe('produceReactiveAgentsRequestData', () => {
-  const baseUrl = 'http://localhost:3000';
+  const baseUrl = 'http://localhost:8787';
   const requestHeaders = {
     'content-type': 'application/json',
     authorization: 'Bearer test-token',

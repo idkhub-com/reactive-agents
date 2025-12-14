@@ -22,21 +22,11 @@
     },
     "cf-build": {
       "dependsOn": ["^cf-build"],
-      "outputs": [
-        "dist/**",
-        ".open-next/**",
-        "!.open-next/cache/**",
-        "wrangler.jsonc"
-      ]
+      "outputs": ["dist/**", "wrangler.jsonc"]
     },
     "preview": {
       "dependsOn": ["cf-build", "^preview"],
-      "outputs": [
-        "dist/**",
-        ".open-next/**",
-        "!.open-next/cache/**",
-        "wrangler.jsonc"
-      ],
+      "outputs": ["dist/**", "wrangler.jsonc"],
       "cache": true
     },
     "deploy": {

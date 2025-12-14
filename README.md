@@ -37,7 +37,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
    ```bash
    docker compose up
    ```
-   The application will be available at `http://localhost:3000`.
+   The web application will be available at `http://localhost:3000`.
 
 3. Configure your application from the UI. 
     
@@ -106,7 +106,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
     
     # client = OpenAI(
           apiKey: '',
-          base_url="http://localhost:3000/v1",
+          base_url="http://localhost:8787/v1",
     # )
 
     # class CalendarEvent(BaseModel):

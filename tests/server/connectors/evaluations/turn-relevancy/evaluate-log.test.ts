@@ -11,7 +11,7 @@ import { createMockStorageConnector } from '../__mocks__/mock-storage-connector'
 
 // Mock the constants
 vi.mock('@server/constants', () => ({
-  API_URL: 'http://localhost:3000',
+  API_URL: 'http://localhost:8787',
   BEARER_TOKEN: 'reactive-agents',
 }));
 

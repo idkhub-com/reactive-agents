@@ -20,9 +20,9 @@
       }
     ],
     "paths": {
-      "@client/*": ["./lib/client/*"],
-      "@server/*": ["./lib/server/*"],
-      "@shared/*": ["./lib/shared/*"]
+      "@client/*": ["./packages/web/src/*"],
+      "@server/*": ["./packages/server/src/*"],
+      "@shared/*": ["./packages/shared/src/*"]
     }
   },
   "include": [
@@ -31,10 +31,9 @@
     "middleware.ts",
     "next.config.ts",
     ".next/types/**/*.ts",
-    ".open-next/types/**/*.ts",
     "tests/**/*.ts",
     "examples/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "dist", "turbo", ".open-next"]
+  "exclude": ["node_modules", ".next", "dist", "turbo"]
 }

@@ -42,7 +42,7 @@ describe('MessagesView - Responses API Conversion', () => {
     responseSchema: z.object({}),
     requestSchema: z.object({}),
     route_pattern: /\/v1\/responses/,
-    url: 'http://localhost:3000/v1/responses',
+    url: 'http://localhost:8787/v1/responses',
     requestHeaders: {},
     method: 'POST',
   } as ReactiveAgentsRequestData;
