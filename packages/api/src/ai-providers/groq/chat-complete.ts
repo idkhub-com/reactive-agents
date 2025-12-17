@@ -20,28 +20,57 @@ export const groqChatCompleteResponseTransform: ResponseTransformFunction = (
   }
 
   if ('choices' in aiProviderResponseBody) {
-    const chatCompleteResponseBody =
-      aiProviderResponseBody as ChatCompletionResponseBody;
+    // Build response object explicitly to avoid including service_tier which Groq doesn't support
+    // and may include with invalid values that cause OpenAI SDK validation errors
 
-    return {
-      id: chatCompleteResponseBody.id,
-      object: chatCompleteResponseBody.object,
-      created: chatCompleteResponseBody.created,
-      model: chatCompleteResponseBody.model,
+    // Type guard for response body
+    if (
+      typeof aiProviderResponseBody !== 'object' ||
+      aiProviderResponseBody === null
+    ) {
+      return generateInvalidProviderResponseError(
+        aiProviderResponseBody,
+        AIProvider.GROQ,
+      );
+    }
+
+    const rawResponse = aiProviderResponseBody as Record<string, unknown>;
+
+    // Validate required fields exist
+    if (
+      !rawResponse.id ||
+      !rawResponse.choices ||
+      !Array.isArray(rawResponse.choices)
+    ) {
+      return generateInvalidProviderResponseError(
+        aiProviderResponseBody,
+        AIProvider.GROQ,
+      );
+    }
+
+    // Build the response object field by field, explicitly excluding service_tier
+    const result: Record<string, unknown> = {
+      id: rawResponse.id,
+      object: rawResponse.object,
+      created: rawResponse.created,
+      model: rawResponse.model,
       provider: AIProvider.GROQ,
-      choices: chatCompleteResponseBody.choices.map((c) => ({
-        index: c.index,
-        message: c.message,
-        logprobs: c.logprobs,
-        finish_reason: c.finish_reason,
-      })),
-      usage: {
-        prompt_tokens: chatCompleteResponseBody.usage?.prompt_tokens || 0,
-        completion_tokens:
-          chatCompleteResponseBody.usage?.completion_tokens || 0,
-        total_tokens: chatCompleteResponseBody.usage?.total_tokens || 0,
-      },
+      choices: rawResponse.choices,
+      usage: rawResponse.usage,
     };
+
+    // Only add system_fingerprint if it exists
+    if (rawResponse.system_fingerprint) {
+      result.system_fingerprint = rawResponse.system_fingerprint;
+    }
+
+    // Explicitly ensure service_tier is NOT included
+    // Groq returns service_tier with value "on_demand" which is incompatible with OpenAI SDK
+    // The OpenAI SDK expects service_tier to be either "scale" or "default" only
+    // Removing this field ensures compatibility with OpenAI client libraries
+    delete result.service_tier;
+
+    return result as ChatCompletionResponseBody;
   }
 
   return generateInvalidProviderResponseError(
@@ -52,15 +81,30 @@ export const groqChatCompleteResponseTransform: ResponseTransformFunction = (
 
 export const groqChatCompleteStreamChunkTransform: ResponseChunkStreamTransformFunction =
   (responseChunk) => {
-    let chunk = responseChunk.trim();
+    // Ensure responseChunk is a string
+    const chunkStr =
+      typeof responseChunk === 'string' ? responseChunk : String(responseChunk);
+    let chunk = chunkStr.trim();
     chunk = chunk.replace(/^data: /, '');
     chunk = chunk.trim();
     if (chunk === '[DONE]') {
       return `data: ${chunk}\n\n`;
     }
 
-    const parsedChunk: GroqStreamChunk = JSON.parse(chunk);
-    if (parsedChunk.x_groq?.usage) {
+    // Parse chunk with error handling
+    let parsedChunk: GroqStreamChunk;
+    try {
+      parsedChunk = JSON.parse(chunk);
+    } catch (error) {
+      console.warn('Failed to parse Groq stream chunk:', {
+        error: error instanceof Error ? error.message : String(error),
+        chunkPreview: chunk.substring(0, 200),
+      });
+      return ''; // Return empty string to skip malformed chunks
+    }
+
+    // Handle usage metadata chunk (sent at end of stream)
+    if (parsedChunk.x_groq?.usage && parsedChunk.choices?.[0]) {
       return `data: ${JSON.stringify({
         id: parsedChunk.id,
         object: parsedChunk.object,
@@ -94,7 +138,7 @@ export const groqChatCompleteStreamChunkTransform: ResponseChunkStreamTransformF
               {
                 index: parsedChunk.choices[0].index || 0,
                 delta: {
-                  role: 'assistant',
+                  role: parsedChunk.choices[0].delta?.role || 'assistant',
                   content: parsedChunk.choices[0].delta?.content || '',
                   tool_calls: parsedChunk.choices[0].delta?.tool_calls || [],
                 },

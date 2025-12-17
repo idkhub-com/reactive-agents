@@ -254,7 +254,14 @@ export async function tryPost(
       const responseFormat = (
         overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
       ).response_format;
-      systemPrompt += getJsonSchemaInstructions(responseFormat);
+      const jsonSchemaInstructions = getJsonSchemaInstructions(responseFormat);
+
+      // For strict JSON schema, prepend the instructions to ensure they override learned behavior
+      if (responseFormat?.type === 'json_schema' && jsonSchemaInstructions) {
+        systemPrompt = `${jsonSchemaInstructions}\n\n${systemPrompt}`;
+      } else {
+        systemPrompt += jsonSchemaInstructions;
+      }
 
       // Add system prompt if not overridden by the user
       switch (raRequestData.functionName) {
