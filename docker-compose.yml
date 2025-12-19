@@ -68,7 +68,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: packages/server/Dockerfile
+      dockerfile: packages/api/Dockerfile
     image: ghcr.io/idkhub-com/reactive-agents-api:${RA_VERSION:-latest}
     container_name: reactive-agents-api
     restart: unless-stopped
@@ -92,7 +92,7 @@ services:
     develop:
       watch:
         - action: rebuild
-          path: ./packages/server/src
+          path: ./packages/api/src
         - action: rebuild
           path: ./packages/shared/src
 

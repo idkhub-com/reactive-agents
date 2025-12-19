@@ -15,7 +15,7 @@ packages/
 │       ├── providers/     # React context providers
 │       ├── hooks/         # Custom React hooks
 │       └── api/           # API client functions
-├── server/        # Hono API server (Node.js)
+├── api/           # Hono API server (Node.js)
 │   └── src/
 │       ├── api/           # API routes
 │       ├── ai-providers/  # AI provider integrations (40+)
@@ -35,7 +35,7 @@ Other directories:
 
 **Key path aliases**:
 - `@web/*` - Web package (`packages/web/src/*`)
-- `@api/*` or `@server/*` - Server package (`packages/server/src/*`)
+- `@api/*` or `@server/*` - API package (`packages/api/src/*`)
 - `@shared/*` - Shared package (`packages/shared/src/*`)
 
 ## Essential Commands
@@ -93,7 +93,7 @@ curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer reactive-agen
   - `.index.tsx` - Index routes for parent paths
 - **Auto-generated**: `routeTree.gen.ts` (do not edit, in .gitignore)
 
-### API Server (packages/server)
+### API Server (packages/api)
 - **Framework**: Hono web framework
 - **Entry**: `src/server.ts` (Node.js) or `src/index.ts` (Cloudflare Workers)
 - **Routes**: `src/api/v1/`
@@ -207,7 +207,7 @@ The application supports 40+ AI providers through a unified interface. Each prov
 - `embed` - Embeddings
 - `image-generate` - Image generation
 
-Provider implementations are in `packages/server/src/ai-providers/[provider]/`.
+Provider implementations are in `packages/api/src/ai-providers/[provider]/`.
 
 ## Authentication
 
