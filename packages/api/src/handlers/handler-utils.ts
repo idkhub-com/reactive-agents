@@ -54,11 +54,17 @@ function getProxyPath(
 
   // NOTE: temporary support for the deprecated way of making azure requests
   // where the endpoint was sent in request path of the incoming gateway url
-  if (
-    proxyProvider === AIProvider.AZURE_OPENAI &&
-    reqPath.includes('.openai.azure.com')
-  ) {
-    return `https:/${reqPath}${reqQuery}`;
+  if (proxyProvider === AIProvider.AZURE_OPENAI) {
+    // Extract what looks like a URL from the path and validate the hostname
+    // The path format is typically: //hostname.openai.azure.com/rest/of/path
+    const azureUrlMatch = reqPath.match(
+      /^\/\/([\w-]+\.openai\.azure\.com)(\/.*)?$/,
+    );
+    if (azureUrlMatch) {
+      const hostname = azureUrlMatch[1];
+      const path = azureUrlMatch[2] || '';
+      return `https://${hostname}${path}${reqQuery}`;
+    }
   }
 
   const providerConfig = providerConfigs[proxyProvider];

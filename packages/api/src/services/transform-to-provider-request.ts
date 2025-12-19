@@ -17,6 +17,7 @@ import type { AIProvider } from '@shared/types/constants';
 
 /**
  * Helper function to set a nested property in an object.
+ * Guards against prototype pollution by checking each property name inline.
  */
 function setNestedProperty(
   obj: Record<string, unknown>,
@@ -24,14 +25,34 @@ function setNestedProperty(
   value: unknown,
 ): void {
   const parts = path.split('.');
+
   let current = obj;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (!current[parts[i]]) {
-      current[parts[i]] = {};
+    const part = parts[i];
+    // Guard against prototype pollution at each step
+    if (
+      part === '__proto__' ||
+      part === 'constructor' ||
+      part === 'prototype'
+    ) {
+      return;
     }
-    current = current[parts[i]] as Record<string, unknown>;
+    if (!Object.hasOwn(current, part)) {
+      current[part] = Object.create(null);
+    }
+    current = current[part] as Record<string, unknown>;
   }
-  current[parts[parts.length - 1]] = value;
+
+  const lastPart = parts[parts.length - 1];
+  // Guard against prototype pollution for the final property
+  if (
+    lastPart === '__proto__' ||
+    lastPart === 'constructor' ||
+    lastPart === 'prototype'
+  ) {
+    return;
+  }
+  current[lastPart] = value;
 }
 
 const getValue = (

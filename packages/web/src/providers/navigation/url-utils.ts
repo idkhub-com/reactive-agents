@@ -3,8 +3,17 @@ import type { SkillOptimizationArm } from '@shared/types/data/skill-optimization
 import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 
 // Remove potentially dangerous HTML tags but preserve spacing/case
+// Applies repeatedly until no more changes to handle nested tags like <scrip<script>t>
 export function sanitizeName(name: string): string {
-  return name.replace(/<[^>]*>/g, '').trim();
+  let previous: string;
+  let current = name;
+
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, '');
+  } while (current !== previous);
+
+  return current.trim();
 }
 
 function safeDecodeURIComponent(value: string): string {

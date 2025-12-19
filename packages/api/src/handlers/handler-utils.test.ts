@@ -56,6 +56,66 @@ import { AIProvider, ContentTypeName } from '@shared/types/constants';
 import { CacheMode } from '@shared/types/middleware/cache';
 import { z } from 'zod';
 
+describe('Azure OpenAI URL validation', () => {
+  // Test the regex pattern used in getProxyPath for Azure OpenAI URL validation
+  // This prevents the "Incomplete URL substring sanitization" vulnerability
+  // where `.openai.azure.com` could appear anywhere in the URL
+
+  const azureUrlPattern = /^\/\/([\w-]+\.openai\.azure\.com)(\/.*)?$/;
+
+  it('accepts valid Azure OpenAI hostnames', () => {
+    expect(
+      '//myresource.openai.azure.com/openai/deployments'.match(azureUrlPattern),
+    ).toBeTruthy();
+    expect(
+      '//my-resource.openai.azure.com/path'.match(azureUrlPattern),
+    ).toBeTruthy();
+    expect(
+      '//resource123.openai.azure.com'.match(azureUrlPattern),
+    ).toBeTruthy();
+  });
+
+  it('rejects URLs where .openai.azure.com is not the hostname', () => {
+    // Malicious URL where .openai.azure.com is in the path, not the host
+    expect(
+      '//evil.com/.openai.azure.com/path'.match(azureUrlPattern),
+    ).toBeNull();
+    // Malicious URL where attacker controls subdomain before legitimate domain
+    expect(
+      '//evil.com.openai.azure.com.attacker.com/path'.match(azureUrlPattern),
+    ).toBeNull();
+  });
+
+  it('rejects URLs without the leading //', () => {
+    expect(
+      '/myresource.openai.azure.com/path'.match(azureUrlPattern),
+    ).toBeNull();
+    expect(
+      'myresource.openai.azure.com/path'.match(azureUrlPattern),
+    ).toBeNull();
+  });
+
+  it('rejects URLs with invalid characters in hostname', () => {
+    // Special characters that could be used for attacks
+    expect(
+      '//evil<script>.openai.azure.com/path'.match(azureUrlPattern),
+    ).toBeNull();
+    expect(
+      '//evil@attacker.openai.azure.com/path'.match(azureUrlPattern),
+    ).toBeNull();
+  });
+
+  it('extracts hostname and path correctly', () => {
+    const match =
+      '//myresource.openai.azure.com/openai/deployments/gpt-4'.match(
+        azureUrlPattern,
+      );
+    expect(match).toBeTruthy();
+    expect(match![1]).toBe('myresource.openai.azure.com');
+    expect(match![2]).toBe('/openai/deployments/gpt-4');
+  });
+});
+
 describe('tryPost Error Handling', () => {
   let mockContext: AppContext;
   let mockReactiveAgentsConfig: ReactiveAgentsConfig;

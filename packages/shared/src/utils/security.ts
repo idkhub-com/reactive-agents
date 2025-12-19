@@ -41,38 +41,12 @@ export function safeJsonStringify(
 }
 
 /**
- * Sanitizes user input text by removing potentially dangerous content
+ * Sanitizes user input text by escaping HTML entities.
+ * This is the most reliable XSS prevention - by escaping all special characters,
+ * no HTML tags or attributes can be injected regardless of the input.
  */
 export function sanitizeUserInput(input: string): string {
-  return (
-    input
-      // Remove any script tags and their content
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      // Remove javascript: protocol and everything after it until space or end
-      .replace(/javascript:[^\s]*/gi, '')
-      // Remove data: protocol and everything after it until space or end
-      .replace(/data:[^\s]*/gi, '')
-      // Remove on* event handlers (onclick, onload, etc.) and their values
-      .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
-      .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
-      .replace(/\bon\w+\s*=\s*[^\s>]*/gi, '')
-      // Escape HTML entities
-      .replace(/[&<>"'`=/]/g, (s) => {
-        const entityMap: Record<string, string> = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-          '/': '&#x2F;',
-          '`': '&#x60;',
-          '=': '&#x3D;',
-        };
-        return entityMap[s];
-      })
-      // Trim whitespace
-      .trim()
-  );
+  return sanitizeHtml(input).trim();
 }
 
 /**

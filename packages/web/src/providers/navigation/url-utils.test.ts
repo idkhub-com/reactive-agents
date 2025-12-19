@@ -58,6 +58,21 @@ describe('url-utils', () => {
       expect(sanitizeName('<div>Unclosed')).toBe('Unclosed');
     });
 
+    it('removes nested/crafted tags that reveal new tags after removal', () => {
+      // Crafted inputs where removing inner tag could reveal outer tag
+      // The key security property is that no <tagname patterns remain
+      // Trailing > characters are harmless plain text
+
+      // These should not contain any < (start of potential tags)
+      expect(sanitizeName('<scrip<script>inner</script>t>')).not.toContain('<');
+      expect(sanitizeName('<<script>script>')).not.toContain('<');
+      expect(sanitizeName('<s<>cript>')).not.toContain('<');
+      expect(sanitizeName('<scr<x>ipt>')).not.toContain('<');
+
+      // Verify the loop removes all tag patterns
+      expect(sanitizeName('<<<div>>>')).not.toContain('<');
+    });
+
     it('handles angle brackets that look like HTML tags', () => {
       // The regex /<[^>]*>/g treats < b > as a tag and removes it
       // This is the expected behavior for security - be aggressive about removing potential tags
