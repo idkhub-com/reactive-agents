@@ -1,8 +1,8 @@
 'use client';
 
-import { jinjaExtensions } from '@client/components/text-editor/extensions';
-import { cn } from '@client/utils/ui/utils';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { jinjaExtensions } from '@web/components/text-editor/extensions';
+import { cn } from '@web/utils/ui/utils';
 import { forwardRef, useEffect, useImperativeHandle } from 'react';
 
 export interface JinjaSystemPromptEditorProps {

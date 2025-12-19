@@ -1,17 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
-      "@client/*": ["./src/*"],
+      "@web/*": ["./src/*"],
       "@shared/*": ["../shared/src/*"],
-      "@server/*": ["../server/src/*"]
+      "@api/*": ["../api/src/*"],
+      "@/*": ["../../*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next"]
+  "include": ["**/*.ts", "**/*.tsx", "src/routeTree.gen.ts"],
+  "exclude": ["node_modules", ".vinxi", "dist"]
 }

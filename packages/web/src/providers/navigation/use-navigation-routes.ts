@@ -1,149 +1,161 @@
-import type { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 
-export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
+// Permissive navigate type that allows any string path during migration
+// This can be tightened once all routes are created
+type PermissiveNavigateOptions = {
+  to: string;
+  replace?: boolean;
+  search?: Record<string, string>;
+  params?: Record<string, string>;
+};
+
+type NavigateFn = (opts: PermissiveNavigateOptions) => void;
+
+export function useNavigationRoutes(navigate: NavigateFn) {
   const navigateToSkillDashboard = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToLogs = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/logs`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/logs`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToLogDetail = useCallback(
     (agentName: string, skillName: string, logId: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/logs/${logId}`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/logs/${logId}`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToEvaluations = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToEvaluationDetail = useCallback(
     (agentName: string, skillName: string, evalId: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations/${evalId}`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations/${evalId}`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToEditEvaluation = useCallback(
     (agentName: string, skillName: string, evaluationId: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations/${evaluationId}/edit`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations/${evaluationId}/edit`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToCreateEvaluation = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations/create`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations/create`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const replaceToEvaluations = useCallback(
     (agentName: string, skillName: string) => {
-      router.replace(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/evaluations`,
+        replace: true,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToDatasets = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const replaceToDatasets = useCallback(
     (agentName: string, skillName: string) => {
-      router.replace(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets`,
+        replace: true,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToDatasetDetail = useCallback(
     (agentName: string, skillName: string, datasetId: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets/${datasetId}`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets/${datasetId}`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToCreateDataset = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets/create`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/datasets/create`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToConfigurations = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/configurations`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/configurations`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToModels = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/models`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/models`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToClusters = useCallback(
     (agentName: string, skillName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/clusters`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/clusters`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToClusterArms = useCallback(
     (agentName: string, skillName: string, clusterName: string) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/clusters/${encodeURIComponent(clusterName)}/configurations`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/clusters/${encodeURIComponent(clusterName)}/configurations`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   const navigateToArmDetail = useCallback(
@@ -153,11 +165,11 @@ export function useNavigationRoutes(router: ReturnType<typeof useRouter>) {
       clusterName: string,
       armName: string,
     ) => {
-      router.push(
-        `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/clusters/${encodeURIComponent(clusterName)}/configurations/${encodeURIComponent(armName)}`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/clusters/${encodeURIComponent(clusterName)}/configurations/${encodeURIComponent(armName)}`,
+      });
     },
-    [router],
+    [navigate],
   );
 
   return {

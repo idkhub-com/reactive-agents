@@ -1,8 +1,8 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
 import { CheckIcon } from '@radix-ui/react-icons';
+import { cn } from '@web/utils/ui/utils';
 import * as React from 'react';
 
 const Checkbox = React.forwardRef<

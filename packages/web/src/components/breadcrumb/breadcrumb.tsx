@@ -1,14 +1,16 @@
 'use client';
 
-import { MAX_AGENT_SHORTCUTS } from '@client/components/agents/constants';
+import { botttsNeutral, shapes } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import { MAX_AGENT_SHORTCUTS } from '@web/components/agents/constants';
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-} from '@client/components/ui/breadcrumb';
-import { Button } from '@client/components/ui/button';
+} from '@web/components/ui/breadcrumb';
+import { Button } from '@web/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -17,24 +19,21 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@client/components/ui/command';
+} from '@web/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@client/components/ui/popover';
-import { useModifierKey } from '@client/hooks/use-keyboard-shortcuts';
-import { useAgents } from '@client/providers/agents';
-import type { BreadcrumbSegment } from '@client/providers/navigation';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
-import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkills } from '@client/providers/skills';
-import { botttsNeutral, shapes } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
+} from '@web/components/ui/popover';
+import { useModifierKey } from '@web/hooks/use-keyboard-shortcuts';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
+import type { BreadcrumbSegment } from '@web/providers/navigation';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillOptimizationArms } from '@web/providers/skill-optimization-arms';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
+import { useSkills } from '@web/providers/skills';
 import { Bot, ChevronRight, Plus, PlusCircleIcon } from 'lucide-react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import React, { type ReactElement, useMemo } from 'react';
 
 // ============================================================================
@@ -42,63 +41,61 @@ import React, { type ReactElement, useMemo } from 'react';
 // ============================================================================
 
 const createAgentAvatar = (agentName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(botttsNeutral, {
-      seed: agentName,
-      size: 24,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(botttsNeutral, {
+    seed: agentName,
+    size: 24,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 const createSkillAvatar = (skillName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(shapes, {
-      seed: skillName,
-      size: 24,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(shapes, {
+    seed: skillName,
+    size: 24,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 // ============================================================================
@@ -174,7 +171,7 @@ function AgentCombobox<T extends { id: string; name: string }>({
             size="sm"
             className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Image
+            <img
               src={agentAvatars.get(activeAgent.name) || ''}
               alt={`${activeAgent.name} avatar`}
               width={20}
@@ -206,7 +203,7 @@ function AgentCombobox<T extends { id: string; name: string }>({
                     className="gap-2"
                   >
                     <div className="flex size-6 items-center justify-center rounded-md border">
-                      <Image
+                      <img
                         src={agentAvatars.get(agent.name) || ''}
                         alt={`${agent.name} avatar`}
                         width={20}
@@ -260,7 +257,7 @@ function NoAgentSelectedSkillBreadcrumb(): ReactElement {
         disabled
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
       >
-        <Image
+        <img
           src={placeholderAvatar}
           alt="Skill icon"
           width={20}
@@ -288,7 +285,7 @@ function CreateFirstSkillBreadcrumb({
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         onClick={onClick}
       >
-        <Image
+        <img
           src={placeholderAvatar}
           alt="Skill icon"
           width={20}
@@ -313,7 +310,7 @@ function LoadingSkillsBreadcrumb(): ReactElement {
         disabled
         className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
       >
-        <Image
+        <img
           src={placeholderAvatar}
           alt="Skill icon"
           width={20}
@@ -352,7 +349,7 @@ function SkillCombobox<T extends { id: string; name: string }>({
             size="sm"
             className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Image
+            <img
               src={skillAvatars.get(activeSkill.name) || ''}
               alt={`${activeSkill.name} icon`}
               width={20}
@@ -411,7 +408,7 @@ function SkillDropdownBreadcrumb(): ReactElement {
   const { navigationState } = useNavigation();
   const { selectedAgent } = useAgents();
   const { skills, selectedSkill, setQueryParams } = useSkills();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
   // Memoize skill avatar generation to prevent recalculation on every render
@@ -441,18 +438,18 @@ function SkillDropdownBreadcrumb(): ReactElement {
   const handleCreateSkillClick = () => {
     setComboboxOpen(false);
     if (navigationState.selectedAgentName) {
-      router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/skills/create`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/skills/create`,
+      });
     }
   };
 
   const handleSkillSelect = (skill: (typeof skills)[0]) => {
     // Navigate to skill - NavigationProvider will update selection from URL
     if (navigationState.selectedAgentName) {
-      router.push(
-        `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/skills/${encodeURIComponent(skill.name)}`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(navigationState.selectedAgentName)}/skills/${encodeURIComponent(skill.name)}`,
+      });
     }
     setComboboxOpen(false);
   };
@@ -687,7 +684,7 @@ function ArmDropdownBreadcrumb(): ReactElement {
 
 function AgentDropdownBreadcrumb(): ReactElement {
   const { agents, selectedAgent, isLoading } = useAgents();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
   // Memoize avatar generation to prevent recalculation on every render
@@ -706,12 +703,12 @@ function AgentDropdownBreadcrumb(): ReactElement {
 
   const handleCreateAgentClick = () => {
     setComboboxOpen(false);
-    router.push('/agents/create');
+    navigate({ to: '/agents/create' });
   };
 
   const handleAgentSelect = (agent: (typeof agents)[0]) => {
     // Navigate to agent - NavigationProvider will update selection from URL
-    router.push(`/agents/${encodeURIComponent(agent.name)}`);
+    navigate({ to: `/agents/${encodeURIComponent(agent.name)}` });
     setComboboxOpen(false);
   };
 

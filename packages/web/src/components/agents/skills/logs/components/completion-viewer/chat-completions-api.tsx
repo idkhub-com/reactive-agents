@@ -1,15 +1,15 @@
 'use client';
 
-import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
-import { Separator } from '@client/components/ui/separator';
 import type {
   ChatCompletionRequestBody,
   ChatCompletionResponseBody,
 } from '@shared/types/api/routes/chat-completions-api';
 import { PrettyChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import type { RawSchema } from '@shared/types/api/routes/shared/tools';
+import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
+import { Separator } from '@web/components/ui/separator';
 import { isArray } from 'lodash';
 import { CopyIcon, Wrench } from 'lucide-react';
 

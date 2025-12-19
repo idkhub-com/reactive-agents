@@ -1,5 +1,5 @@
-import type { SideBarDataSchema } from '@client/types/ui/side-bar';
 import { SkillEventType } from '@shared/types/data';
+import type { SideBarDataSchema } from '@web/types/ui/side-bar';
 import { BookOpenIcon, CableIcon, SettingsIcon } from 'lucide-react';
 
 export const AVATAR_SEED = '';
@@ -8,15 +8,15 @@ export const AVATAR_SEED = '';
  * The URL of the client app.
  */
 export const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:8787';
+  (import.meta.env.VITE_APP_URL as string) || 'http://localhost:3000';
 
 /**
  * The URL of the API (Hono server).
+ * In development, API requests are proxied through Vite to avoid CORS issues.
  */
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+export const API_URL = (import.meta.env.VITE_API_URL as string) || '';
 
-export const ENVIRONMENT = process.env.NEXT_PUBLIC_ENV;
+export const ENVIRONMENT = import.meta.env.VITE_ENV as string | undefined;
 
 export const SideBarData: SideBarDataSchema = {
   sections: [

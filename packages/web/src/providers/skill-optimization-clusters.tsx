@@ -1,9 +1,9 @@
 'use client';
 
-import { getSkillClusterStates as getSkillClusters } from '@client/api/v1/reactive-agents/skills';
-import { useNavigation } from '@client/providers/navigation';
 import type { SkillOptimizationCluster } from '@shared/types/data/skill-optimization-cluster';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getSkillClusterStates as getSkillClusters } from '@web/api/v1/reactive-agents/skills';
+import { useNavigation } from '@web/providers/navigation';
 import type React from 'react';
 import {
   createContext,

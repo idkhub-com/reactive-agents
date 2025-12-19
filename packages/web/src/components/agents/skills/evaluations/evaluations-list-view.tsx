@@ -1,9 +1,14 @@
 'use client';
 
-import { getEvaluationMethods } from '@client/api/v1/reactive-agents/skills';
-import { Button } from '@client/components/ui/button';
-import { Card, CardContent } from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
+import type { SkillOptimizationEvaluation } from '@shared/types/data';
+import type {
+  EvaluationMethodDetails,
+  EvaluationMethodName,
+} from '@shared/types/evaluations';
+import { getEvaluationMethods } from '@web/api/v1/reactive-agents/skills';
+import { Button } from '@web/components/ui/button';
+import { Card, CardContent } from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -11,28 +16,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@client/components/ui/dialog';
+} from '@web/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
-import { Input } from '@client/components/ui/input';
-import { Label } from '@client/components/ui/label';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useToast } from '@client/hooks/use-toast';
-import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import { useSkills } from '@client/providers/skills';
-import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import type {
-  EvaluationMethodDetails,
-  EvaluationMethodName,
-} from '@shared/types/evaluations';
+} from '@web/components/ui/dropdown-menu';
+import { Input } from '@web/components/ui/input';
+import { Label } from '@web/components/ui/label';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useToast } from '@web/hooks/use-toast';
+import { useAgents } from '@web/providers/agents';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
+import { useSkills } from '@web/providers/skills';
 import {
   Edit,
   Loader2,

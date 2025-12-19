@@ -1,14 +1,17 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { sanitizeUserInput } from '@shared/utils/security';
+import { useParams } from '@tanstack/react-router';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
+} from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -17,17 +20,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@client/components/ui/form';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Slider } from '@client/components/ui/slider';
-import { Textarea } from '@client/components/ui/textarea';
-import { useAgents } from '@client/providers/agents';
-import { useSkills } from '@client/providers/skills';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { sanitizeUserInput } from '@shared/utils/security';
+} from '@web/components/ui/form';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Slider } from '@web/components/ui/slider';
+import { Textarea } from '@web/components/ui/textarea';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
+import { useSkills } from '@web/providers/skills';
 import { Bot, ChevronDown, ChevronUp, Plus, Wrench, X } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -131,9 +132,8 @@ type CreateSkillFormData = z.infer<typeof CreateSkillFormSchema>;
 export function CreateSkillView(): React.ReactElement {
   const { agents, selectedAgent } = useAgents();
   const { createSkill, isCreating } = useSkills();
-  const router = useRouter();
-  const params = useParams();
-  const agentName = params.agentName as string;
+  const navigate = usePermissiveNavigate();
+  const { agentName } = useParams({ strict: false }) as { agentName?: string };
 
   // Find agent by name from URL parameter
   const agentFromUrl = React.useMemo(() => {
@@ -191,11 +191,13 @@ export function CreateSkillView(): React.ReactElement {
 
       // Navigate to setup page to add models and evaluations, replacing history to prevent back button going to create page
       if (agentName) {
-        router.replace(
-          `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(newSkill.name)}/setup`,
-        );
+        navigate({
+          to: '/agents/$agentName/skills/$skillName/setup',
+          params: { agentName, skillName: newSkill.name },
+          replace: true,
+        });
       } else {
-        router.replace('/agents');
+        navigate({ to: '/agents', replace: true });
       }
     } catch (error) {
       console.error('Error creating skill:', error);
@@ -207,9 +209,13 @@ export function CreateSkillView(): React.ReactElement {
 
   const handleBack = () => {
     if (agentName) {
-      router.push(`/agents/${encodeURIComponent(agentName)}?skip_create=true`);
+      navigate({
+        to: '/agents/$agentName',
+        params: { agentName },
+        search: { skip_create: 'true' },
+      });
     } else {
-      router.push('/agents');
+      navigate({ to: '/agents' });
     }
   };
 

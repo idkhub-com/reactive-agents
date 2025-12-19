@@ -1,40 +1,5 @@
 'use client';
 
-import type { AIProviderSchemaResponse } from '@client/api/v1/reactive-agents/ai-providers';
-import { getAIProviderSchemas } from '@client/api/v1/reactive-agents/ai-providers';
-import { Button } from '@client/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@client/components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@client/components/ui/command';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@client/components/ui/form';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@client/components/ui/popover';
-import { useAIProviders } from '@client/providers/ai-providers';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AIProvider,
@@ -46,6 +11,42 @@ import type {
   AIProviderConfigCreateParams,
   AIProviderConfigUpdateParams,
 } from '@shared/types/data/ai-provider';
+import type { AIProviderSchemaResponse } from '@web/api/v1/reactive-agents/ai-providers';
+import { getAIProviderSchemas } from '@web/api/v1/reactive-agents/ai-providers';
+import { Button } from '@web/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@web/components/ui/card';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@web/components/ui/command';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@web/components/ui/form';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@web/components/ui/popover';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAIProviders } from '@web/providers/ai-providers';
 import {
   Check,
   ChevronsUpDown,
@@ -54,7 +55,6 @@ import {
   KeyIcon,
   SaveIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { FieldErrors } from 'react-hook-form';
@@ -88,7 +88,7 @@ interface APIKeyFormProps {
 }
 
 export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { createAPIKey, updateAPIKey, isCreating, isUpdating } =
     useAIProviders();
   const [showAPIKey, setShowAPIKey] = useState(false);
@@ -209,7 +209,10 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
 
         // Navigate to add models view for the new provider
         // The mutation's onSuccess already waits for cache invalidation
-        router.push(`/ai-providers/${newProvider.id}/add-models`);
+        navigate({
+          to: '/ai-providers/$id/add-models',
+          params: { id: newProvider.id },
+        });
       } else if (apiKey) {
         const updateParams: AIProviderConfigUpdateParams = {
           ai_provider: data.ai_provider,
@@ -226,7 +229,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
         }
 
         await updateAPIKey(apiKey.id, updateParams);
-        router.push('/ai-providers');
+        navigate({ to: '/ai-providers' });
       }
     } catch (error) {
       // Error handling is done in the provider, but log for debugging
@@ -237,7 +240,7 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
   };
 
   const handleBack = () => {
-    router.back();
+    window.history.back();
   };
 
   const isSubmitting = isCreating || isUpdating;

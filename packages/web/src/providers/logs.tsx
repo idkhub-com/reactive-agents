@@ -1,9 +1,9 @@
 'use client';
-import { queryLogs } from '@client/api/v1/reactive-agents/observability/logs';
-import { useToast } from '@client/hooks/use-toast';
-import { useNavigation } from '@client/providers/navigation';
 import { type Log, LogsQueryParams } from '@shared/types/data/log';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryLogs } from '@web/api/v1/reactive-agents/observability/logs';
+import { useToast } from '@web/hooks/use-toast';
+import { useNavigation } from '@web/providers/navigation';
 import type React from 'react';
 import {
   createContext,

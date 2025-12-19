@@ -1,7 +1,7 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -9,14 +9,14 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@client/components/ui/command';
+} from '@web/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@client/components/ui/popover';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { cn } from '@client/utils/ui/utils';
+} from '@web/components/ui/popover';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { cn } from '@web/utils/ui/utils';
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useId, useMemo, useState } from 'react';

@@ -1,4 +1,4 @@
-import { cn } from '@client/utils/ui/utils';
+import { cn } from '@web/utils/ui/utils';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import type { ComponentProps, ReactElement } from 'react';
 

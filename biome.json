@@ -7,13 +7,11 @@
       "**",
       "!**/node_modules/**/*",
       "!**/dist/**/*",
-      "!**/.next/**/*",
       "!**/.turbo/**/*",
-      "!**/.next",
       "!**/.claude",
-      "!next-env.d.ts",
       "!**/.wrangler/**/*",
-      "!**/.wrangler-build/**/*"
+      "!**/.wrangler-build/**/*",
+      "!**/routeTree.gen.ts"
     ]
   },
   "formatter": {
@@ -30,9 +28,7 @@
       "**",
       "!**/node_modules/**/*",
       "!**/dist/**/*",
-      "!**/.next/**/*",
       "!**/.turbo/**/*",
-      "!**/.next",
       "!**/*.yaml",
       "!**/*.yml",
       "!**/*.log",
@@ -143,9 +139,7 @@
       "**",
       "!**/node_modules/**/*",
       "!**/dist/**/*",
-      "!**/.next/**/*",
       "!**/.turbo/**/*",
-      "!**/.next",
       "!**/*.js",
       "!**/*.mjs",
       "!**/tsconfig.json",
@@ -287,7 +281,7 @@
       }
     },
     {
-      "includes": ["**/next-env.d.ts"],
+      "includes": ["**/routeTree.gen.ts"],
       "formatter": {
         "enabled": false
       },

@@ -1,18 +1,18 @@
 'use client';
 
-import { AnimatedLogo } from '@client/components/side-bar/animated-logo';
-import { NavMain } from '@client/components/side-bar/nav-main';
-import { NavUser } from '@client/components/side-bar/nav-user';
+import { Link } from '@tanstack/react-router';
+import { AnimatedLogo } from '@web/components/side-bar/animated-logo';
+import { NavMain } from '@web/components/side-bar/nav-main';
+import { NavUser } from '@web/components/side-bar/nav-user';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from '@client/components/ui/sidebar';
-import { SideBarData } from '@client/constants';
-import { useSidebar } from '@client/providers/side-bar';
-import Link from 'next/link';
+} from '@web/components/ui/sidebar';
+import { SideBarData } from '@web/constants';
+import { useSidebar } from '@web/providers/side-bar';
 import type * as React from 'react';
 
 export function AppSidebar({
@@ -25,7 +25,7 @@ export function AppSidebar({
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="p-2 flex items-center justify-center group-data-[collapsible=icon]:p-0 transition-all">
         <Link
-          href="/"
+          to="/"
           className="flex h-14 items-center justify-center relative rounded-sm w-full group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:m-2"
         >
           <AnimatedLogo isCollapsed={isCollapsed} />

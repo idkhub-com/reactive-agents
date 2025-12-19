@@ -8,7 +8,8 @@ export const FileUploadRequestBody = z.object({
   file: z.union([
     z.instanceof(File),
     z.instanceof(Blob),
-    z.instanceof(Buffer),
+    z.instanceof(ArrayBuffer),
+    z.instanceof(Uint8Array),
     z.instanceof(ReadableStream),
   ]),
 

@@ -1,59 +1,57 @@
 'use client';
 
-import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
-import { Button } from '@client/components/ui/button';
+import { botttsNeutral } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import type { Agent } from '@shared/types/data';
+import { AgentStatusIndicator } from '@web/components/agents/agent-status-indicator';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useAgents } from '@client/providers/agents';
-import { botttsNeutral } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
-import type { Agent } from '@shared/types/data';
+} from '@web/components/ui/card';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
 
 const createAgentAvatar = (agentName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(botttsNeutral, {
-      seed: agentName,
-      size: 64,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(botttsNeutral, {
+    seed: agentName,
+    size: 64,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 export function AgentsListView(): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const { agents, isLoading } = useAgents();
 
@@ -67,11 +65,11 @@ export function AgentsListView(): ReactElement {
   }, [agents, searchQuery]);
 
   const handleAgentSelect = (agent: Agent) => {
-    router.push(`/agents/${encodeURIComponent(agent.name)}`);
+    navigate({ to: `/agents/${encodeURIComponent(agent.name)}` });
   };
 
   const handleCreateAgent = () => {
-    router.push('/agents/create');
+    navigate({ to: '/agents/create' });
   };
 
   return (
@@ -136,7 +134,7 @@ export function AgentsListView(): ReactElement {
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start gap-3 mb-2">
-                      <Image
+                      <img
                         src={createAgentAvatar(agent.name)}
                         alt={`${agent.name} avatar`}
                         width={48}

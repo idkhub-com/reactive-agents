@@ -25,7 +25,7 @@
 import type { ChatCompletionResponseBody } from '../../lib/shared/types/api/routes/chat-completions-api';
 
 // Configuration
-const RA_URL = 'http://localhost:8787/v1';
+const RA_URL = 'http://localhost:3000/v1';
 const AUTH_TOKEN = 'reactive-agents';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 

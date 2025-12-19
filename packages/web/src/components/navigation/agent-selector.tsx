@@ -1,23 +1,23 @@
 'use client';
 
-import { getAgents } from '@client/api/v1/reactive-agents/agents';
+import { useQuery } from '@tanstack/react-query';
+import { getAgents } from '@web/api/v1/reactive-agents/agents';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@client/components/ui/select';
-import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+} from '@web/components/ui/select';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
+import { useNavigation } from '@web/providers/navigation';
 import type { ReactElement } from 'react';
 
 export function AgentSelector(): ReactElement | null {
   const { navigationState } = useNavigation();
   const { selectedAgent } = useAgents();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ['agents'],
@@ -26,11 +26,11 @@ export function AgentSelector(): ReactElement | null {
 
   const handleValueChange = (agentId: string) => {
     if (agentId === 'clear') {
-      router.push('/agents');
+      navigate({ to: '/agents' });
     } else {
       const agent = agents.find((a) => a.id === agentId);
       if (agent) {
-        router.push(`/agents/${encodeURIComponent(agent.name)}`);
+        navigate({ to: `/agents/${encodeURIComponent(agent.name)}` });
       }
     }
   };

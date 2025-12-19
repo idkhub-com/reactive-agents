@@ -1,10 +1,10 @@
-import {
-  getSkillEvaluations,
-  getSkillModels,
-} from '@client/api/v1/reactive-agents/skills';
 import type { Skill } from '@shared/types/data';
 import { isSkillReady } from '@shared/utils/skill-validation';
 import { useQuery } from '@tanstack/react-query';
+import {
+  getSkillEvaluations,
+  getSkillModels,
+} from '@web/api/v1/reactive-agents/skills';
 
 export interface UseSkillValidationResult {
   isReady: boolean;

@@ -13,8 +13,10 @@ const client = new OpenAI({
   // This is the API key to Reactive Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
   apiKey: process.env.BEARER_TOKEN ?? '',
-  baseURL: 'http://localhost:8787/v1',
-}falseconst raConfig = {
+  baseURL: 'http://localhost:3000/v1',
+});
+
+const raConfig = {
   agent_name: 'calendar_event_planner',
   skill_name: 'generate',
   system_prompt_variables: {

@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
+} from '@web/components/ui/dropdown-menu';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -14,9 +14,9 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@client/components/ui/sidebar';
-import { useSidebar } from '@client/providers/side-bar';
-import type { Project } from '@client/types/ui/side-bar';
+} from '@web/components/ui/sidebar';
+import { useSidebar } from '@web/providers/side-bar';
+import type { Project } from '@web/types/ui/side-bar';
 import { Folder, Forward, MoreHorizontal, Trash2 } from 'lucide-react';
 
 export function NavProjects({

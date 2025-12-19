@@ -1,15 +1,15 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { Link } from '@tanstack/react-router';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import { AlertCircleIcon, RefreshCwIcon, SettingsIcon } from 'lucide-react';
-import Link from 'next/link';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
@@ -104,7 +104,7 @@ export class SettingsErrorBoundary extends Component<Props, State> {
                   Try Again
                 </Button>
                 <Button asChild variant="ghost" className="gap-2">
-                  <Link href="/">
+                  <Link to="/">
                     <SettingsIcon className="h-4 w-4" aria-hidden="true" />
                     Go to Dashboard
                   </Link>

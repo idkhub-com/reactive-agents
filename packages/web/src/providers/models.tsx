@@ -1,9 +1,9 @@
 'use client';
 
-import { getModels } from '@client/api/v1/reactive-agents/models';
-import { getSkillModels } from '@client/api/v1/reactive-agents/skills';
 import type { Model, ModelQueryParams } from '@shared/types/data/model';
 import { useQuery } from '@tanstack/react-query';
+import { getModels } from '@web/api/v1/reactive-agents/models';
+import { getSkillModels } from '@web/api/v1/reactive-agents/skills';
 import {
   createContext,
   type ReactNode,

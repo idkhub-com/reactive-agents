@@ -1,48 +1,46 @@
 'use client';
 
-import { getAgentEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/agents';
-import { getSkillEvents } from '@client/api/v1/reactive-agents/skill-events';
-import { getSkillEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/skills';
-import { AgentPerformanceChart } from '@client/components/agents/agent-performance-chart';
-import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
-import { DeleteAgentDialog } from '@client/components/agents/delete-agent-dialog';
-import { SkillPerformanceChart } from '@client/components/agents/skills/skill-performance-chart';
-import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
-import { Button } from '@client/components/ui/button';
+import { botttsNeutral, shapes } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import type { Skill } from '@shared/types/data';
+import { useQuery } from '@tanstack/react-query';
+import { getAgentEvaluationScoresByTimeBucket } from '@web/api/v1/reactive-agents/agents';
+import { getSkillEvents } from '@web/api/v1/reactive-agents/skill-events';
+import { getSkillEvaluationScoresByTimeBucket } from '@web/api/v1/reactive-agents/skills';
+import { AgentPerformanceChart } from '@web/components/agents/agent-performance-chart';
+import { AgentStatusIndicator } from '@web/components/agents/agent-status-indicator';
+import { DeleteAgentDialog } from '@web/components/agents/delete-agent-dialog';
+import { SkillPerformanceChart } from '@web/components/agents/skills/skill-performance-chart';
+import { SkillStatusIndicator } from '@web/components/agents/skills/skill-status-indicator';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { DateTimePicker } from '@client/components/ui/date-time-picker';
+} from '@web/components/ui/card';
+import { DateTimePicker } from '@web/components/ui/date-time-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@client/components/ui/toggle-group';
+} from '@web/components/ui/dropdown-menu';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@web/components/ui/toggle-group';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkills } from '@client/providers/skills';
-import { botttsNeutral, shapes } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
-import type { Skill } from '@shared/types/data';
-import { useQuery } from '@tanstack/react-query';
+} from '@web/components/ui/tooltip';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkills } from '@web/providers/skills';
 import {
   BarChart3Icon,
   Clock,
@@ -53,75 +51,71 @@ import {
   Trash2,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
 const createAgentAvatar = (agentName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(botttsNeutral, {
-      seed: agentName,
-      size: 24,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(botttsNeutral, {
+    seed: agentName,
+    size: 24,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 const createSkillAvatar = (skillName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(shapes, {
-      seed: skillName,
-      size: 24,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(shapes, {
+    seed: skillName,
+    size: 24,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 export function AgentView(): ReactElement {
   const { navigateToSkillDashboard } = useNavigation();
   const { selectedAgent, deleteAgent } = useAgents();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
   const agentAvatar = useMemo(() => {
@@ -281,22 +275,24 @@ export function AgentView(): ReactElement {
 
   const handleCreateSkill = () => {
     if (selectedAgent) {
-      router.push(
-        `/agents/${encodeURIComponent(selectedAgent.name)}/skills/create`,
-      );
+      navigate({
+        to: `/agents/${encodeURIComponent(selectedAgent.name)}/skills/create`,
+      });
     }
   };
 
   const handleEditAgent = () => {
     if (selectedAgent) {
-      router.push(`/agents/${encodeURIComponent(selectedAgent.name)}/edit`);
+      navigate({
+        to: `/agents/${encodeURIComponent(selectedAgent.name)}/edit`,
+      });
     }
   };
 
   const handleDeleteAgent = async () => {
     if (!selectedAgent) return;
     await deleteAgent(selectedAgent.id);
-    router.push('/agents');
+    navigate({ to: '/agents' });
   };
 
   // Removed automatic redirect to create skill - let users decide when to create
@@ -327,7 +323,7 @@ export function AgentView(): ReactElement {
       <PageHeader
         title={
           <div className="flex items-center gap-2">
-            <Image
+            <img
               src={agentAvatar}
               alt={`${selectedAgent.name} avatar`}
               width={20}
@@ -344,7 +340,7 @@ export function AgentView(): ReactElement {
         }
         description={selectedAgent.description || 'No description provided'}
         showBackButton={true}
-        onBack={() => router.push('/agents')}
+        onBack={() => navigate({ to: '/agents' })}
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -517,7 +513,7 @@ export function AgentView(): ReactElement {
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Image
+                        <img
                           src={createSkillAvatar(skill.name)}
                           alt={`${skill.name} icon`}
                           width={24}

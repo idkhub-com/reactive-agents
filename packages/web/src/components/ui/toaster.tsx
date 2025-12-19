@@ -7,8 +7,8 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from '@client/components/ui/toast';
-import { useToast } from '@client/hooks/use-toast';
+} from '@web/components/ui/toast';
+import { useToast } from '@web/hooks/use-toast';
 
 export function Toaster(): React.ReactElement {
   const { toasts } = useToast();

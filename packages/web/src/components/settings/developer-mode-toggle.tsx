@@ -6,8 +6,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Switch } from '@client/components/ui/switch';
+} from '@web/components/ui/card';
+import { Switch } from '@web/components/ui/switch';
 import { CodeIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 

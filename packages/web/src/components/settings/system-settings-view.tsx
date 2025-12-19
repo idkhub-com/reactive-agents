@@ -1,31 +1,31 @@
 'use client';
 
-import { DeveloperModeToggle } from '@client/components/settings/developer-mode-toggle';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { SystemSettingsUpdateParams } from '@shared/types/data/system-settings';
+import { DeveloperModeToggle } from '@web/components/settings/developer-mode-toggle';
 import {
   type ModelOption,
   ModelSelector,
-} from '@client/components/settings/model-selector';
+} from '@web/components/settings/model-selector';
 import {
   ErrorWarning,
   IncompleteSettingsWarning,
   NoModelsWarning,
-} from '@client/components/settings/validation-warnings';
-import { Button } from '@client/components/ui/button';
+} from '@web/components/settings/validation-warnings';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { PageHeader } from '@client/components/ui/page-header';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { useSystemSettings } from '@client/providers/system-settings';
-import { sortModels } from '@client/utils/model-sorting';
-import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import type { SystemSettingsUpdateParams } from '@shared/types/data/system-settings';
+} from '@web/components/ui/card';
+import { PageHeader } from '@web/components/ui/page-header';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { useSystemSettings } from '@web/providers/system-settings';
+import { sortModels } from '@web/utils/model-sorting';
 import { SaveIcon, SettingsIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';

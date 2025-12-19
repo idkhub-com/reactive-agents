@@ -1,4 +1,4 @@
-import type { NavigationMetrics } from '@client/hooks/use-navigation-performance';
+import type { NavigationMetrics } from '@web/hooks/use-navigation-performance';
 
 /**
  * Performance DevTools for debugging navigation metrics

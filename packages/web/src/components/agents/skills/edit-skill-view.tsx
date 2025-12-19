@@ -1,14 +1,18 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { SkillUpdateParams } from '@shared/types/data/skill';
+import { sanitizeUserInput } from '@shared/utils/security';
+import { useParams } from '@tanstack/react-router';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
+} from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -17,18 +21,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@client/components/ui/form';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Slider } from '@client/components/ui/slider';
-import { Textarea } from '@client/components/ui/textarea';
-import { useAgents } from '@client/providers/agents';
-import { useSkills } from '@client/providers/skills';
-import { zodResolver } from '@hookform/resolvers/zod';
-import type { SkillUpdateParams } from '@shared/types/data/skill';
-import { sanitizeUserInput } from '@shared/utils/security';
+} from '@web/components/ui/form';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Slider } from '@web/components/ui/slider';
+import { Textarea } from '@web/components/ui/textarea';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
+import { useSkills } from '@web/providers/skills';
 import { ChevronDown, ChevronUp, Plus, Settings, X } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -124,10 +125,11 @@ type EditSkillFormData = z.infer<typeof EditSkillFormSchema>;
 export function EditSkillView(): React.ReactElement {
   const { selectedAgent } = useAgents();
   const { selectedSkill, updateSkill, isUpdating } = useSkills();
-  const router = useRouter();
-  const params = useParams();
-  const agentName = params.agentName as string;
-  const skillName = params.skillName as string;
+  const navigate = usePermissiveNavigate();
+  const { agentName, skillName } = useParams({ strict: false }) as {
+    agentName?: string;
+    skillName?: string;
+  };
 
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [newVariableName, setNewVariableName] = React.useState('');
@@ -186,11 +188,13 @@ export function EditSkillView(): React.ReactElement {
 
       // Navigate back to skill dashboard (replace to remove edit page from history)
       if (agentName && skillName) {
-        router.replace(
-          `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
-        );
+        navigate({
+          to: '/agents/$agentName/skills/$skillName',
+          params: { agentName, skillName },
+          replace: true,
+        });
       } else {
-        router.replace('/agents');
+        navigate({ to: '/agents', replace: true });
       }
     } catch (error) {
       console.error('Error updating skill:', error);
@@ -651,11 +655,13 @@ export function EditSkillView(): React.ReactElement {
                     onClick={() => {
                       // Navigate back to skill dashboard (replace to remove edit page from history)
                       if (agentName && skillName) {
-                        router.replace(
-                          `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}`,
-                        );
+                        navigate({
+                          to: '/agents/$agentName/skills/$skillName',
+                          params: { agentName, skillName },
+                          replace: true,
+                        });
                       } else {
-                        router.replace('/agents');
+                        navigate({ to: '/agents', replace: true });
                       }
                     }}
                     disabled={isUpdating}

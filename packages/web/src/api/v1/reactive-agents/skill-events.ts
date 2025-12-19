@@ -1,4 +1,4 @@
-import type { skillEventsRouter } from '@server/api/v1/reactive-agents/skill-events';
+import type { skillEventsRouter } from '@api/v1/reactive-agents/skill-events';
 import type { SkillEventQueryParams } from '@shared/types/data/skill-event';
 import { hc } from 'hono/client';
 

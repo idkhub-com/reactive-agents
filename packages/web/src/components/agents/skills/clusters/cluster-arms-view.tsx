@@ -1,47 +1,47 @@
 'use client';
 
-import { getSkillEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/skills';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import type { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
+import { useQuery } from '@tanstack/react-query';
+import {
+  getSkillArmStats,
+  getSkillEvaluationScoresByTimeBucket,
+  resetCluster,
+} from '@web/api/v1/reactive-agents/skills';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { DateTimePicker } from '@client/components/ui/date-time-picker';
+} from '@web/components/ui/card';
+import { DateTimePicker } from '@web/components/ui/date-time-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@client/components/ui/toggle-group';
+} from '@web/components/ui/dropdown-menu';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@web/components/ui/toggle-group';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useToast } from '@client/hooks/use-toast';
-import { useAgents } from '@client/providers/agents';
-import { useAIProviders } from '@client/providers/ai-providers';
-
-import { useModels } from '@client/providers/models';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillEvents } from '@client/providers/skill-events';
-import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
-import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import { useSkills } from '@client/providers/skills';
-import type { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
-import { useQuery } from '@tanstack/react-query';
+} from '@web/components/ui/tooltip';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useToast } from '@web/hooks/use-toast';
+import { useAgents } from '@web/providers/agents';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillEvents } from '@web/providers/skill-events';
+import { useSkillOptimizationArms } from '@web/providers/skill-optimization-arms';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
+import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
+import { useSkills } from '@web/providers/skills';
 import {
   ArrowUpDown,
   BoxIcon,
@@ -81,11 +81,8 @@ export function ClusterArmsView(): ReactElement {
   // Fetch arm stats for weighted colorization
   const { data: armStats = [] } = useQuery<SkillOptimizationArmStat[]>({
     queryKey: ['skillArmStats', selectedSkill?.id],
-    queryFn: async () => {
+    queryFn: () => {
       if (!selectedSkill) return [];
-      const { getSkillArmStats } = await import(
-        '@client/api/v1/reactive-agents/skills'
-      );
       return getSkillArmStats(selectedSkill.id);
     },
     enabled: !!selectedSkill,
@@ -226,9 +223,6 @@ export function ClusterArmsView(): ReactElement {
 
       setIsResetting(true);
       try {
-        const { resetCluster } = await import(
-          '@client/api/v1/reactive-agents/skills'
-        );
         await resetCluster(
           selectedSkill.id,
           selectedCluster.id,

@@ -1,10 +1,10 @@
 'use client';
 
-import { ChatCompletionsAPIViewer } from '@client/components/agents/skills/logs/components/completion-viewer/chat-completions-api';
-import { CompletionsAPIViewer } from '@client/components/agents/skills/logs/components/completion-viewer/completions-api';
-import { ImageGenerationViewer } from '@client/components/agents/skills/logs/components/completion-viewer/images-api';
 import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
+import { ChatCompletionsAPIViewer } from '@web/components/agents/skills/logs/components/completion-viewer/chat-completions-api';
+import { CompletionsAPIViewer } from '@web/components/agents/skills/logs/components/completion-viewer/completions-api';
+import { ImageGenerationViewer } from '@web/components/agents/skills/logs/components/completion-viewer/images-api';
 import { ResponsesAPIViewer } from './responses-api';
 
 export function CompletionViewer({

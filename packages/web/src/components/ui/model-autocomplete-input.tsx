@@ -1,21 +1,21 @@
 'use client';
 
+import type { AIProvider } from '@shared/types/constants';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandList,
-} from '@client/components/ui/command';
-import { Input } from '@client/components/ui/input';
+} from '@web/components/ui/command';
+import { Input } from '@web/components/ui/input';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@client/components/ui/popover';
-import { useModelsDevFiltered } from '@client/hooks/use-models-dev';
-import { cn } from '@client/utils/ui/utils';
-import type { AIProvider } from '@shared/types/constants';
+} from '@web/components/ui/popover';
+import { useModelsDevFiltered } from '@web/hooks/use-models-dev';
+import { cn } from '@web/utils/ui/utils';
 import { CheckIcon, ChevronsUpDownIcon, LoaderIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { Button } from '@web/components/ui/button';
 import { motion } from 'framer-motion';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';

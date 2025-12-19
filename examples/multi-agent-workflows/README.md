@@ -45,7 +45,7 @@ When running successfully, you should see:
 - Check the console for API key format detection messages
 
 **Connection Issues:**
-- Ensure Reactive Agents server is running on `http://localhost:8787`
+- Ensure Reactive Agents server is running on `http://localhost:3000`
 - Start server with `pnpm install && pnpm dev`
 - Check for port conflicts or firewall issues
 

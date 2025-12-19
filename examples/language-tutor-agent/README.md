@@ -28,7 +28,7 @@ cp .env.example .env.local
 OPENAI_API_KEY="sk-your-openai-key"
 
 # Optional (defaults shown)
-RA_URL="http://localhost:8787"
+RA_URL="http://localhost:3000"
 RA_AUTH_TOKEN="reactive-agents"
 ```
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { eventColors, eventLabels } from '@client/constants';
 import type { SkillEvent } from '@shared/types/data/skill-event';
+import { eventColors, eventLabels } from '@web/constants';
 import {
   CategoryScale,
   Chart as ChartJS,

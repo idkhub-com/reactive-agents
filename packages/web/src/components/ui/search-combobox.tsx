@@ -1,4 +1,4 @@
-import { cn } from '@client/utils/ui/utils';
+import { cn } from '@web/utils/ui/utils';
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 

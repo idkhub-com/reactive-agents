@@ -1,6 +1,6 @@
-import { defaultExtensions } from '@client/components/text-editor/extensions';
-import { cn } from '@client/utils/ui/utils';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { defaultExtensions } from '@web/components/text-editor/extensions';
+import { cn } from '@web/utils/ui/utils';
 import { type ReactElement, useEffect } from 'react';
 
 export const TextViewer = ({

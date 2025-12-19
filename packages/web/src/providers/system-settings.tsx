@@ -1,14 +1,14 @@
 'use client';
 
-import {
-  getSystemSettings,
-  updateSystemSettings,
-} from '@client/api/v1/reactive-agents/system-settings';
 import type {
   SystemSettings,
   SystemSettingsUpdateParams,
 } from '@shared/types/data/system-settings';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getSystemSettings,
+  updateSystemSettings,
+} from '@web/api/v1/reactive-agents/system-settings';
 import { createContext, type ReactNode, useCallback, useContext } from 'react';
 
 export const systemSettingsQueryKeys = {

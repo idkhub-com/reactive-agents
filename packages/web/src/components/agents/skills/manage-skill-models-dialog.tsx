@@ -1,13 +1,16 @@
 'use client';
 
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { Model } from '@shared/types/data/model';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   addModelsToSkill,
   removeModelsFromSkill,
-} from '@client/api/v1/reactive-agents/skills';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
-import { Card, CardContent } from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
+} from '@web/api/v1/reactive-agents/skills';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
+import { Card, CardContent } from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -15,14 +18,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@client/components/ui/dialog';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { compareModels } from '@client/utils/model-sorting';
-import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import type { Model } from '@shared/types/data/model';
-import { useQueryClient } from '@tanstack/react-query';
+} from '@web/components/ui/dialog';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { compareModels } from '@web/utils/model-sorting';
 import { Clock, CpuIcon, Loader2 } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';

@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { cn } from '@web/utils/ui/utils';
 import React from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { LogRow } from '@client/components/agents/skills/logs/components/log-row';
+import type { Log } from '@shared/types/data';
+import { LogRow } from '@web/components/agents/skills/logs/components/log-row';
 import {
   Table,
   TableBody,
@@ -8,8 +9,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@client/components/ui/table';
-import type { Log } from '@shared/types/data';
+} from '@web/components/ui/table';
 import type { ReactElement } from 'react';
 
 interface LogListProps {

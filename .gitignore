@@ -9,9 +9,7 @@
 **/coverage
 **/test-results
 
-# next.js
-**/.next/
-**/out/
+# build outputs
 **/dist
 
 # production
@@ -39,8 +37,12 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 .idea
+
+# TanStack Router (auto-generated)
+routeTree.gen.ts
+*.tanstack
+app.config.timestamp_*.js
 
 # ide
 .vscode/

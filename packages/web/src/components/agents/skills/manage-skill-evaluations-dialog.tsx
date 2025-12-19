@@ -1,8 +1,11 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
-import { Card, CardContent } from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
+import type { SkillOptimizationEvaluation } from '@shared/types/data';
+import { EvaluationMethodName } from '@shared/types/evaluations';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@web/components/ui/button';
+import { Card, CardContent } from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +13,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@client/components/ui/dialog';
-import { Label } from '@client/components/ui/label';
-import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import { EvaluationMethodName } from '@shared/types/evaluations';
-import { useQueryClient } from '@tanstack/react-query';
+} from '@web/components/ui/dialog';
+import { Label } from '@web/components/ui/label';
+import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
 import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';

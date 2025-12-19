@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useLocation } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface NavigationMetrics {
@@ -25,7 +25,8 @@ const METRICS_STORAGE_KEY = 'agent-navigation-metrics';
 const MAX_STORED_METRICS = 100;
 
 export function useNavigationPerformance() {
-  const pathname = usePathname();
+  const location = useLocation();
+  const pathname = location.pathname;
   const [metrics, setMetrics] = useState<NavigationMetrics[]>([]);
   const [currentMetric, setCurrentMetric] = useState<NavigationMetrics | null>(
     null,

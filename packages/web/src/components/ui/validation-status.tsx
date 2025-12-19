@@ -1,4 +1,4 @@
-import { cn } from '@client/utils/ui/utils';
+import { cn } from '@web/utils/ui/utils';
 import { Check, Loader2, X } from 'lucide-react';
 import type { ReactElement } from 'react';
 

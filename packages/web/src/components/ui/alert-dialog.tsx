@@ -1,8 +1,8 @@
 'use client';
 
-import { buttonVariants } from '@client/components/ui/button';
-import { cn } from '@client/utils/ui/utils';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
+import { buttonVariants } from '@web/components/ui/button';
+import { cn } from '@web/utils/ui/utils';
 import type { VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 

@@ -1,11 +1,11 @@
-import { Badge } from '@client/components/ui/badge';
+import type { Skill } from '@shared/types/data';
+import { Badge } from '@web/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSkillValidation } from '@client/hooks/use-skill-validation';
-import type { Skill } from '@shared/types/data';
+} from '@web/components/ui/tooltip';
+import { useSkillValidation } from '@web/hooks/use-skill-validation';
 import { AlertCircle } from 'lucide-react';
 import type { ReactElement } from 'react';
 

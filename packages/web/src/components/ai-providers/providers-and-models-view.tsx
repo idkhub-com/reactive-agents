@@ -1,25 +1,27 @@
 'use client';
 
-import { deleteModel } from '@client/api/v1/reactive-agents/models';
-import { AIProvidersListView } from '@client/components/ai-providers/ai-providers-list';
-import { DeleteModelDialog } from '@client/components/ai-providers/delete-model-dialog';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { Model } from '@shared/types/data/model';
+import { deleteModel } from '@web/api/v1/reactive-agents/models';
+import { AIProvidersListView } from '@web/components/ai-providers/ai-providers-list';
+import { DeleteModelDialog } from '@web/components/ai-providers/delete-model-dialog';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
-import { Input } from '@client/components/ui/input';
-import { Skeleton } from '@client/components/ui/skeleton';
+} from '@web/components/ui/dropdown-menu';
+import { Input } from '@web/components/ui/input';
+import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -27,19 +29,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@client/components/ui/table';
+} from '@web/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSettingsValidation } from '@client/hooks/use-settings-validation';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { compareModels } from '@client/utils/model-sorting';
-import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import type { Model } from '@shared/types/data/model';
+} from '@web/components/ui/tooltip';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useSettingsValidation } from '@web/hooks/use-settings-validation';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { compareModels } from '@web/utils/model-sorting';
 import { format } from 'date-fns';
 import {
   AlertCircleIcon,
@@ -51,7 +52,6 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -62,7 +62,7 @@ interface ProvidersAndModelsViewProps {
 export function ProvidersAndModelsView({
   selectedProviderId,
 }: ProvidersAndModelsViewProps): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { toast } = useToast();
   const { aiProviderConfigs: apiKeys } = useAIProviders();
   const { models, isLoading, setQueryParams, refetch } = useModels();
@@ -223,9 +223,10 @@ export function ProvidersAndModelsView({
                       size="sm"
                       className="mt-2"
                       onClick={() =>
-                        router.push(
-                          `/ai-providers/${activeProvider}/add-models`,
-                        )
+                        navigate({
+                          to: '/ai-providers/$id/add-models',
+                          params: { id: activeProvider },
+                        })
                       }
                     >
                       <PlusIcon className="h-4 w-4 mr-2" />
@@ -263,9 +264,10 @@ export function ProvidersAndModelsView({
                   {activeProvider && (
                     <Button
                       onClick={() =>
-                        router.push(
-                          `/ai-providers/${activeProvider}/add-models`,
-                        )
+                        navigate({
+                          to: '/ai-providers/$id/add-models',
+                          params: { id: activeProvider },
+                        })
                       }
                     >
                       <PlusIcon className="h-4 w-4 mr-2" />
@@ -328,7 +330,10 @@ export function ProvidersAndModelsView({
                 </p>
                 <Button
                   onClick={() =>
-                    router.push(`/ai-providers/${activeProvider}/add-models`)
+                    navigate({
+                      to: '/ai-providers/$id/add-models',
+                      params: { id: activeProvider },
+                    })
                   }
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />

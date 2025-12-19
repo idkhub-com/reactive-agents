@@ -1,11 +1,11 @@
 'use client';
 
-import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
 import type { CompletionResponseBody } from '@shared/types/api/routes/completions-api';
 import {
   ChatCompletionMessageRole,
   PrettyChatCompletionMessageRole,
 } from '@shared/types/api/routes/shared/messages';
+import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
 
 export function CompletionsAPIViewer({
   logId,

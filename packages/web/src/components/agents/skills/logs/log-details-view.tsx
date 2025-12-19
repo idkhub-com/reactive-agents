@@ -1,28 +1,28 @@
 'use client';
 
-import { CompletionViewer } from '@client/components/agents/skills/logs/components/completion-viewer';
-import { MessagesView } from '@client/components/agents/skills/logs/components/messages-view';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import { EvaluationMethodName } from '@shared/types/evaluations';
+import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
+import { CompletionViewer } from '@web/components/agents/skills/logs/components/completion-viewer';
+import { MessagesView } from '@web/components/agents/skills/logs/components/messages-view';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Separator } from '@client/components/ui/separator';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useAgents } from '@client/providers/agents';
-import { useLogs } from '@client/providers/logs';
-import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkillOptimizationEvaluationRuns } from '@client/providers/skill-optimization-evaluation-runs';
-import { useSkills } from '@client/providers/skills';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
-import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import { EvaluationMethodName } from '@shared/types/evaluations';
-import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
+} from '@web/components/ui/card';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Separator } from '@web/components/ui/separator';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useAgents } from '@web/providers/agents';
+import { useLogs } from '@web/providers/logs';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
+import { useSkillOptimizationEvaluationRuns } from '@web/providers/skill-optimization-evaluation-runs';
+import { useSkills } from '@web/providers/skills';
 import { format } from 'date-fns';
 import {
   AlertTriangle,

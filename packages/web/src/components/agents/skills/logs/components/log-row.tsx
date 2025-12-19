@@ -1,32 +1,46 @@
 'use client';
 
-import { StatusBadge } from '@client/components/agents/skills/logs/components/status-badge';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@client/components/ui/avatar';
-import { Badge } from '@client/components/ui/badge';
-import { TableCell, TableRow } from '@client/components/ui/table';
+import { micah } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import { PrettyFunctionName } from '@shared/types/api/request/function-name';
+import type { Log } from '@shared/types/data';
+import { StatusBadge } from '@web/components/agents/skills/logs/components/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@web/components/ui/avatar';
+import { Badge } from '@web/components/ui/badge';
+import { TableCell, TableRow } from '@web/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { AVATAR_SEED } from '@client/constants';
-import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkills } from '@client/providers/skills';
-import { micah } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
-import { PrettyFunctionName } from '@shared/types/api/request/function-name';
-import type { Log } from '@shared/types/data';
+} from '@web/components/ui/tooltip';
+import { AVATAR_SEED } from '@web/constants';
+import { useAgents } from '@web/providers/agents';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
+import { useSkills } from '@web/providers/skills';
 import { format } from 'date-fns';
 import { InfoIcon } from 'lucide-react';
 import type { KeyboardEvent, ReactElement } from 'react';
 import { useMemo } from 'react';
+
+const createUserAvatar = (seed: string) => {
+  const svg = createAvatar(micah, {
+    seed,
+    size: 32,
+    backgroundColor: [
+      'FFD1DC',
+      'AEEEEE',
+      'BDFCC9',
+      'E6E6FA',
+      'FFFFCC',
+      'FFE5B4',
+      'D8BFD8',
+      'B0E0E6',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+};
 
 export function LogRow({ log }: { log: Log }): ReactElement {
   const { navigateToLogDetail } = useNavigation();
@@ -162,22 +176,9 @@ export function LogRow({ log }: { log: Log }): ReactElement {
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8 rounded-full border">
               <AvatarImage
-                src={`data:image/svg+xml;base64,${Buffer.from(
-                  createAvatar(micah, {
-                    seed: `${AVATAR_SEED}${log.external_user_human_name ?? log.external_user_id}`,
-                    size: 32,
-                    backgroundColor: [
-                      'FFD1DC',
-                      'AEEEEE',
-                      'BDFCC9',
-                      'E6E6FA',
-                      'FFFFCC',
-                      'FFE5B4',
-                      'D8BFD8',
-                      'B0E0E6',
-                    ],
-                  }).toString(),
-                ).toString('base64')}`}
+                src={createUserAvatar(
+                  `${AVATAR_SEED}${log.external_user_human_name ?? log.external_user_id}`,
+                )}
                 alt={`User Avatar for ${log.external_user_human_name || log.external_user_id}`}
               />
               <AvatarFallback className="rounded-lg">CN</AvatarFallback>

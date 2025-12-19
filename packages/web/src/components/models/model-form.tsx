@@ -1,18 +1,24 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { AIProvider } from '@shared/types/constants';
+import type {
+  ModelCreateParams,
+  ModelUpdateParams,
+} from '@shared/types/data/model';
 import {
   createModel,
   getModelById,
   updateModel,
-} from '@client/api/v1/reactive-agents/models';
-import { Button } from '@client/components/ui/button';
+} from '@web/api/v1/reactive-agents/models';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import {
   Form,
   FormControl,
@@ -21,29 +27,23 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@client/components/ui/form';
-import { ModelAutocompleteInput } from '@client/components/ui/model-autocomplete-input';
-import { PageHeader } from '@client/components/ui/page-header';
+} from '@web/components/ui/form';
+import { ModelAutocompleteInput } from '@web/components/ui/model-autocomplete-input';
+import { PageHeader } from '@web/components/ui/page-header';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@client/components/ui/select';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { zodResolver } from '@hookform/resolvers/zod';
-import type { AIProvider } from '@shared/types/constants';
-import type {
-  ModelCreateParams,
-  ModelUpdateParams,
-} from '@shared/types/data/model';
+} from '@web/components/ui/select';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
 import { CpuIcon, LoaderIcon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -61,7 +61,7 @@ interface ModelFormProps {
 }
 
 export function ModelForm({ modelId }: ModelFormProps): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const goBack = useSmartBack();
   const { toast } = useToast();
   const { refetch } = useModels();
@@ -144,7 +144,7 @@ export function ModelForm({ modelId }: ModelFormProps): ReactElement {
       }
 
       await refetch();
-      router.push('/models');
+      navigate({ to: '/models' });
     } catch (error) {
       toast({
         title: isEdit ? 'Failed to update model' : 'Failed to create model',

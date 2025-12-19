@@ -1,14 +1,5 @@
 'use client';
 
-import {
-  createSkill,
-  deleteSkill,
-  getSkills,
-  updateSkill,
-} from '@client/api/v1/reactive-agents/skills';
-import { useToast } from '@client/hooks/use-toast';
-import { useAgents } from '@client/providers/agents';
-import { useNavigation } from '@client/providers/navigation';
 import type {
   Skill,
   SkillCreateParams,
@@ -21,6 +12,15 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import {
+  createSkill,
+  deleteSkill,
+  getSkills,
+  updateSkill,
+} from '@web/api/v1/reactive-agents/skills';
+import { useToast } from '@web/hooks/use-toast';
+import { useAgents } from '@web/providers/agents';
+import { useNavigation } from '@web/providers/navigation';
 import type React from 'react';
 import {
   createContext,

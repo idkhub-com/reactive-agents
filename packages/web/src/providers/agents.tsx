@@ -1,14 +1,5 @@
 'use client';
 
-import {
-  createAgent,
-  deleteAgent,
-  getAgents,
-  updateAgent,
-} from '@client/api/v1/reactive-agents/agents';
-import { useToast } from '@client/hooks/use-toast';
-import { useNavigation } from '@client/providers/navigation';
-import { useSystemSettings } from '@client/providers/system-settings';
 import type {
   Agent,
   AgentCreateParams,
@@ -21,6 +12,15 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import {
+  createAgent,
+  deleteAgent,
+  getAgents,
+  updateAgent,
+} from '@web/api/v1/reactive-agents/agents';
+import { useToast } from '@web/hooks/use-toast';
+import { useNavigation } from '@web/providers/navigation';
+import { useSystemSettings } from '@web/providers/system-settings';
 import type React from 'react';
 import {
   createContext,

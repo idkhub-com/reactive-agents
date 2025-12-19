@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useLocation, useNavigate, useParams } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
 import {
   createContext,
@@ -16,6 +16,7 @@ import {
 } from './storage-utils';
 import type {
   BreadcrumbSegment,
+  NavigateFn,
   NavigationContextType,
   NavigationState,
 } from './types';
@@ -40,9 +41,15 @@ interface NavigationProviderProps {
 export function NavigationProvider({
   children,
 }: NavigationProviderProps): ReactElement {
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useParams();
+  // Cast navigate to permissive type during migration
+  const tanstackNavigate = useNavigate();
+  const navigate = tanstackNavigate as unknown as NavigateFn;
+  const location = useLocation();
+  const pathname = location.pathname;
+  const params = useParams({ strict: false }) as Record<
+    string,
+    string | undefined
+  >;
 
   const [navigationState, setNavigationState] = useState<NavigationState>({
     section: 'agents',
@@ -53,7 +60,7 @@ export function NavigationProvider({
   const [isLoadingFromStorage, setIsLoadingFromStorage] = useState(true);
 
   // Use extracted navigation routes hook
-  const navigationRoutes = useNavigationRoutes(router);
+  const navigationRoutes = useNavigationRoutes(navigate);
 
   // Parse current URL and determine view
   const parseCurrentView = useCallback((): NavigationState['currentView'] => {
@@ -63,13 +70,13 @@ export function NavigationProvider({
       return 'agent-view';
     }
 
-    const agentName = params.agentName as string;
-    const skillName = params.skillName as string;
-    const logId = params.logId as string;
-    const evalId = params.evalId as string;
-    const datasetId = params.datasetId as string;
-    const clusterName = params.clusterName as string;
-    const configName = params.configName as string;
+    const agentName = params.agentName;
+    const skillName = params.skillName;
+    const logId = params.logId;
+    const evalId = params.evaluationId;
+    const datasetId = params.datasetId;
+    const clusterName = params.clusterId;
+    const configName = params.armId;
 
     // Determine view based on URL structure
     if (pathSegments.length === 1) return 'agents-list'; // /agents
@@ -141,19 +148,19 @@ export function NavigationProvider({
 
   const setSection = useCallback(
     (section: NavigationState['section']) => {
-      router.push(`/${section}`);
+      navigate({ to: `/${section}` });
     },
-    [router],
+    [navigate],
   );
 
   const navigateBack = useCallback(
     (targetSegmentIndex: number) => {
       const targetSegment = navigationState.breadcrumbs[targetSegmentIndex];
       if (targetSegment) {
-        router.push(targetSegment.path);
+        navigate({ to: targetSegment.path });
       }
     },
-    [navigationState.breadcrumbs, router],
+    [navigationState.breadcrumbs, navigate],
   );
 
   const updateBreadcrumbs = useCallback((segments: BreadcrumbSegment[]) => {
@@ -166,13 +173,13 @@ export function NavigationProvider({
   // Sync navigation state with URL
   useEffect(() => {
     const currentView = parseCurrentView();
-    const agentName = params.agentName as string;
-    const skillName = params.skillName as string;
-    const clusterName = params.clusterName as string;
-    const configName = params.configName as string;
-    const logId = params.logId as string;
-    const evalId = params.evalId as string;
-    const datasetId = params.datasetId as string;
+    const agentName = params.agentName;
+    const skillName = params.skillName;
+    const clusterName = params.clusterId;
+    const configName = params.armId;
+    const logId = params.logId;
+    const evalId = params.evaluationId;
+    const datasetId = params.datasetId;
 
     setNavigationState((prev) => {
       const newState: NavigationState = {
@@ -426,7 +433,7 @@ export function NavigationProvider({
       value={{
         navigationState,
         isLoadingFromStorage,
-        router,
+        navigate,
         setSection,
         ...navigationRoutes,
         navigateBack,

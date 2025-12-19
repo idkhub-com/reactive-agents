@@ -1,23 +1,24 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import type { AIProviderConfig } from '@shared/types/data/ai-provider';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
+} from '@web/components/ui/dropdown-menu';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -25,10 +26,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@client/components/ui/table';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import type { AIProviderConfig } from '@shared/types/data/ai-provider';
+} from '@web/components/ui/table';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
 import { format } from 'date-fns';
 import {
   CableIcon,
@@ -40,7 +41,6 @@ import {
   SearchIcon,
   TrashIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { DeleteAIProviderDialog } from './delete-ai-provider-dialog';
@@ -54,7 +54,7 @@ export function AIProvidersListView({
   onProviderSelect,
   selectedProviderId,
 }: AIProvidersListViewProps = {}): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { toast } = useToast();
   const {
     aiProviderConfigs: apiKeys,
@@ -212,7 +212,9 @@ export function AIProvidersListView({
                 {filteredAPIKeys.length})
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => router.push('/ai-providers/create')}>
+                <Button
+                  onClick={() => navigate({ to: '/ai-providers/create' })}
+                >
                   <PlusIcon className="h-4 w-4 mr-2" />
                   Add AI Provider
                 </Button>
@@ -250,7 +252,9 @@ export function AIProvidersListView({
                       : 'Get started by adding your first AI provider.'}
                   </p>
                   {!searchQuery && (
-                    <Button onClick={() => router.push('/ai-providers/create')}>
+                    <Button
+                      onClick={() => navigate({ to: '/ai-providers/create' })}
+                    >
                       <PlusIcon className="h-4 w-4 mr-2" />
                       Add Your First AI Provider
                     </Button>
@@ -337,7 +341,10 @@ export function AIProvidersListView({
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  router.push(`/ai-providers/${apiKey.id}/edit`)
+                                  navigate({
+                                    to: '/ai-providers/$id/edit',
+                                    params: { id: apiKey.id },
+                                  })
                                 }
                               >
                                 Edit

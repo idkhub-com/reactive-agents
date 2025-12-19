@@ -1,8 +1,8 @@
 'use client';
 
-import { ErrorBoundary } from '@client/components/error-boundary';
-import { useToast } from '@client/hooks/use-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ErrorBoundary } from '@web/components/error-boundary';
+import { useToast } from '@web/hooks/use-toast';
 import { useState } from 'react';
 
 export function ReactQueryProvider({

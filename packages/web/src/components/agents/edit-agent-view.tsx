@@ -1,13 +1,17 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { AgentUpdateParams } from '@shared/types/data';
+import { sanitizeUserInput } from '@shared/utils/security';
+import { useParams } from '@tanstack/react-router';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import {
   Form,
   FormControl,
@@ -16,16 +20,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@client/components/ui/form';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Textarea } from '@client/components/ui/textarea';
-import { useAgents } from '@client/providers/agents';
-import { zodResolver } from '@hookform/resolvers/zod';
-import type { AgentUpdateParams } from '@shared/types/data';
-import { sanitizeUserInput } from '@shared/utils/security';
+} from '@web/components/ui/form';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Textarea } from '@web/components/ui/textarea';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
 import { Bot, Settings } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -43,9 +44,8 @@ type EditAgentFormData = z.infer<typeof EditAgentFormSchema>;
 
 export function EditAgentView(): React.ReactElement {
   const { selectedAgent, updateAgent, isUpdating } = useAgents();
-  const router = useRouter();
-  const params = useParams();
-  const agentName = params.agentName as string;
+  const navigate = usePermissiveNavigate();
+  const { agentName } = useParams({ strict: false }) as { agentName?: string };
   const agentNameInputId = React.useId();
 
   const form = useForm<EditAgentFormData>({
@@ -79,9 +79,9 @@ export function EditAgentView(): React.ReactElement {
 
       // Navigate back to agent skills list
       if (agentName) {
-        router.push(`/agents/${encodeURIComponent(agentName)}`);
+        navigate({ to: '/agents/$agentName', params: { agentName } });
       } else {
-        router.push('/agents');
+        navigate({ to: '/agents' });
       }
     } catch (error) {
       console.error('Error updating agent:', error);
@@ -91,9 +91,9 @@ export function EditAgentView(): React.ReactElement {
 
   const handleBack = () => {
     if (agentName) {
-      router.push(`/agents/${encodeURIComponent(agentName)}`);
+      navigate({ to: '/agents/$agentName', params: { agentName } });
     } else {
-      router.push('/agents');
+      navigate({ to: '/agents' });
     }
   };
 

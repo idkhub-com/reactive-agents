@@ -8,13 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
+} from '@web/components/ui/dropdown-menu';
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@client/components/ui/sidebar';
-import { useSidebar } from '@client/providers/side-bar';
+} from '@web/components/ui/sidebar';
+import { useSidebar } from '@web/providers/side-bar';
 import { ChevronsUpDown, Plus } from 'lucide-react';
 import * as React from 'react';
 

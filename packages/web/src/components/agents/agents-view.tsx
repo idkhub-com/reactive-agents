@@ -1,8 +1,8 @@
 'use client';
 
-import { AgentView } from '@client/components/agents/agent-view';
-import { useNavigationPerformance } from '@client/hooks/use-navigation-performance';
-import { useNavigation } from '@client/providers/navigation';
+import { AgentView } from '@web/components/agents/agent-view';
+import { useNavigationPerformance } from '@web/hooks/use-navigation-performance';
+import { useNavigation } from '@web/providers/navigation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { AgentErrorBoundary } from './agent-error-boundary';

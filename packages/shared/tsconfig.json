@@ -2,8 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
+    "types": ["vitest/globals"],
     "paths": {
-      "@shared/*": ["./src/*"]
+      "@shared/*": ["./src/*"],
+      "@/*": ["../../*"]
     }
   },
   "include": ["src/**/*.ts"],

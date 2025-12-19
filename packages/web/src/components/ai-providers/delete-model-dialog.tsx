@@ -1,5 +1,6 @@
 'use client';
 
+import type { Model } from '@shared/types/data/model';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,10 +10,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@client/components/ui/alert-dialog';
-import { Input } from '@client/components/ui/input';
-import { Label } from '@client/components/ui/label';
-import type { Model } from '@shared/types/data/model';
+} from '@web/components/ui/alert-dialog';
+import { Input } from '@web/components/ui/input';
+import { Label } from '@web/components/ui/label';
 import { AlertTriangle } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useId, useState } from 'react';

@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
+import { cn } from '@web/utils/ui/utils';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import * as React from 'react';

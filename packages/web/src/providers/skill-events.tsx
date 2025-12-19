@@ -1,12 +1,12 @@
 'use client';
 
-import { getSkillEvents } from '@client/api/v1/reactive-agents/skill-events';
 import type {
   SkillEvent,
   SkillEventQueryParams,
   SkillEventType,
 } from '@shared/types/data/skill-event';
 import { useQuery } from '@tanstack/react-query';
+import { getSkillEvents } from '@web/api/v1/reactive-agents/skill-events';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
 

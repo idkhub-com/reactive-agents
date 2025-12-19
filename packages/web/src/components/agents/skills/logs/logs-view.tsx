@@ -1,16 +1,17 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import type { Log } from '@shared/types/data';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
+} from '@web/components/ui/card';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
 import {
   Pagination,
   PaginationContent,
@@ -19,15 +20,15 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@client/components/ui/pagination';
+} from '@web/components/ui/pagination';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@client/components/ui/select';
-import { Skeleton } from '@client/components/ui/skeleton';
+} from '@web/components/ui/select';
+import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -35,20 +36,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@client/components/ui/table';
+} from '@web/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useAgents } from '@client/providers/agents';
-import { useLogs } from '@client/providers/logs';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkills } from '@client/providers/skills';
-import type { Log } from '@shared/types/data';
+} from '@web/components/ui/tooltip';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useAgents } from '@web/providers/agents';
+import { useLogs } from '@web/providers/logs';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
+import { useSkills } from '@web/providers/skills';
 import { format } from 'date-fns';
 import {
   CalendarIcon,

@@ -1,15 +1,15 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import type { NavigationMetrics } from '@client/hooks/use-navigation-performance';
-import { useNavigationPerformance } from '@client/hooks/use-navigation-performance';
+} from '@web/components/ui/card';
+import type { NavigationMetrics } from '@web/hooks/use-navigation-performance';
+import { useNavigationPerformance } from '@web/hooks/use-navigation-performance';
 import {
   BarChart,
   Clock,

@@ -1,6 +1,6 @@
-import { API_URL } from '@client/constants';
-import type { ReactiveAgentsRoute } from '@server/api/v1';
+import type { ReactiveAgentsRoute } from '@api/v1';
 import { Log, type LogsQueryParams } from '@shared/types/data/log';
+import { API_URL } from '@web/constants';
 import { hc } from 'hono/client';
 
 const client = hc<ReactiveAgentsRoute>(API_URL);

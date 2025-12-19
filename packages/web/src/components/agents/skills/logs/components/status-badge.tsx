@@ -1,9 +1,9 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
-import { Separator } from '@client/components/ui/separator';
-import { cn } from '@client/utils/ui/utils';
 import type { Log } from '@shared/types/data';
+import { Badge } from '@web/components/ui/badge';
+import { Separator } from '@web/components/ui/separator';
+import { cn } from '@web/utils/ui/utils';
 import type { ReactElement } from 'react';
 
 export function StatusBadge({

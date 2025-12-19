@@ -1,9 +1,10 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
-import { Card, CardContent } from '@client/components/ui/card';
-import { PageHeader } from '@client/components/ui/page-header';
+import { SkillEventType } from '@shared/types/data/skill-event';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
+import { Card, CardContent } from '@web/components/ui/card';
+import { PageHeader } from '@web/components/ui/page-header';
 import {
   Pagination,
   PaginationContent,
@@ -11,20 +12,19 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@client/components/ui/pagination';
+} from '@web/components/ui/pagination';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@client/components/ui/select';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useAgents } from '@client/providers/agents';
-import { useSkillEvents } from '@client/providers/skill-events';
-import { useSkills } from '@client/providers/skills';
-import { SkillEventType } from '@shared/types/data/skill-event';
+} from '@web/components/ui/select';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useAgents } from '@web/providers/agents';
+import { useSkillEvents } from '@web/providers/skill-events';
+import { useSkills } from '@web/providers/skills';
 import {
   CalendarIcon,
   CheckCircle2,

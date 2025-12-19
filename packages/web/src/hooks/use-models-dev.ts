@@ -1,4 +1,3 @@
-import { mapAIProviderToModelsDev } from '@client/utils/models-dev-mapping';
 import type { AIProvider } from '@shared/types/constants';
 import type { FlattenedModel } from '@shared/types/models-dev';
 import {
@@ -6,6 +5,7 @@ import {
   parseModelsDevResponse,
 } from '@shared/types/models-dev';
 import { useQuery } from '@tanstack/react-query';
+import { mapAIProviderToModelsDev } from '@web/utils/models-dev-mapping';
 
 const MODELS_DEV_API_URL = '/v1/reactive-agents/models-dev';
 

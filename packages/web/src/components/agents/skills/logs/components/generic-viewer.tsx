@@ -1,11 +1,11 @@
 'use client';
 
-import { TextViewer } from '@client/components/agents/skills/logs/components/text-viewer';
-import { MonacoEditor } from '@client/components/monaco-editor';
-import { Button } from '@client/components/ui/button';
-import { Separator } from '@client/components/ui/separator';
-import { cn } from '@client/utils/ui/utils';
 import type { RawSchema } from '@shared/types/api/routes/shared/tools';
+import { LazyTextViewer } from '@web/components/agents/skills/logs/components/text-viewer.lazy';
+import { MonacoEditor } from '@web/components/monaco-editor';
+import { Button } from '@web/components/ui/button';
+import { Separator } from '@web/components/ui/separator';
+import { cn } from '@web/utils/ui/utils';
 import Ajv, { type ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { AlertTriangleIcon, CopyIcon, SaveIcon } from 'lucide-react';
@@ -168,7 +168,7 @@ export function GenericViewer({
         )}
       </div>
       {language === 'text' ? (
-        <TextViewer
+        <LazyTextViewer
           readOnly={readOnly}
           content={value}
           className="h-fit w-full p-2 pb-4"

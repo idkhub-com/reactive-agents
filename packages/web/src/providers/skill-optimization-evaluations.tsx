@@ -1,14 +1,14 @@
 'use client';
 
+import type { SkillOptimizationEvaluation } from '@shared/types/data';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSkillEvaluation,
   deleteSkillEvaluation,
   getSkillEvaluations,
   updateSkillEvaluation,
-} from '@client/api/v1/reactive-agents/skills';
-import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import type { EvaluationMethodName } from '@shared/types/evaluations';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+} from '@web/api/v1/reactive-agents/skills';
 import type { ReactElement, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
 

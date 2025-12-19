@@ -1,5 +1,6 @@
 'use client';
 
+import type { SkillOptimizationCluster } from '@shared/types/data';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,10 +10,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@client/components/ui/alert-dialog';
-import { Checkbox } from '@client/components/ui/checkbox';
-import { Label } from '@client/components/ui/label';
-import type { SkillOptimizationCluster } from '@shared/types/data';
+} from '@web/components/ui/alert-dialog';
+import { Checkbox } from '@web/components/ui/checkbox';
+import { Label } from '@web/components/ui/label';
 import type { ReactElement } from 'react';
 import { useId, useState } from 'react';
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { getSkillEvaluationRuns } from '@client/api/v1/reactive-agents/skills';
 import type { SkillOptimizationEvaluationRun } from '@shared/types/data/skill-optimization-evaluation-run';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getSkillEvaluationRuns } from '@web/api/v1/reactive-agents/skills';
 import type React from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
 

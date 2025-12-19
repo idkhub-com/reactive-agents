@@ -1,8 +1,8 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { useRouter } from '@tanstack/react-router';
+import { Button } from '@web/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { ReactElement, ReactNode } from 'react';
 
 interface PageHeaderProps {
@@ -27,7 +27,7 @@ export function PageHeader({
       if (onBack) {
         onBack();
       } else {
-        router.back();
+        router.history.back();
       }
     } catch (error) {
       console.error('Navigation error:', error);

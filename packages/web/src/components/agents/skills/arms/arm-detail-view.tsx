@@ -1,26 +1,27 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import type { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
+import { EvaluationMethodName } from '@shared/types/evaluations';
+import { useQuery } from '@tanstack/react-query';
+import { getSkillArmStats } from '@web/api/v1/reactive-agents/skills';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useAgents } from '@client/providers/agents';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { useSkillOptimizationArms } from '@client/providers/skill-optimization-arms';
-import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import { useSkills } from '@client/providers/skills';
-import type { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
-import { EvaluationMethodName } from '@shared/types/evaluations';
-import { useQuery } from '@tanstack/react-query';
+} from '@web/components/ui/card';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useAgents } from '@web/providers/agents';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { useSkillOptimizationArms } from '@web/providers/skill-optimization-arms';
+import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
+import { useSkills } from '@web/providers/skills';
 import { BoxIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo } from 'react';
@@ -54,12 +55,8 @@ export function ArmDetailView(): ReactElement {
   // Fetch arm stats for this specific arm
   const { data: armStats = [] } = useQuery<SkillOptimizationArmStat[]>({
     queryKey: ['armStats', selectedArm?.id],
-    queryFn: async () => {
-      if (!selectedArm) return [];
-      const { getSkillArmStats } = await import(
-        '@client/api/v1/reactive-agents/skills'
-      );
-      if (!selectedSkill) return [];
+    queryFn: () => {
+      if (!selectedArm || !selectedSkill) return [];
       return getSkillArmStats(selectedSkill.id);
     },
     enabled: !!selectedArm && !!selectedSkill,

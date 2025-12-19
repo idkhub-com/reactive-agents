@@ -1,11 +1,11 @@
+import type { Agent } from '@shared/types/data';
+import { isSkillReady } from '@shared/utils/skill-validation';
+import { useQuery } from '@tanstack/react-query';
 import {
   getSkillEvaluations,
   getSkillModels,
   getSkills,
-} from '@client/api/v1/reactive-agents/skills';
-import type { Agent } from '@shared/types/data';
-import { isSkillReady } from '@shared/utils/skill-validation';
-import { useQuery } from '@tanstack/react-query';
+} from '@web/api/v1/reactive-agents/skills';
 
 export interface UseAgentUnreadySkillsResult {
   hasUnreadySkills: boolean;

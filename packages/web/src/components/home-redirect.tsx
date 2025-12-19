@@ -1,7 +1,7 @@
 'use client';
 
-import { useSettingsValidation } from '@client/hooks/use-settings-validation';
-import { useRouter } from 'next/navigation';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useSettingsValidation } from '@web/hooks/use-settings-validation';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
@@ -16,7 +16,7 @@ interface HomeRedirectProps {
  * - Redirects to /agents when settings are complete
  */
 export function HomeRedirect({ children }: HomeRedirectProps): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { isComplete, isLoading } = useSettingsValidation();
 
   useEffect(() => {
@@ -25,12 +25,12 @@ export function HomeRedirect({ children }: HomeRedirectProps): ReactElement {
 
     if (isComplete) {
       // Settings are complete, redirect to agents
-      router.replace('/agents');
+      navigate({ to: '/agents', replace: true });
     } else {
       // Settings are incomplete, redirect to settings
-      router.replace('/settings');
+      navigate({ to: '/settings', replace: true });
     }
-  }, [isLoading, isComplete, router]);
+  }, [isLoading, isComplete, navigate]);
 
   return children;
 }

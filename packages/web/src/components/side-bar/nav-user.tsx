@@ -4,20 +4,20 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@client/components/ui/sidebar';
-import { API_URL } from '@client/constants';
+} from '@web/components/ui/sidebar';
+import { API_URL } from '@web/constants';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
 import { LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export function NavUser(): React.ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   async function signOut(): Promise<void> {
     const response = await fetch(`${API_URL}/v1/reactive-agents/auth/logout`, {
       credentials: 'include',
       method: 'POST',
     });
     if (response.ok) {
-      router.push('/login');
+      navigate({ to: '/login' });
     }
   }
 

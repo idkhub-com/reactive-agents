@@ -1,13 +1,16 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { AgentCreateParams } from '@shared/types/data';
+import { sanitizeUserInput } from '@shared/utils/security';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import {
   Form,
   FormControl,
@@ -16,16 +19,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@client/components/ui/form';
-import { Input } from '@client/components/ui/input';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Textarea } from '@client/components/ui/textarea';
-import { useAgents } from '@client/providers/agents';
-import { zodResolver } from '@hookform/resolvers/zod';
-import type { AgentCreateParams } from '@shared/types/data';
-import { sanitizeUserInput } from '@shared/utils/security';
+} from '@web/components/ui/form';
+import { Input } from '@web/components/ui/input';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Textarea } from '@web/components/ui/textarea';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
 import { Bot, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -55,7 +55,7 @@ type CreateAgentFormData = z.infer<typeof CreateAgentFormSchema>;
 
 export function CreateAgentView(): React.ReactElement {
   const { createAgent, isCreating } = useAgents();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
 
   const form = useForm<CreateAgentFormData>({
     resolver: zodResolver(CreateAgentFormSchema),
@@ -79,7 +79,11 @@ export function CreateAgentView(): React.ReactElement {
       form.reset();
 
       // Navigate to the agent's skills page, replacing history to prevent back button going to create page
-      router.replace(`/agents/${encodeURIComponent(newAgent.name)}`);
+      navigate({
+        to: '/agents/$agentName',
+        params: { agentName: newAgent.name },
+        replace: true,
+      });
     } catch (error) {
       console.error('Error creating agent:', error);
       // Error is already handled by the agents provider
@@ -87,7 +91,7 @@ export function CreateAgentView(): React.ReactElement {
   };
 
   const handleBack = () => {
-    router.push('/agents');
+    navigate({ to: '/agents' });
   };
 
   return (

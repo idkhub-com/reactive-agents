@@ -1,12 +1,12 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
+import { Badge } from '@web/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSettingsValidation } from '@client/hooks/use-settings-validation';
+} from '@web/components/ui/tooltip';
+import { useSettingsValidation } from '@web/hooks/use-settings-validation';
 import { AlertCircle } from 'lucide-react';
 import type { ReactElement } from 'react';
 

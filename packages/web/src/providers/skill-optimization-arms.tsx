@@ -1,9 +1,9 @@
 'use client';
 
-import { getSkillArms } from '@client/api/v1/reactive-agents/skills';
-import { useNavigation } from '@client/providers/navigation';
 import type { SkillOptimizationArm } from '@shared/types/data/skill-optimization-arm';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getSkillArms } from '@web/api/v1/reactive-agents/skills';
+import { useNavigation } from '@web/providers/navigation';
 import type React from 'react';
 import {
   createContext,

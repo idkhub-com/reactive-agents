@@ -1,12 +1,5 @@
 'use client';
 
-import {
-  createAIProvider,
-  deleteAIProvider,
-  getAIProviderAPIKeys,
-  updateAIProvider,
-} from '@client/api/v1/reactive-agents/ai-providers';
-import { useToast } from '@client/hooks/use-toast';
 import type {
   AIProviderConfig,
   AIProviderConfigCreateParams,
@@ -14,6 +7,13 @@ import type {
   AIProviderConfigUpdateParams,
 } from '@shared/types/data/ai-provider';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  createAIProvider,
+  deleteAIProvider,
+  getAIProviderAPIKeys,
+  updateAIProvider,
+} from '@web/api/v1/reactive-agents/ai-providers';
+import { useToast } from '@web/hooks/use-toast';
 import type React from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
-import { Card, CardContent } from '@client/components/ui/card';
+import { Link } from '@tanstack/react-router';
+import { Button } from '@web/components/ui/button';
+import { Card, CardContent } from '@web/components/ui/card';
 import { AlertCircleIcon, RefreshCwIcon } from 'lucide-react';
-import Link from 'next/link';
 import type { ReactElement } from 'react';
 
 export interface ErrorWarningProps {
@@ -56,7 +56,7 @@ export function NoModelsWarning({
             <p className="font-medium">No models configured</p>
             <p className="text-sm text-muted-foreground">{message}</p>
             <Button asChild variant="outline" className="mt-2">
-              <Link href={createModelLink}>Add Your First Model</Link>
+              <Link to={createModelLink}>Add Your First Model</Link>
             </Button>
           </div>
         </div>

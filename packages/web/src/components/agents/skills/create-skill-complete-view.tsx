@@ -1,36 +1,36 @@
 'use client';
 
-import {
-  addModelsToSkill,
-  getEvaluationMethods,
-} from '@client/api/v1/reactive-agents/skills';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
-import { Label } from '@client/components/ui/label';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useToast } from '@client/hooks/use-toast';
-import { useAgents } from '@client/providers/agents';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import { useSkills } from '@client/providers/skills';
 import type { AIProvider } from '@shared/types/constants';
 import { PrettyAIProvider } from '@shared/types/constants';
 import type {
   EvaluationMethodDetails,
   EvaluationMethodName,
 } from '@shared/types/evaluations';
+import {
+  addModelsToSkill,
+  getEvaluationMethods,
+} from '@web/api/v1/reactive-agents/skills';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
+import { Label } from '@web/components/ui/label';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useToast } from '@web/hooks/use-toast';
+import { useAgents } from '@web/providers/agents';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
+import { useSkills } from '@web/providers/skills';
 import { CheckCircle2, Clock, CpuIcon, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 
@@ -46,7 +46,7 @@ export function CreateSkillCompleteView(): ReactElement {
   const { aiProviderConfigs: apiKeys, isLoading: isLoadingAPIKeys } =
     useAIProviders();
   const { models, isLoading: isLoadingModels, setQueryParams } = useModels();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { toast } = useToast();
 
   const [selectedModels, setSelectedModels] = useState<SelectedModel[]>([]);
@@ -176,9 +176,14 @@ export function CreateSkillCompleteView(): ReactElement {
 
       // Navigate to skill dashboard (replace to remove setup page from history)
       if (selectedAgent && selectedSkill) {
-        router.replace(
-          `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}`,
-        );
+        navigate({
+          to: '/agents/$agentName/skills/$skillName',
+          params: {
+            agentName: selectedAgent.name,
+            skillName: selectedSkill.name,
+          },
+          replace: true,
+        });
       }
     } catch (error) {
       console.error('Error completing setup:', error);
@@ -198,9 +203,14 @@ export function CreateSkillCompleteView(): ReactElement {
   const handleSkip = () => {
     // Navigate to skill dashboard without adding anything (replace to remove setup page from history)
     if (selectedAgent && selectedSkill) {
-      router.replace(
-        `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}`,
-      );
+      navigate({
+        to: '/agents/$agentName/skills/$skillName',
+        params: {
+          agentName: selectedAgent.name,
+          skillName: selectedSkill.name,
+        },
+        replace: true,
+      });
     }
   };
 
@@ -278,7 +288,7 @@ export function CreateSkillCompleteView(): ReactElement {
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => router.push('/ai-providers')}
+                    onClick={() => navigate({ to: '/ai-providers' })}
                   >
                     Go to AI Providers
                   </Button>

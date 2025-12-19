@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { cn } from '@web/utils/ui/utils';
 import * as React from 'react';
 
 const Dialog = DialogPrimitive.Root;

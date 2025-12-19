@@ -1,16 +1,20 @@
 'use client';
 
-import { AgentStatusIndicator } from '@client/components/agents/agent-status-indicator';
+import { botttsNeutral } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import { useLocation } from '@tanstack/react-router';
+import { AgentStatusIndicator } from '@web/components/agents/agent-status-indicator';
 import {
   AGENT_SHORTCUT_KEYS,
   MAX_AGENT_SHORTCUTS,
-} from '@client/components/agents/constants';
-import { AIProvidersStatusIndicator } from '@client/components/ai-providers/ai-providers-status-indicator';
-import { SettingsStatusIndicator } from '@client/components/settings/settings-status-indicator';
+} from '@web/components/agents/constants';
+import { AIProvidersStatusIndicator } from '@web/components/ai-providers/ai-providers-status-indicator';
+import { SettingsStatusIndicator } from '@web/components/settings/settings-status-indicator';
 import {
   Collapsible,
   CollapsibleContent,
-} from '@client/components/ui/collapsible';
+} from '@web/components/ui/collapsible';
+import { PermissiveLink as Link } from '@web/components/ui/permissive-link';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -20,49 +24,44 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from '@client/components/ui/sidebar';
+} from '@web/components/ui/sidebar';
 import {
   useKeyboardShortcuts,
   useModifierKey,
-} from '@client/hooks/use-keyboard-shortcuts';
-import { useAgents } from '@client/providers/agents';
-import type { NavigationSection } from '@client/types/ui/side-bar';
-import { botttsNeutral } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
+} from '@web/hooks/use-keyboard-shortcuts';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useAgents } from '@web/providers/agents';
+import type { NavigationSection } from '@web/types/ui/side-bar';
 import { BotIcon, ExternalLink, Plus } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import React from 'react';
 
 const createAgentAvatar = (agentName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(botttsNeutral, {
-      seed: agentName,
-      size: 20,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(botttsNeutral, {
+    seed: agentName,
+    size: 20,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 export function NavMain({
@@ -71,8 +70,9 @@ export function NavMain({
   sections: NavigationSection[];
 }): React.ReactElement {
   const { agents, selectedAgent, isLoading } = useAgents();
-  const router = useRouter();
-  const pathname = usePathname();
+  const navigate = usePermissiveNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
   const modifierKey = useModifierKey();
   const [isAgentsOpen, setIsAgentsOpen] = React.useState(true);
 
@@ -90,11 +90,11 @@ export function NavMain({
       if (keyNumber >= 1 && keyNumber <= agents.length) {
         const targetAgent = agents[keyNumber - 1];
         if (targetAgent) {
-          router.push(`/agents/${encodeURIComponent(targetAgent.name)}`);
+          navigate({ to: `/agents/${encodeURIComponent(targetAgent.name)}` });
         }
       }
     },
-    [agents, router],
+    [agents, navigate],
   );
 
   // Set up keyboard shortcuts for first MAX_AGENT_SHORTCUTS agents
@@ -117,8 +117,8 @@ export function NavMain({
               asChild
             >
               <Link
-                href="/agents"
-                onClick={(e) => {
+                to="/agents"
+                onClick={(e: React.MouseEvent) => {
                   // Only toggle collapse if we're already on /agents
                   if (pathname === '/agents') {
                     e.preventDefault();
@@ -139,7 +139,7 @@ export function NavMain({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        router.push('/agents/create');
+                        navigate({ to: '/agents/create' });
                       }}
                     >
                       <Plus className="size-4" />
@@ -159,7 +159,7 @@ export function NavMain({
                 ) : agents.length === 0 ? (
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild>
-                      <Link href="/agents/create">
+                      <Link to="/agents/create">
                         <Plus className="size-4" />
                         <span>Create your first agent</span>
                       </Link>
@@ -172,10 +172,8 @@ export function NavMain({
                         isActive={selectedAgent?.id === agent.id}
                         asChild
                       >
-                        <Link
-                          href={`/agents/${encodeURIComponent(agent.name)}`}
-                        >
-                          <Image
+                        <Link to={`/agents/${encodeURIComponent(agent.name)}`}>
+                          <img
                             src={createAgentAvatar(agent.name)}
                             alt={`${agent.name} avatar`}
                             width={16}
@@ -208,21 +206,28 @@ export function NavMain({
               isActive={isSectionActive(item)}
               asChild
             >
-              <Link
-                href={item.url}
-                target={item.external ? '_blank' : undefined}
-                rel={item.external ? 'noopener noreferrer' : undefined}
-                className="cursor-pointer"
-              >
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
-                {/* Show status indicators for nav items */}
-                {item.url === '/ai-providers' && <AIProvidersStatusIndicator />}
-                {item.url === '/settings' && <SettingsStatusIndicator />}
-                {item.external && (
+              {item.external ? (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cursor-pointer"
+                >
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
                   <ExternalLink className="ml-auto size-3 text-muted-foreground" />
-                )}
-              </Link>
+                </a>
+              ) : (
+                <Link to={item.url} className="cursor-pointer">
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
+                  {/* Show status indicators for nav items */}
+                  {item.url === '/ai-providers' && (
+                    <AIProvidersStatusIndicator />
+                  )}
+                  {item.url === '/settings' && <SettingsStatusIndicator />}
+                </Link>
+              )}
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}

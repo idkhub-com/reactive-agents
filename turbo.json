@@ -14,27 +14,14 @@
     "check:fix": {
       "cache": false
     },
-    "typecheck": {},
-
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**"]
     },
-    "cf-build": {
-      "dependsOn": ["^cf-build"],
-      "outputs": ["dist/**", "wrangler.jsonc"]
-    },
-    "preview": {
-      "dependsOn": ["cf-build", "^preview"],
-      "outputs": ["dist/**", "wrangler.jsonc"],
-      "cache": true
-    },
-    "deploy": {
-      "dependsOn": ["cf-build", "^deploy"],
-      "inputs": ["wrangler.jsonc"],
-      "cache": true
-    },
-    "check-types": {},
     "dev": {
       "cache": false,
       "persistent": true
@@ -42,7 +29,9 @@
     "clean": {
       "cache": false
     },
-    "cf-typegen": {
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
       "cache": false
     }
   }

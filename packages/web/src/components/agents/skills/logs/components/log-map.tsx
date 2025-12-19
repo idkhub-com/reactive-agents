@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
-import { useLogs } from '@client/providers/logs';
-import { cn } from '@client/utils/ui/utils';
 import { PrettyFunctionName } from '@shared/types/api/request';
 import type { Log } from '@shared/types/data';
+import { Button } from '@web/components/ui/button';
+import { useLogs } from '@web/providers/logs';
+import { cn } from '@web/utils/ui/utils';
 
 export function LogMap({ logs }: { logs: Log[] }): React.ReactElement {
   const { selectedLog } = useLogs();

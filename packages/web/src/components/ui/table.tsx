@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
+import { cn } from '@web/utils/ui/utils';
 import type * as React from 'react';
 
 function Table({

@@ -1,6 +1,6 @@
 'use client';
 
-import { ErrorBoundary } from '@client/components/error-boundary';
+import { ErrorBoundary } from '@web/components/error-boundary';
 import type { ReactElement, ReactNode } from 'react';
 import { AgentsProvider } from './agents';
 import { AIProvidersProvider } from './ai-providers';

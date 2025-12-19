@@ -1,31 +1,32 @@
 'use client';
 
-import { createModel } from '@client/api/v1/reactive-agents/models';
-import { Button } from '@client/components/ui/button';
+import { getKnownEmbeddingDimensions } from '@shared/constants/embedding-models';
+import type { AIProvider } from '@shared/types/constants';
+import { PrettyAIProvider } from '@shared/types/constants';
+import { createModel } from '@web/api/v1/reactive-agents/models';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Input } from '@client/components/ui/input';
-import { Label } from '@client/components/ui/label';
-import { ModelAutocompleteInput } from '@client/components/ui/model-autocomplete-input';
-import { PageHeader } from '@client/components/ui/page-header';
+} from '@web/components/ui/card';
+import { Input } from '@web/components/ui/input';
+import { Label } from '@web/components/ui/label';
+import { ModelAutocompleteInput } from '@web/components/ui/model-autocomplete-input';
+import { PageHeader } from '@web/components/ui/page-header';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@client/components/ui/select';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { getKnownEmbeddingDimensions } from '@shared/constants/embedding-models';
-import type { AIProvider } from '@shared/types/constants';
-import { PrettyAIProvider } from '@shared/types/constants';
+} from '@web/components/ui/select';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
 import {
   AlertCircle,
   CpuIcon,
@@ -34,7 +35,6 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 
@@ -55,7 +55,7 @@ interface ModelField {
 export function AddModelsView({
   providerId,
 }: AddModelsViewProps): ReactElement {
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { toast } = useToast();
   const { aiProviderConfigs: apiKeys } = useAIProviders();
   const { refetch } = useModels();
@@ -69,9 +69,9 @@ export function AddModelsView({
 
   useEffect(() => {
     if (!provider) {
-      router.push('/ai-providers');
+      navigate({ to: '/ai-providers' });
     }
-  }, [provider, router]);
+  }, [provider, navigate]);
 
   if (!provider) {
     return <div>Loading...</div>;
@@ -238,7 +238,7 @@ export function AddModelsView({
 
       // Navigate back to providers page with provider selected
       await refetch();
-      router.push(`/ai-providers?provider=${provider.id}`);
+      navigate({ to: '/ai-providers', search: { provider: provider.id } });
     } catch (error) {
       console.error('Error adding models:', error);
       toast({
@@ -255,7 +255,7 @@ export function AddModelsView({
   };
 
   const handleBack = () => {
-    router.back();
+    window.history.back();
   };
 
   return (

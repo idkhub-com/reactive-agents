@@ -1,12 +1,12 @@
-import { Badge } from '@client/components/ui/badge';
+import type { Agent } from '@shared/types/data';
+import { Badge } from '@web/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useAgentUnreadySkills } from '@client/hooks/use-agent-unready-skills';
-import { useAgentValidation } from '@client/hooks/use-agent-validation';
-import type { Agent } from '@shared/types/data';
+} from '@web/components/ui/tooltip';
+import { useAgentUnreadySkills } from '@web/hooks/use-agent-unready-skills';
+import { useAgentValidation } from '@web/hooks/use-agent-validation';
 import { AlertCircle } from 'lucide-react';
 import type { ReactElement } from 'react';
 

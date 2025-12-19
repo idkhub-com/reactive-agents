@@ -1,12 +1,12 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
+} from '@web/components/ui/card';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 

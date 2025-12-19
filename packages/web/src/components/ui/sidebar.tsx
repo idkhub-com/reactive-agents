@@ -1,24 +1,24 @@
 'use client';
 
-import { Button } from '@client/components/ui/button';
-import { Input } from '@client/components/ui/input';
-import { Separator } from '@client/components/ui/separator';
+import { Slot } from '@radix-ui/react-slot';
+import { Button } from '@web/components/ui/button';
+import { Input } from '@web/components/ui/input';
+import { Separator } from '@web/components/ui/separator';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@client/components/ui/sheet';
-import { Skeleton } from '@client/components/ui/skeleton';
+} from '@web/components/ui/sheet';
+import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSidebar } from '@client/providers/side-bar';
-import { cn } from '@client/utils/ui/utils';
-import { Slot } from '@radix-ui/react-slot';
+} from '@web/components/ui/tooltip';
+import { useSidebar } from '@web/providers/side-bar';
+import { cn } from '@web/utils/ui/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { PanelLeftIcon } from 'lucide-react';
 import * as React from 'react';

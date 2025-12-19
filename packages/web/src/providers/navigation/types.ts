@@ -1,4 +1,13 @@
-import type { useRouter } from 'next/navigation';
+// Permissive navigate type that allows any string path during migration
+// This can be tightened once all routes are created
+export type PermissiveNavigateOptions = {
+  to: string;
+  replace?: boolean;
+  search?: Record<string, string>;
+  params?: Record<string, string>;
+};
+
+export type NavigateFn = (opts: PermissiveNavigateOptions) => void;
 
 export interface BreadcrumbSegment {
   label: string;
@@ -50,7 +59,7 @@ export interface NavigationState {
 export interface NavigationContextType {
   navigationState: NavigationState;
   isLoadingFromStorage: boolean;
-  router: ReturnType<typeof useRouter>;
+  navigate: NavigateFn;
   setSection: (section: NavigationState['section']) => void;
   navigateToSkillDashboard: (agentName: string, skillName: string) => void;
   navigateToLogs: (agentName: string, skillName: string) => void;

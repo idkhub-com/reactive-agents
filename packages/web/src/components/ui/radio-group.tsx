@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
+import { cn } from '@web/utils/ui/utils';
 import { Circle } from 'lucide-react';
 import * as React from 'react';
 

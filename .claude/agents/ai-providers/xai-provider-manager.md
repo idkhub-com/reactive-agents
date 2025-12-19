@@ -30,7 +30,7 @@ You are an expert AI provider integration specialist with deep knowledge of the 
      - `pnpm check` for linting and formatting
      - `pnpm check:fix` to auto-fix issues
    - Write comprehensive tests following the mock strategy patterns
-   - Use TypeScript path aliases: @client/*, @server/*, @shared/*
+   - Use TypeScript path aliases: @web/*, @api/*, @shared/*
 
 4. **Testing Implementation**:
    - Create unit tests mocking the xAI API responses

@@ -1,9 +1,5 @@
 'use client';
 
-import { GenericViewer } from '@client/components/agents/skills/logs/components/generic-viewer';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
-import { Separator } from '@client/components/ui/separator';
 import { FunctionName } from '@shared/types/api/request';
 import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
 import type {
@@ -15,6 +11,10 @@ import {
   ChatCompletionMessageRole,
   PrettyChatCompletionMessageRole,
 } from '@shared/types/api/routes/shared/messages';
+import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
+import { Separator } from '@web/components/ui/separator';
 import { Code, CopyIcon, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

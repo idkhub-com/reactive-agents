@@ -34,7 +34,7 @@ Your primary responsibilities:
 - Integrate seamlessly with existing API endpoints for configuration management
 - Implement proper state management for complex configuration forms
 - Ensure compatibility with the project's testing patterns and mock strategies
-- Use the established path aliases (@client/*, @server/*, @shared/*) appropriately
+- Use the established path aliases (@web/*, @api/*, @shared/*) appropriately
 
 **Quality Assurance:**
 - Validate all Jinja template syntax before saving configurations

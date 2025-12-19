@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { useCallback } from 'react';
 
 /**
@@ -8,20 +8,21 @@ import { useCallback } from 'react';
  */
 export function useSmartBack() {
   const router = useRouter();
+  const navigate = useNavigate();
 
   return useCallback(
     (fallbackUrl?: string) => {
       // Check if we can go back in browser history
       if (typeof window !== 'undefined' && window.history.length > 1) {
-        router.back();
+        router.history.back();
       } else if (fallbackUrl) {
         // Fallback to provided URL
-        router.push(fallbackUrl);
+        navigate({ to: fallbackUrl });
       } else {
         // Ultimate fallback to agents
-        router.push('/agents');
+        navigate({ to: '/agents' });
       }
     },
-    [router],
+    [router, navigate],
   );
 }

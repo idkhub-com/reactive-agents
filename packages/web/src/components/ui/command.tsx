@@ -1,8 +1,8 @@
 'use client';
 
-import { Dialog, DialogContent } from '@client/components/ui/dialog';
-import { cn } from '@client/utils/ui/utils';
 import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { Dialog, DialogContent } from '@web/components/ui/dialog';
+import { cn } from '@web/utils/ui/utils';
 import { Command as CommandPrimitive } from 'cmdk';
 import type { ReactNode } from 'react';
 import * as React from 'react';

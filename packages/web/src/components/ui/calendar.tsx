@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@client/utils/ui/utils';
+import { cn } from '@web/utils/ui/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DayPicker, type DayPickerProps } from 'react-day-picker';
 import { buttonVariants } from './button';

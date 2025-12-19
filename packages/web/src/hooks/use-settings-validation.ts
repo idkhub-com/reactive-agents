@@ -1,7 +1,7 @@
 'use client';
 
-import { useModels } from '@client/providers/models';
-import { useSystemSettings } from '@client/providers/system-settings';
+import { useModels } from '@web/providers/models';
+import { useSystemSettings } from '@web/providers/system-settings';
 import { useEffect, useMemo } from 'react';
 
 interface SettingsValidationResult {

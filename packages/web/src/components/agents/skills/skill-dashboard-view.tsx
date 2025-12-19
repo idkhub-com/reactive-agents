@@ -1,57 +1,58 @@
 'use client';
 
-import { getSkillEvaluationScoresByTimeBucket } from '@client/api/v1/reactive-agents/skills';
-import { ManageSkillModelsDialog } from '@client/components/agents/skills/manage-skill-models-dialog';
-import { SkillStatusIndicator } from '@client/components/agents/skills/skill-status-indicator';
-import { SkillWarmingUpIndicator } from '@client/components/agents/skills/skill-warming-up-indicator';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import { shapes } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import { PrettyFunctionName } from '@shared/types/api/request/function-name';
+import { useQuery } from '@tanstack/react-query';
+import {
+  getSkillEvaluationScoresByTimeBucket,
+  resetSkill,
+} from '@web/api/v1/reactive-agents/skills';
+import { ManageSkillModelsDialog } from '@web/components/agents/skills/manage-skill-models-dialog';
+import { SkillStatusIndicator } from '@web/components/agents/skills/skill-status-indicator';
+import { SkillWarmingUpIndicator } from '@web/components/agents/skills/skill-warming-up-indicator';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { DateTimePicker } from '@client/components/ui/date-time-picker';
+} from '@web/components/ui/card';
+import { DateTimePicker } from '@web/components/ui/date-time-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@client/components/ui/dropdown-menu';
-import { PageHeader } from '@client/components/ui/page-header';
-import { Skeleton } from '@client/components/ui/skeleton';
+} from '@web/components/ui/dropdown-menu';
+import { PageHeader } from '@web/components/ui/page-header';
+import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Table,
   TableBody,
   TableCell,
   TableRow,
-} from '@client/components/ui/table';
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@client/components/ui/toggle-group';
+} from '@web/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@web/components/ui/toggle-group';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { eventLabels } from '@client/constants';
-import { useSkillValidation } from '@client/hooks/use-skill-validation';
-import { useToast } from '@client/hooks/use-toast';
-import { useAgents } from '@client/providers/agents';
-import { useLogs } from '@client/providers/logs';
-import { useModels } from '@client/providers/models';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillEvents } from '@client/providers/skill-events';
-import { useSkillOptimizationClusters } from '@client/providers/skill-optimization-clusters';
-import { useSkills } from '@client/providers/skills';
-import { shapes } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
-import { PrettyFunctionName } from '@shared/types/api/request/function-name';
-import { useQuery } from '@tanstack/react-query';
+} from '@web/components/ui/tooltip';
+import { eventLabels } from '@web/constants';
+import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
+import { useSkillValidation } from '@web/hooks/use-skill-validation';
+import { useToast } from '@web/hooks/use-toast';
+import { useAgents } from '@web/providers/agents';
+import { useLogs } from '@web/providers/logs';
+import { useModels } from '@web/providers/models';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillEvents } from '@web/providers/skill-events';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
+import { useSkills } from '@web/providers/skills';
 import {
   AlertCircle,
   CalendarIcon,
@@ -67,8 +68,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { ClusterPerformanceChart } from './clusters/cluster-performance-chart';
@@ -81,38 +80,37 @@ import { SkillPerformanceChart } from './skill-performance-chart';
 // ============================================================================
 
 const createSkillAvatar = (skillName: string) => {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    createAvatar(shapes, {
-      seed: skillName,
-      size: 24,
-      backgroundColor: [
-        '00acc1',
-        '039be5',
-        '1e88e5',
-        '43a047',
-        '546e7a',
-        '5e35b1',
-        '6d4c41',
-        '757575',
-        '7cb342',
-        '8e24aa',
-        'c0ca33',
-        'd81b60',
-        'e53935',
-        'f4511e',
-        'fb8c00',
-        'fdd835',
-        'ffb300',
-        '00897b',
-        '3949ab',
-      ],
-    }).toString(),
-  ).toString('base64')}`;
+  const svg = createAvatar(shapes, {
+    seed: skillName,
+    size: 24,
+    backgroundColor: [
+      '00acc1',
+      '039be5',
+      '1e88e5',
+      '43a047',
+      '546e7a',
+      '5e35b1',
+      '6d4c41',
+      '757575',
+      '7cb342',
+      '8e24aa',
+      'c0ca33',
+      'd81b60',
+      'e53935',
+      'f4511e',
+      'fb8c00',
+      'fdd835',
+      'ffb300',
+      '00897b',
+      '3949ab',
+    ],
+  }).toString();
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 export function SkillDashboardView(): ReactElement {
   const { navigateToLogs, navigateToClusterArms } = useNavigation();
-  const router = useRouter();
+  const navigate = usePermissiveNavigate();
   const { toast } = useToast();
   const { navigateToEvaluations } = useNavigation();
 
@@ -289,7 +287,10 @@ export function SkillDashboardView(): ReactElement {
   const handleDeleteSkill = async () => {
     if (!selectedSkill || !selectedAgent) return;
     await deleteSkill(selectedSkill.id);
-    router.push(`/agents/${encodeURIComponent(selectedAgent.name)}`);
+    navigate({
+      to: '/agents/$agentName',
+      params: { agentName: selectedAgent.name },
+    });
   };
 
   const handleResetSkill = async (clearObservabilityCount: boolean) => {
@@ -297,9 +298,6 @@ export function SkillDashboardView(): ReactElement {
 
     setIsResettingSkill(true);
     try {
-      const { resetSkill } = await import(
-        '@client/api/v1/reactive-agents/skills'
-      );
       await resetSkill(selectedSkill.id, clearObservabilityCount);
       await refetchSkills();
       toast({
@@ -341,7 +339,7 @@ export function SkillDashboardView(): ReactElement {
       <PageHeader
         title={
           <div className="flex items-center gap-2">
-            <Image
+            <img
               src={createSkillAvatar(selectedSkill.name)}
               alt={`${selectedSkill.name} icon`}
               width={20}
@@ -392,9 +390,13 @@ export function SkillDashboardView(): ReactElement {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() =>
-                    router.push(
-                      `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}/edit`,
-                    )
+                    navigate({
+                      to: '/agents/$agentName/skills/$skillName/edit',
+                      params: {
+                        agentName: selectedAgent.name,
+                        skillName: selectedSkill.name,
+                      },
+                    })
                   }
                 >
                   <Edit className="h-4 w-4 mr-2" />
@@ -761,9 +763,13 @@ export function SkillDashboardView(): ReactElement {
           <Card
             className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
             onClick={() =>
-              router.push(
-                `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}/events`,
-              )
+              navigate({
+                to: '/agents/$agentName/skills/$skillName/events',
+                params: {
+                  agentName: selectedAgent.name,
+                  skillName: selectedSkill.name,
+                },
+              })
             }
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

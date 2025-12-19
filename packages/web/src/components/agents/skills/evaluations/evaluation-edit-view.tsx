@@ -1,16 +1,18 @@
 'use client';
 
-import { getEvaluationMethods } from '@client/api/v1/reactive-agents/skills';
-import { Badge } from '@client/components/ui/badge';
-import { Button } from '@client/components/ui/button';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { EvaluationMethodDetails } from '@shared/types/evaluations';
+import { getEvaluationMethods } from '@web/api/v1/reactive-agents/skills';
+import { Badge } from '@web/components/ui/badge';
+import { Button } from '@web/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Checkbox } from '@client/components/ui/checkbox';
+} from '@web/components/ui/card';
+import { Checkbox } from '@web/components/ui/checkbox';
 import {
   Command,
   CommandEmpty,
@@ -18,33 +20,31 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@client/components/ui/command';
-import { Input } from '@client/components/ui/input';
-import { Label } from '@client/components/ui/label';
-import { PageHeader } from '@client/components/ui/page-header';
+} from '@web/components/ui/command';
+import { Input } from '@web/components/ui/input';
+import { Label } from '@web/components/ui/label';
+import { PageHeader } from '@web/components/ui/page-header';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@client/components/ui/popover';
-import { Skeleton } from '@client/components/ui/skeleton';
+} from '@web/components/ui/popover';
+import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@client/components/ui/tooltip';
-import { useSmartBack } from '@client/hooks/use-smart-back';
-import { useToast } from '@client/hooks/use-toast';
-import { useAIProviders } from '@client/providers/ai-providers';
-import { useModels } from '@client/providers/models';
-import { useNavigation } from '@client/providers/navigation';
-import { useSkillOptimizationEvaluations } from '@client/providers/skill-optimization-evaluations';
-import { useSkills } from '@client/providers/skills';
-import { sortModels } from '@client/utils/model-sorting';
-import { cn } from '@client/utils/ui/utils';
-import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import type { EvaluationMethodDetails } from '@shared/types/evaluations';
+} from '@web/components/ui/tooltip';
+import { useSmartBack } from '@web/hooks/use-smart-back';
+import { useToast } from '@web/hooks/use-toast';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { useNavigation } from '@web/providers/navigation';
+import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
+import { useSkills } from '@web/providers/skills';
+import { sortModels } from '@web/utils/model-sorting';
+import { cn } from '@web/utils/ui/utils';
 import {
   CheckIcon,
   ChevronsUpDownIcon,

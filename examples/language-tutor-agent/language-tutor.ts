@@ -60,7 +60,7 @@ function validateConfiguration(): {
   authToken: string;
   openaiApiKey: string;
 } {
-  const raUrl = process.env.RA_URL || 'http://localhost:8787';
+  const raUrl = process.env.RA_URL || 'http://localhost:3000';
   const authToken = process.env.RA_AUTH_TOKEN || 'reactive-agents';
   const openaiApiKey = process.env.OPENAI_API_KEY;
 

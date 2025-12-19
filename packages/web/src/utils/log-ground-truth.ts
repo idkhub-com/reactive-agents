@@ -1,6 +1,6 @@
-import { getImprovedResponseByLogId } from '@client/api/v1/reactive-agents/improved-responses';
 import type { ImprovedResponse } from '@shared/types/data/improved-response';
 import type { Log } from '@shared/types/data/log';
+import { getImprovedResponseByLogId } from '@web/api/v1/reactive-agents/improved-responses';
 
 /**
  * Determines if a log has ground truth based on improved responses

@@ -1,16 +1,16 @@
 'use client';
 
-import { Badge } from '@client/components/ui/badge';
+import { SkillEventType } from '@shared/types/data/skill-event';
+import { Badge } from '@web/components/ui/badge';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@client/components/ui/card';
-import { Skeleton } from '@client/components/ui/skeleton';
-import { useSkillEvents } from '@client/providers/skill-events';
-import { SkillEventType } from '@shared/types/data/skill-event';
+} from '@web/components/ui/card';
+import { Skeleton } from '@web/components/ui/skeleton';
+import { useSkillEvents } from '@web/providers/skill-events';
 import {
   CalendarIcon,
   CheckCircle2Icon,
