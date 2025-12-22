@@ -43,7 +43,7 @@
     "@tanstack/react-query-devtools": "^5.91.1",
     "@tanstack/react-router": "^1.141.2",
     "@tiptap/core": "^3.4.2",
-    "@tiptap/extension-color": "^3.4.2",
+    "@tiptap/extension-color": "^3.14.0",
     "@tiptap/extension-highlight": "^3.4.2",
     "@tiptap/extension-horizontal-rule": "^3.4.2",
     "@tiptap/extension-task-item": "^3.4.2",
