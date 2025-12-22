@@ -7,8 +7,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    setupFiles: ['./vitest.setup.tsx'],
+    include: ['packages/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -22,14 +22,16 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
-    deps: {
-      inline: ['lodash'],
+    server: {
+      deps: {
+        inline: ['@tanstack/react-router'],
+      },
     },
     alias: {
       '@': path.resolve(__dirname),
-      '@client': path.resolve(__dirname, 'lib/client'),
-      '@server': path.resolve(__dirname, 'lib/server'),
-      '@shared': path.resolve(__dirname, 'lib/shared'),
+      '@web': path.resolve(__dirname, 'packages/web/src'),
+      '@api': path.resolve(__dirname, 'packages/api/src'),
+      '@shared': path.resolve(__dirname, 'packages/shared/src'),
     },
   },
 });

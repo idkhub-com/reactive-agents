@@ -4,24 +4,45 @@ This file provides guidance to AI assistants when working with code in this repo
 
 ## Project Structure & Module Organization
 
-This is a **Next.js/TypeScript application** with a clean three-layer architecture:
+This is a **TypeScript monorepo** using pnpm workspaces with three packages:
 
-- **`app/`**: Next.js routes (RSC), layouts, page entries
-- **`lib/`**: Shared code organized by layer:
-  - `lib/client/` - React components, API clients, hooks, UI utilities
-  - `lib/server/` - Hono-based API, AI provider integrations, middleware, database connectors
-  - `lib/shared/` - Shared types, Zod schemas, utilities
-- **`tests/`**: Vitest suites mirroring app/lib (client, server, shared)
-- **`public/`**: Static assets
-- **`docs/`**, **`examples/`**, **`scripts/`**: Documentation and utilities
+```
+packages/
+├── web/           # Vite + TanStack Router SPA (React 19)
+│   └── src/
+│       ├── routes/        # TanStack Router file-based routes
+│       ├── components/    # React components
+│       ├── providers/     # React context providers
+│       ├── hooks/         # Custom React hooks
+│       └── api/           # API client functions
+├── api/           # Hono API server (Node.js)
+│   └── src/
+│       ├── api/           # API routes
+│       ├── ai-providers/  # AI provider integrations (40+)
+│       ├── connectors/    # Database connectors
+│       └── middlewares/   # Hono middlewares
+└── shared/        # Shared types, Zod schemas, utilities
+    └── src/
+        ├── types/         # TypeScript types
+        └── utils/         # Shared utilities
+```
+
+Other directories:
+- **`tests/`**: Vitest suites mirroring packages (client, server, shared)
+- **`examples/`**: Example implementations
 - **`supabase/`**: Local dev DB config, migrations, `seed.sql`
-- **Key aliases**: `@client`, `@server`, `@shared`
+- **`docker/`**: Docker configuration files
+
+**Key path aliases**:
+- `@web/*` - Web package (`packages/web/src/*`)
+- `@api/*` or `@server/*` - API package (`packages/api/src/*`)
+- `@shared/*` - Shared package (`packages/shared/src/*`)
 
 ## Essential Commands
 
 **You must run these commands after modifying any file to ensure code quality:**
 ```bash
-pnpm typecheck  # TypeScript type checking - REQUIRED
+pnpm typecheck  # TypeScript type checking (uses Turborepo) - REQUIRED
 pnpm check      # Biome linting and formatting - REQUIRED
 pnpm check:fix  # Auto-fix linting and formatting issues
 ```
@@ -35,8 +56,10 @@ pnpm install
 supabase start  # Start local Supabase database
 supabase stop   # Stop local database
 
-# Development server
-pnpm dev        # Start development server (Next.js + Turbopack, auto-restarts on changes)
+# Development server (runs both web and API via Turborepo)
+pnpm dev        # Start all dev servers in parallel
+pnpm dev:web    # Start only web dev server (Vite on port 3000)
+pnpm dev:api    # Start only API dev server (Hono on port 8787)
 
 # Testing
 pnpm test                      # Run all tests (excludes in-depth integration tests)
@@ -45,39 +68,65 @@ pnpm test:watch                # Run tests in watch mode
 
 # In-depth integration tests (slower, more comprehensive)
 INCLUDE_IN_DEPTH=true pnpm test
-INCLUDE_IN_DEPTH=true pnpm test tests/server/connectors/in-depth/tool-correctness/integration-test.test.ts
 
-# Build and production
-pnpm build      # Build for production
-pnpm start      # Serve production build
+# Build (uses Turborepo with caching)
+pnpm build      # Build all packages
+pnpm build:web  # Build only web package
+pnpm build:api  # Build only API package
 
 # Code quality
 pnpm lint       # Run linter
 pnpm format     # Check formatting
 pnpm format:fix # Auto-fix formatting
 
-# Cloudflare deployment (OpenNext)
-pnpm cf-build   # Build for Cloudflare
-pnpm preview    # Preview Cloudflare build
-pnpm deploy     # Deploy to Cloudflare
-pnpm cf-typegen # Regenerate Cloudflare types when env changes
-
-# API testing
+# API testing (all requests go through port 3000, proxied to API)
 curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer reactive-agents"
 ```
 
-## API Structure (Hono-based)
+## Architecture
 
-The application uses **Hono** web framework with TypeScript path aliases:
-- Main API entry: `/app/v1/[[...route]]/route.ts`
-- Server routes: `/lib/server/api/v1/`
-- Client API calls: `/lib/client/api/v1/`
+### Web Application (packages/web)
+- **Framework**: Vite + TanStack Router (SPA mode)
+- **Routing**: File-based routing in `src/routes/`
+  - `_main.tsx` - Layout wrapper with sidebar
+  - `$paramName` - Dynamic route parameters
+  - `.index.tsx` - Index routes for parent paths
+- **Auto-generated**: `routeTree.gen.ts` (do not edit, in .gitignore)
+
+### API Server (packages/api)
+- **Framework**: Hono web framework
+- **Entry**: `src/server.ts` (Node.js) or `src/index.ts` (Cloudflare Workers)
+- **Routes**: `src/api/v1/`
+
+### Request Flow
+```
+Browser (port 3000) → Vite/nginx proxy → API (port 8787)
+                           ↓
+                    /v1/* requests proxied
+```
+
+In development, Vite proxies `/v1/*` requests to the API server.
+In Docker, nginx handles the proxying.
+
+## API Structure (Hono-based)
 
 Key API endpoints:
 - `/v1/chat/completions` - OpenAI-compatible chat API
 - `/v1/reactive-agents/agents` - Agent management
 - `/v1/reactive-agents/evaluations` - Dataset and evaluation management
 - `/v1/reactive-agents/observability/logs` - Request logging
+
+**Hono Syntax**: Always use chained method syntax for proper type inference:
+```typescript
+// Use this pattern:
+const app = new Hono<AppEnv>().get().post().fetch();
+
+// Instead of:
+const app = new Hono<AppEnv>();
+app.get();
+app.post();
+app.fetch();
+```
 
 ## Database Integration (Supabase)
 
@@ -99,33 +148,20 @@ Database management:
 
 ## Coding Style & Naming Conventions
 
-- **Language**: TypeScript, React 19, Next.js 15
+- **Language**: TypeScript, React 19, Vite, TanStack Router
 - **Formatting via Biome**: 2-space indent, LF, single quotes, semicolons, import organize
   - Auto-fix: `pnpm check:fix` or `pnpm format:fix`
 - **Files**: kebab-case for filenames (e.g., `add-logs-dialog.tsx`)
-- **Components**: PascalCase exports; colocate simple hooks/utils with feature or place in `lib/*`
-- **Paths**: prefer `@client`, `@server`, `@shared` over long relative paths
-
-**Hono Syntax**: Always use chained method syntax for proper type inference:
-```typescript
-// Use this pattern:
-const app = new Hono<AppEnv>().get().post().fetch();
-
-// Instead of:
-const app = new Hono<AppEnv>();
-app.get();
-app.post();
-app.fetch();
-```
+- **Components**: PascalCase exports
+- **Paths**: prefer `@web`, `@api`, `@shared` over long relative paths
 
 ## Testing Guidelines
 
 **Framework**: Vitest (jsdom) + Testing Library
-- **Location**: under `tests/` mirroring source paths (e.g., `tests/server/api/v1/reactive-agents/agents.test.ts`)
-- **Naming**: `*.test.ts` or `*.test.tsx`; use `*.spec.*` if useful
+- **Location**: under `tests/` mirroring source paths
+- **Naming**: `*.test.ts` or `*.test.tsx`
 - **Run**: `pnpm test` (CI mode) or `pnpm test:watch` (dev)
-- **Coverage**: Reports generated in text/json/html; keep meaningful coverage for changed code
-- **Integration tests**: Use `INCLUDE_IN_DEPTH=true pnpm test` for comprehensive testing
+- **Coverage**: Reports generated in text/json/html
 
 ### Testing Patterns
 
@@ -140,9 +176,9 @@ const mockUserDataStorageConnector: unknown = {
 };
 ```
 
-**Client API Tests**: Mock the entire API module to control HTTP responses:
+**Client API Tests**: Mock the entire API module:
 ```typescript
-vi.mock('@client/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/reactive-agents/agents', () => ({
   getAgents: vi.fn().mockImplementation(async (params) => {
     const response = await mockGet({ query: params });
     if (!response.ok) throw new Error('Failed to fetch agents');
@@ -171,13 +207,29 @@ The application supports 40+ AI providers through a unified interface. Each prov
 - `embed` - Embeddings
 - `image-generate` - Image generation
 
-Provider implementations are in `/lib/server/ai-providers/[provider]/`.
+Provider implementations are in `packages/api/src/ai-providers/[provider]/`.
 
 ## Authentication
 
-Dual authentication system:
-- **Client**: Next.js middleware with JWT cookies for dashboard access
 - **API**: Hono middleware with Bearer token validation (`Authorization: Bearer reactive-agents`)
+- **Dashboard**: Client-side authentication (when ACCESS_PASSWORD is set)
+
+## Docker Deployment
+
+```bash
+docker compose up  # Start all services
+```
+
+Services:
+- **postgres**: PostgreSQL database
+- **postgrest**: PostgREST API for database access
+- **api**: Hono API server (port 8787 internal)
+- **web**: nginx serving Vite SPA (port 3000, proxies /v1/* to api)
+
+The web container uses nginx to:
+1. Serve static files from the Vite build
+2. Proxy `/v1/*` requests to the API container
+3. Handle SPA routing (fallback to index.html)
 
 ## Agent Validation & Readiness
 
@@ -185,17 +237,9 @@ Dual authentication system:
 - **Skill Requirements**: All skills must meet the following to be considered "ready":
   - At least one model must be configured
   - If optimization is enabled, at least one evaluation must be configured
-- **UI Indicators**:
-  - Agents/skills without requirements display an orange indicator icon or badge
-  - Detail views show warning banners for incomplete agents/skills
-  - Popover tooltips explain what requirements are missing
 - **Validation Logic**:
-  - Agent validation: `lib/shared/utils/agent-validation.ts` and `lib/client/hooks/use-agent-validation.ts`
-  - Skill validation: `lib/shared/utils/skill-validation.ts` and `lib/client/hooks/use-skill-validation.ts`
-- **Reusable Components**:
-  - `AgentStatusIndicator` (`lib/client/components/agents/agent-status-indicator.tsx`)
-  - `SkillStatusIndicator` (`lib/client/components/agents/skills/skill-status-indicator.tsx`)
-- **User Experience**: Guide users to add required components when viewing incomplete agents/skills
+  - Agent validation: `packages/shared/src/utils/agent-validation.ts`
+  - Skill validation: `packages/shared/src/utils/skill-validation.ts`
 
 ## Skill Optimization System
 
@@ -206,42 +250,19 @@ System prompts evolve through two distinct phases:
 1. **Early Regeneration (after 5 skill requests)**:
    - Triggered once per skill when `evaluations_regenerated_at` is undefined
    - Regenerates evaluations with real examples from the first 5 requests
-   - Generates new system prompts for ALL arms using `generateSeedSystemPromptWithContext()`
-   - Includes actual JSON schemas from `response_format` and real example conversations
-   - Deletes all existing arms and recreates with new prompts and reset stats
-   - Resets all cluster `total_steps` to 0 (complete reset - all arms are brand new)
-   - Sets `skill.metadata.evaluations_regenerated_at` to mark completion
+   - Generates new system prompts for ALL arms
+   - Resets all cluster `total_steps` to 0
 
 2. **Reflection-based Regeneration (ongoing per cluster)**:
    - Triggered when all arms in a cluster meet the minimum request threshold
-   - Uses `generateReflectiveSystemPromptForSkill()` to improve the best-performing prompt
-   - Provides contrastive examples for targeted improvement:
-     - High-scoring logs from the cluster (what's working well)
-     - Low-scoring logs from the cluster (what needs improvement)
-     - AI instructed to maintain strengths while fixing weaknesses
-   - Updates arms according to conservative algorithm:
-     - **Best arm**: Kept completely intact (config + stats unchanged)
-     - **Worst arm**: Gets best arm's config + new prompt (stats reset)
-     - **Middle arms**: Get new prompt only (stats reset)
-   - Resets cluster `total_steps` to best arm's `n` (only valid historical data)
-   - Per-cluster process: each cluster evolves independently
-
-### Key Design Decisions
-
-- **Skill-level early regeneration**: All clusters regenerate together after 5 skill requests (not per-cluster)
-- **Conservative reflection**: Best arm is never modified, guaranteeing performance never degrades
-- **In-place updates**: Arms are updated rather than deleted/recreated during reflection
-- **Stats comparability**: When system prompts change, affected arm stats reset to 0 to ensure fair comparison
-- **Cluster state handling**:
-  - **Early regeneration**: `total_steps` reset to 0 (all arms deleted/recreated, no historical data)
-  - **Ongoing reflection**: `total_steps` set to best arm's `n` (only valid historical data after other arms reset)
-- **Description changes**: Updating a skill's description resets `evaluations_regenerated_at` to trigger early regeneration again
+   - Uses contrastive examples (high-scoring vs low-scoring logs)
+   - Conservative algorithm: best arm never modified
 
 ### Internal Skills
 
 The system uses special auto-generated skills in the `reactive-agents` agent (defined in `RA_SKILLS` constant):
-- `system-prompt-seeding`: Initial prompt generation without context
-- `system-prompt-seeding-with-context`: Context-aware generation with examples and schemas
+- `system-prompt-seeding`: Initial prompt generation
+- `system-prompt-seeding-with-context`: Context-aware generation
 - `system-prompt-reflection`: Reflection-based improvements
 - `create-evaluations`: Evaluation method generation
 - `judge`: Evaluation scoring
@@ -250,22 +271,25 @@ The system uses special auto-generated skills in the `reactive-agents` agent (de
 
 ## Development Workflow
 
-1. Files auto-save and restart the development server
-2. **Always run `pnpm typecheck` and `pnpm check` after changes**
-3. Write comprehensive tests covering success/error status codes
-4. Use TypeScript path aliases: `@client/*`, `@server/*`, `@shared/*`
-5. Follow the connector pattern for external service integration
+1. Run `pnpm dev` to start both web and API servers
+2. Web app available at `http://localhost:3000`
+3. API requests are proxied through port 3000
+4. **Always run `pnpm typecheck` and `pnpm check` after changes**
+5. Use TypeScript path aliases: `@web/*`, `@api/*`, `@shared/*`
 
 ## Commit & Pull Request Guidelines
 
 - **Conventional Commits required**. Examples:
   - `feat(server): add feedback endpoint`
-  - `fix(client): handle empty dataset state`
+  - `fix(web): handle empty dataset state`
 - **Before pushing**: `pnpm typecheck && pnpm check && pnpm test`
-- **PRs include**: problem/solution summary, linked issues, screenshots for UI, test notes, and any schema/migration callouts
+- **PRs include**: problem/solution summary, linked issues, screenshots for UI, test notes
 
 ## Security & Configuration
 
 - **Secrets**: Never commit secrets; use `.env` for local development
-- **Environment changes**: Regenerate Cloudflare types with `pnpm cf-typegen` when env changes
-- **Middleware and API changes**: Include server/client tests and docs updates in `docs/` when relevant
+- **Environment variables**:
+  - `API_URL` - API server URL (server-side)
+  - `BEARER_TOKEN` - API authentication token
+  - `ACCESS_PASSWORD` - Dashboard password (optional)
+  - `JWT_SECRET` - JWT signing secret

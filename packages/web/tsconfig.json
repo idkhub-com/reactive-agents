@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "paths": {
+      "@web/*": ["./src/*"],
+      "@shared/*": ["../shared/src/*"],
+      "@api/*": ["../api/src/*"],
+      "@/*": ["../../*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "src/routeTree.gen.ts"],
+  "exclude": ["node_modules", ".vinxi", "dist"]
+}

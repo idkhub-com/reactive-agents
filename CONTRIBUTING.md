@@ -4,13 +4,35 @@ Thank you for your interest in improving **Reactive Agents**!
 
 ## Project Structure
 
-- `app/`: Next.js routes (RSC), layouts, page entries
-- `lib/`: Shared code organized into `lib/client/`, `lib/server/`, `lib/shared/`
-- `tests/`: Vitest suites mirroring app/lib (client, server, shared)
-- `public/`: Static assets
-- `docs/`, `examples/`, `scripts/`: Documentation and utilities
+This is a TypeScript monorepo using pnpm workspaces with three packages:
+
+```
+packages/
+├── api/           # Hono API server (Node.js)
+│   └── src/
+│       ├── ai-providers/  # AI provider integrations (40+)
+│       ├── connectors/    # Database connectors
+│       ├── middlewares/   # Hono middlewares
+│       └── v1/            # API routes
+├── shared/        # Shared types, Zod schemas, utilities
+│   └── src/
+│       ├── types/         # TypeScript types
+│       └── utils/         # Shared utilities
+└── web/           # Vite + TanStack Router SPA (React 19)
+    └── src/
+        ├── api/           # API client functions
+        ├── components/    # React components
+        ├── hooks/         # Custom React hooks
+        ├── providers/     # React context providers
+        └── routes/        # TanStack Router file-based routes
+```
+
+Other directories:
+- `examples/`: Example implementations
 - `supabase/`: Local dev DB config, migrations, `seed.sql`
-- Path aliases: Use `@client`, `@server`, `@shared` for imports
+- `docker/`: Docker configuration files
+
+**Path aliases:** Use `@web/*`, `@api/*`, `@shared/*` for imports.
 
 ## Setup
 
@@ -32,9 +54,13 @@ Thank you for your interest in improving **Reactive Agents**!
 
 **Build & Run:**
 ```sh
-pnpm build          # Build for production
+pnpm build          # Build all packages (uses Turborepo)
+pnpm build:web      # Build only web package
+pnpm build:api      # Build only API package
+pnpm dev            # Start all dev servers in parallel
+pnpm dev:web        # Start only web dev server (Vite on port 3000)
+pnpm dev:api        # Start only API dev server (Hono on port 8787)
 pnpm start          # Serve production build
-pnpm dev            # Start dev server (Next.js + Turbopack)
 ```
 
 **Code Quality:**
@@ -44,7 +70,7 @@ pnpm check:fix      # Auto-fix linting and formatting issues
 pnpm lint           # Run linter
 pnpm format         # Check code formatting
 pnpm format:fix     # Auto-fix formatting
-pnpm typecheck      # TypeScript type checking
+pnpm typecheck      # TypeScript type checking (uses Turborepo)
 ```
 
 **Testing:**
@@ -52,13 +78,6 @@ pnpm typecheck      # TypeScript type checking
 pnpm test           # Run all tests (CI mode)
 pnpm test:watch     # Run tests in watch mode
 pnpm test path/to/test.ts  # Run specific test file
-```
-
-**Cloudflare (OpenNext):**
-```sh
-pnpm cf-build       # Build for Cloudflare
-pnpm preview        # Preview Cloudflare build
-pnpm deploy         # Deploy to Cloudflare
 ```
 
 **Database:**
@@ -70,24 +89,25 @@ supabase stop       # Stop local Supabase
 ## Coding Style & Conventions
 
 **Language & Framework:**
-- TypeScript, React 19, Next.js 15
+- TypeScript, React 19, Vite, TanStack Router
 - 2-space indent, LF line endings, single quotes, semicolons
 - Biome handles formatting and import organization
 
 **File Naming:**
 - Use kebab-case for filenames (e.g., `add-logs-dialog.tsx`)
 - Components: PascalCase exports
-- Tests: `*.test.ts` or `*.test.tsx` (use `*.spec.*` if preferred)
+- Tests: `*.test.ts` or `*.test.tsx`, colocated with source files
 
 **Module Organization:**
-- Prefer path aliases (`@client`, `@server`, `@shared`) over relative imports
-- Colocate simple hooks/utils with features or place in `lib/*`
+- Prefer path aliases (`@web/*`, `@api/*`, `@shared/*`) over relative imports
+- Colocate simple hooks/utils with features
 
 ## Testing Guidelines
 
 - **Framework:** Vitest (jsdom) + Testing Library
-- **Location:** Under `tests/` mirroring source paths
-  - Example: `tests/server/api/v1/reactive-agents/agents.test.ts`
+- **Location:** Tests are colocated with source files in each package
+  - Example: `packages/api/src/v1/reactive-agents/agents.test.ts`
+  - Example: `packages/web/src/hooks/use-smart-back.test.ts`
 - **Coverage:** Reports generated in text/json/html; maintain meaningful coverage for changed code
 - **Run tests:** `pnpm test` (CI) or `pnpm test:watch` (development)
 
@@ -102,8 +122,8 @@ pnpm typecheck && pnpm check && pnpm test
 
 - Create a feature branch for your work
 - Use [conventional commits](https://www.conventionalcommits.org/):
-  - `feat(server): add feedback endpoint`
-  - `fix(client): handle empty dataset state`
+  - `feat(api): add feedback endpoint`
+  - `fix(web): handle empty dataset state`
   - `docs: improve contributing guide`
 - Include in your PR:
   - Problem/solution summary
@@ -130,12 +150,12 @@ When working on agent or skill functionality, be aware of the validation require
 - Popover tooltips explain what requirements are missing
 
 **Validation Logic:**
-- Agent validation: `lib/shared/utils/agent-validation.ts` and `lib/client/hooks/use-agent-validation.ts`
-- Skill validation: `lib/shared/utils/skill-validation.ts` and `lib/client/hooks/use-skill-validation.ts`
+- Agent validation: `packages/shared/src/utils/agent-validation.ts`
+- Skill validation: `packages/shared/src/utils/skill-validation.ts`
 
 **Reusable Components:**
-- `AgentStatusIndicator` (`lib/client/components/agents/agent-status-indicator.tsx`)
-- `SkillStatusIndicator` (`lib/client/components/agents/skills/skill-status-indicator.tsx`)
+- `AgentStatusIndicator` (`packages/web/src/components/agents/agent-status-indicator.tsx`)
+- `SkillStatusIndicator` (`packages/web/src/components/agents/skills/skill-status-indicator.tsx`)
 
 **User Experience:**
 - Guide users to add required components when viewing incomplete agents/skills
@@ -144,7 +164,6 @@ When working on agent or skill functionality, be aware of the validation require
 
 - **Secrets:** Never commit secrets; use `.env` for local development
 - **Supabase:** Migrations go in `supabase/migrations/`; seed data in `supabase/seed.sql`
-- **Environment changes:** Regenerate Cloudflare types with `pnpm cf-typegen`
-- **API/Middleware changes:** Include server/client tests and update docs in `docs/` when relevant
+- **API/Middleware changes:** Include server/client tests and update docs when relevant
 
-We appreciate your contributions! 💖
+We appreciate your contributions!

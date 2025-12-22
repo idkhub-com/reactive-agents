@@ -37,7 +37,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
    ```bash
    docker compose up
    ```
-   The application will be available at `http://localhost:3000`.
+   The web application will be available at `http://localhost:3000`.
 
 3. Configure your application from the UI. 
     

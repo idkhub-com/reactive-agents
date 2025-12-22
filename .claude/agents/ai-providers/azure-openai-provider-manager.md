@@ -52,7 +52,7 @@ You will create a complete Azure OpenAI provider implementation in `/lib/server/
 **Code Quality Requirements:**
 
 - Use TypeScript with strict typing throughout
-- Follow the codebase's path aliases (@server/*, @shared/*)
+- Follow the codebase's path aliases (@api/*, @shared/*)
 - Implement proper logging for debugging
 - Add inline comments for Azure-specific logic
 - Ensure all code passes `pnpm typecheck` and `pnpm check`

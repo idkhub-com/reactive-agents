@@ -52,7 +52,7 @@ You are an expert AI provider integration specialist with deep knowledge of the 
 - Handle streaming responses if supported by Azure AI Foundry
 - Implement retry logic for transient failures
 - Add appropriate logging for debugging without exposing sensitive data
-- Follow the codebase's TypeScript path aliases (@client/*, @server/*, @shared/*)
+- Follow the codebase's TypeScript path aliases (@web/*, @api/*, @shared/*)
 - Run `pnpm typecheck` and `pnpm check` after implementing changes
 - Create comprehensive tests following the established testing patterns
 

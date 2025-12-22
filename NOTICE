@@ -22,12 +22,21 @@ Used for: Evaluation metrics (ported from Python to TypeScript)
 
 ================================================================================
 
-Next.js
-https://github.com/vercel/next.js
+Vite
+https://github.com/vitejs/vite
 
-Copyright (c) Vercel, Inc.
+Copyright (c) Evan You and Vite contributors
 License: MIT
-Used for: Web application framework
+Used for: Build tool and development server
+
+================================================================================
+
+TanStack Router
+https://github.com/TanStack/router
+
+Copyright (c) Tanner Linsley
+License: MIT
+Used for: Client-side routing framework
 
 ================================================================================
 
@@ -124,18 +133,18 @@ Used for: Code editor component
 Tiptap
 https://github.com/ueberdosis/tiptap
 
-Copyright (c) überDosis GmbH
+Copyright (c) ueberdosis GmbH
 License: MIT
 Used for: Rich text editor framework
 
 ================================================================================
 
-OpenNext Cloudflare
-https://github.com/opennextjs/opennextjs-cloudflare
+Turborepo
+https://github.com/vercel/turborepo
 
-Copyright (c) OpenNext Contributors
+Copyright (c) Vercel, Inc.
 License: MIT
-Used for: Next.js Cloudflare adapter
+Used for: Monorepo build system
 
 ================================================================================
 

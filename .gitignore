@@ -1,25 +1,23 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
-.pnp.js
+**/node_modules/
+**/.pnp
+**/.pnp.js
 
 # testing
-/coverage
-/test-results
+**/coverage
+**/test-results
 
-# next.js
-/.next/
-/out/
-/dist
+# build outputs
+**/dist
 
 # production
-/build
+**/build
 
 # misc
-.DS_Store
-*.pem
+**/.DS_Store
+**/*.pem
 
 # debug
 npm-debug.log*
@@ -29,18 +27,22 @@ yarn-error.log*
 /analyze
 
 # local env files
-.env
-.env*.local
-.env*.production
-.dev.vars*
+**/.env
+**/.env*.local
+**/.env*.production
+**/.dev.vars*
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 .idea
+
+# TanStack Router (auto-generated)
+routeTree.gen.ts
+*.tanstack
+app.config.timestamp_*.js
 
 # ide
 .vscode/
@@ -53,7 +55,6 @@ next-env.d.ts
 .env.sentry-build-plugin
 
 # Cloudflare
-.open-next/
 .wrangler/
 
 # Docker

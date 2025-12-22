@@ -64,25 +64,23 @@ services:
     networks:
       - ra-network
 
-  # Next.js Application
-  app:
-    image: ghcr.io/idkhub-com/reactive-agents:${RA_VERSION:-latest}
-    container_name: reactive-agents
+  # API Server (Hono)
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    image: ghcr.io/idkhub-com/reactive-agents-api:${RA_VERSION:-latest}
+    container_name: reactive-agents-api
     restart: unless-stopped
     ports:
-      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:8787:8787"
     environment:
-      # Database - connect directly to PostgREST
       POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:3000}
       POSTGREST_SERVICE_ROLE_KEY: ${POSTGREST_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
-
-      # App Config
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
-      ACCESS_PASSWORD: ${ACCESS_PASSWORD:-reactive-agents}
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD}
       BEARER_TOKEN: ${BEARER_TOKEN}
       JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
-
       NODE_ENV: production
     depends_on:
       postgres:
@@ -91,6 +89,35 @@ services:
         condition: service_started
     networks:
       - ra-network
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/api/src
+        - action: rebuild
+          path: ./packages/shared/src
+
+  # Web App (Vite SPA with nginx)
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    image: ghcr.io/idkhub-com/reactive-agents-web:${RA_VERSION:-latest}
+    container_name: reactive-agents-web
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
+    depends_on:
+      - api
+    networks:
+      - ra-network
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/web
+          ignore:
+            - dist/
+        - action: rebuild
+          path: ./packages/shared/src
 
 volumes:
   postgres_data:
