@@ -6,12 +6,37 @@ export const groqErrorResponseTransform = (
   aiProviderResponseBody: Record<string, unknown>,
   aiProviderResponseStatus: number,
 ): ErrorResponseBody => {
+  const error = aiProviderResponseBody.error;
+
+  // Extract error details with proper type checking
+  const message =
+    typeof error === 'object' && error && 'message' in error
+      ? String(error.message)
+      : typeof error === 'string'
+        ? error
+        : 'Unknown error occurred';
+
+  const type =
+    typeof error === 'object' && error && 'type' in error
+      ? String(error.type)
+      : undefined;
+
+  const param =
+    typeof error === 'object' && error && 'param' in error
+      ? String(error.param)
+      : undefined;
+
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String(error.code)
+      : aiProviderResponseStatus.toString();
+
   return generateErrorResponse(
     {
-      message: aiProviderResponseBody.error as string,
-      type: undefined,
-      param: undefined,
-      code: aiProviderResponseStatus.toString(),
+      message,
+      type,
+      param,
+      code,
     },
     AIProvider.GROQ,
   );

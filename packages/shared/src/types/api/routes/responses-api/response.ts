@@ -689,7 +689,7 @@ export const ResponsesResponseBody = z.object({
   // Internal fields used by the system (not part of official OpenAI API)
   provider: z.string().nullable().optional(),
   service_tier: z
-    .union([z.literal('scale'), z.literal('default')])
+    .union([z.literal('scale'), z.literal('default'), z.string()])
     .nullable()
     .optional(),
 });

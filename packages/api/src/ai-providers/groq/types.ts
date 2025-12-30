@@ -22,6 +22,7 @@ export interface GroqStreamChunk {
   model: string;
   choices: {
     delta: {
+      role?: string;
       content?: string;
       tool_calls?: object[];
     };
@@ -29,8 +30,8 @@ export interface GroqStreamChunk {
     finish_reason: string | null;
     logprobs: object | null;
   }[];
-  x_groq: {
+  x_groq?: {
     usage: GroqStreamChunkUsage;
   };
-  usage: GroqStreamChunkUsage;
+  usage?: GroqStreamChunkUsage;
 }

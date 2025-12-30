@@ -1,6 +1,10 @@
 import { ChatCompletionMessage } from '@shared/types/api/routes/shared/messages';
 import { z } from 'zod';
 
+// Constants for timestamp validation and conversion
+const SECONDS_TIMESTAMP_MAX_LENGTH = 10; // Unix timestamps in seconds are 10 digits
+const MILLISECONDS_TO_SECONDS_DIVISOR = 1000;
+
 /**
  * Log probability information for a token.
  */
@@ -112,8 +116,8 @@ export const ChatCompletionResponseBody = z.object({
   /** The Unix timestamp (in seconds) of when the chat completion was created. */
   created: z.number().transform((v) => {
     // Standardize the created timestamp to be in seconds
-    if (v.toString().length > 10) {
-      return Math.floor(v / 1000);
+    if (v.toString().length > SECONDS_TIMESTAMP_MAX_LENGTH) {
+      return Math.floor(v / MILLISECONDS_TO_SECONDS_DIVISOR);
     }
     return v;
   }),
@@ -125,9 +129,9 @@ export const ChatCompletionResponseBody = z.object({
   system_fingerprint: z.string().optional().nullable(),
   /** Usage statistics for the completion request. */
   usage: ChatCompletionUsage.optional(),
-  /** The service tier used for processing the request. */
+  /** The service tier used for processing the request. OpenAI uses 'scale' or 'default', but other providers may use different values. */
   service_tier: z
-    .union([z.literal('scale'), z.literal('default')])
+    .union([z.literal('scale'), z.literal('default'), z.string()])
     .nullable()
     .optional(),
 });
@@ -214,9 +218,9 @@ export const ChatCompletionChunk = z.object({
   model: z.string(),
   /** The object type, which is always `chat.completion.chunk`. */
   object: z.literal('chat.completion.chunk'),
-  /** The service tier used for processing the request. */
+  /** The service tier used for processing the request. OpenAI uses 'scale' or 'default', but other providers may use different values. */
   service_tier: z
-    .union([z.literal('scale'), z.literal('default')])
+    .union([z.literal('scale'), z.literal('default'), z.string()])
     .nullable()
     .optional(),
   /** This fingerprint represents the backend configuration that the model runs with. */

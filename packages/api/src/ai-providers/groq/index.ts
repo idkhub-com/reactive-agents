@@ -7,11 +7,19 @@ import {
   responseTransformers,
 } from '../open-ai-base';
 import { groqAPIConfig } from './api';
-import { groqChatCompleteStreamChunkTransform } from './chat-complete';
+import {
+  groqChatCompleteResponseTransform,
+  groqChatCompleteStreamChunkTransform,
+} from './chat-complete';
 
 export const groqConfig: AIProviderConfig = {
   api: groqAPIConfig,
   [FunctionName.CHAT_COMPLETE]: chatCompleteParams([
+    'logprobs',
+    'logits_bias',
+    'top_logprobs',
+  ]),
+  [FunctionName.STREAM_CHAT_COMPLETE]: chatCompleteParams([
     'logprobs',
     'logits_bias',
     'top_logprobs',
@@ -24,6 +32,8 @@ export const groqConfig: AIProviderConfig = {
       chatComplete: true,
       createSpeech: true,
     }),
+    // Override with custom transforms that handle Groq-specific response format
+    [FunctionName.CHAT_COMPLETE]: groqChatCompleteResponseTransform,
     [FunctionName.STREAM_CHAT_COMPLETE]: groqChatCompleteStreamChunkTransform,
   },
 };
