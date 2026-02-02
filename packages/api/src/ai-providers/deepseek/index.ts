@@ -10,6 +10,7 @@ import {
 export const deepSeekConfig: AIProviderConfig = {
   api: deepSeekAPIConfig,
   [FunctionName.CHAT_COMPLETE]: deepSeekChatCompleteConfig,
+  [FunctionName.STREAM_CHAT_COMPLETE]: deepSeekChatCompleteConfig,
   responseTransforms: {
     [FunctionName.CHAT_COMPLETE]: deepSeekChatCompleteResponseTransform,
     [FunctionName.STREAM_CHAT_COMPLETE]:

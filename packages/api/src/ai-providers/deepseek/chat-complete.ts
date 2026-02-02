@@ -1,4 +1,7 @@
-import type { DeepSeekChatCompleteResponse } from '@api/ai-providers/deepseek/types';
+import type {
+  DeepSeekChatCompleteResponse,
+  DeepSeekStreamChunk,
+} from '@api/ai-providers/deepseek/types';
 import {
   generateErrorResponse,
   generateInvalidProviderResponseError,
@@ -82,27 +85,31 @@ export const deepSeekChatCompleteConfig: AIProviderFunctionConfig = {
     min: 0,
     max: 20,
   },
-};
+  tools: {
+    param: 'tools',
+  },
+  tool_choice: {
+    param: 'tool_choice',
+  },
+  response_format: {
+    param: 'response_format',
+    transform: (raRequestBody: ChatCompletionRequestBody) => {
+      const format = raRequestBody.response_format;
+      if (!format) return undefined;
 
-interface DeepSeekStreamChunk {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  choices: {
-    delta: {
-      role?: string | null;
-      content?: string;
-    };
-    index: number;
-    finish_reason: string | null;
-  }[];
-}
+      // DeepSeek only supports json_object, not json_schema
+      if (typeof format === 'object' && 'type' in format) {
+        if (format.type === 'json_schema') {
+          throw new Error(
+            'DeepSeek does not support json_schema response format. Use { type: "json_object" } instead.',
+          );
+        }
+      }
+
+      return format;
+    },
+  },
+};
 
 export const deepSeekChatCompleteResponseTransform: ResponseTransformFunction =
   (aiProviderResponseBody, aiProviderResponseStatus) => {
@@ -125,25 +132,38 @@ export const deepSeekChatCompleteResponseTransform: ResponseTransformFunction =
       const response =
         aiProviderResponseBody as unknown as DeepSeekChatCompleteResponse;
 
+      // Validate required fields
+      if (!response.id || !Array.isArray(response.choices)) {
+        return generateInvalidProviderResponseError(
+          aiProviderResponseBody,
+          AIProvider.DEEPSEEK,
+        );
+      }
+
       return {
         id: response.id,
         object: response.object,
         created: response.created,
         model: response.model,
         provider: AIProvider.DEEPSEEK,
-        choices: response.choices.map((choices) => ({
-          index: choices.index,
+        choices: response.choices.map((choice) => ({
+          index: choice.index,
           message: {
-            role: choices.message.role,
-            content: choices.message.content,
+            role: choice.message.role,
+            content: choice.message.content,
+            ...(choice.message.tool_calls && {
+              tool_calls: choice.message.tool_calls,
+            }),
           },
-          finish_reason: choices.finish_reason,
+          finish_reason: choice.finish_reason,
         })),
-        usage: {
-          prompt_tokens: response.usage?.prompt_tokens,
-          completion_tokens: response.usage?.completion_tokens,
-          total_tokens: response.usage?.total_tokens,
-        },
+        usage: response.usage
+          ? {
+              prompt_tokens: response.usage.prompt_tokens,
+              completion_tokens: response.usage.completion_tokens,
+              total_tokens: response.usage.total_tokens,
+            }
+          : undefined,
       };
     }
 
@@ -155,7 +175,7 @@ export const deepSeekChatCompleteResponseTransform: ResponseTransformFunction =
 
 export const deepSeekChatCompleteStreamChunkTransform: ResponseChunkStreamTransformFunction =
   (responseChunk) => {
-    let chunk = responseChunk.trim();
+    let chunk = String(responseChunk).trim();
     chunk = chunk.replace(/^data: /, '');
     chunk = chunk.trim();
     if (chunk === '[DONE]') {
@@ -168,13 +188,11 @@ export const deepSeekChatCompleteStreamChunkTransform: ResponseChunkStreamTransf
       created: parsedChunk.created,
       model: parsedChunk.model,
       provider: AIProvider.DEEPSEEK,
-      choices: [
-        {
-          index: parsedChunk.choices[0].index,
-          delta: parsedChunk.choices[0].delta,
-          finish_reason: parsedChunk.choices[0].finish_reason,
-        },
-      ],
+      choices: parsedChunk.choices.map((choice) => ({
+        index: choice.index,
+        delta: choice.delta,
+        finish_reason: choice.finish_reason,
+      })),
       usage: parsedChunk.usage,
     })}\n\n`;
   };

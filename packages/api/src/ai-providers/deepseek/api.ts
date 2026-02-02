@@ -9,6 +9,7 @@ const deepSeekAPIConfig: InternalProviderAPIConfig = {
   getEndpoint: ({ raRequestData }) => {
     switch (raRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
+      case FunctionName.STREAM_CHAT_COMPLETE:
         return '/v1/chat/completions';
       default:
         return '';
