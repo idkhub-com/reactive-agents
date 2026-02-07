@@ -1,13 +1,12 @@
-name: Release and Publish Docker Image
+name: Release and Publish Docker Images
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
   contents: write
@@ -94,16 +93,23 @@ jobs:
 
   # Build images on native runners for each architecture (faster than QEMU emulation)
   build-image:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.platform.runner }}
     needs: [validate-tag, create-release]
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: linux/amd64
+        image:
+          - name: api
+            dockerfile: packages/api/Dockerfile
+          - name: web
+            dockerfile: packages/web/Dockerfile
+        platform:
+          - os: linux/amd64
             runner: ubuntu-latest
-          - platform: linux/arm64
+            arch: amd64
+          - os: linux/arm64
             runner: ubuntu-24.04-arm
+            arch: arm64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -122,18 +128,19 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.image.name }}
 
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ matrix.platform }}
+          file: ${{ matrix.image.dockerfile }}
+          platforms: ${{ matrix.platform.os }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.image.name }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.image.name }}-${{ matrix.platform.os }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}-${{ matrix.platform.os }}
 
       - name: Export digest
         run: |
@@ -144,7 +151,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v6
         with:
-          name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          name: digests-${{ matrix.image.name }}-${{ matrix.platform.arch }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -153,12 +160,15 @@ jobs:
   merge-manifests:
     runs-on: ubuntu-latest
     needs: [validate-tag, create-release, build-image]
+    strategy:
+      matrix:
+        image: [api, web]
     steps:
       - name: Download digests
         uses: actions/download-artifact@v7
         with:
           path: /tmp/digests
-          pattern: digests-*
+          pattern: digests-${{ matrix.image }}-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
@@ -175,7 +185,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.image }}
           # Note: 'latest' tag is only added when the release is published (see release-publish.yml)
           tags: |
             type=semver,pattern={{version}}
@@ -186,12 +196,17 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+            $(printf '${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.image }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.image }}:${{ steps.meta.outputs.version }}
 
+  # Update release notes after all manifests are merged
+  update-release:
+    runs-on: ubuntu-latest
+    needs: [validate-tag, create-release, merge-manifests]
+    steps:
       - name: Update release with Docker info
         # Pinned to v2.3.2 SHA for security
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
@@ -202,27 +217,29 @@ jobs:
 
             ---
 
-            ## Docker Image
+            ## Docker Images
 
             ```bash
-            docker pull ghcr.io/${{ github.repository }}:${{ needs.validate-tag.outputs.version }}
+            docker pull ghcr.io/${{ github.repository }}-api:${{ needs.validate-tag.outputs.version }}
+            docker pull ghcr.io/${{ github.repository }}-web:${{ needs.validate-tag.outputs.version }}
             ```
 
             Or use with docker-compose:
             ```bash
-            RA_VERSION=${{ needs.validate-tag.outputs.version }} docker-compose -f docker-compose.yml up
+            RA_VERSION=${{ needs.validate-tag.outputs.version }} docker compose -f docker-compose.yml up
             ```
 
-            > **Note:** This is a draft release. Publishing this release will tag the Docker image as `latest`.
+            > **Note:** This is a draft release. Publishing this release will tag the Docker images as `latest`.
 
       - name: Summary
         run: |
           echo "## Draft Release Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ needs.validate-tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Image:** \`ghcr.io/${{ github.repository }}:${{ needs.validate-tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Image:** \`ghcr.io/${{ github.repository }}-api:${{ needs.validate-tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Image:** \`ghcr.io/${{ github.repository }}-web:${{ needs.validate-tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Review the [draft release](${{ needs.create-release.outputs.release_url }})" >> $GITHUB_STEP_SUMMARY
           echo "2. Edit release notes if needed" >> $GITHUB_STEP_SUMMARY
-          echo "3. Click **Publish release** to make it public and tag Docker image as \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Click **Publish release** to make it public and tag Docker images as \`latest\`" >> $GITHUB_STEP_SUMMARY

@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
   contents: read
@@ -17,6 +16,9 @@ jobs:
     # Only tag 'latest' for non-prerelease versions
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [api, web]
     steps:
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -36,9 +38,10 @@ jobs:
       - name: Tag image as latest
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          IMAGE: ${{ github.repository }}-${{ matrix.image }}
         run: |
-          SOURCE="${REGISTRY}/${IMAGE_NAME}:${VERSION}"
-          TARGET="${REGISTRY}/${IMAGE_NAME}:latest"
+          SOURCE="${REGISTRY}/${IMAGE}:${VERSION}"
+          TARGET="${REGISTRY}/${IMAGE}:latest"
 
           echo "Tagging $SOURCE as $TARGET"
 
@@ -48,7 +51,8 @@ jobs:
       - name: Summary
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          IMAGE: ${{ github.repository }}-${{ matrix.image }}
         run: |
           echo "## Release Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Docker image \`${REGISTRY}/${IMAGE_NAME}:${VERSION}\` is now tagged as \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "Docker image \`${REGISTRY}/${IMAGE}:${VERSION}\` is now tagged as \`latest\`" >> $GITHUB_STEP_SUMMARY
