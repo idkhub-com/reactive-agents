@@ -66,10 +66,8 @@ services:
 
   # API Server (Hono)
   api:
-    build:
-      context: .
-      dockerfile: packages/api/Dockerfile
     image: ghcr.io/idkhub-com/reactive-agents-api:${RA_VERSION:-latest}
+    pull_policy: always
     container_name: reactive-agents-api
     restart: unless-stopped
     ports:
@@ -89,19 +87,11 @@ services:
         condition: service_started
     networks:
       - ra-network
-    develop:
-      watch:
-        - action: rebuild
-          path: ./packages/api/src
-        - action: rebuild
-          path: ./packages/shared/src
 
   # Web App (Vite SPA with nginx)
   web:
-    build:
-      context: .
-      dockerfile: packages/web/Dockerfile
     image: ghcr.io/idkhub-com/reactive-agents-web:${RA_VERSION:-latest}
+    pull_policy: always
     container_name: reactive-agents-web
     restart: unless-stopped
     ports:
@@ -110,14 +100,6 @@ services:
       - api
     networks:
       - ra-network
-    develop:
-      watch:
-        - action: rebuild
-          path: ./packages/web
-          ignore:
-            - dist/
-        - action: rebuild
-          path: ./packages/shared/src
 
 volumes:
   postgres_data:
