@@ -1,10 +1,10 @@
-import { groqAPIConfig } from '@server/ai-providers/groq/api';
+import { groqAPIConfig } from '@api/ai-providers/groq/api';
 import {
   groqChatCompleteResponseTransform,
   groqChatCompleteStreamChunkTransform,
-} from '@server/ai-providers/groq/chat-complete';
-import { groqConfig } from '@server/ai-providers/groq/index';
-import type { GroqStreamChunk } from '@server/ai-providers/groq/types';
+} from '@api/ai-providers/groq/chat-complete';
+import { groqConfig } from '@api/ai-providers/groq/index';
+import type { GroqStreamChunk } from '@api/ai-providers/groq/types';
 import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
 import { FunctionName } from '@shared/types/api/request';
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
