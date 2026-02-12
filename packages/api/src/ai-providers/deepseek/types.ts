@@ -19,3 +19,31 @@ export interface DeepSeekErrorResponse {
   param: string | null;
   code: string;
 }
+
+export interface DeepSeekStreamChunk {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  choices: {
+    delta: {
+      role?: string | null;
+      content?: string;
+      tool_calls?: Array<{
+        id: string;
+        type: string;
+        function: {
+          name: string;
+          arguments: string;
+        };
+      }>;
+    };
+    index: number;
+    finish_reason: string | null;
+  }[];
+}
