@@ -1,6 +1,12 @@
 import { screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderRoute, setupAuthMocks } from './route-test-utils';
+
+// --- Global fetch mock for auth status check ---
+// The root route calls /v1/reactive-agents/auth/status in beforeLoad
+// We mock it to return no auth required so all routes render
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
 
 // --- Layout mocks (pass-through or null) ---
 vi.mock('@web/providers/app-providers', () => ({
@@ -126,6 +132,51 @@ vi.mock('@web/components/ui/skeleton', () => ({
   Skeleton: () => null,
 }));
 
+// --- Login page mocks ---
+vi.mock('@web/components/side-bar/animated-logo', () => ({
+  AnimatedLogo: () => <div data-testid="animated-logo" />,
+}));
+
+vi.mock('@web/components/ui/card', () => ({
+  Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  CardTitle: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  CardContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}));
+
+vi.mock('@web/components/ui/form', () => ({
+  Form: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormField: () => <div data-testid="form-field" />,
+  FormItem: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  FormLabel: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  FormControl: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  FormMessage: () => null,
+}));
+
+vi.mock('@web/components/ui/input', () => ({
+  Input: () => <input data-testid="input" />,
+}));
+
+vi.mock('@web/components/ui/button', () => ({
+  Button: ({ children }: { children: React.ReactNode }) => (
+    <button type="button" data-testid="button">
+      {children}
+    </button>
+  ),
+}));
+
 // --- Route rendering tests ---
 const ROUTE_TABLE: [string, string, string][] = [
   ['agents list', '/agents', 'page-agents-list'],
@@ -189,6 +240,11 @@ const ROUTE_TABLE: [string, string, string][] = [
 describe('Route Rendering', () => {
   beforeEach(() => {
     setupAuthMocks();
+    // Mock auth status to return authenticated for protected routes
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ authRequired: false, authenticated: true }),
+    });
   });
 
   it.each(
@@ -197,6 +253,21 @@ describe('Route Rendering', () => {
     renderRoute(path);
     await waitFor(() => {
       expect(screen.getByTestId(expectedTestId)).toBeInTheDocument();
+    });
+  });
+
+  it('renders login page at /login', async () => {
+    // Login page should render when auth is required but user is not authenticated
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ authRequired: true, authenticated: false }),
+    });
+    renderRoute('/login');
+    await waitFor(() => {
+      expect(screen.getByTestId('animated-logo')).toBeInTheDocument();
+      expect(
+        screen.getByText('Enter password to continue'),
+      ).toBeInTheDocument();
     });
   });
 });

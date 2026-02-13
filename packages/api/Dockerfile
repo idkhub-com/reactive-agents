@@ -32,8 +32,8 @@ WORKDIR /app
 COPY --from=builder /app/packages/api/dist ./dist
 
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 hono && \
-    chown -R hono:nodejs /app
+  adduser --system --uid 1001 hono && \
+  chown -R hono:nodejs /app
 
 USER hono
 

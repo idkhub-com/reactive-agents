@@ -6,7 +6,11 @@ import {
 import { API_URL } from '@web/constants';
 import { hc } from 'hono/client';
 
-const client = hc<ReactiveAgentsRoute>(API_URL);
+const client = hc<ReactiveAgentsRoute>(API_URL, {
+  init: {
+    credentials: 'include',
+  },
+});
 
 export async function getSystemSettings(): Promise<SystemSettings> {
   const response = await client.v1['reactive-agents']['system-settings'].$get();

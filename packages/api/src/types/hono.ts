@@ -28,6 +28,11 @@ import type { Hook, HookType } from '@shared/types/middleware/hooks';
 import type { Context, Hono } from 'hono';
 
 export interface AppEnv {
+  Bindings: {
+    ACCESS_PASSWORD?: string;
+    JWT_SECRET?: string;
+    BEARER_TOKEN?: string;
+  };
   Variables: {
     ra_config: ReactiveAgentsConfig;
     ra_config_pre_processed: ReactiveAgentsConfigPreProcessed;

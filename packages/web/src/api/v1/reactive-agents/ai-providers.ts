@@ -8,7 +8,11 @@ import {
 import { API_URL } from '@web/constants';
 import { hc } from 'hono/client';
 
-const client = hc<ReactiveAgentsRoute>(API_URL);
+const client = hc<ReactiveAgentsRoute>(API_URL, {
+  init: {
+    credentials: 'include',
+  },
+});
 
 // Schema types
 export interface AIProviderSchemaResponse {

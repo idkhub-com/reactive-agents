@@ -2,7 +2,14 @@ import type { skillEventsRouter } from '@api/v1/reactive-agents/skill-events';
 import type { SkillEventQueryParams } from '@shared/types/data/skill-event';
 import { hc } from 'hono/client';
 
-const client = hc<typeof skillEventsRouter>('/v1/reactive-agents/skill-events');
+const client = hc<typeof skillEventsRouter>(
+  '/v1/reactive-agents/skill-events',
+  {
+    init: {
+      credentials: 'include',
+    },
+  },
+);
 
 export async function getSkillEvents(params: SkillEventQueryParams) {
   // Convert params to query strings for Hono

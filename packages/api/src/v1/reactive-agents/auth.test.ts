@@ -4,12 +4,93 @@ import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { describe, expect, it } from 'vitest';
 
-// Create a test app with the auth router
+// Default app — no bindings, so c.env?.ACCESS_PASSWORD is undefined
 const app = new Hono<AppEnv>().route('/', authRouter);
-
 const client = testClient(app);
 
+// App with ACCESS_PASSWORD binding set — uses app.request() since testClient
+// can't infer route types through dynamic middleware
+function createAppWithBindings(bindings: Partial<AppEnv['Bindings']>) {
+  return new Hono<AppEnv>()
+    .use('*', async (c, next) => {
+      for (const [key, value] of Object.entries(bindings)) {
+        c.env = { ...c.env, [key]: value };
+      }
+      await next();
+    })
+    .route('/', authRouter);
+}
+
 describe('Auth Router', () => {
+  describe('GET /status', () => {
+    it('returns authRequired: false when ACCESS_PASSWORD is not set', async () => {
+      const response = await client.status.$get();
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toEqual({ authRequired: false, authenticated: true });
+    });
+
+    it('returns authenticated: false when ACCESS_PASSWORD is set but no token', async () => {
+      const authedApp = createAppWithBindings({
+        ACCESS_PASSWORD: 'test-password',
+      });
+      const response = await authedApp.request('/status');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toEqual({ authRequired: true, authenticated: false });
+    });
+  });
+
+  describe('POST /login', () => {
+    it('accepts any password when ACCESS_PASSWORD is not set', async () => {
+      const response = await app.request('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'anything' }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toEqual({ message: 'Password verified' });
+    });
+
+    it('rejects wrong password when ACCESS_PASSWORD is set', async () => {
+      const authedApp = createAppWithBindings({
+        ACCESS_PASSWORD: 'correct-password',
+      });
+      const response = await authedApp.request('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'wrong-password' }),
+      });
+
+      expect(response.status).toBe(401);
+      const data = await response.json();
+      expect(data).toEqual({ error: 'Invalid password' });
+    });
+
+    it('accepts correct password when ACCESS_PASSWORD is set', async () => {
+      const authedApp = createAppWithBindings({
+        ACCESS_PASSWORD: 'correct-password',
+      });
+      const response = await authedApp.request('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'correct-password' }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toEqual({ message: 'Password verified' });
+
+      const setCookieHeader = response.headers.get('set-cookie');
+      expect(setCookieHeader).toBeTruthy();
+      expect(setCookieHeader).toContain('access_token=');
+    });
+  });
+
   describe('POST /logout', () => {
     it('should successfully log out and return 200', async () => {
       const response = await client.logout.$post();
