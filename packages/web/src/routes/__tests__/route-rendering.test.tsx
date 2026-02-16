@@ -1,12 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { renderRoute, setupAuthMocks } from './route-test-utils';
-
-// --- Global fetch mock for auth status check ---
-// The root route calls /v1/reactive-agents/auth/status in beforeLoad
-// We mock it to return no auth required so all routes render
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
 
 // --- Layout mocks (pass-through or null) ---
 vi.mock('@web/providers/app-providers', () => ({
@@ -239,12 +233,7 @@ const ROUTE_TABLE: [string, string, string][] = [
 
 describe('Route Rendering', () => {
   beforeEach(() => {
-    setupAuthMocks();
-    // Mock auth status to return authenticated for protected routes
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ authRequired: false, authenticated: true }),
-    });
+    setupAuthMocks({ authRequired: false, authenticated: true });
   });
 
   it.each(
@@ -258,10 +247,7 @@ describe('Route Rendering', () => {
 
   it('renders login page at /login', async () => {
     // Login page should render when auth is required but user is not authenticated
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ authRequired: true, authenticated: false }),
-    });
+    setupAuthMocks({ authRequired: true, authenticated: false });
     renderRoute('/login');
     await waitFor(() => {
       expect(screen.getByTestId('animated-logo')).toBeInTheDocument();
