@@ -91,7 +91,7 @@ function LoginPage(): React.ReactNode {
                       <Input
                         type="password"
                         autoComplete="off"
-                        placeholder="Default: reactive-agents"
+                        placeholder="Enter your password"
                         {...field}
                       />
                     </FormControl>

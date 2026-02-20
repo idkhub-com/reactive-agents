@@ -1,4 +1,4 @@
-import { JWT_SECRET } from '@api/constants';
+import { getJwtSecret } from '@api/constants';
 import { authenticatedMiddleware } from '@api/middlewares/auth';
 import type { AppEnv } from '@api/types/hono';
 import { modelsRouter } from '@api/v1/reactive-agents/models';
@@ -388,7 +388,7 @@ describe('Models API - Authentication Integration', () => {
     it('should accept requests with valid JWT cookie', async () => {
       const token = await sign(
         { sub: 'test-user-123', exp: Math.floor(Date.now() / 1000) + 3600 },
-        JWT_SECRET,
+        getJwtSecret(),
       );
 
       const app = createAuthenticatedApp();

@@ -1,4 +1,4 @@
-import { BEARER_TOKEN, JWT_SECRET } from '@api/constants';
+import { BEARER_TOKEN, getJwtSecret } from '@api/constants';
 import type { AppEnv } from '@api/types/hono';
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
@@ -30,7 +30,7 @@ export const authenticatedMiddleware = (
       return;
     }
 
-    const jwtSecret = c.env?.JWT_SECRET ?? JWT_SECRET;
+    const jwtSecret = c.env?.JWT_SECRET ?? getJwtSecret();
     const bearerToken = c.env?.BEARER_TOKEN ?? BEARER_TOKEN;
     const accessPassword = c.env?.ACCESS_PASSWORD;
 

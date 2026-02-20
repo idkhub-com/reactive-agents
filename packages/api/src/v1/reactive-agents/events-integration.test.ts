@@ -1,4 +1,4 @@
-import { JWT_SECRET } from '@api/constants';
+import { getJwtSecret } from '@api/constants';
 import { authenticatedMiddleware } from '@api/middlewares/auth';
 import type { AppEnv } from '@api/types/hono';
 import { eventsRouter } from '@api/v1/reactive-agents/events';
@@ -88,7 +88,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
     // Generate a valid JWT token
     const token = await sign(
       { sub: 'test-user-123', exp: Math.floor(Date.now() / 1000) + 3600 },
-      JWT_SECRET,
+      getJwtSecret(),
     );
 
     const app = new Hono<AppEnv>()
@@ -112,7 +112,7 @@ describe('SSE Events Endpoint - Full Authentication Integration', () => {
     const testUserId = 'user-789';
     const token = await sign(
       { sub: testUserId, exp: Math.floor(Date.now() / 1000) + 3600 },
-      JWT_SECRET,
+      getJwtSecret(),
     );
 
     // biome-ignore lint/suspicious/noExplicitAny: Testing runtime values from context

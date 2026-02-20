@@ -40,8 +40,14 @@ export const POSTGREST_SERVICE_ROLE_KEY =
   (SUPABASE_SECRET_KEY ? SUPABASE_SECRET_KEY : undefined);
 
 export const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD;
-export const JWT_SECRET =
-  process.env.JWT_SECRET ?? 'you-should-change-this-in-production';
+export const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'JWT_SECRET environment variable is required in production. Set it to a strong, random secret.',
+  );
+}
+const DEFAULT_JWT_SECRET = 'default-dev-jwt-secret';
+export const getJwtSecret = (): string => JWT_SECRET ?? DEFAULT_JWT_SECRET;
 
 /**
  * Bearer token for API authentication.

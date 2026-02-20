@@ -1,4 +1,4 @@
-import { JWT_SECRET } from '@api/constants';
+import { getJwtSecret } from '@api/constants';
 import type { AppEnv } from '@api/types/hono';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
@@ -21,12 +21,15 @@ export const loginRouter = new Hono<AppEnv>()
       const { password } = c.req.valid('json');
       const accessPassword = c.env?.ACCESS_PASSWORD;
 
-      // If ACCESS_PASSWORD is not set, authentication is disabled - allow any login
-      if (accessPassword && password !== accessPassword) {
+      if (!accessPassword) {
+        console.warn(
+          'ACCESS_PASSWORD is not set — dashboard authentication is disabled. Any login will be accepted.',
+        );
+      } else if (password !== accessPassword) {
         return c.json({ error: 'Invalid password' }, 401);
       }
 
-      const jwtSecret = c.env?.JWT_SECRET ?? JWT_SECRET;
+      const jwtSecret = c.env?.JWT_SECRET ?? getJwtSecret();
       const jwt = await sign({ access: true }, jwtSecret);
       // Set cookie without domain restriction for cross-origin development
       // In production, set appropriate domain via environment variable

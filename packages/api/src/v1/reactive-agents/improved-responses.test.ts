@@ -133,6 +133,7 @@ vi.stubGlobal('crypto', {
 vi.mock('@api/constants', () => ({
   BEARER_TOKEN: 'test-bearer-token',
   JWT_SECRET: 'test-jwt-secret',
+  getJwtSecret: () => 'test-jwt-secret',
 }));
 
 describe('Improved Responses API', () => {
