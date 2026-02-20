@@ -24,7 +24,8 @@ export const authenticatedMiddleware = (
     // Allow access to auth endpoints so that we can login or verify authorization
     if (
       c.req.path.startsWith('/v1/reactive-agents/auth/login') ||
-      c.req.path.startsWith('/v1/reactive-agents/auth/verify')
+      c.req.path.startsWith('/v1/reactive-agents/auth/verify') ||
+      c.req.path.startsWith('/v1/reactive-agents/auth/status')
     ) {
       await next();
       return;
@@ -50,8 +51,13 @@ export const authenticatedMiddleware = (
     // Check Bearer token header (for programmatic access)
     const bearerHeaderString = c.req.header('authorization');
     if (bearerHeaderString) {
-      const headerToken = bearerHeaderString.split(' ')[1];
-      if (bearerToken && headerToken === bearerToken) {
+      const parts = bearerHeaderString.split(' ');
+      if (
+        parts.length === 2 &&
+        parts[0].toLowerCase() === 'bearer' &&
+        bearerToken &&
+        parts[1] === bearerToken
+      ) {
         await next();
         return;
       }

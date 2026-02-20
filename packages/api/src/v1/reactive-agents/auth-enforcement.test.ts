@@ -59,6 +59,38 @@ describe('Auth enforcement on reactive-agents routes', () => {
     expect(response.status).not.toBe(401);
   });
 
+  describe('Bearer token format validation', () => {
+    const endpoint = `${BASE}/agents`;
+
+    it('rejects Authorization header with no scheme', async () => {
+      const response = await app.request(endpoint, {
+        headers: { Authorization: 'just-a-token' },
+      });
+      expect(response.status).toBe(401);
+    });
+
+    it('rejects Authorization header with wrong scheme', async () => {
+      const response = await app.request(endpoint, {
+        headers: { Authorization: 'Basic test-bearer-token' },
+      });
+      expect(response.status).toBe(401);
+    });
+
+    it('rejects Authorization header with extra segments', async () => {
+      const response = await app.request(endpoint, {
+        headers: { Authorization: 'Bearer test-bearer-token extra' },
+      });
+      expect(response.status).toBe(401);
+    });
+
+    it('rejects Authorization header with Bearer but no token', async () => {
+      const response = await app.request(endpoint, {
+        headers: { Authorization: 'Bearer' },
+      });
+      expect(response.status).toBe(401);
+    });
+  });
+
   describe('Auth endpoint exemptions', () => {
     it('POST /auth/login is accessible without auth', async () => {
       const response = await app.request(`${BASE}/auth/login`, {
@@ -71,18 +103,8 @@ describe('Auth enforcement on reactive-agents routes', () => {
       expect(response.status).toBe(200);
     });
 
-    it('GET /auth/status returns 401 without auth (web handles gracefully)', async () => {
-      // The status endpoint is NOT exempt from auth middleware.
-      // The web app handles the 401 by redirecting to /login.
+    it('GET /auth/status is accessible without auth', async () => {
       const response = await app.request(`${BASE}/auth/status`);
-      expect(response.status).toBe(401);
-    });
-
-    it('GET /auth/status returns 200 with valid auth', async () => {
-      const cookie = await createAuthCookie();
-      const response = await app.request(`${BASE}/auth/status`, {
-        headers: { Cookie: cookie },
-      });
       expect(response.status).toBe(200);
     });
   });
