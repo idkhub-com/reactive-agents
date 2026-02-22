@@ -13,7 +13,7 @@ const verifyPasswordSchema = z.object({
 export const loginRouter = new Hono<AppEnv>()
   /**
    * Handles the '/reactive-agents/auth/login' API request by verifying the user's password.
-   * If ACCESS_PASSWORD is not set, authentication is disabled and any request succeeds.
+   * If ACCESS_PASSWORD is not set, login is unavailable because dashboard auth is disabled.
    */
   .post(
     zValidator('json', verifyPasswordSchema),
@@ -22,10 +22,16 @@ export const loginRouter = new Hono<AppEnv>()
       const accessPassword = c.env?.ACCESS_PASSWORD;
 
       if (!accessPassword) {
-        console.warn(
-          'ACCESS_PASSWORD is not set — dashboard authentication is disabled. Any login will be accepted.',
+        return c.json(
+          {
+            error:
+              'Dashboard authentication is disabled because ACCESS_PASSWORD is not configured.',
+          },
+          400,
         );
-      } else if (password !== accessPassword) {
+      }
+
+      if (password !== accessPassword) {
         return c.json({ error: 'Invalid password' }, 401);
       }
 
