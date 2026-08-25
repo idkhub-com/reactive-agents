@@ -255,9 +255,12 @@ describe('Agents API Status Codes', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual(mockSkills);
-      expect(mockUserDataStorageConnector.getSkills).toHaveBeenCalledWith({
-        agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
-      });
+      expect(mockUserDataStorageConnector.getSkills).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          agent_id: 'c13d1678-150a-466b-804f-ecc82de3680e',
+        },
+      );
     });
 
     it('should return 500 on error', async () => {

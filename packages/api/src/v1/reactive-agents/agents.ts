@@ -16,7 +16,7 @@ export const agentsRouter = new Hono<AppEnv>()
       const data = c.req.valid('json');
       const connector = c.get('user_data_storage_connector');
 
-      const newAgent = await connector.createAgent(data);
+      const newAgent = await connector.createAgent(c, data);
 
       return c.json(newAgent, 201);
     } catch (error) {
@@ -30,7 +30,7 @@ export const agentsRouter = new Hono<AppEnv>()
       const query = c.req.valid('query');
       const connector = c.get('user_data_storage_connector');
 
-      const agents = await connector.getAgents(query);
+      const agents = await connector.getAgents(c, query);
 
       return c.json(agents, 200);
     } catch (error) {
@@ -49,7 +49,7 @@ export const agentsRouter = new Hono<AppEnv>()
         const data = c.req.valid('json');
         const connector = c.get('user_data_storage_connector');
 
-        const updatedAgent = await connector.updateAgent(agentId, data);
+        const updatedAgent = await connector.updateAgent(c, agentId, data);
 
         // Emit SSE event for agent update
         emitSSEEvent('agent:updated', {
@@ -72,7 +72,7 @@ export const agentsRouter = new Hono<AppEnv>()
         const { agentId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        await connector.deleteAgent(agentId);
+        await connector.deleteAgent(c, agentId);
 
         return c.body(null, 204);
       } catch (error) {
@@ -95,7 +95,7 @@ export const agentsRouter = new Hono<AppEnv>()
         const { agentId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const skills = await connector.getSkills({ agent_id: agentId });
+        const skills = await connector.getSkills(c, { agent_id: agentId });
 
         return c.json(skills, 200);
       } catch (error) {
@@ -123,7 +123,7 @@ export const agentsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         const evaluationRuns =
-          await connector.getSkillOptimizationEvaluationRuns({
+          await connector.getSkillOptimizationEvaluationRuns(c, {
             agent_id: agentId,
             ...(log_id && { log_id }),
             ...(created_after && { created_after }),
@@ -155,7 +155,7 @@ export const agentsRouter = new Hono<AppEnv>()
         const { interval_minutes, start_time, end_time } = c.req.valid('json');
         const connector = c.get('user_data_storage_connector');
 
-        const scores = await connector.getEvaluationScoresByTimeBucket({
+        const scores = await connector.getEvaluationScoresByTimeBucket(c, {
           agent_id: agentId,
           interval_minutes,
           start_time,

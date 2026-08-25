@@ -173,7 +173,7 @@ describe('Feedback API', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual(feedbackList);
-      expect(mockGetFeedback).toHaveBeenCalledWith({});
+      expect(mockGetFeedback).toHaveBeenCalledWith(expect.anything(), {});
     });
 
     it('should return feedback by ID using query parameter', async () => {
@@ -195,7 +195,7 @@ describe('Feedback API', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual([feedback]);
-      expect(mockGetFeedback).toHaveBeenCalledWith({
+      expect(mockGetFeedback).toHaveBeenCalledWith(expect.anything(), {
         id: '123e4567-e89b-12d3-a456-426614174000',
       });
     });
@@ -221,7 +221,7 @@ describe('Feedback API', () => {
       );
 
       expect(res.status).toBe(200);
-      expect(mockGetFeedback).toHaveBeenCalledWith({
+      expect(mockGetFeedback).toHaveBeenCalledWith(expect.anything(), {
         log_id: '123e4567-e89b-12d3-a456-426614174002',
         limit: 10,
         offset: 0,
@@ -274,6 +274,7 @@ describe('Feedback API', () => {
 
       // Check that createFeedback was called with transformed data (id and timestamps added)
       expect(mockCreateFeedback).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
           log_id: '123e4567-e89b-12d3-a456-426614174002',
           score: 0.8,
@@ -501,6 +502,7 @@ describe('Feedback API', () => {
 
       // Should directly call deleteFeedback
       expect(mockDeleteFeedback).toHaveBeenCalledWith(
+        expect.anything(),
         '123e4567-e89b-12d3-a456-426614174000',
       );
     });

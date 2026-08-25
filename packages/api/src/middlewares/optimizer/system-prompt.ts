@@ -3,6 +3,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { formatMessagesForExtraction } from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/reactive-agents/requests';
 import { extractOutputFromResponseBody } from '@api/utils/reactive-agents/responses';
@@ -84,13 +85,14 @@ function extractRequestConstraints(
  * Returns the lock timestamp if successful, null otherwise
  */
 async function acquireReflectionLock(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   _skill: Skill,
   clusterId: string,
 ): Promise<string | null> {
   // Re-fetch cluster to get latest state (critical for lock check)
   const latestClusters =
-    await userDataStorageConnector.getSkillOptimizationClusters({
+    await userDataStorageConnector.getSkillOptimizationClusters(c, {
       id: clusterId,
     });
 
@@ -114,16 +116,20 @@ async function acquireReflectionLock(
   // Try to acquire lock by updating the cluster
   const lockTime = new Date().toISOString();
   try {
-    await userDataStorageConnector.updateSkillOptimizationCluster(clusterId, {
-      reflection_lock_acquired_at: lockTime,
-    });
+    await userDataStorageConnector.updateSkillOptimizationCluster(
+      c,
+      clusterId,
+      {
+        reflection_lock_acquired_at: lockTime,
+      },
+    );
   } catch (_error) {
     return null;
   }
 
   // CRITICAL: Double-check the lock after acquisition to detect race conditions
   const postLockClusters =
-    await userDataStorageConnector.getSkillOptimizationClusters({
+    await userDataStorageConnector.getSkillOptimizationClusters(c, {
       id: clusterId,
     });
 
@@ -150,10 +156,11 @@ async function acquireReflectionLock(
  * Releases the reflection lock for a cluster
  */
 async function releaseReflectionLock(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   clusterId: string,
 ) {
-  await userDataStorageConnector.updateSkillOptimizationCluster(clusterId, {
+  await userDataStorageConnector.updateSkillOptimizationCluster(c, clusterId, {
     reflection_lock_acquired_at: null,
   });
 }
@@ -162,6 +169,7 @@ async function releaseReflectionLock(
  * Calculates weighted stats for all arms in a cluster efficiently
  */
 async function calculateClusterArmStats(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   cluster: SkillOptimizationCluster,
   clusterArms: Awaited<
@@ -170,7 +178,7 @@ async function calculateClusterArmStats(
 ) {
   // Fetch evaluations to get weights (once for the whole cluster)
   const evaluations =
-    await userDataStorageConnector.getSkillOptimizationEvaluations({
+    await userDataStorageConnector.getSkillOptimizationEvaluations(c, {
       skill_id: cluster.skill_id,
     });
 
@@ -182,7 +190,7 @@ async function calculateClusterArmStats(
 
   // Fetch ALL arm_stats for the cluster in one query (efficient!)
   const allArmStats =
-    await userDataStorageConnector.getSkillOptimizationArmStats({
+    await userDataStorageConnector.getSkillOptimizationArmStats(c, {
       cluster_id: cluster.id,
     });
 
@@ -237,21 +245,25 @@ async function calculateClusterArmStats(
  * - Worst: Worst logs since last reflection only
  */
 async function fetchReflectionExamples(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   logsStorageConnector: LogsStorageConnector,
   cluster: SkillOptimizationCluster,
 ) {
   // Find the last reflection event for this cluster
-  const lastReflectionEvents = await userDataStorageConnector.getSkillEvents({
-    cluster_id: cluster.id,
-    event_type: SkillEventType.REFLECTION,
-    limit: 1,
-  });
+  const lastReflectionEvents = await userDataStorageConnector.getSkillEvents(
+    c,
+    {
+      cluster_id: cluster.id,
+      event_type: SkillEventType.REFLECTION,
+      limit: 1,
+    },
+  );
 
   const lastReflectionTime = lastReflectionEvents[0]?.created_at;
 
   // Fetch best log from all time (no time filter)
-  const allTimeLogs = await logsStorageConnector.getLogs({
+  const allTimeLogs = await logsStorageConnector.getLogs(c, {
     skill_id: cluster.skill_id,
     cluster_id: cluster.id,
     embedding_not_null: true,
@@ -269,7 +281,7 @@ async function fetchReflectionExamples(
   const bestExamples = bestLog ? generateExampleConversations([bestLog]) : [];
 
   // Fetch worst logs since last reflection (or all time if no reflection yet)
-  const recentLogs = await logsStorageConnector.getLogs({
+  const recentLogs = await logsStorageConnector.getLogs(c, {
     skill_id: cluster.skill_id,
     cluster_id: cluster.id,
     embedding_not_null: true,
@@ -291,6 +303,7 @@ async function fetchReflectionExamples(
 
   // For worst examples, include evaluation information
   const worstExamples = await generateExampleConversationsWithEvaluations(
+    c,
     userDataStorageConnector,
     worstLogs,
   );
@@ -302,6 +315,7 @@ async function fetchReflectionExamples(
  * Performs reflection: updates arms with new prompt and resets stats
  */
 async function performReflection(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   cluster: SkillOptimizationCluster,
   skill: Skill,
@@ -346,7 +360,7 @@ async function performReflection(
     if (isWorst) {
       // Worst arm: Gets best config + new prompt
       updatePromises.push(
-        userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+        userDataStorageConnector.updateSkillOptimizationArm(c, arm.id, {
           params: {
             ...bestArm.params,
             system_prompt: newPrompt,
@@ -355,14 +369,14 @@ async function performReflection(
       );
       // Delete all arm_stats for this arm to reset its performance history
       updatePromises.push(
-        userDataStorageConnector.deleteSkillOptimizationArmStats({
+        userDataStorageConnector.deleteSkillOptimizationArmStats(c, {
           arm_id: arm.id,
         }),
       );
     } else {
       // Middle arms: Get new prompt only
       updatePromises.push(
-        userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+        userDataStorageConnector.updateSkillOptimizationArm(c, arm.id, {
           params: {
             ...arm.params,
             system_prompt: newPrompt,
@@ -371,7 +385,7 @@ async function performReflection(
       );
       // Delete all arm_stats for this arm to reset its performance history
       updatePromises.push(
-        userDataStorageConnector.deleteSkillOptimizationArmStats({
+        userDataStorageConnector.deleteSkillOptimizationArmStats(c, {
           arm_id: arm.id,
         }),
       );
@@ -381,12 +395,12 @@ async function performReflection(
   await Promise.all(updatePromises);
 
   // Reset cluster total_steps to match the best arm's request count
-  await userDataStorageConnector.updateSkillOptimizationCluster(cluster.id, {
+  await userDataStorageConnector.updateSkillOptimizationCluster(c, cluster.id, {
     total_steps: bestArmStats?.n ?? 0,
   });
 
   // Create skill event for reflection
-  await userDataStorageConnector.createSkillEvent({
+  await userDataStorageConnector.createSkillEvent(c, {
     agent_id: skill.agent_id,
     skill_id: skill.id,
     cluster_id: cluster.id,
@@ -453,6 +467,7 @@ export function generateExampleConversations(logs: Log[]): string[] {
  * Converts logs into conversation strings with evaluation information appended
  */
 async function generateExampleConversationsWithEvaluations(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   logs: Log[],
 ): Promise<string[]> {
@@ -490,7 +505,7 @@ async function generateExampleConversationsWithEvaluations(
 
       // Fetch evaluation runs for this log
       const evaluationRuns =
-        await userDataStorageConnector.getSkillOptimizationEvaluationRuns({
+        await userDataStorageConnector.getSkillOptimizationEvaluationRuns(c, {
           log_id: log.id,
         });
 
@@ -530,6 +545,7 @@ async function generateExampleConversationsWithEvaluations(
 }
 
 async function autoGenerateSystemPromptsForCluster(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   logsStorageConnector: LogsStorageConnector,
   cluster: SkillOptimizationCluster,
@@ -540,6 +556,7 @@ async function autoGenerateSystemPromptsForCluster(
 ) {
   // Attempt to acquire reflection lock
   const lockTime = await acquireReflectionLock(
+    c,
     userDataStorageConnector,
     skill,
     cluster.id,
@@ -552,6 +569,7 @@ async function autoGenerateSystemPromptsForCluster(
   try {
     // Fetch cluster arms
     const clusterArms = await userDataStorageConnector.getSkillOptimizationArms(
+      c,
       {
         skill_id: cluster.skill_id,
         cluster_id: cluster.id,
@@ -563,17 +581,18 @@ async function autoGenerateSystemPromptsForCluster(
       console.warn(
         `[REFLECTION] No arms found for cluster ${cluster.id}. Skipping reflection and releasing lock.`,
       );
-      await releaseReflectionLock(userDataStorageConnector, cluster.id);
+      await releaseReflectionLock(c, userDataStorageConnector, cluster.id);
       return;
     }
 
     if (clusterArms.length === 1) {
-      await releaseReflectionLock(userDataStorageConnector, cluster.id);
+      await releaseReflectionLock(c, userDataStorageConnector, cluster.id);
       return;
     }
 
     // Calculate weighted stats for all arms
     const { armStatsMap, evaluationWeights } = await calculateClusterArmStats(
+      c,
       userDataStorageConnector,
       cluster,
       clusterArms,
@@ -584,7 +603,7 @@ async function autoGenerateSystemPromptsForCluster(
       (armData) => armData.n >= minRequestsPerArm,
     );
     if (!thresholdMetArms) {
-      await releaseReflectionLock(userDataStorageConnector, cluster.id);
+      await releaseReflectionLock(c, userDataStorageConnector, cluster.id);
       return;
     }
 
@@ -607,6 +626,7 @@ async function autoGenerateSystemPromptsForCluster(
 
     // Fetch reflection examples (best and worst logs)
     const { bestExamples, worstExamples } = await fetchReflectionExamples(
+      c,
       userDataStorageConnector,
       logsStorageConnector,
       cluster,
@@ -614,7 +634,7 @@ async function autoGenerateSystemPromptsForCluster(
 
     // SAFETY CHECK: Revalidate arms haven't changed during reflection
     const revalidatedArms =
-      await userDataStorageConnector.getSkillOptimizationArms({
+      await userDataStorageConnector.getSkillOptimizationArms(c, {
         skill_id: cluster.skill_id,
         cluster_id: cluster.id,
       });
@@ -628,7 +648,7 @@ async function autoGenerateSystemPromptsForCluster(
 
     // Re-fetch arm stats for revalidation
     const revalidatedArmStats =
-      await userDataStorageConnector.getSkillOptimizationArmStats({
+      await userDataStorageConnector.getSkillOptimizationArmStats(c, {
         cluster_id: cluster.id,
       });
 
@@ -678,13 +698,14 @@ async function autoGenerateSystemPromptsForCluster(
       revalidatedBestStats.n < minRequestsPerArm ||
       revalidatedWorstStats.n < minRequestsPerArm
     ) {
-      await releaseReflectionLock(userDataStorageConnector, cluster.id);
+      await releaseReflectionLock(c, userDataStorageConnector, cluster.id);
       return;
     }
 
     // Generate new prompt based on reflection
 
     const newPrompt = await generateReflectiveSystemPromptForSkill(
+      c,
       bestArm.params.system_prompt,
       bestExamples,
       worstExamples,
@@ -696,6 +717,7 @@ async function autoGenerateSystemPromptsForCluster(
 
     // Perform reflection: update arms with new prompt and reset stats
     await performReflection(
+      c,
       userDataStorageConnector,
       cluster,
       skill,
@@ -706,7 +728,7 @@ async function autoGenerateSystemPromptsForCluster(
     );
 
     // Release lock on successful completion
-    await releaseReflectionLock(userDataStorageConnector, cluster.id);
+    await releaseReflectionLock(c, userDataStorageConnector, cluster.id);
   } catch (reflectionError) {
     console.error(
       `[REFLECTION] Error during reflection for skill ${skill.id}, cluster ${cluster.id}:`,
@@ -714,7 +736,7 @@ async function autoGenerateSystemPromptsForCluster(
     );
     // Release lock on error
     try {
-      await releaseReflectionLock(userDataStorageConnector, cluster.id);
+      await releaseReflectionLock(c, userDataStorageConnector, cluster.id);
     } catch (unlockError) {
       console.error('[REFLECTION] Failed to release lock:', unlockError);
     }
@@ -724,6 +746,7 @@ async function autoGenerateSystemPromptsForCluster(
 }
 
 export async function autoGenerateSystemPromptsForSkill(
+  c: AppContext,
   functionName: FunctionName,
   userDataStorageConnector: UserDataStorageConnector,
   logsStorageConnector: LogsStorageConnector,
@@ -741,7 +764,7 @@ export async function autoGenerateSystemPromptsForSkill(
   }
 
   const skillClusters =
-    await userDataStorageConnector.getSkillOptimizationClusters({
+    await userDataStorageConnector.getSkillOptimizationClusters(c, {
       skill_id: skill.id,
     });
 
@@ -752,7 +775,7 @@ export async function autoGenerateSystemPromptsForSkill(
   const minRequestsPerArm = skill.reflection_min_requests_per_arm;
 
   // Fetch the agent information for context
-  const agents = await userDataStorageConnector.getAgents({
+  const agents = await userDataStorageConnector.getAgents(c, {
     id: skill.agent_id,
   });
 
@@ -764,6 +787,7 @@ export async function autoGenerateSystemPromptsForSkill(
 
   for (const cluster of skillClusters) {
     await autoGenerateSystemPromptsForCluster(
+      c,
       userDataStorageConnector,
       logsStorageConnector,
       cluster,

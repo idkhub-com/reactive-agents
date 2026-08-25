@@ -2,6 +2,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { calculateDistance, kMeansClustering } from '@api/utils/math';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import { error, info, success } from '@shared/console-logging';
@@ -51,6 +52,7 @@ export function getClusters(skill: Skill, logs: Log[]): ClusterResult | null {
 }
 
 export async function autoClusterSkill(
+  c: AppContext,
   functionName: FunctionName,
   userDataStorageConnector: UserDataStorageConnector,
   logsStorageConnector: LogsStorageConnector,
@@ -69,7 +71,7 @@ export async function autoClusterSkill(
 
   const interval = skill.clustering_interval;
 
-  const logs = await logsStorageConnector.getLogs({
+  const logs = await logsStorageConnector.getLogs(c, {
     skill_id: skill.id,
     after: skill.last_clustering_log_start_time ?? undefined,
     // Since the embedding is not null, we can assume that the logs are valid
@@ -90,6 +92,7 @@ export async function autoClusterSkill(
       const lockThresholdMs = 60000; // 60 seconds
       const lockedSkill =
         await userDataStorageConnector.tryAcquireReclusteringLock(
+          c,
           skill.id,
           lockThresholdMs,
         );
@@ -110,7 +113,7 @@ export async function autoClusterSkill(
       skill.last_clustering_at = lockedSkill.last_clustering_at;
 
       const clusterStates =
-        await userDataStorageConnector.getSkillOptimizationClusters({
+        await userDataStorageConnector.getSkillOptimizationClusters(c, {
           skill_id: skill.id,
         });
 
@@ -141,6 +144,7 @@ export async function autoClusterSkill(
             centroid,
           }));
         await userDataStorageConnector.createSkillOptimizationClusters(
+          c,
           clusterParams,
         );
         // Emit SSE event for cluster updates
@@ -182,6 +186,7 @@ export async function autoClusterSkill(
         await Promise.all(
           matches.map((match) =>
             userDataStorageConnector.updateSkillOptimizationCluster(
+              c,
               match.clusterStateId,
               {
                 centroid: match.newCenter,
@@ -199,12 +204,12 @@ export async function autoClusterSkill(
       const mostRecentLog = logs[0];
 
       // Update clustering state (last_clustering_at was already set as a lock)
-      await userDataStorageConnector.updateSkill(skill.id, {
+      await userDataStorageConnector.updateSkill(c, skill.id, {
         last_clustering_log_start_time: mostRecentLog.start_time,
       });
 
       // Create reclustering event
-      await userDataStorageConnector.createSkillEvent({
+      await userDataStorageConnector.createSkillEvent(c, {
         agent_id: skill.agent_id,
         skill_id: skill.id,
         cluster_id: null, // Skill-wide event

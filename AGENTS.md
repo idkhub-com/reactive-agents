@@ -292,4 +292,10 @@ The system uses special auto-generated skills in the `reactive-agents` agent (de
   - `API_URL` - API server URL (server-side)
   - `BEARER_TOKEN` - API authentication token
   - `ACCESS_PASSWORD` - Dashboard password (optional)
-  - `JWT_SECRET` - JWT signing secret
+  - `AUTH_JWT_SECRET` - JWT signing secret for the dashboard session cookie (required in production)
+  - `AI_PROVIDER_API_KEY_ENCRYPTION_KEY` - Encryption key for stored AI provider API keys (required in production)
+- **Reading env vars**: Never read `process.env` from request-handling code. Every
+  environment value is exposed as a getter in `packages/api/src/constants.ts` that
+  takes the Hono context (e.g. `getAccessPassword(c)`), so the same code works on
+  Node and Cloudflare Workers. `packages/api/src/server.ts` merges `process.env`
+  into `c.env` for the Node entrypoint.

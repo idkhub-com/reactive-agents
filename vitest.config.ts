@@ -18,6 +18,7 @@ export default defineConfig({
       // in-depth tests excluded based on environment variable
       ...(process.env.INCLUDE_IN_DEPTH !== 'true' ? ['**/in-depth/**'] : []),
     ],
+    teardownTimeout: 3000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

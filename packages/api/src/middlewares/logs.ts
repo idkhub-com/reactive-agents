@@ -10,7 +10,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
-import type { AppEnv } from '@api/types/hono';
+import type { AppContext, AppEnv } from '@api/types/hono';
 import type { HttpMethod } from '@api/types/http';
 import {
   runEvaluationsForLog,
@@ -347,6 +347,7 @@ function parseStreamChunksToResponseBody(
 }
 
 interface ProcessLogsParams {
+  c: AppContext;
   url: URL;
   status: number;
   method: HttpMethod;
@@ -369,6 +370,7 @@ interface ProcessLogsParams {
 }
 
 async function processLogs({
+  c,
   url,
   status,
   method,
@@ -447,7 +449,7 @@ async function processLogs({
 
   // Store the log in the configured logs storage connector
   try {
-    const insertedLog = await logsStorageConnector.createLog(createParams);
+    const insertedLog = await logsStorageConnector.createLog(c, createParams);
 
     // Emit SSE event for real-time log updates with full log data
     emitSSEEvent('log:created', {
@@ -463,7 +465,7 @@ async function processLogs({
       // Run evaluations in the background without blocking log creation
       const evaluationsPromise: Promise<SkillOptimizationEvaluationResult[]> =
         Promise.resolve(
-          userDataStorageConnector.getSkillOptimizationEvaluations({
+          userDataStorageConnector.getSkillOptimizationEvaluations(c, {
             agent_id: skill.agent_id,
             skill_id: skill.id,
           }),
@@ -471,6 +473,7 @@ async function processLogs({
           .then((evaluations) => {
             if (evaluations.length > 0) {
               return runEvaluationsForLog(
+                c,
                 insertedLog,
                 evaluations,
                 evaluationConnectorsMap,
@@ -528,11 +531,13 @@ async function processLogsAndOptimizeSkill(
           if (results.length > 0 && processLogsParams.pulledArm) {
             // Update arm stats with real scores
             await updatePulledArm(
+              processLogsParams.c,
               processLogsParams.userDataStorageConnector,
               processLogsParams.pulledArm,
               results,
             );
             await addSkillOptimizationEvaluationRun(
+              processLogsParams.c,
               processLogsParams.userDataStorageConnector,
               processLogsParams.pulledArm,
               logId,
@@ -554,11 +559,13 @@ async function processLogsAndOptimizeSkill(
     } else if (evaluationResults.length > 0 && logId) {
       // We have synchronous evaluation results - update arm stats with real scores
       await updatePulledArm(
+        processLogsParams.c,
         processLogsParams.userDataStorageConnector,
         processLogsParams.pulledArm,
         evaluationResults,
       );
       await addSkillOptimizationEvaluationRun(
+        processLogsParams.c,
         processLogsParams.userDataStorageConnector,
         processLogsParams.pulledArm,
         logId,
@@ -577,6 +584,7 @@ async function processLogsAndOptimizeSkill(
     // Check if we should regenerate evaluations early (after first 5 requests)
     if (processLogsParams.evaluationConnectorsMap) {
       await checkAndRegenerateEvaluationsEarly(
+        processLogsParams.c,
         processLogsParams.functionName,
         processLogsParams.userDataStorageConnector,
         processLogsParams.logsStorageConnector,
@@ -586,12 +594,14 @@ async function processLogsAndOptimizeSkill(
       );
     }
     await autoClusterSkill(
+      processLogsParams.c,
       processLogsParams.functionName,
       processLogsParams.userDataStorageConnector,
       processLogsParams.logsStorageConnector,
       processLogsParams.skill,
     );
     await autoGenerateSystemPromptsForSkill(
+      processLogsParams.c,
       processLogsParams.functionName,
       processLogsParams.userDataStorageConnector,
       processLogsParams.logsStorageConnector,
@@ -708,6 +718,7 @@ export const logsMiddleware = (
       }
 
       const processLogsParams: ProcessLogsParams = {
+        c,
         url,
         status: c.res.status,
         method: raRequestData.method,

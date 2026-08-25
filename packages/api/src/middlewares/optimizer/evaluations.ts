@@ -6,6 +6,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import { FunctionName } from '@shared/types/api/request';
 import type {
@@ -17,6 +18,7 @@ import type {
 import { SkillEventType } from '@shared/types/data/skill-event';
 
 export async function addSkillOptimizationEvaluationRun(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
   logId: string,
@@ -32,6 +34,7 @@ export async function addSkillOptimizationEvaluationRun(
 
   const evaluationRun =
     await userDataStorageConnector.createSkillOptimizationEvaluationRun(
+      c,
       createParams,
     );
 
@@ -50,6 +53,7 @@ export async function addSkillOptimizationEvaluationRun(
  * This happens after the first 5 requests to use actual usage data.
  */
 export async function checkAndRegenerateEvaluationsEarly(
+  c: AppContext,
   functionName: FunctionName,
   userDataStorageConnector: UserDataStorageConnector,
   logsStorageConnector: LogsStorageConnector,
@@ -71,7 +75,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Re-fetch skill to get latest metadata state (critical for lock check)
     // This ensures we see any locks or completion flags set by concurrent requests
-    const latestSkills = await userDataStorageConnector.getSkills({
+    const latestSkills = await userDataStorageConnector.getSkills(c, {
       id: skill.id,
     });
 
@@ -104,7 +108,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Try to acquire lock by updating the skill
     const lockTime = new Date().toISOString();
     try {
-      await userDataStorageConnector.updateSkill(skill.id, {
+      await userDataStorageConnector.updateSkill(c, skill.id, {
         evaluation_lock_acquired_at: lockTime,
       });
     } catch (_error) {
@@ -115,7 +119,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Re-fetch the skill and verify:
     // 1. The lock we just set is still there (not overwritten by another process)
     // 2. No completion flag has been set (another process didn't complete while we were setting the lock)
-    const postLockSkills = await userDataStorageConnector.getSkills({
+    const postLockSkills = await userDataStorageConnector.getSkills(c, {
       id: skill.id,
     });
 
@@ -127,7 +131,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Check if completion flag was set by another process
     if (postLockSkill.evaluations_regenerated_at !== null) {
-      await userDataStorageConnector.updateSkill(skill.id, {
+      await userDataStorageConnector.updateSkill(c, skill.id, {
         evaluation_lock_acquired_at: null,
       });
       return;
@@ -145,7 +149,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     }
 
     // Count total logs for this skill
-    const logs = await logsStorageConnector.getLogs({
+    const logs = await logsStorageConnector.getLogs(c, {
       skill_id: skill.id,
       embedding_not_null: true,
       limit: 10, // Get a few more than needed
@@ -154,7 +158,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Need at least 5 logs to regenerate
     if (logs.length < 5) {
       // Release lock
-      await userDataStorageConnector.updateSkill(skill.id, {
+      await userDataStorageConnector.updateSkill(c, skill.id, {
         evaluation_lock_acquired_at: null,
       });
       return;
@@ -165,7 +169,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     if (examples.length === 0) {
       // Release lock
-      await userDataStorageConnector.updateSkill(skill.id, {
+      await userDataStorageConnector.updateSkill(c, skill.id, {
         evaluation_lock_acquired_at: null,
       });
       return;
@@ -183,6 +187,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Generate new system prompt with schema and examples
     const newSystemPrompt = await generateSeedSystemPromptWithContext(
+      c,
       agentDescription,
       skill.description,
       examples,
@@ -193,7 +198,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Get existing evaluations to know which methods to regenerate
     const existingEvaluations =
-      await userDataStorageConnector.getSkillOptimizationEvaluations({
+      await userDataStorageConnector.getSkillOptimizationEvaluations(c, {
         skill_id: skill.id,
       });
     const existingEvaluationMethods = existingEvaluations.map(
@@ -202,6 +207,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Regenerate evaluations with real examples
     const newEvaluationParams = await regenerateEvaluationsWithExamples(
+      c,
       skill,
       agentDescription,
       examples,
@@ -219,6 +225,7 @@ export async function checkAndRegenerateEvaluationsEarly(
 
       if (newParams) {
         await userDataStorageConnector.updateSkillOptimizationEvaluation(
+          c,
           evaluation.id,
           {
             params: newParams.params,
@@ -230,12 +237,12 @@ export async function checkAndRegenerateEvaluationsEarly(
 
     // Update all arms in-place with new system prompts
     // This preserves arm IDs and cluster associations
-    const allArms = await userDataStorageConnector.getSkillOptimizationArms({
+    const allArms = await userDataStorageConnector.getSkillOptimizationArms(c, {
       skill_id: skill.id,
     });
 
     for (const arm of allArms) {
-      await userDataStorageConnector.updateSkillOptimizationArm(arm.id, {
+      await userDataStorageConnector.updateSkillOptimizationArm(c, arm.id, {
         params: {
           ...arm.params,
           system_prompt: newSystemPrompt,
@@ -246,7 +253,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Reset all arm stats since we have new evaluations and system prompts
     // This forces Thompson Sampling to re-explore with the new configurations
     for (const arm of allArms) {
-      await userDataStorageConnector.deleteSkillOptimizationArmStats({
+      await userDataStorageConnector.deleteSkillOptimizationArmStats(c, {
         arm_id: arm.id,
       });
     }
@@ -254,12 +261,13 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Reset all cluster total_steps to 0 for early regeneration
     // This restarts the exploration/exploitation balance
     const allClusters =
-      await userDataStorageConnector.getSkillOptimizationClusters({
+      await userDataStorageConnector.getSkillOptimizationClusters(c, {
         skill_id: skill.id,
       });
 
     for (const cluster of allClusters) {
       await userDataStorageConnector.updateSkillOptimizationCluster(
+        c,
         cluster.id,
         {
           total_steps: 0,
@@ -268,13 +276,13 @@ export async function checkAndRegenerateEvaluationsEarly(
     }
 
     // Mark completion and release lock atomically
-    await userDataStorageConnector.updateSkill(skill.id, {
+    await userDataStorageConnector.updateSkill(c, skill.id, {
       evaluations_regenerated_at: new Date().toISOString(),
       evaluation_lock_acquired_at: null, // Release lock
     });
 
     // Create event for context generation
-    await userDataStorageConnector.createSkillEvent({
+    await userDataStorageConnector.createSkillEvent(c, {
       agent_id: skill.agent_id,
       skill_id: skill.id,
       cluster_id: null, // Skill-wide event
@@ -294,7 +302,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     console.error('[EARLY_EVAL_REGEN] Error during regeneration:', error);
     // Release lock on error
     try {
-      await userDataStorageConnector.updateSkill(skill.id, {
+      await userDataStorageConnector.updateSkill(c, skill.id, {
         evaluation_lock_acquired_at: null,
       });
     } catch (unlockError) {

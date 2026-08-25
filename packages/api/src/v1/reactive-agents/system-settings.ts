@@ -10,7 +10,7 @@ export const systemSettingsRouter = new Hono<AppEnv>()
     try {
       const connector = c.get('user_data_storage_connector');
 
-      const settings = await connector.getSystemSettings();
+      const settings = await connector.getSystemSettings(c);
       return c.json(settings, 200);
     } catch (error) {
       console.error('Error fetching system settings:', error);
@@ -25,7 +25,10 @@ export const systemSettingsRouter = new Hono<AppEnv>()
       const connector = c.get('user_data_storage_connector');
       const updateData = c.req.valid('json');
 
-      const updatedSettings = await connector.updateSystemSettings(updateData);
+      const updatedSettings = await connector.updateSystemSettings(
+        c,
+        updateData,
+      );
       return c.json(updatedSettings, 200);
     } catch (error) {
       console.error('Error updating system settings:', error);

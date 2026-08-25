@@ -1,5 +1,6 @@
-import { API_URL, BEARER_TOKEN } from '@api/constants';
+import { getApiUrl, getBearerToken } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import {
@@ -193,6 +194,7 @@ export function formatMessagesForEmbedding(
 }
 
 export async function generateEmbeddingForRequest(
+  c: AppContext,
   raRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
@@ -200,7 +202,7 @@ export async function generateEmbeddingForRequest(
   connector: UserDataStorageConnector,
 ): Promise<number[]> {
   // Resolve embedding model from system settings (includes dimensions)
-  const embeddingConfig = await resolveEmbeddingModelConfig(connector);
+  const embeddingConfig = await resolveEmbeddingModelConfig(c, connector);
 
   if (!embeddingConfig) {
     warn('[EMBEDDING] No embedding model configured in system settings');
@@ -210,7 +212,7 @@ export async function generateEmbeddingForRequest(
   }
 
   // Look up the provider to get the API key
-  const providers = await connector.getAIProviderAPIKeys({
+  const providers = await connector.getAIProviderAPIKeys(c, {
     id: embeddingConfig.model.ai_provider_id,
   });
   if (providers.length === 0) {
@@ -255,11 +257,11 @@ export async function generateEmbeddingForRequest(
     // We use the fetch instead of the openai library because the openai
     // library attempts to automatically truncate the embeddings to fit their models'
     // dimensions.
-    const response = await fetch(`${API_URL}/v1/embeddings`, {
+    const response = await fetch(`${getApiUrl(c)}/v1/embeddings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${BEARER_TOKEN}`,
+        Authorization: `Bearer ${getBearerToken(c)}`,
         'ra-config': JSON.stringify(raConfig),
       },
       body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { createMockContext } from '@api/test-utils/mock-context';
 import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
@@ -12,7 +13,8 @@ import {
 import { describe, expect, it, type MockedFunction, vi } from 'vitest';
 import { z } from 'zod';
 
-// Mock storage connector for tests
+// Mock context and storage connector for tests
+const mockContext = createMockContext();
 const mockStorageConnector = {} as UserDataStorageConnector;
 
 describe('Connector Interfaces', () => {
@@ -39,6 +41,8 @@ describe('Connector Interfaces', () => {
 
         getAIParameterSchema: z.object({}),
       });
+
+    // Note: The EvaluationMethodConnector.evaluateLog now takes (c, evaluation, log, storageConnector)
 
     it('should have all required methods', () => {
       const connector = createMockEvaluationMethodConnector();
@@ -83,12 +87,14 @@ describe('Connector Interfaces', () => {
       } as unknown as Log;
 
       const result = await connector.evaluateLog(
+        mockContext,
         evaluation,
         log,
         mockStorageConnector,
       );
 
       expect(connector.evaluateLog).toHaveBeenCalledWith(
+        mockContext,
         evaluation,
         log,
         mockStorageConnector,
@@ -114,7 +120,7 @@ describe('Connector Interfaces', () => {
     });
 
     describe('evaluateLog method signature compliance', () => {
-      it('should accept SkillOptimizationEvaluation as first parameter', async () => {
+      it('should accept AppContext as first parameter and SkillOptimizationEvaluation as second', async () => {
         const connector = createMockEvaluationMethodConnector();
         const evaluation: SkillOptimizationEvaluation = {
           id: 'test-eval-id',
@@ -129,23 +135,30 @@ describe('Connector Interfaces', () => {
         };
         const log = {} as unknown as Log;
 
-        await connector.evaluateLog(evaluation, log, mockStorageConnector);
+        await connector.evaluateLog(
+          mockContext,
+          evaluation,
+          log,
+          mockStorageConnector,
+        );
 
         expect(connector.evaluateLog).toHaveBeenCalledWith(
+          mockContext,
           evaluation,
           expect.any(Object),
           mockStorageConnector,
         );
 
-        // Verify first argument has evaluation properties
+        // Verify second argument has evaluation properties
         const callArgs = (
           connector.evaluateLog as MockedFunction<typeof connector.evaluateLog>
         ).mock.calls[0];
-        expect(callArgs[0]).toBe(evaluation);
-        expect(callArgs[0]).toHaveProperty('evaluation_method');
+        expect(callArgs[0]).toBe(mockContext);
+        expect(callArgs[1]).toBe(evaluation);
+        expect(callArgs[1]).toHaveProperty('evaluation_method');
       });
 
-      it('should accept Log as second parameter', async () => {
+      it('should accept Log as third parameter', async () => {
         const connector = createMockEvaluationMethodConnector();
         const evaluation: SkillOptimizationEvaluation = {
           id: 'test-eval-id',
@@ -166,14 +179,19 @@ describe('Connector Interfaces', () => {
           metadata: {},
         } as unknown as Log;
 
-        await connector.evaluateLog(evaluation, log, mockStorageConnector);
+        await connector.evaluateLog(
+          mockContext,
+          evaluation,
+          log,
+          mockStorageConnector,
+        );
 
         const callArgs = (
           connector.evaluateLog as MockedFunction<typeof connector.evaluateLog>
         ).mock.calls[0];
-        expect(callArgs[1]).toBe(log);
-        expect(callArgs[1]).toHaveProperty('id');
-        expect(callArgs[2]).toBe(mockStorageConnector);
+        expect(callArgs[2]).toBe(log);
+        expect(callArgs[2]).toHaveProperty('id');
+        expect(callArgs[3]).toBe(mockStorageConnector);
       });
 
       it('should return Promise<SkillOptimizationEvaluationResult>', async () => {
@@ -191,6 +209,7 @@ describe('Connector Interfaces', () => {
         };
 
         const result = connector.evaluateLog(
+          mockContext,
           evaluation,
           {} as unknown as Log,
           mockStorageConnector,
@@ -233,7 +252,7 @@ describe('Connector Interfaces', () => {
           name: 'Test',
           description: 'Test method',
         }),
-        evaluateLog: async (evaluation, _log, _storageConnector) => ({
+        evaluateLog: async (_c, evaluation, _log, _storageConnector) => ({
           evaluation_id: evaluation.id,
           method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
           score: 0.5,

@@ -1,5 +1,6 @@
 import type { LLMJudgeModelConfig } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { warn } from '@shared/console-logging';
 import type { AIProvider } from '@shared/types/constants';
 import type { Model, SkillOptimizationEvaluation } from '@shared/types/data';
@@ -31,12 +32,13 @@ export type SystemSettingsModelType =
  * @returns The model configuration or null if not found
  */
 async function resolveModelById(
+  c: AppContext,
   modelId: string,
   connector: UserDataStorageConnector,
   logPrefix: string,
 ): Promise<ResolvedModelConfig | null> {
   // Look up the model
-  const models = await connector.getModels({ id: modelId });
+  const models = await connector.getModels(c, { id: modelId });
   if (models.length === 0) {
     warn(`[${logPrefix}] Model not found: ${modelId}`);
     return null;
@@ -44,7 +46,7 @@ async function resolveModelById(
   const model = models[0];
 
   // Look up the provider to get the API key
-  const providers = await connector.getAIProviderAPIKeys({
+  const providers = await connector.getAIProviderAPIKeys(c, {
     id: model.ai_provider_id,
   });
   if (providers.length === 0) {
@@ -78,11 +80,12 @@ async function resolveModelById(
  * @returns The model configuration or null if not configured
  */
 export async function resolveSystemSettingsModel(
+  c: AppContext,
   modelType: SystemSettingsModelType,
   connector: UserDataStorageConnector,
 ): Promise<ResolvedModelConfig | null> {
   const logPrefix = `MODEL_RESOLVER_${modelType.toUpperCase()}`;
-  const systemSettings = await connector.getSystemSettings();
+  const systemSettings = await connector.getSystemSettings(c);
 
   let modelId: string | null = null;
 
@@ -108,7 +111,7 @@ export async function resolveSystemSettingsModel(
     return null;
   }
 
-  return resolveModelById(modelId, connector, logPrefix);
+  return resolveModelById(c, modelId, connector, logPrefix);
 }
 
 /**
@@ -123,6 +126,7 @@ export async function resolveSystemSettingsModel(
  * @returns The model configuration or null if no model could be resolved
  */
 export async function resolveEvaluationModelConfig(
+  c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   connector: UserDataStorageConnector,
 ): Promise<LLMJudgeModelConfig | null> {
@@ -130,11 +134,11 @@ export async function resolveEvaluationModelConfig(
 
   // If evaluation has a model_id, use it
   if (evaluation.model_id) {
-    return await resolveModelById(evaluation.model_id, connector, logPrefix);
+    return await resolveModelById(c, evaluation.model_id, connector, logPrefix);
   }
 
   // Fall back to system settings judge_model_id
-  return await resolveSystemSettingsModel('judge', connector);
+  return await resolveSystemSettingsModel(c, 'judge', connector);
 }
 
 /**
@@ -153,17 +157,18 @@ export interface EmbeddingModelConfig {
  * @returns The embedding model config or null if not configured
  */
 export async function resolveEmbeddingModelConfig(
+  c: AppContext,
   connector: UserDataStorageConnector,
 ): Promise<EmbeddingModelConfig | null> {
   const logPrefix = 'EMBEDDING_MODEL_RESOLVER';
-  const systemSettings = await connector.getSystemSettings();
+  const systemSettings = await connector.getSystemSettings(c);
 
   if (!systemSettings.embedding_model_id) {
     warn(`[${logPrefix}] No embedding_model_id configured in system settings`);
     return null;
   }
 
-  const models = await connector.getModels({
+  const models = await connector.getModels(c, {
     id: systemSettings.embedding_model_id,
   });
   if (models.length === 0) {

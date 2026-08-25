@@ -7,6 +7,7 @@ import {
   type LLMJudgeModelConfig,
 } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/reactive-agents/requests';
@@ -29,12 +30,14 @@ import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data'
  * Evaluate conversation completeness for a single log
  */
 export async function evaluateConversationCompleteness(
+  c: AppContext,
   log: Log,
   params: ConversationCompletenessEvaluationParameters,
   modelConfig?: LLMJudgeModelConfig | null,
 ): Promise<ConversationCompletenessResult> {
   // Create LLM judge instance with resolved model config
   const llmJudge = createLLMJudge(
+    c,
     {
       temperature: params.temperature,
       max_tokens: params.max_tokens,
@@ -88,6 +91,7 @@ export async function evaluateConversationCompleteness(
 }
 
 export async function evaluateLog(
+  c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
@@ -99,12 +103,14 @@ export async function evaluateLog(
 
   // Resolve model configuration from evaluation.model_id or system settings
   const modelConfig = await resolveEvaluationModelConfig(
+    c,
     evaluation,
     storageConnector,
   );
 
   // Evaluate the log using the existing function
   const result = await evaluateConversationCompleteness(
+    c,
     log,
     params,
     modelConfig,

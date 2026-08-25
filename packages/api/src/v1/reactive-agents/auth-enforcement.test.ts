@@ -107,5 +107,12 @@ describe('Auth enforcement on reactive-agents routes', () => {
       const response = await app.request(`${BASE}/auth/status`);
       expect(response.status).toBe(200);
     });
+
+    it('POST /auth/logout is accessible without auth', async () => {
+      const response = await app.request(`${BASE}/auth/logout`, {
+        method: 'POST',
+      });
+      expect(response.status).toBe(200);
+    });
   });
 });

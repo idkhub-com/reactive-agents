@@ -1,5 +1,10 @@
-import { BEARER_TOKEN, getJwtSecret } from '@api/constants';
+import {
+  getAccessPassword,
+  getAuthJwtSecret,
+  getBearerToken,
+} from '@api/constants';
 import type { AppEnv } from '@api/types/hono';
+import { AUTH_COOKIE_NAME } from '@api/utils/auth-cookie';
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Factory } from 'hono/factory';
@@ -22,18 +27,14 @@ export const authenticatedMiddleware = (
 ): MiddlewareHandler =>
   factory.createMiddleware(async (c, next) => {
     // Allow access to auth endpoints so that we can login or verify authorization
-    if (
-      c.req.path.startsWith('/v1/reactive-agents/auth/login') ||
-      c.req.path.startsWith('/v1/reactive-agents/auth/verify') ||
-      c.req.path.startsWith('/v1/reactive-agents/auth/status')
-    ) {
+    if (c.req.path.startsWith('/v1/reactive-agents/auth/')) {
       await next();
       return;
     }
 
-    const jwtSecret = c.env?.JWT_SECRET ?? getJwtSecret();
-    const bearerToken = c.env?.BEARER_TOKEN ?? BEARER_TOKEN;
-    const accessPassword = c.env?.ACCESS_PASSWORD;
+    const jwtSecret = getAuthJwtSecret(c);
+    const bearerToken = getBearerToken(c);
+    const accessPassword = getAccessPassword(c);
 
     // If neither ACCESS_PASSWORD nor BEARER_TOKEN is configured, skip auth
     if (!accessPassword && !bearerToken) {
@@ -42,9 +43,9 @@ export const authenticatedMiddleware = (
     }
 
     // Check JWT cookie first (set by login flow)
-    const accessTokenCookie = getCookie(c, 'access_token');
+    const accessTokenCookie = getCookie(c, AUTH_COOKIE_NAME);
     if (accessTokenCookie) {
-      await jwt({ cookie: 'access_token', secret: jwtSecret })(c, next);
+      await jwt({ cookie: AUTH_COOKIE_NAME, secret: jwtSecret })(c, next);
       return;
     }
 

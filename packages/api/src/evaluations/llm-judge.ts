@@ -1,4 +1,4 @@
-import { API_URL } from '@api/constants';
+import { getApiUrl } from '@api/constants';
 import {
   evaluationCriteria,
   scoringGuidelinesText,
@@ -9,6 +9,7 @@ import {
   type LLMJudgeConfig,
   LLMJudgeResult,
 } from '@api/types/evaluations/llm-judge';
+import type { AppContext } from '@api/types/hono';
 import { error, warn } from '@shared/console-logging';
 import {
   type AIProvider,
@@ -118,6 +119,7 @@ export interface LLMJudgeModelConfig {
 }
 
 export function createLLMJudge(
+  c: AppContext,
   config: Partial<LLMJudgeConfig> = {},
   modelConfig?: LLMJudgeModelConfig,
   openaiClient?: OpenAI,
@@ -138,7 +140,7 @@ export function createLLMJudge(
     openaiClient ||
     new OpenAI({
       apiKey: '',
-      baseURL: `${API_URL}/v1`,
+      baseURL: `${getApiUrl(c)}/v1`,
       dangerouslyAllowBrowser: true, // Safe in server-side Node.js context
     });
 

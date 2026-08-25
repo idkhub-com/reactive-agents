@@ -1,8 +1,9 @@
-import { API_URL } from '@api/constants';
+import { getApiUrl } from '@api/constants';
 import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
@@ -92,6 +93,7 @@ Your task description will guide the extraction AI to understand what users are 
 }
 
 export async function generateEvaluationCreateParams(
+  c: AppContext,
   skill: Skill,
   evaluationConnector: EvaluationMethodConnector,
   method: EvaluationMethodName,
@@ -101,6 +103,7 @@ export async function generateEvaluationCreateParams(
 ): Promise<SkillOptimizationEvaluationCreateParams> {
   // Resolve evaluation generation model from system settings
   const modelConfig = await resolveSystemSettingsModel(
+    c,
     'evaluation_generation',
     connector,
   );
@@ -117,7 +120,7 @@ export async function generateEvaluationCreateParams(
   // Create OpenAI client pointing to local Reactive Agents API
   const client = new OpenAI({
     apiKey: '',
-    baseURL: `${API_URL}/v1`,
+    baseURL: `${getApiUrl(c)}/v1`,
   });
 
   const raConfig = {
@@ -208,6 +211,7 @@ export async function generateEvaluationCreateParams(
  * evaluations that are better aligned with actual usage patterns.
  */
 export async function regenerateEvaluationsWithExamples(
+  c: AppContext,
   skill: Skill,
   agentDescription: string,
   examples: string[],
@@ -222,6 +226,7 @@ export async function regenerateEvaluationsWithExamples(
     }
 
     return await generateEvaluationCreateParams(
+      c,
       skill,
       evaluationConnector,
       method,

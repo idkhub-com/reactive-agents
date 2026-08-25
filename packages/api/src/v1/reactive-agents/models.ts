@@ -26,7 +26,7 @@ export const modelsRouter = new Hono<AppEnv>()
         offset: c.req.query('offset'),
       });
 
-      const models = await userDataStorageConnector.getModels(queryParams);
+      const models = await userDataStorageConnector.getModels(c, queryParams);
       return c.json(models);
     } catch (error) {
       console.error('Error fetching models:', error);
@@ -41,7 +41,7 @@ export const modelsRouter = new Hono<AppEnv>()
       const userDataStorageConnector = c.get('user_data_storage_connector');
       const { id } = c.req.valid('param');
 
-      const models = await userDataStorageConnector.getModels({
+      const models = await userDataStorageConnector.getModels(c, {
         id,
       });
       if (!models || models.length === 0) {
@@ -64,7 +64,7 @@ export const modelsRouter = new Hono<AppEnv>()
       const userDataStorageConnector = c.get('user_data_storage_connector');
       const modelData = c.req.valid('json');
 
-      const newModel = await userDataStorageConnector.createModel(modelData);
+      const newModel = await userDataStorageConnector.createModel(c, modelData);
       return c.json(newModel, 201);
     } catch (error) {
       console.error('Error creating model:', error);
@@ -85,6 +85,7 @@ export const modelsRouter = new Hono<AppEnv>()
         const updateData = c.req.valid('json');
 
         const updatedModel = await userDataStorageConnector.updateModel(
+          c,
           id,
           updateData,
         );
@@ -108,15 +109,17 @@ export const modelsRouter = new Hono<AppEnv>()
 
         // Find all skills using this model
         const affectedSkills =
-          await userDataStorageConnector.getSkillsByModelId(id);
+          await userDataStorageConnector.getSkillsByModelId(c, id);
 
         // For each affected skill, remove the model and create an event
         for (const skill of affectedSkills) {
           // Remove the model from the skill
-          await userDataStorageConnector.removeModelsFromSkill(skill.id, [id]);
+          await userDataStorageConnector.removeModelsFromSkill(c, skill.id, [
+            id,
+          ]);
 
           // Create MODEL_REMOVED event
-          await userDataStorageConnector.createSkillEvent({
+          await userDataStorageConnector.createSkillEvent(c, {
             agent_id: skill.agent_id,
             skill_id: skill.id,
             cluster_id: null,
@@ -135,6 +138,7 @@ export const modelsRouter = new Hono<AppEnv>()
 
           // Check if skill still has models
           const remainingModels = await userDataStorageConnector.getSkillModels(
+            c,
             skill.id,
           );
 
@@ -145,7 +149,7 @@ export const modelsRouter = new Hono<AppEnv>()
         }
 
         // Delete the model
-        await userDataStorageConnector.deleteModel(id);
+        await userDataStorageConnector.deleteModel(c, id);
 
         // Emit SSE event for model deletion
         emitSSEEvent('model:deleted', {

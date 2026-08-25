@@ -16,7 +16,7 @@ export const improvedResponsesRouter = new Hono<AppEnv>()
 
       const improvedResponse = await c
         .get('user_data_storage_connector')
-        .getImprovedResponse(queryParams);
+        .getImprovedResponse(c, queryParams);
 
       return c.json(improvedResponse);
     } catch (error) {
@@ -34,7 +34,7 @@ export const improvedResponsesRouter = new Hono<AppEnv>()
       // Create the improved response (timestamps and ID are added during validation)
       const improvedResponse = await c
         .get('user_data_storage_connector')
-        .createImprovedResponse(validatedData);
+        .createImprovedResponse(c, validatedData);
 
       return c.json(improvedResponse, 201);
     } catch (error) {
@@ -62,7 +62,7 @@ export const improvedResponsesRouter = new Hono<AppEnv>()
         // Update the improved response (updated_at is added during validation)
         const updatedResponse = await c
           .get('user_data_storage_connector')
-          .updateImprovedResponse(improvedResponseId, updateData);
+          .updateImprovedResponse(c, improvedResponseId, updateData);
 
         return c.json(updatedResponse);
       } catch (error) {
@@ -83,7 +83,7 @@ export const improvedResponsesRouter = new Hono<AppEnv>()
 
         await c
           .get('user_data_storage_connector')
-          .deleteImprovedResponse(improvedResponseId);
+          .deleteImprovedResponse(c, improvedResponseId);
         return c.body(null, 204);
       } catch (error) {
         console.error('Error deleting improved response:', error);

@@ -4,6 +4,7 @@ import { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { LLMJudge } from '@api/types/evaluations/llm-judge';
+import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/reactive-agents/requests';
@@ -41,6 +42,7 @@ async function generateVerdict(
 }
 
 async function getTaskAndOutcome(
+  c: AppContext,
   params: TaskCompletionEvaluationParameters,
   log: Log,
   connector: UserDataStorageConnector,
@@ -65,6 +67,7 @@ async function getTaskAndOutcome(
   const output = extractOutputFromResponseBody(responseBody);
 
   const { task, outcome } = await extractTaskAndOutcome(
+    c,
     params,
     input,
     output,
@@ -74,6 +77,7 @@ async function getTaskAndOutcome(
 }
 
 export async function evaluateLog(
+  c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
@@ -85,11 +89,13 @@ export async function evaluateLog(
 
     // Resolve model configuration from evaluation.model_id or system settings
     const modelConfig = await resolveEvaluationModelConfig(
+      c,
       evaluation,
       storageConnector,
     );
 
     const llmJudge = createLLMJudge(
+      c,
       {
         temperature: params.temperature,
         max_tokens: params.max_tokens,
@@ -98,6 +104,7 @@ export async function evaluateLog(
     );
 
     const { task, outcome } = await getTaskAndOutcome(
+      c,
       params,
       log,
       storageConnector,

@@ -29,6 +29,7 @@ import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
 async function getOptimalArm(
+  c: AppContext,
   arms: SkillOptimizationArm[],
   skillId: string,
   userDataStorageConnector: UserDataStorageConnector,
@@ -45,7 +46,7 @@ async function getOptimalArm(
 
   // Fetch evaluations to get weights
   const evaluations =
-    await userDataStorageConnector.getSkillOptimizationEvaluations({
+    await userDataStorageConnector.getSkillOptimizationEvaluations(c, {
       skill_id: skillId,
     });
 
@@ -73,7 +74,7 @@ async function getOptimalArm(
   for (const arm of arms) {
     // Fetch arm stats for this arm
     const armStats =
-      await userDataStorageConnector.getSkillOptimizationArmStats({
+      await userDataStorageConnector.getSkillOptimizationArmStats(c, {
         arm_id: arm.id,
       });
 
@@ -206,12 +207,13 @@ async function validateTargetConfiguration(
       const skill = c.get('skill');
 
       let clusters =
-        await userDataStorageConnector.getSkillOptimizationClusters({
+        await userDataStorageConnector.getSkillOptimizationClusters(c, {
           skill_id: skill.id,
         });
 
       // Get embedding model config for cluster centroids
       const embeddingConfig = await resolveEmbeddingModelConfig(
+        c,
         userDataStorageConnector,
       );
 
@@ -237,6 +239,7 @@ async function validateTargetConfiguration(
 
             clusters =
               await userDataStorageConnector.createSkillOptimizationClusters(
+                c,
                 clusterParams,
               );
 
@@ -245,7 +248,7 @@ async function validateTargetConfiguration(
             // If cluster creation fails (e.g., duplicate from concurrent request),
             // fetch the existing clusters instead
             clusters =
-              await userDataStorageConnector.getSkillOptimizationClusters({
+              await userDataStorageConnector.getSkillOptimizationClusters(c, {
                 skill_id: skill.id,
               });
             // If we still have no clusters, throw the original error
@@ -258,12 +261,13 @@ async function validateTargetConfiguration(
 
       const optimalCluster = getOptimalCluster(embedding, clusters);
 
-      const arms = await userDataStorageConnector.getSkillOptimizationArms({
+      const arms = await userDataStorageConnector.getSkillOptimizationArms(c, {
         skill_id: skill.id,
         cluster_id: optimalCluster.id,
       });
 
       const optimalArm = await getOptimalArm(
+        c,
         arms,
         skill.id,
         userDataStorageConnector,
@@ -279,7 +283,7 @@ async function validateTargetConfiguration(
       );
 
       // Resolve model_id to get model name and provider
-      const models = await userDataStorageConnector.getModels({
+      const models = await userDataStorageConnector.getModels(c, {
         id: optimalArm.params.model_id,
       });
 
@@ -297,6 +301,7 @@ async function validateTargetConfiguration(
       // Get the provider from the associated API key
       const apiKeyRecord =
         await userDataStorageConnector.getAIProviderAPIKeyById(
+          c,
           model.ai_provider_id,
         );
 
@@ -445,6 +450,7 @@ export const raConfigurationInjectorMiddleware = createMiddleware(
         ) {
           try {
             embedding = await generateEmbeddingForRequest(
+              c,
               raRequestData,
               c.get('user_data_storage_connector'),
             );

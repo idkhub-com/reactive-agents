@@ -1,5 +1,6 @@
-import { API_URL } from '@api/constants';
+import { getApiUrl } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
@@ -72,11 +73,13 @@ Analyze these examples to understand the task better and incorporate any pattern
  * Shared function to create and configure OpenAI client for system prompt generation.
  */
 async function createSystemPromptClient(
+  c: AppContext,
   skillName: string,
   connector: UserDataStorageConnector,
 ) {
   // Resolve system prompt reflection model from system settings
   const modelConfig = await resolveSystemSettingsModel(
+    c,
     'system_prompt_reflection',
     connector,
   );
@@ -92,7 +95,7 @@ async function createSystemPromptClient(
 
   const client = new OpenAI({
     apiKey: '',
-    baseURL: `${API_URL}/v1`,
+    baseURL: `${getApiUrl(c)}/v1`,
   });
 
   const raConfig = {
@@ -208,10 +211,12 @@ Return the system prompt in a JSON object.`;
 }
 
 export async function generateSeedSystemPromptForSkill(
+  c: AppContext,
   skill: Skill,
   connector: UserDataStorageConnector,
 ) {
   const { client, raConfig, model } = await createSystemPromptClient(
+    c,
     'system-prompt-seeding',
     connector,
   );
@@ -229,6 +234,7 @@ export async function generateSeedSystemPromptForSkill(
 }
 
 export async function generateSeedSystemPromptWithContext(
+  c: AppContext,
   agentDescription: string,
   skillDescription: string,
   examples: string[],
@@ -237,6 +243,7 @@ export async function generateSeedSystemPromptWithContext(
   allowedTemplateVariables?: string[],
 ) {
   const { client, raConfig, model } = await createSystemPromptClient(
+    c,
     'system-prompt-seeding-with-context',
     connector,
   );
@@ -323,6 +330,7 @@ Return the new system prompt as JSON.`;
 }
 
 export async function generateReflectiveSystemPromptForSkill(
+  c: AppContext,
   currentSystemPrompt: string,
   bestExamples: string[],
   worstExamples: string[],
@@ -332,6 +340,7 @@ export async function generateReflectiveSystemPromptForSkill(
   connector: UserDataStorageConnector,
 ) {
   const { client, raConfig, model } = await createSystemPromptClient(
+    c,
     'system-prompt-reflection',
     connector,
   );

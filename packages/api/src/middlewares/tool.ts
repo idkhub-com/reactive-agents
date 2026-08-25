@@ -80,6 +80,7 @@ function getToolsFromCreateModelResponseRequest(
 }
 
 async function captureTool(
+  c: AppContext,
   agent_id: string,
   raRequestData:
     | ChatCompletionRequestData
@@ -140,7 +141,7 @@ async function captureTool(
       };
 
       try {
-        await userDataStorageConnector.createTool(tool);
+        await userDataStorageConnector.createTool(c, tool);
       } catch {
         // If the tool already exists, we don't need to do anything
       }
@@ -171,6 +172,7 @@ export const toolMiddleware = createMiddleware(
     if (getRuntimeKey() === 'workerd') {
       c.executionCtx.waitUntil(
         captureTool(
+          c,
           c.get('agent').id,
           raRequestData,
           c.get('user_data_storage_connector'),
@@ -178,6 +180,7 @@ export const toolMiddleware = createMiddleware(
       );
     } else {
       await captureTool(
+        c,
         c.get('agent').id,
         raRequestData,
         c.get('user_data_storage_connector'),

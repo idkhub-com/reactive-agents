@@ -58,7 +58,7 @@ const getAIProviderResponseFromCache = async (
 
     let value: string | null = null;
     try {
-      value = await c.get('cache_storage_connector').getCache(cacheKey);
+      value = await c.get('cache_storage_connector').getCache(c, cacheKey);
     } catch (error) {
       console.error(error);
     }
@@ -75,6 +75,7 @@ const getAIProviderResponseFromCache = async (
 };
 
 const putAIProviderResponseInCache = async (
+  c: AppContext,
   connector: CacheStorageConnector,
   raRequestBody: ReactiveAgentsRequestBody,
   responseBody: Record<string, unknown>,
@@ -88,7 +89,7 @@ const putAIProviderResponseInCache = async (
   const cacheKey = await produceAIProviderCacheKey(fn, raRequestBody);
 
   try {
-    await connector.setCache(cacheKey, JSON.stringify(responseBody));
+    await connector.setCache(c, cacheKey, JSON.stringify(responseBody));
   } catch (error) {
     console.error(error);
   }
@@ -138,7 +139,7 @@ const getHookResponseFromCache = async (
 
     let value: string | null = null;
     try {
-      value = await c.get('cache_storage_connector').getCache(cacheKey);
+      value = await c.get('cache_storage_connector').getCache(c, cacheKey);
     } catch (error) {
       console.error(error);
     }
@@ -181,6 +182,7 @@ export const cacheMiddleware = (
         aiProviderLog.response_body !== null
       ) {
         await putAIProviderResponseInCache(
+          c,
           c.get('cache_storage_connector'),
           aiProviderLog.request_body,
           aiProviderLog.response_body,

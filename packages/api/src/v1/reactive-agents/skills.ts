@@ -31,10 +31,11 @@ export const skillsRouter = new Hono<AppEnv>()
       const data = c.req.valid('json');
       const userDataStorageConnector = c.get('user_data_storage_connector');
 
-      const newSkill = await userDataStorageConnector.createSkill(data);
+      const newSkill = await userDataStorageConnector.createSkill(c, data);
 
       // Get embedding model config for cluster centroids
       const embeddingConfig = await resolveEmbeddingModelConfig(
+        c,
         userDataStorageConnector,
       );
 
@@ -56,6 +57,7 @@ export const skillsRouter = new Hono<AppEnv>()
           }));
 
         await userDataStorageConnector.createSkillOptimizationClusters(
+          c,
           clusterParams,
         );
       }
@@ -72,7 +74,7 @@ export const skillsRouter = new Hono<AppEnv>()
       const query = c.req.valid('query');
       const connector = c.get('user_data_storage_connector');
 
-      const skills = await connector.getSkills(query);
+      const skills = await connector.getSkills(c, query);
 
       return c.json(skills, 200);
     } catch (error) {
@@ -92,7 +94,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const userDataStorageConnector = c.get('user_data_storage_connector');
 
         // Get the current skill for comparison
-        const currentSkill = await userDataStorageConnector.getSkills({
+        const currentSkill = await userDataStorageConnector.getSkills(c, {
           id: skillId,
         });
         if (currentSkill.length === 0) {
@@ -107,12 +109,12 @@ export const skillsRouter = new Hono<AppEnv>()
           data.description !== skill.description;
 
         if (descriptionChanged) {
-          await userDataStorageConnector.updateSkill(skillId, {
+          await userDataStorageConnector.updateSkill(c, skillId, {
             evaluations_regenerated_at: null,
           });
 
           // Create event for description update
-          await userDataStorageConnector.createSkillEvent({
+          await userDataStorageConnector.createSkillEvent(c, {
             agent_id: skill.agent_id,
             skill_id: skillId,
             cluster_id: null, // Skill-wide event
@@ -126,7 +128,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
         // If optimization status changes, create event
         if (data.optimize !== undefined && data.optimize !== skill.optimize) {
-          await userDataStorageConnector.createSkillEvent({
+          await userDataStorageConnector.createSkillEvent(c, {
             agent_id: skill.agent_id,
             skill_id: skillId,
             cluster_id: null, // Skill-wide event
@@ -138,6 +140,7 @@ export const skillsRouter = new Hono<AppEnv>()
         }
 
         const updatedSkill = await userDataStorageConnector.updateSkill(
+          c,
           skillId,
           data,
         );
@@ -149,7 +152,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
         if (configurationCountChanged) {
           const currentClusters =
-            await userDataStorageConnector.getSkillOptimizationClusters({
+            await userDataStorageConnector.getSkillOptimizationClusters(c, {
               skill_id: updatedSkill.id,
             });
 
@@ -157,12 +160,14 @@ export const skillsRouter = new Hono<AppEnv>()
           // Skill-level total_requests counter preserves lifetime statistics
           for (const cluster of currentClusters) {
             await userDataStorageConnector.deleteSkillOptimizationCluster(
+              c,
               cluster.id,
             );
           }
 
           // Get embedding model config for cluster centroids
           const embeddingConfig = await resolveEmbeddingModelConfig(
+            c,
             userDataStorageConnector,
           );
 
@@ -184,12 +189,13 @@ export const skillsRouter = new Hono<AppEnv>()
               }));
 
             await userDataStorageConnector.createSkillOptimizationClusters(
+              c,
               clusterParams,
             );
           }
 
           // Create event for partition reclustering
-          await userDataStorageConnector.createSkillEvent({
+          await userDataStorageConnector.createSkillEvent(c, {
             agent_id: updatedSkill.agent_id,
             skill_id: skillId,
             cluster_id: null, // Skill-wide event
@@ -231,7 +237,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        await connector.deleteSkill(skillId);
+        await connector.deleteSkill(c, skillId);
 
         return c.body(null, 204);
       } catch (error) {
@@ -249,7 +255,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const models = await connector.getSkillModels(skillId);
+        const models = await connector.getSkillModels(c, skillId);
 
         return c.json(models);
       } catch (error) {
@@ -270,21 +276,21 @@ export const skillsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         // Get skill to get agent_id
-        const skills = await connector.getSkills({ id: skillId });
+        const skills = await connector.getSkills(c, { id: skillId });
         if (skills.length === 0) {
           return c.json({ error: 'Skill not found' }, 404);
         }
         const skill = skills[0];
 
-        await connector.addModelsToSkill(skillId, modelIds);
+        await connector.addModelsToSkill(c, skillId, modelIds);
 
         // Create events for each model added
         // Get model details after adding
         for (const modelId of modelIds) {
-          const models = await connector.getModels({ id: modelId });
+          const models = await connector.getModels(c, { id: modelId });
           if (models.length > 0) {
             const model = models[0];
-            await connector.createSkillEvent({
+            await connector.createSkillEvent(c, {
               agent_id: skill.agent_id,
               skill_id: skillId,
               cluster_id: null, // Skill-wide event
@@ -333,21 +339,21 @@ export const skillsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         // Get skill to get agent_id
-        const skills = await connector.getSkills({ id: skillId });
+        const skills = await connector.getSkills(c, { id: skillId });
         if (skills.length === 0) {
           return c.json({ error: 'Skill not found' }, 404);
         }
         const skill = skills[0];
 
         // Get model details before removing for event metadata
-        const models = await connector.getSkillModels(skillId);
+        const models = await connector.getSkillModels(c, skillId);
         const removedModels = models.filter((m) => ids.includes(m.id));
 
-        await connector.removeModelsFromSkill(skillId, ids);
+        await connector.removeModelsFromSkill(c, skillId, ids);
 
         // Create events for each model removed
         for (const model of removedModels) {
-          await connector.createSkillEvent({
+          await connector.createSkillEvent(c, {
             agent_id: skill.agent_id,
             skill_id: skillId,
             cluster_id: null, // Skill-wide event
@@ -377,7 +383,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const clusters = await connector.getSkillOptimizationClusters({
+        const clusters = await connector.getSkillOptimizationClusters(c, {
           skill_id: skillId,
         });
 
@@ -397,7 +403,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const arms = await connector.getSkillOptimizationArms({
+        const arms = await connector.getSkillOptimizationArms(c, {
           skill_id: skillId,
         });
 
@@ -417,7 +423,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const armStats = await connector.getSkillOptimizationArmStats({
+        const armStats = await connector.getSkillOptimizationArmStats(c, {
           skill_id: skillId,
         });
 
@@ -463,7 +469,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const connector = c.get('user_data_storage_connector');
 
         const evaluationRuns =
-          await connector.getSkillOptimizationEvaluationRuns({
+          await connector.getSkillOptimizationEvaluationRuns(c, {
             skill_id: skillId,
             ...(log_id && { log_id }),
             ...(created_after && { created_after }),
@@ -497,7 +503,7 @@ export const skillsRouter = new Hono<AppEnv>()
           c.req.valid('json');
         const connector = c.get('user_data_storage_connector');
 
-        const scores = await connector.getEvaluationScoresByTimeBucket({
+        const scores = await connector.getEvaluationScoresByTimeBucket(c, {
           skill_id: skillId,
           ...(cluster_id && { cluster_id }),
           interval_minutes,
@@ -521,7 +527,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const { skillId } = c.req.valid('param');
         const connector = c.get('user_data_storage_connector');
 
-        const evaluations = await connector.getSkillOptimizationEvaluations({
+        const evaluations = await connector.getSkillOptimizationEvaluations(c, {
           skill_id: skillId,
         });
 
@@ -547,7 +553,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const userDataStorageConnector = c.get('user_data_storage_connector');
         const evaluationConnectorsMap = c.get('evaluation_connectors_map');
 
-        const skills = await userDataStorageConnector.getSkills({
+        const skills = await userDataStorageConnector.getSkills(c, {
           id: skillId,
         });
 
@@ -558,7 +564,7 @@ export const skillsRouter = new Hono<AppEnv>()
         const skill = skills[0];
 
         // Fetch the agent information for context
-        const agents = await userDataStorageConnector.getAgents({
+        const agents = await userDataStorageConnector.getAgents(c, {
           id: skill.agent_id,
         });
 
@@ -577,6 +583,7 @@ export const skillsRouter = new Hono<AppEnv>()
           }
 
           const createParams = await generateEvaluationCreateParams(
+            c,
             skill,
             evaluationConnector,
             method,
@@ -593,12 +600,13 @@ export const skillsRouter = new Hono<AppEnv>()
 
         const createdEvaluations =
           await userDataStorageConnector.createSkillOptimizationEvaluations(
+            c,
             createParamsList,
           );
 
         // Create event for each evaluation added
         for (const evaluation of createdEvaluations) {
-          await userDataStorageConnector.createSkillEvent({
+          await userDataStorageConnector.createSkillEvent(c, {
             agent_id: skill.agent_id,
             skill_id: skillId,
             cluster_id: null, // Skill-wide event
@@ -632,7 +640,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
         // Get evaluation to verify it exists and belongs to this skill
         const evaluations =
-          await userDataStorageConnector.getSkillOptimizationEvaluations({
+          await userDataStorageConnector.getSkillOptimizationEvaluations(c, {
             id: evaluationId,
             skill_id: skillId,
           });
@@ -671,6 +679,7 @@ export const skillsRouter = new Hono<AppEnv>()
         // Update evaluation
         const updatedEvaluation =
           await userDataStorageConnector.updateSkillOptimizationEvaluation(
+            c,
             evaluationId,
             updateParams,
           );
@@ -696,7 +705,7 @@ export const skillsRouter = new Hono<AppEnv>()
 
         // Get evaluation details before deleting
         const evaluations =
-          await userDataStorageConnector.getSkillOptimizationEvaluations({
+          await userDataStorageConnector.getSkillOptimizationEvaluations(c, {
             id: evaluationId,
           });
 
@@ -707,11 +716,12 @@ export const skillsRouter = new Hono<AppEnv>()
         const evaluation = evaluations[0];
 
         await userDataStorageConnector.deleteSkillOptimizationEvaluation(
+          c,
           evaluationId,
         );
 
         // Create event for evaluation removed
-        await userDataStorageConnector.createSkillEvent({
+        await userDataStorageConnector.createSkillEvent(c, {
           agent_id: evaluation.agent_id,
           skill_id: skillId,
           cluster_id: null, // Skill-wide event
@@ -741,14 +751,14 @@ export const skillsRouter = new Hono<AppEnv>()
         const { clearObservabilityCount } = c.req.valid('query');
 
         // Verify skill exists
-        const skills = await connector.getSkills({ id: skillId });
+        const skills = await connector.getSkills(c, { id: skillId });
         if (skills.length === 0) {
           return c.json({ error: 'Skill not found' }, 404);
         }
         const skill = skills[0];
 
         // Verify cluster exists
-        const clusters = await connector.getSkillOptimizationClusters({
+        const clusters = await connector.getSkillOptimizationClusters(c, {
           id: clusterId,
         });
         if (clusters.length === 0) {
@@ -756,12 +766,12 @@ export const skillsRouter = new Hono<AppEnv>()
         }
 
         // Get all arms for this cluster before reset (for event metadata)
-        const arms = await connector.getSkillOptimizationArms({
+        const arms = await connector.getSkillOptimizationArms(c, {
           cluster_id: clusterId,
         });
 
         // Reset cluster stats (optionally clear observability_total_requests)
-        await connector.updateSkillOptimizationCluster(clusterId, {
+        await connector.updateSkillOptimizationCluster(c, clusterId, {
           total_steps: 0,
           ...(clearObservabilityCount && { observability_total_requests: 0 }),
         });
@@ -771,7 +781,7 @@ export const skillsRouter = new Hono<AppEnv>()
         await handleGenerateArms(c, connector, skillId, clusterId);
 
         // Create event for cluster reset
-        await connector.createSkillEvent({
+        await connector.createSkillEvent(c, {
           agent_id: skill.agent_id,
           skill_id: skillId,
           cluster_id: clusterId, // Cluster-specific event
@@ -804,7 +814,7 @@ export const skillsRouter = new Hono<AppEnv>()
       const { clearObservabilityCount } = c.req.valid('query');
 
       // Verify skill exists
-      const skills = await connector.getSkills({ id: skillId });
+      const skills = await connector.getSkills(c, { id: skillId });
       if (skills.length === 0) {
         return c.json({ error: 'Skill not found' }, 404);
       }
@@ -812,17 +822,17 @@ export const skillsRouter = new Hono<AppEnv>()
 
       // Get existing evaluations to regenerate them
       const existingEvaluations =
-        await connector.getSkillOptimizationEvaluations({
+        await connector.getSkillOptimizationEvaluations(c, {
           skill_id: skillId,
         });
 
       // Get existing clusters to update them
-      const existingClusters = await connector.getSkillOptimizationClusters({
+      const existingClusters = await connector.getSkillOptimizationClusters(c, {
         skill_id: skillId,
       });
 
       // Get embedding model config for cluster centroids
-      const embeddingConfig = await resolveEmbeddingModelConfig(connector);
+      const embeddingConfig = await resolveEmbeddingModelConfig(c, connector);
 
       // Only reset clusters if embedding model is configured
       if (embeddingConfig) {
@@ -838,6 +848,7 @@ export const skillsRouter = new Hono<AppEnv>()
           if (i < existingClusters.length) {
             // Update existing cluster
             await connector.updateSkillOptimizationCluster(
+              c,
               existingClusters[i].id,
               {
                 centroid,
@@ -859,7 +870,7 @@ export const skillsRouter = new Hono<AppEnv>()
               centroid,
               embedding_model_id: embeddingConfig.modelId,
             };
-            await connector.createSkillOptimizationClusters([clusterParams]);
+            await connector.createSkillOptimizationClusters(c, [clusterParams]);
           }
         }
 
@@ -870,6 +881,7 @@ export const skillsRouter = new Hono<AppEnv>()
           i++
         ) {
           await connector.deleteSkillOptimizationCluster(
+            c,
             existingClusters[i].id,
           );
         }
@@ -878,7 +890,7 @@ export const skillsRouter = new Hono<AppEnv>()
       // Regenerate evaluations with the same methods in-place
       if (existingEvaluations.length > 0) {
         // Get agent for evaluation generation
-        const agents = await connector.getAgents({ id: skill.agent_id });
+        const agents = await connector.getAgents(c, { id: skill.agent_id });
         if (agents.length === 0) {
           return c.json({ error: 'Agent not found' }, 404);
         }
@@ -897,6 +909,7 @@ export const skillsRouter = new Hono<AppEnv>()
           }
 
           const newParams = await generateEvaluationCreateParams(
+            c,
             skill,
             evaluationConnector,
             method,
@@ -906,10 +919,14 @@ export const skillsRouter = new Hono<AppEnv>()
           );
 
           // Update evaluation in-place
-          await connector.updateSkillOptimizationEvaluation(existingEval.id, {
-            params: newParams.params,
-            weight: newParams.weight,
-          });
+          await connector.updateSkillOptimizationEvaluation(
+            c,
+            existingEval.id,
+            {
+              params: newParams.params,
+              weight: newParams.weight,
+            },
+          );
         }
       }
 
@@ -917,7 +934,7 @@ export const skillsRouter = new Hono<AppEnv>()
       await handleGenerateArms(c, connector, skillId);
 
       // Reset skill metadata (and optionally total_requests)
-      await connector.updateSkill(skillId, {
+      await connector.updateSkill(c, skillId, {
         last_clustering_at: null,
         last_clustering_log_start_time: null,
         evaluations_regenerated_at: null,
@@ -926,7 +943,7 @@ export const skillsRouter = new Hono<AppEnv>()
       });
 
       // Create event for skill reset
-      await connector.createSkillEvent({
+      await connector.createSkillEvent(c, {
         agent_id: skill.agent_id,
         skill_id: skillId,
         cluster_id: null, // Skill-wide event

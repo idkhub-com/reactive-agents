@@ -1,27 +1,22 @@
 import {
-  POSTGREST_SERVICE_ROLE_KEY,
-  POSTGREST_URL,
-  SUPABASE_SECRET_KEY,
+  getPostgrestServiceRoleKey,
+  getPostgrestUrl,
+  getSupabaseSecretKey,
 } from '@api/constants';
+import type { AppContext } from '@api/types/hono';
 import type { z } from 'zod';
 
-const checkEnvironmentVariables = (): void => {
-  if (!POSTGREST_SERVICE_ROLE_KEY) {
-    throw new Error('POSTGREST_SERVICE_ROLE_KEY is not set');
-  }
-  if (!POSTGREST_URL) {
-    throw new Error('POSTGREST_URL is not set');
-  }
-};
-
 export const selectFromSupabase = async <T extends z.ZodType>(
+  c: AppContext,
   table: string,
   queryParams: Record<string, string | undefined>,
   schema: T,
 ): Promise<z.infer<T>> => {
-  checkEnvironmentVariables();
+  const postgrestUrl = getPostgrestUrl(c);
+  const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
+  const supabaseSecretKey = getSupabaseSecretKey(c);
 
-  const url = new URL(`${POSTGREST_URL}/${table}`);
+  const url = new URL(`${postgrestUrl}/${table}`);
 
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
@@ -30,11 +25,11 @@ export const selectFromSupabase = async <T extends z.ZodType>(
   }
 
   const headers: HeadersInit = {
-    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${postgrestServiceRoleKey}`,
   };
 
-  if (SUPABASE_SECRET_KEY) {
-    headers.apiKey = SUPABASE_SECRET_KEY;
+  if (supabaseSecretKey) {
+    headers.apiKey = supabaseSecretKey;
   }
 
   const response = await fetch(url, {
@@ -64,6 +59,7 @@ export const insertIntoSupabase = async <
   InputSchema extends z.ZodType,
   OutputSchema extends z.ZodType | null,
 >(
+  c: AppContext,
   table: string,
   data: z.infer<InputSchema>,
   schema: OutputSchema,
@@ -72,9 +68,11 @@ export const insertIntoSupabase = async <
   // If schema is not provided, return void
   OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
 > => {
-  checkEnvironmentVariables();
+  const postgrestUrl = getPostgrestUrl(c);
+  const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
+  const supabaseSecretKey = getSupabaseSecretKey(c);
 
-  const url = new URL(`${POSTGREST_URL}/${table}`);
+  const url = new URL(`${postgrestUrl}/${table}`);
 
   const preferArr = [];
 
@@ -90,12 +88,12 @@ export const insertIntoSupabase = async <
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${postgrestServiceRoleKey}`,
     Prefer: prefer,
   };
 
-  if (SUPABASE_SECRET_KEY) {
-    headers.apiKey = SUPABASE_SECRET_KEY;
+  if (supabaseSecretKey) {
+    headers.apiKey = supabaseSecretKey;
   }
 
   const response = await fetch(url, {
@@ -131,6 +129,7 @@ export const updateInSupabase = async <
   InputSchema extends z.ZodType,
   OutputSchema extends z.ZodType,
 >(
+  c: AppContext,
   table: string,
   id: string,
   data: z.infer<InputSchema>,
@@ -139,18 +138,20 @@ export const updateInSupabase = async <
   // If schema is not provided, return void
   OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
 > => {
-  checkEnvironmentVariables();
+  const postgrestUrl = getPostgrestUrl(c);
+  const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
+  const supabaseSecretKey = getSupabaseSecretKey(c);
 
-  const url = new URL(`${POSTGREST_URL}/${table}`);
+  const url = new URL(`${postgrestUrl}/${table}`);
   url.searchParams.set('id', `eq.${id}`);
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${postgrestServiceRoleKey}`,
     Prefer: 'return=representation',
   };
-  if (SUPABASE_SECRET_KEY) {
-    headers.apiKey = SUPABASE_SECRET_KEY;
+  if (supabaseSecretKey) {
+    headers.apiKey = supabaseSecretKey;
   }
 
   const response = await fetch(url, {
@@ -182,12 +183,15 @@ ${await response.text()}`,
 };
 
 export const deleteFromSupabase = async (
+  c: AppContext,
   table: string,
   params: Record<string, string>,
 ): Promise<void> => {
-  checkEnvironmentVariables();
+  const postgrestUrl = getPostgrestUrl(c);
+  const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
+  const supabaseSecretKey = getSupabaseSecretKey(c);
 
-  const url = new URL(`${POSTGREST_URL}/${table}`);
+  const url = new URL(`${postgrestUrl}/${table}`);
 
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
@@ -196,11 +200,11 @@ export const deleteFromSupabase = async (
   }
 
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${postgrestServiceRoleKey}`,
   };
 
-  if (SUPABASE_SECRET_KEY) {
-    headers.apiKey = SUPABASE_SECRET_KEY;
+  if (supabaseSecretKey) {
+    headers.apiKey = supabaseSecretKey;
   }
 
   const response = await fetch(url, {
@@ -219,12 +223,15 @@ ${await response.text()}`,
 };
 
 export const rpcFunction = async (
+  c: AppContext,
   functionName: string,
   params: Record<string, string>,
 ): Promise<void> => {
-  checkEnvironmentVariables();
+  const postgrestUrl = getPostgrestUrl(c);
+  const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
+  const supabaseSecretKey = getSupabaseSecretKey(c);
 
-  const url = new URL(`${POSTGREST_URL}/rpc/${functionName}`);
+  const url = new URL(`${postgrestUrl}/rpc/${functionName}`);
 
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
@@ -233,11 +240,11 @@ export const rpcFunction = async (
   }
 
   const headers: HeadersInit = {
-    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${postgrestServiceRoleKey}`,
   };
 
-  if (SUPABASE_SECRET_KEY) {
-    headers.apiKey = SUPABASE_SECRET_KEY;
+  if (supabaseSecretKey) {
+    headers.apiKey = supabaseSecretKey;
   }
 
   const response = await fetch(url, {
@@ -256,21 +263,24 @@ ${await response.text()}`,
 };
 
 export const rpcFunctionWithResponse = async <T extends z.ZodType>(
+  c: AppContext,
   functionName: string,
   params: Record<string, unknown>,
   schema: T,
 ): Promise<z.Infer<T>> => {
-  checkEnvironmentVariables();
+  const postgrestUrl = getPostgrestUrl(c);
+  const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
+  const supabaseSecretKey = getSupabaseSecretKey(c);
 
-  const url = new URL(`${POSTGREST_URL}/rpc/${functionName}`);
+  const url = new URL(`${postgrestUrl}/rpc/${functionName}`);
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${POSTGREST_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${postgrestServiceRoleKey}`,
   };
 
-  if (SUPABASE_SECRET_KEY) {
-    headers.apiKey = SUPABASE_SECRET_KEY;
+  if (supabaseSecretKey) {
+    headers.apiKey = supabaseSecretKey;
   }
 
   const response = await fetch(url, {

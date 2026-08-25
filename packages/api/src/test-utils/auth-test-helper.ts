@@ -43,7 +43,7 @@ export function createAuthenticatedApp(
 ) {
   const bindings: AppEnv['Bindings'] = {
     ACCESS_PASSWORD: TEST_ACCESS_PASSWORD,
-    JWT_SECRET: TEST_JWT_SECRET,
+    AUTH_JWT_SECRET: TEST_JWT_SECRET,
     BEARER_TOKEN: TEST_BEARER_TOKEN,
     ...options?.bindings,
   };

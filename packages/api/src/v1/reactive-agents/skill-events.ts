@@ -11,7 +11,7 @@ export const skillEventsRouter = new Hono<AppEnv>().get(
       const queryParams = c.req.valid('query');
       const connector = c.get('user_data_storage_connector');
 
-      const events = await connector.getSkillEvents(queryParams);
+      const events = await connector.getSkillEvents(c, queryParams);
 
       return c.json(events);
     } catch (error) {

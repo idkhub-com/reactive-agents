@@ -1,4 +1,5 @@
 import { evaluateLog } from '@api/connectors/evaluations/latency/service/evaluate';
+import { createMockContext } from '@api/test-utils/mock-context';
 import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
@@ -103,6 +104,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -126,6 +128,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -152,6 +155,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -173,6 +177,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -192,6 +197,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -213,6 +219,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -236,6 +243,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -260,6 +268,7 @@ describe('Latency - evaluateLog', () => {
 
       // Mock extractLatency to return null
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         log,
         mockStorageConnector,
@@ -279,6 +288,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         invalidEvaluation,
         baseLog,
         mockStorageConnector,
@@ -291,6 +301,7 @@ describe('Latency - evaluateLog', () => {
 
     it('should include execution time in extra_data', async () => {
       const result = await evaluateLog(
+        createMockContext(),
         baseEvaluation,
         baseLog,
         mockStorageConnector,
@@ -321,6 +332,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         customEvaluation,
         log,
         mockStorageConnector,
@@ -347,6 +359,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         customEvaluation,
         log,
         mockStorageConnector,
@@ -370,6 +383,7 @@ describe('Latency - evaluateLog', () => {
       };
 
       const result = await evaluateLog(
+        createMockContext(),
         defaultEvaluation,
         log,
         mockStorageConnector,

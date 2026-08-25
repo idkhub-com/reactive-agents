@@ -4,8 +4,13 @@ import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { describe, expect, it } from 'vitest';
 
-// Default app — no bindings, so c.env?.ACCESS_PASSWORD is undefined
-const app = new Hono<AppEnv>().route('/', authRouter);
+// Default app — no ACCESS_PASSWORD binding, so auth is disabled
+const app = new Hono<AppEnv>()
+  .use('*', async (c, next) => {
+    c.env = { ...c.env };
+    await next();
+  })
+  .route('/', authRouter);
 const client = testClient(app);
 
 // App with ACCESS_PASSWORD binding set — uses app.request() since testClient
@@ -88,6 +93,53 @@ describe('Auth Router', () => {
       const setCookieHeader = response.headers.get('set-cookie');
       expect(setCookieHeader).toBeTruthy();
       expect(setCookieHeader).toContain('access_token=');
+      expect(setCookieHeader).toContain('HttpOnly');
+      expect(setCookieHeader).toContain('SameSite=Lax');
+      expect(setCookieHeader).toContain('Path=/');
+    });
+
+    it('omits Secure over plain HTTP', async () => {
+      const authedApp = createAppWithBindings({
+        ACCESS_PASSWORD: 'correct-password',
+      });
+      const response = await authedApp.request('http://localhost/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'correct-password' }),
+      });
+
+      expect(response.headers.get('set-cookie')).not.toContain('Secure');
+    });
+
+    it('sets Secure when the proxy reports an HTTPS client connection', async () => {
+      const authedApp = createAppWithBindings({
+        ACCESS_PASSWORD: 'correct-password',
+      });
+      // nginx terminates TLS and forwards over plain HTTP, so the request URL
+      // is http: even though the browser is on HTTPS.
+      const response = await authedApp.request('http://localhost/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-Proto': 'https',
+        },
+        body: JSON.stringify({ password: 'correct-password' }),
+      });
+
+      expect(response.headers.get('set-cookie')).toContain('Secure');
+    });
+
+    it('sets Secure when the request itself is HTTPS', async () => {
+      const authedApp = createAppWithBindings({
+        ACCESS_PASSWORD: 'correct-password',
+      });
+      const response = await authedApp.request('https://example.com/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'correct-password' }),
+      });
+
+      expect(response.headers.get('set-cookie')).toContain('Secure');
     });
   });
 
@@ -112,6 +164,21 @@ describe('Auth Router', () => {
       expect(setCookieHeader).toContain('access_token=');
       // Cookie deletion is indicated by Max-Age=0 or Expires in the past
       expect(setCookieHeader).toMatch(/Max-Age=0|Expires=/);
+    });
+
+    it('mirrors the login cookie attributes so the browser replaces it', async () => {
+      // A browser only overwrites a cookie when name, domain and path match,
+      // so the delete has to be issued with the same Path the login used.
+      const response = await app.request('https://example.com/logout', {
+        method: 'POST',
+        headers: { 'X-Forwarded-Proto': 'https' },
+      });
+
+      const setCookieHeader = response.headers.get('set-cookie');
+      expect(setCookieHeader).toContain('Path=/');
+      expect(setCookieHeader).toContain('HttpOnly');
+      expect(setCookieHeader).toContain('SameSite=Lax');
+      expect(setCookieHeader).toContain('Secure');
     });
   });
 });

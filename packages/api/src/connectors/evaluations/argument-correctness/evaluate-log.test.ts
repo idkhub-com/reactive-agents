@@ -1,4 +1,5 @@
 import { evaluateLog } from '@api/connectors/evaluations/argument-correctness/service/evaluate';
+import { createMockContext } from '@api/test-utils/mock-context';
 import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
@@ -10,10 +11,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockStorageConnector } from '../__mocks__/mock-storage-connector';
 
 // Mock the constants
-vi.mock('@api/constants', () => ({
-  API_URL: 'http://localhost:8787',
-  BEARER_TOKEN: 'reactive-agents',
-}));
+vi.mock('@api/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@api/constants')>();
+  return {
+    ...actual,
+    getApiUrl: () => 'http://localhost:8787',
+    getBearerToken: () => 'reactive-agents',
+  };
+});
 
 // Mock OpenAI client
 const mockParse = vi.fn();
@@ -180,6 +185,7 @@ describe('Argument Correctness - evaluateLog', () => {
 
     const mockStorageConnector = createMockStorageConnector();
     const result = await evaluateLog(
+      createMockContext(),
       mockEvaluation,
       mockLog,
       mockStorageConnector,
@@ -294,6 +300,7 @@ describe('Argument Correctness - evaluateLog', () => {
 
     const mockStorageConnector = createMockStorageConnector();
     const result = await evaluateLog(
+      createMockContext(),
       mockEvaluation,
       mockLog,
       mockStorageConnector,

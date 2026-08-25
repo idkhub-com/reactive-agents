@@ -1,5 +1,6 @@
 import { LatencyEvaluationParameters } from '@api/connectors/evaluations/latency/types';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
@@ -50,6 +51,7 @@ function extractLatency(log: Log): number | null {
 }
 
 export function evaluateLog(
+  _c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   _storageConnector: UserDataStorageConnector,

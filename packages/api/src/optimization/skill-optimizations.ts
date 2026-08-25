@@ -23,7 +23,7 @@ export async function handleGenerateArms(
   skillId: string,
   clusterId?: string, // Optional: if provided, only regenerate arms for this cluster
 ) {
-  const skills = await userStorageConnector.getSkills({
+  const skills = await userStorageConnector.getSkills(c, {
     id: skillId,
   });
 
@@ -42,7 +42,7 @@ export async function handleGenerateArms(
   let logs: Awaited<ReturnType<LogsStorageConnector['getLogs']>> = [];
 
   if (logsStorageConnector) {
-    logs = await logsStorageConnector.getLogs({
+    logs = await logsStorageConnector.getLogs(c, {
       skill_id: skill.id,
       embedding_not_null: true,
       limit: 5,
@@ -58,13 +58,13 @@ export async function handleGenerateArms(
 
     // Get existing evaluations
     const existingEvaluations =
-      await userStorageConnector.getSkillOptimizationEvaluations({
+      await userStorageConnector.getSkillOptimizationEvaluations(c, {
         skill_id: skill.id,
       });
 
     if (existingEvaluations.length > 0 && examples.length > 0) {
       // Get agent description for context
-      const agents = await userStorageConnector.getAgents({
+      const agents = await userStorageConnector.getAgents(c, {
         id: skill.agent_id,
       });
 
@@ -79,6 +79,7 @@ export async function handleGenerateArms(
         // Regenerate evaluations with context
         const regeneratedEvaluationParams =
           await regenerateEvaluationsWithExamples(
+            c,
             skill,
             agent.description,
             examples,
@@ -92,9 +93,11 @@ export async function handleGenerateArms(
 
         // Delete old evaluations and create new ones
         await userStorageConnector.deleteSkillOptimizationEvaluationsForSkill(
+          c,
           skill.id,
         );
         await userStorageConnector.createSkillOptimizationEvaluations(
+          c,
           regeneratedEvaluationParams,
         );
       }
@@ -103,10 +106,10 @@ export async function handleGenerateArms(
 
   // Get existing arms - either for specific cluster or entire skill
   const existingArms = clusterId
-    ? await userStorageConnector.getSkillOptimizationArms({
+    ? await userStorageConnector.getSkillOptimizationArms(c, {
         cluster_id: clusterId,
       })
-    : await userStorageConnector.getSkillOptimizationArms({
+    : await userStorageConnector.getSkillOptimizationArms(c, {
         skill_id: skill.id,
       });
 
@@ -116,18 +119,18 @@ export async function handleGenerateArms(
   >;
 
   if (clusterId) {
-    clusters = await userStorageConnector.getSkillOptimizationClusters({
+    clusters = await userStorageConnector.getSkillOptimizationClusters(c, {
       id: clusterId,
     });
     if (clusters.length === 0) {
       return c.json({ error: 'Cluster not found' }, 404);
     }
     // Only reset the specific cluster (already done in caller, but ensure consistency)
-    await userStorageConnector.updateSkillOptimizationCluster(clusterId, {
+    await userStorageConnector.updateSkillOptimizationCluster(c, clusterId, {
       total_steps: 0,
     });
   } else {
-    clusters = await userStorageConnector.getSkillOptimizationClusters({
+    clusters = await userStorageConnector.getSkillOptimizationClusters(c, {
       skill_id: skill.id,
     });
     if (!clusters) {
@@ -135,13 +138,13 @@ export async function handleGenerateArms(
     }
     // Reset all clusters
     for (const cluster of clusters) {
-      await userStorageConnector.updateSkillOptimizationCluster(cluster.id, {
+      await userStorageConnector.updateSkillOptimizationCluster(c, cluster.id, {
         total_steps: 0,
       });
     }
   }
 
-  const skillModels = await userStorageConnector.getSkillModels(skill.id);
+  const skillModels = await userStorageConnector.getSkillModels(c, skill.id);
   // Use the clusters we already fetched (either specific one or all)
   const skillClusters = clusters;
 
@@ -153,7 +156,7 @@ export async function handleGenerateArms(
   if (skillModels.length === 0 || skillClusters.length === 0) {
     // Delete existing arms if any
     for (const arm of existingArms) {
-      await userStorageConnector.deleteSkillOptimizationArmStats({
+      await userStorageConnector.deleteSkillOptimizationArmStats(c, {
         arm_id: arm.id,
       });
     }
@@ -167,13 +170,14 @@ export async function handleGenerateArms(
     const examples = generateExampleConversations(exampleLogs);
 
     // Get agent description for context
-    const agents = await userStorageConnector.getAgents({
+    const agents = await userStorageConnector.getAgents(c, {
       id: skill.agent_id,
     });
 
     if (agents.length > 0 && examples.length > 0) {
       const agent = agents[0];
       systemPrompt = await generateSeedSystemPromptWithContext(
+        c,
         agent.description,
         skill.description,
         examples,
@@ -182,6 +186,7 @@ export async function handleGenerateArms(
     } else {
       // Fallback to no-context generation
       systemPrompt = await generateSeedSystemPromptForSkill(
+        c,
         skill,
         userStorageConnector,
       );
@@ -189,6 +194,7 @@ export async function handleGenerateArms(
   } else {
     // Use no-context generation for initial setup
     systemPrompt = await generateSeedSystemPromptForSkill(
+      c,
       skill,
       userStorageConnector,
     );
@@ -229,13 +235,14 @@ export async function handleGenerateArms(
         if (existingArm) {
           // Update existing arm in-place, keeping its original name
           await userStorageConnector.updateSkillOptimizationArm(
+            c,
             existingArm.id,
             {
               params: armParams,
             },
           );
           // Delete arm stats to reset performance history
-          await userStorageConnector.deleteSkillOptimizationArmStats({
+          await userStorageConnector.deleteSkillOptimizationArmStats(c, {
             arm_id: existingArm.id,
           });
           updatedArms.push(existingArm.id);
@@ -265,18 +272,20 @@ export async function handleGenerateArms(
 
   // Create any new arms needed
   if (armsToCreate.length > 0) {
-    const createdArms =
-      await userStorageConnector.createSkillOptimizationArms(armsToCreate);
+    const createdArms = await userStorageConnector.createSkillOptimizationArms(
+      c,
+      armsToCreate,
+    );
     updatedArms.push(...createdArms.map((a) => a.id));
   }
 
   // Delete any orphaned arms that don't match expected structure
   for (const arm of existingArms) {
     if (!matchedArmIds.has(arm.id)) {
-      await userStorageConnector.deleteSkillOptimizationArmStats({
+      await userStorageConnector.deleteSkillOptimizationArmStats(c, {
         arm_id: arm.id,
       });
-      await userStorageConnector.deleteSkillOptimizationArm(arm.id);
+      await userStorageConnector.deleteSkillOptimizationArm(c, arm.id);
     }
   }
 
