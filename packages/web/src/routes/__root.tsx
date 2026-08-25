@@ -4,7 +4,7 @@ import {
   Outlet,
   redirect,
 } from '@tanstack/react-router';
-import { API_URL } from '@web/constants';
+import { getAuthStatus } from '@web/api/v1/reactive-agents/auth';
 import { Suspense } from 'react';
 
 async function checkAuth({
@@ -17,18 +17,11 @@ async function checkAuth({
   }
 
   try {
-    const response = await fetch(`${API_URL}/v1/reactive-agents/auth/status`, {
-      credentials: 'include',
-    });
+    const data = await getAuthStatus();
 
-    if (!response.ok) {
+    if (!data) {
       throw redirect({ to: '/login' });
     }
-
-    const data = (await response.json()) as {
-      authRequired: boolean;
-      authenticated: boolean;
-    };
 
     if (data.authRequired && !data.authenticated) {
       throw redirect({ to: '/login' });

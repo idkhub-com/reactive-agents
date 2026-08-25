@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 import { createRouter, RouterProvider } from '@tanstack/react-router';
+import { getAuthStatus } from '@web/api/v1/reactive-agents/auth';
 import { Toaster } from '@web/components/ui/toaster';
-import { API_URL } from '@web/constants';
 import { SidebarProvider } from '@web/providers/side-bar';
 import { ThemeProvider } from '@web/providers/theme';
 import { StrictMode } from 'react';
@@ -19,22 +19,10 @@ import '@web/styles/editor.css';
 async function checkAuthBeforeMount(): Promise<boolean> {
   if (window.location.pathname === '/login') return true;
 
-  try {
-    const response = await fetch(`${API_URL}/v1/reactive-agents/auth/status`, {
-      credentials: 'include',
-    });
+  const data = await getAuthStatus();
+  if (!data) return false;
 
-    if (!response.ok) return false;
-
-    const data = (await response.json()) as {
-      authRequired: boolean;
-      authenticated: boolean;
-    };
-
-    return !(data.authRequired && !data.authenticated);
-  } catch {
-    return false;
-  }
+  return !(data.authRequired && !data.authenticated);
 }
 
 const router = createRouter({

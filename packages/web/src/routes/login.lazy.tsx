@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
+import { login } from '@web/api/v1/reactive-agents/auth';
 import { AnimatedLogo } from '@web/components/side-bar/animated-logo';
 import { Button } from '@web/components/ui/button';
 import {
@@ -17,7 +18,6 @@ import {
   FormMessage,
 } from '@web/components/ui/form';
 import { Input } from '@web/components/ui/input';
-import { API_URL } from '@web/constants';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -41,21 +41,14 @@ function LoginPage(): React.ReactNode {
     },
   });
 
-  async function handleLogin(data: z.infer<typeof formSchema>): Promise<void> {
-    const response = await fetch(`${API_URL}/v1/reactive-agents/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  const isSubmitting = form.formState.isSubmitting;
 
-    if (!response.ok) {
+  async function handleLogin(data: z.infer<typeof formSchema>): Promise<void> {
+    const success = await login(data.password);
+    if (!success) {
       setError('Invalid password');
       return;
     }
-
     navigate({ to: '/agents' });
   }
 
@@ -90,8 +83,9 @@ function LoginPage(): React.ReactNode {
                     <FormControl>
                       <Input
                         type="password"
-                        autoComplete="off"
+                        autoComplete="current-password"
                         placeholder="Enter your password"
+                        disabled={isSubmitting}
                         {...field}
                       />
                     </FormControl>
@@ -102,7 +96,9 @@ function LoginPage(): React.ReactNode {
               {error && (
                 <p className="text-red-600 leading-0 text-sm">{error}</p>
               )}
-              <Button type="submit">Login</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Logging in…' : 'Login'}
+              </Button>
             </form>
           </Form>
         </CardContent>
