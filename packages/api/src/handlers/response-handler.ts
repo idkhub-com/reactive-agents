@@ -10,8 +10,8 @@ import type {
   ResponseTransformFunctionType,
 } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
-import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
+import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response/body';
 import { type AIProvider, ContentTypeName } from '@shared/types/constants';
 import { CacheStatus } from '@shared/types/middleware/cache';
 import {
@@ -35,14 +35,14 @@ export async function responseHandler(
   responseTransformerFunctionName: FunctionName | undefined,
   aiProviderRequestURL: string,
   cacheStatus: CacheStatus,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   strictOpenAiCompliance: boolean,
   areSyncHooksAvailable: boolean,
   onFirstChunk?: () => void,
   onStreamEnd?: (accumulatedChunks: string) => void,
 ): Promise<{
   response: Response;
-  raResponseBody: ReactiveAgentsResponseBody | null;
+  saResponseBody: SuperAgentsResponseBody | null;
   originalResponseJson?: Record<string, unknown> | null;
 }> {
   let responseTransformFunction: ResponseTransformFunctionType | undefined;
@@ -61,7 +61,7 @@ export async function responseHandler(
 
   if (providerConfig?.getConfig) {
     responseTransformFunctions = providerConfig.getConfig(
-      raRequestData.requestBody,
+      saRequestData.requestBody,
     ).responseTransforms;
   }
 
@@ -117,7 +117,7 @@ export async function responseHandler(
       provider,
       responseTransformFunction as JSONToStreamGeneratorTransformFunction,
     );
-    return { response: streamingResponse, raResponseBody: null };
+    return { response: streamingResponse, saResponseBody: null };
   }
   if (streamingMode && isSuccessStatusCode) {
     return {
@@ -126,17 +126,17 @@ export async function responseHandler(
         provider,
         responseTransformFunction as ResponseChunkStreamTransformFunction,
         aiProviderRequestURL,
-        raRequestData,
+        saRequestData,
         strictOpenAiCompliance,
         onFirstChunk,
         onStreamEnd,
       ),
-      raResponseBody: null,
+      saResponseBody: null,
     };
   }
 
   if (responseContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)) {
-    return { response: handleAudioResponse(response), raResponseBody: null };
+    return { response: handleAudioResponse(response), saResponseBody: null };
   }
 
   if (
@@ -145,12 +145,12 @@ export async function responseHandler(
   ) {
     return {
       response: handleOctetStreamResponse(response),
-      raResponseBody: null,
+      saResponseBody: null,
     };
   }
 
   if (responseContentType?.startsWith(ContentTypeName.GENERIC_IMAGE_PATTERN)) {
-    return { response: handleImageResponse(response), raResponseBody: null };
+    return { response: handleImageResponse(response), saResponseBody: null };
   }
 
   if (
@@ -160,15 +160,15 @@ export async function responseHandler(
     const textResponse = await handleTextResponse(
       response,
       responseTransformFunction as ResponseTransformFunction | undefined,
-      raRequestData,
+      saRequestData,
     );
-    return { response: textResponse, raResponseBody: null };
+    return { response: textResponse, saResponseBody: null };
   }
 
   if (!responseContentType && response.status === 204) {
     return {
       response: new Response(response.body, response),
-      raResponseBody: null,
+      saResponseBody: null,
     };
   }
 
@@ -176,13 +176,13 @@ export async function responseHandler(
     response,
     responseTransformFunction as ResponseTransformFunction | undefined,
     strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
     areSyncHooksAvailable,
   );
 
   return {
     response: nonStreamingResponse.response,
-    raResponseBody: nonStreamingResponse.raResponseBody,
+    saResponseBody: nonStreamingResponse.saResponseBody,
     originalResponseJson: nonStreamingResponse.originalBodyJson,
   };
 }

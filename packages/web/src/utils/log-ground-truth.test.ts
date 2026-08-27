@@ -3,12 +3,12 @@ import type { Log } from '@shared/types/data/log';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/improved-responses', () => ({
+vi.mock('@web/api/v1/super-agents/improved-responses', () => ({
   getImprovedResponseByLogId: vi.fn(),
 }));
 
 // Import after mocking
-import { getImprovedResponseByLogId } from '@web/api/v1/reactive-agents/improved-responses';
+import { getImprovedResponseByLogId } from '@web/api/v1/super-agents/improved-responses';
 import {
   getGroundTruth,
   getGroundTruthResponseBody,

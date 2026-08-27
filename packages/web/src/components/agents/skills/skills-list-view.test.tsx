@@ -18,12 +18,12 @@ import {
 // TanStack Router is mocked globally in vitest.setup.tsx
 
 // Mock API functions and providers
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn(),
   getAgentEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: vi.fn(),
   getSkillEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
   getSkillClusterStates: vi.fn().mockResolvedValue([]),
@@ -31,7 +31,7 @@ vi.mock('@web/api/v1/reactive-agents/skills', () => ({
   getSkillEvaluations: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/skill-events', () => ({
+vi.mock('@web/api/v1/super-agents/skill-events', () => ({
   getSkillEvents: vi.fn().mockResolvedValue([]),
 }));
 
@@ -67,8 +67,8 @@ vi.mock('@web/providers/system-settings', () => ({
     children,
 }));
 
-import { getAgents } from '@web/api/v1/reactive-agents/agents';
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getAgents } from '@web/api/v1/super-agents/agents';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 import { useLogs } from '@web/providers/logs';
 import { useSkills } from '@web/providers/skills';
 

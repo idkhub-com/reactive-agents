@@ -9,21 +9,21 @@ const inferenceFunctions = [
 ];
 
 const FireworksAIAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raRequestData, raTarget: providerOptions }) => {
-    if (inferenceFunctions.includes(raRequestData.functionName)) {
+  getBaseURL: ({ saRequestData, saTarget: providerOptions }) => {
+    if (inferenceFunctions.includes(saRequestData.functionName)) {
       return 'https://api.fireworks.ai/inference/v1';
     }
     const accountId = providerOptions.fireworks_account_id;
     return `https://api.fireworks.ai/v1/accounts/${accountId}`;
   },
-  headers: ({ raTarget: providerOptions }) => {
+  headers: ({ saTarget: providerOptions }) => {
     return {
       Authorization: `Bearer ${providerOptions.api_key}`,
       Accept: 'application/json',
     };
   },
-  getEndpoint: ({ raRequestData, c }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData, c }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.COMPLETE:
         return '/completions';
       case FunctionName.CHAT_COMPLETE:
@@ -31,7 +31,7 @@ const FireworksAIAPIConfig: InternalProviderAPIConfig = {
       case FunctionName.EMBED:
         return '/embeddings';
       case FunctionName.GENERATE_IMAGE: {
-        const model = raRequestData.requestBody.model;
+        const model = saRequestData.requestBody.model;
         return `/image_generation/${model}`;
       }
       case FunctionName.UPLOAD_FILE:

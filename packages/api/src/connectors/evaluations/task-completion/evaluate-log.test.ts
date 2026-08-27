@@ -16,7 +16,7 @@ vi.mock('@api/constants', async (importOriginal) => {
   return {
     ...actual,
     getApiUrl: () => 'http://localhost:8787',
-    getBearerToken: () => 'reactive-agents',
+    getBearerToken: () => 'super-agents',
   };
 });
 
@@ -109,7 +109,7 @@ describe('Task Completion - evaluateLog', () => {
       first_token_time: null,
       end_time: 1677652289000,
       duration: 1000,
-      base_ra_config: {},
+      base_sa_config: {},
       ai_provider: AIProvider.OPENAI,
       model: 'gpt-4',
       hook_logs: [],
@@ -242,7 +242,7 @@ describe('Task Completion - evaluateLog', () => {
       first_token_time: null,
       end_time: 1677652289000,
       duration: 1000,
-      base_ra_config: {},
+      base_sa_config: {},
       ai_provider: AIProvider.OPENAI,
       model: 'gpt-4',
       hook_logs: [],

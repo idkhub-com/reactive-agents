@@ -8,17 +8,17 @@ import { getBucketAndFile } from './utils';
 
 export const googleRetrieveFileRequestHandler: RequestHandlerFunction = async ({
   c,
-  raTarget,
-  raRequestData,
+  saTarget,
+  saRequestData,
 }) => {
-  const fileId = raRequestData.url.split('/').pop();
+  const fileId = saRequestData.url.split('/').pop();
 
   const { bucket, file } = getBucketAndFile(fileId ?? '');
 
   const googleHeaders = await vertexAPIConfig.headers({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
 
   const url = `https://storage.googleapis.com/${bucket}/${file}`;

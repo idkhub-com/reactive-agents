@@ -27,19 +27,19 @@ export const aI21ChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'messages',
       required: true,
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): { role: ChatCompletionMessageRole; text: string }[] => {
         let inputMessages: ChatCompletionMessage[] = [];
 
         if (
-          raRequestBody.messages?.[0]?.role &&
+          saRequestBody.messages?.[0]?.role &&
           Object.values(ChatCompletionMessageRole).includes(
-            raRequestBody.messages?.[0]?.role,
+            saRequestBody.messages?.[0]?.role,
           )
         ) {
-          inputMessages = raRequestBody.messages.slice(1);
-        } else if (raRequestBody.messages) {
-          inputMessages = raRequestBody.messages;
+          inputMessages = saRequestBody.messages.slice(1);
+        } else if (saRequestBody.messages) {
+          inputMessages = saRequestBody.messages;
         }
 
         return inputMessages.map((msg: ChatCompletionMessage) => ({
@@ -56,14 +56,14 @@ export const aI21ChatCompleteConfig: AIProviderFunctionConfig = {
     {
       param: 'system',
       required: false,
-      transform: (raRequestBody: ChatCompletionRequestBody): string => {
+      transform: (saRequestBody: ChatCompletionRequestBody): string => {
         if (
-          raRequestBody.messages?.[0]?.role &&
+          saRequestBody.messages?.[0]?.role &&
           Object.values(ChatCompletionMessageRole).includes(
-            raRequestBody.messages?.[0]?.role,
+            saRequestBody.messages?.[0]?.role,
           )
         ) {
-          const content = raRequestBody.messages?.[0].content;
+          const content = saRequestBody.messages?.[0].content;
           return typeof content === 'string' ? content : '';
         }
         return '';
@@ -105,17 +105,17 @@ export const aI21ChatCompleteConfig: AIProviderFunctionConfig = {
   },
   presence_penalty: {
     param: 'presencePenalty',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
       return {
-        scale: raRequestBody.presence_penalty,
+        scale: saRequestBody.presence_penalty,
       };
     },
   },
   frequency_penalty: {
     param: 'frequencyPenalty',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
       return {
-        scale: raRequestBody.frequency_penalty,
+        scale: saRequestBody.frequency_penalty,
       };
     },
   },
@@ -161,7 +161,7 @@ export const aI21ChatCompleteResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = aI21ErrorResponseTransform(aiProviderResponseBody);
@@ -182,7 +182,7 @@ export const aI21ChatCompleteResponseTransform: ResponseTransformFunction = (
       id: aiProviderResponseBody.id as string,
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
-      model: (raRequestData.requestBody as ChatCompletionRequestBody).model,
+      model: (saRequestData.requestBody as ChatCompletionRequestBody).model,
       choices: outputs.map((o, index) => {
         const chatCompletionChoice: ChatCompletionChoice = {
           message: {

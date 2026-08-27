@@ -25,8 +25,8 @@ export const FireworksAIChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'messages',
     required: true,
     default: [],
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      return raRequestBody.messages?.map((message: ChatCompletionMessage) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      return saRequestBody.messages?.map((message: ChatCompletionMessage) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;

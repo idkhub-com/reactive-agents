@@ -16,7 +16,7 @@ import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@web/api/v1/reactive-agents/ai-providers', () => ({
+vi.mock('@web/api/v1/super-agents/ai-providers', () => ({
   createAIProvider: vi.fn(),
   getAIProviderAPIKeys: vi.fn(),
   updateAIProvider: vi.fn(),
@@ -33,7 +33,7 @@ import {
   deleteAIProvider,
   getAIProviderAPIKeys,
   updateAIProvider,
-} from '@web/api/v1/reactive-agents/ai-providers';
+} from '@web/api/v1/super-agents/ai-providers';
 
 const mockAIProviders: AIProviderConfig[] = [
   {

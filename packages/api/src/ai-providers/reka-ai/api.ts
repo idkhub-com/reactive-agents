@@ -3,11 +3,11 @@ import { FunctionName } from '@shared/types/api/request';
 
 const rekaAIApiConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.reka.ai',
-  headers: ({ raTarget }) => {
-    return { Authorization: `Bearer ${raTarget.api_key}` };
+  headers: ({ saTarget }) => {
+    return { Authorization: `Bearer ${saTarget.api_key}` };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat';
       default:

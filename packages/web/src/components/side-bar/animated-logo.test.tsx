@@ -9,22 +9,22 @@ describe('AnimatedLogo', () => {
     expect(logoContainer).toBeInTheDocument();
   });
 
-  it('should display "Reactive Agents" text when expanded', () => {
+  it('should display "Super Agents" text when expanded', () => {
     render(<AnimatedLogo isCollapsed={false} />);
-    const expandedText = screen.getByText('Reactive Agents');
+    const expandedText = screen.getByText('Super Agents');
     expect(expandedText).toBeInTheDocument();
   });
 
-  it('should display "RA" text when collapsed', () => {
+  it('should display "SA" text when collapsed', () => {
     render(<AnimatedLogo isCollapsed={true} />);
-    const collapsedText = screen.getByText('RA');
+    const collapsedText = screen.getByText('SA');
     expect(collapsedText).toBeInTheDocument();
   });
 
   it('should have both text elements in the DOM regardless of state', () => {
     render(<AnimatedLogo isCollapsed={false} />);
-    const expandedText = screen.getByText('Reactive Agents');
-    const collapsedText = screen.getByText('RA');
+    const expandedText = screen.getByText('Super Agents');
+    const collapsedText = screen.getByText('SA');
 
     expect(expandedText).toBeInTheDocument();
     expect(collapsedText).toBeInTheDocument();
@@ -32,8 +32,8 @@ describe('AnimatedLogo', () => {
 
   it('should apply correct visibility styles when expanded', () => {
     render(<AnimatedLogo isCollapsed={false} />);
-    const expandedText = screen.getByText('Reactive Agents');
-    const collapsedText = screen.getByText('RA');
+    const expandedText = screen.getByText('Super Agents');
+    const collapsedText = screen.getByText('SA');
 
     expect(expandedText).toHaveStyle({ visibility: 'visible' });
     expect(collapsedText).toHaveStyle({ visibility: 'hidden' });
@@ -41,8 +41,8 @@ describe('AnimatedLogo', () => {
 
   it('should apply correct visibility styles when collapsed', () => {
     render(<AnimatedLogo isCollapsed={true} />);
-    const expandedText = screen.getByText('Reactive Agents');
-    const collapsedText = screen.getByText('RA');
+    const expandedText = screen.getByText('Super Agents');
+    const collapsedText = screen.getByText('SA');
 
     expect(expandedText).toHaveStyle({ visibility: 'hidden' });
     expect(collapsedText).toHaveStyle({ visibility: 'visible' });
@@ -76,7 +76,7 @@ describe('AnimatedLogo', () => {
 
   it('should apply correct text styling for expanded state', () => {
     render(<AnimatedLogo isCollapsed={false} />);
-    const expandedText = screen.getByText('Reactive Agents');
+    const expandedText = screen.getByText('Super Agents');
 
     expect(expandedText).toHaveClass(
       'text-xl',
@@ -88,7 +88,7 @@ describe('AnimatedLogo', () => {
 
   it('should apply correct text styling for collapsed state', () => {
     render(<AnimatedLogo isCollapsed={true} />);
-    const collapsedText = screen.getByText('RA');
+    const collapsedText = screen.getByText('SA');
 
     expect(collapsedText).toHaveClass(
       'text-xl',

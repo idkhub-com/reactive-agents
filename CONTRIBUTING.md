@@ -1,6 +1,6 @@
-# Contributing to Reactive Agents
+# Contributing to Super Agents
 
-Thank you for your interest in improving **Reactive Agents**!
+Thank you for your interest in improving **Super Agents**!
 
 ## Project Structure
 
@@ -106,7 +106,7 @@ supabase stop       # Stop local Supabase
 
 - **Framework:** Vitest (jsdom) + Testing Library
 - **Location:** Tests are colocated with source files in each package
-  - Example: `packages/api/src/v1/reactive-agents/agents.test.ts`
+  - Example: `packages/api/src/v1/super-agents/agents.test.ts`
   - Example: `packages/web/src/hooks/use-smart-back.test.ts`
 - **Coverage:** Reports generated in text/json/html; maintain meaningful coverage for changed code
 - **Run tests:** `pnpm test` (CI) or `pnpm test:watch` (development)

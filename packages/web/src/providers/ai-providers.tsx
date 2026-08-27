@@ -12,7 +12,7 @@ import {
   deleteAIProvider,
   getAIProviderAPIKeys,
   updateAIProvider,
-} from '@web/api/v1/reactive-agents/ai-providers';
+} from '@web/api/v1/super-agents/ai-providers';
 import { useToast } from '@web/hooks/use-toast';
 import type React from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';

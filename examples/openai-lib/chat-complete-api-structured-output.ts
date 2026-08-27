@@ -4,13 +4,13 @@ import logger from '@shared/console-logging';
 import { z } from 'zod';
 
 const client = new OpenAI({
-  // This is the API key to Reactive Agents
+  // This is the API key to Super Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
   apiKey: process.env.BEARER_TOKEN ?? '',
   baseURL: 'http://localhost:3000/v1',
 });
 
-const raConfig = {
+const saConfig = {
   agent_name: 'calendar_event_planner',
   // You can use the following description for the agent: "Plan calendar events for a user"
   skill_name: 'generate',
@@ -32,7 +32,7 @@ logger.printWithHeader('User', userMessage1);
 const response1 = await client
   .withOptions({
     defaultHeaders: {
-      'ra-config': JSON.stringify(raConfig),
+      'sa-config': JSON.stringify(saConfig),
     },
   })
   .chat.completions.parse({

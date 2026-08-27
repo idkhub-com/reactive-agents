@@ -12,10 +12,10 @@ export async function realTimeHandlerNode(
   try {
     let incomingWebsocket: WSContext<unknown> | null = null;
 
-    const raConfig = c.get('ra_config');
-    const raRequestData = c.get('ra_request_data');
+    const saConfig = c.get('sa_config');
+    const saRequestData = c.get('sa_request_data');
 
-    const provider = raConfig?.targets[0]?.configuration.ai_provider;
+    const provider = saConfig?.targets[0]?.configuration.ai_provider;
     if (!provider) {
       throw new Error('Provider not found');
     }
@@ -29,30 +29,30 @@ export async function realTimeHandlerNode(
     if (!apiConfig) {
       throw new Error('API config not found');
     }
-    const raTarget = raConfig.targets[0];
+    const saTarget = saConfig.targets[0];
     const baseUrl = apiConfig.getBaseURL({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     const endpoint = apiConfig.getEndpoint({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     let url = `${baseUrl}${endpoint}`;
     url = url.replace('https://', 'wss://');
 
     const requestHeaders = await apiConfig.headers({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
 
     const sessionOptions: RealtimeSessionOptions = {
       id: crypto.randomUUID(),
       providerOptions: {
-        ...raTarget,
+        ...saTarget,
         requestURL: url,
         rubeusURL: 'realtime',
       },

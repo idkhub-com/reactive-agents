@@ -86,13 +86,13 @@ export function shouldTriggerRealtimeEvaluation(
     return false;
   }
 
-  // Only evaluate actual AI provider calls, not internal Reactive Agents API calls
+  // Only evaluate actual AI provider calls, not internal Super Agents API calls
   if (!url.pathname.startsWith('/v1/')) {
     return false;
   }
 
-  // Don't evaluate Reactive Agents internal API calls
-  if (url.pathname.startsWith('/v1/reactive-agents')) {
+  // Don't evaluate Super Agents internal API calls
+  if (url.pathname.startsWith('/v1/super-agents')) {
     return false;
   }
 

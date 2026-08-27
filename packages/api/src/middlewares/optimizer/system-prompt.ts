@@ -5,9 +5,9 @@ import type {
 } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { formatMessagesForExtraction } from '@api/utils/messages';
-import { extractMessagesFromRequestData } from '@api/utils/reactive-agents/requests';
-import { extractOutputFromResponseBody } from '@api/utils/reactive-agents/responses';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
+import { extractMessagesFromRequestData } from '@api/utils/super-agents/requests';
+import { extractOutputFromResponseBody } from '@api/utils/super-agents/responses';
 import { error } from '@shared/console-logging';
 import {
   type ChatCompletionRequestData,
@@ -15,17 +15,17 @@ import {
   type ResponsesRequestData,
   type StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
-import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import { SuperAgentsResponseBody } from '@shared/types/api/response';
 import type { Log, Skill, SkillOptimizationCluster } from '@shared/types/data';
 import { SkillEventType } from '@shared/types/data/skill-event';
-import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
+import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 
 /**
  * Extracts relevant request parameters that affect the output format and constraints.
  * This includes structured output requirements, tool definitions, and sampling parameters.
  */
 function extractRequestConstraints(
-  raRequestData:
+  saRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
@@ -33,42 +33,42 @@ function extractRequestConstraints(
   const constraints: string[] = [];
 
   // Extract response format (JSON schema, structured output)
-  if ('response_format' in raRequestData && raRequestData.response_format) {
+  if ('response_format' in saRequestData && saRequestData.response_format) {
     constraints.push(
-      `Response Format: ${JSON.stringify(raRequestData.response_format, null, 2)}`,
+      `Response Format: ${JSON.stringify(saRequestData.response_format, null, 2)}`,
     );
   }
 
   // Extract text config for Responses API
-  if ('text' in raRequestData && raRequestData.text) {
+  if ('text' in saRequestData && saRequestData.text) {
     constraints.push(
-      `Text Config: ${JSON.stringify(raRequestData.text, null, 2)}`,
+      `Text Config: ${JSON.stringify(saRequestData.text, null, 2)}`,
     );
   }
 
   // Extract tools/functions
-  if ('tools' in raRequestData && raRequestData.tools) {
+  if ('tools' in saRequestData && saRequestData.tools) {
     constraints.push(
-      `Available Tools: ${JSON.stringify(raRequestData.tools, null, 2)}`,
+      `Available Tools: ${JSON.stringify(saRequestData.tools, null, 2)}`,
     );
   }
 
-  if ('functions' in raRequestData && raRequestData.functions) {
+  if ('functions' in saRequestData && saRequestData.functions) {
     constraints.push(
-      `Available Functions: ${JSON.stringify(raRequestData.functions, null, 2)}`,
+      `Available Functions: ${JSON.stringify(saRequestData.functions, null, 2)}`,
     );
   }
 
   // Extract tool choice constraints
-  if ('tool_choice' in raRequestData && raRequestData.tool_choice) {
+  if ('tool_choice' in saRequestData && saRequestData.tool_choice) {
     constraints.push(
-      `Tool Choice: ${JSON.stringify(raRequestData.tool_choice)}`,
+      `Tool Choice: ${JSON.stringify(saRequestData.tool_choice)}`,
     );
   }
 
-  if ('function_call' in raRequestData && raRequestData.function_call) {
+  if ('function_call' in saRequestData && saRequestData.function_call) {
     constraints.push(
-      `Function Call: ${JSON.stringify(raRequestData.function_call)}`,
+      `Function Call: ${JSON.stringify(saRequestData.function_call)}`,
     );
   }
 
@@ -423,18 +423,18 @@ export function generateExampleConversations(logs: Log[]): string[] {
   return logs
     .map((log) => {
       try {
-        const raRequestData = produceReactiveAgentsRequestData(
+        const saRequestData = produceSuperAgentsRequestData(
           log.ai_provider_request_log.method,
           log.ai_provider_request_log.request_url,
           {},
           log.ai_provider_request_log.request_body,
         );
-        const responseBody = ReactiveAgentsResponseBody.parse(
+        const responseBody = SuperAgentsResponseBody.parse(
           log.ai_provider_request_log.response_body,
         );
 
         const messages = extractMessagesFromRequestData(
-          raRequestData as
+          saRequestData as
             | ChatCompletionRequestData
             | StreamChatCompletionRequestData
             | ResponsesRequestData,
@@ -475,18 +475,18 @@ async function generateExampleConversationsWithEvaluations(
 
   for (const log of logs) {
     try {
-      const raRequestData = produceReactiveAgentsRequestData(
+      const saRequestData = produceSuperAgentsRequestData(
         log.ai_provider_request_log.method,
         log.ai_provider_request_log.request_url,
         {},
         log.ai_provider_request_log.request_body,
       );
-      const responseBody = ReactiveAgentsResponseBody.parse(
+      const responseBody = SuperAgentsResponseBody.parse(
         log.ai_provider_request_log.response_body,
       );
 
       const messages = extractMessagesFromRequestData(
-        raRequestData as
+        saRequestData as
           | ChatCompletionRequestData
           | StreamChatCompletionRequestData
           | ResponsesRequestData,

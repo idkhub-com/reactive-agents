@@ -4,13 +4,13 @@ import logger from '@shared/console-logging';
 import eventInputs from './data/structured-event-inputs.json';
 
 const client = new OpenAI({
-  // This is the API key to Reactive Agents
+  // This is the API key to Super Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
   apiKey: process.env.BEARER_TOKEN ?? '',
   baseURL: 'http://localhost:3000/v1',
 });
 
-const raConfig = {
+const saConfig = {
   agent_name: 'calendar_event_planner',
   skill_name: 'describe',
 };
@@ -38,7 +38,7 @@ for (let i = 0; i < selectedInputs.length; i++) {
   const response = await client
     .withOptions({
       defaultHeaders: {
-        'ra-config': JSON.stringify(raConfig),
+        'sa-config': JSON.stringify(saConfig),
       },
     })
     .responses.create({

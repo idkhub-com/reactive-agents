@@ -15,29 +15,29 @@ import { CopyIcon, Wrench } from 'lucide-react';
 
 export function ChatCompletionsAPIViewer({
   logId,
-  raRequestBody,
-  raResponseBody,
+  saRequestBody,
+  saResponseBody,
 }: {
   logId: string;
-  raRequestBody: ChatCompletionRequestBody;
-  raResponseBody: ChatCompletionResponseBody;
+  saRequestBody: ChatCompletionRequestBody;
+  saResponseBody: ChatCompletionResponseBody;
 }): React.ReactElement {
   const language =
-    'response_format' in raRequestBody
-      ? raRequestBody.response_format?.type === 'json_object' ||
-        raRequestBody.response_format?.type === 'json_schema'
+    'response_format' in saRequestBody
+      ? saRequestBody.response_format?.type === 'json_object' ||
+        saRequestBody.response_format?.type === 'json_schema'
         ? 'json'
         : 'text'
       : 'text';
 
   const rawSchema =
-    'response_format' in raRequestBody
-      ? raRequestBody.response_format?.type === 'json_schema'
-        ? raRequestBody.response_format.json_schema.schema
+    'response_format' in saRequestBody
+      ? saRequestBody.response_format?.type === 'json_schema'
+        ? saRequestBody.response_format.json_schema.schema
         : undefined
       : undefined;
 
-  const message = raResponseBody.choices[0].message;
+  const message = saResponseBody.choices[0].message;
   const hasToolCalls =
     'tool_calls' in message &&
     message.tool_calls &&

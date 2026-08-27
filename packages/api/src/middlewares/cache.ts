@@ -2,10 +2,10 @@ import type { CacheStorageConnector } from '@api/types/connector';
 import type { AppContext, AppEnv } from '@api/types/hono';
 import type {
   FunctionName,
-  ReactiveAgentsRequestBody,
-  ReactiveAgentsRequestData,
+  SuperAgentsRequestBody,
+  SuperAgentsRequestData,
 } from '@shared/types/api/request';
-import type { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response';
 import {
   CacheMode,
   type CacheSettings,
@@ -18,9 +18,9 @@ import type { Factory } from 'hono/factory';
 
 async function produceAIProviderCacheKey(
   fn: FunctionName,
-  raRequestBody: ReactiveAgentsRequestBody,
+  saRequestBody: SuperAgentsRequestBody,
 ): Promise<string> {
-  const stringToHash = `${fn}-${JSON.stringify(raRequestBody)}`;
+  const stringToHash = `${fn}-${JSON.stringify(saRequestBody)}`;
 
   const encodedHash = new TextEncoder().encode(stringToHash);
 
@@ -40,9 +40,9 @@ async function produceAIProviderCacheKey(
 const getAIProviderResponseFromCache = async (
   c: AppContext,
   cacheSettings: CacheSettings,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
 ): Promise<GetFromCacheResult> => {
-  const config = c.get('ra_config');
+  const config = c.get('sa_config');
 
   if (config.force_refresh) {
     return { status: CacheStatus.REFRESH };
@@ -52,8 +52,8 @@ const getAIProviderResponseFromCache = async (
 
   try {
     const cacheKey = await produceAIProviderCacheKey(
-      raRequestData.functionName,
-      raRequestData.requestBody,
+      saRequestData.functionName,
+      saRequestData.requestBody,
     );
 
     let value: string | null = null;
@@ -77,16 +77,16 @@ const getAIProviderResponseFromCache = async (
 const putAIProviderResponseInCache = async (
   c: AppContext,
   connector: CacheStorageConnector,
-  raRequestBody: ReactiveAgentsRequestBody,
+  saRequestBody: SuperAgentsRequestBody,
   responseBody: Record<string, unknown>,
   fn: FunctionName,
 ): Promise<void> => {
-  if (raRequestBody instanceof ReadableStream) {
+  if (saRequestBody instanceof ReadableStream) {
     // Does not support caching of streams
     return;
   }
 
-  const cacheKey = await produceAIProviderCacheKey(fn, raRequestBody);
+  const cacheKey = await produceAIProviderCacheKey(fn, saRequestBody);
 
   try {
     await connector.setCache(c, cacheKey, JSON.stringify(responseBody));
@@ -98,10 +98,10 @@ const putAIProviderResponseInCache = async (
 async function produceHookCacheKey(
   fn: FunctionName,
   hook: Hook,
-  raRequestBody: ReactiveAgentsRequestBody,
-  raResponseBody?: ReactiveAgentsResponseBody,
+  saRequestBody: SuperAgentsRequestBody,
+  saResponseBody?: SuperAgentsResponseBody,
 ): Promise<string> {
-  const stringToHash = `${fn}-${JSON.stringify(hook)}-${JSON.stringify(raRequestBody)}-${JSON.stringify(raResponseBody)}`;
+  const stringToHash = `${fn}-${JSON.stringify(hook)}-${JSON.stringify(saRequestBody)}-${JSON.stringify(saResponseBody)}`;
 
   const encodedHash = new TextEncoder().encode(stringToHash);
 
@@ -120,10 +120,10 @@ async function produceHookCacheKey(
 const getHookResponseFromCache = async (
   c: AppContext,
   hook: Hook,
-  raRequestData: ReactiveAgentsRequestData,
-  raResponseBody?: ReactiveAgentsResponseBody,
+  saRequestData: SuperAgentsRequestData,
+  saResponseBody?: SuperAgentsResponseBody,
 ): Promise<GetFromCacheResult> => {
-  const config = c.get('ra_config');
+  const config = c.get('sa_config');
 
   if (config.force_hook_refresh) {
     return { status: CacheStatus.REFRESH };
@@ -131,10 +131,10 @@ const getHookResponseFromCache = async (
 
   try {
     const cacheKey = await produceHookCacheKey(
-      raRequestData.functionName,
+      saRequestData.functionName,
       hook,
-      raRequestData.requestBody,
-      raResponseBody,
+      saRequestData.requestBody,
+      saResponseBody,
     );
 
     let value: string | null = null;

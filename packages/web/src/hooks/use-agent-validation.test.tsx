@@ -5,12 +5,12 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
 // Import after mocking
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 import { useAgentValidation } from '@web/hooks/use-agent-validation';
 
 const mockGetSkills = vi.mocked(getSkills);

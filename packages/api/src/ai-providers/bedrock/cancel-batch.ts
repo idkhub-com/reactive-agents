@@ -8,14 +8,14 @@ export const bedrockCancelBatchResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = bedrockErrorResponseTransform(aiProviderResponseBody);
     if (errorResponse) return errorResponse;
   }
   const batchId = decodeURIComponent(
-    raRequestData.url.split('/v1/batches/')[1].split('/')[0],
+    saRequestData.url.split('/v1/batches/')[1].split('/')[0],
   );
   const batchResponseBody: CancelBatchResponseBody = {
     id: batchId,

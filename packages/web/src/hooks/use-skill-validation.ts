@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getSkillEvaluations,
   getSkillModels,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 
 export interface UseSkillValidationResult {
   isReady: boolean;

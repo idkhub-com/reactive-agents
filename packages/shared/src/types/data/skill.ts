@@ -14,7 +14,7 @@ export const Skill = z.object({
   /** Name of the skill. Unique within the agent. */
   name: z.string(),
 
-  /** Description of the skill. This will be used by Reactive Agents to automatically optimize the skill. */
+  /** Description of the skill. This will be used by Super Agents to automatically optimize the skill. */
   description: z.string(),
 
   /** Internal metadata for the skill. Reserved for user-defined custom data. */

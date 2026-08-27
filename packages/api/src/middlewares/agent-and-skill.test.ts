@@ -1,10 +1,10 @@
 import { agentAndSkillMiddleware } from '@api/middlewares/agent-and-skill';
 import type { AppContext } from '@api/types/hono';
-import * as agentsUtils from '@api/utils/reactive-agents/agents';
-import * as skillsUtils from '@api/utils/reactive-agents/skills';
+import * as agentsUtils from '@api/utils/super-agents/agents';
+import * as skillsUtils from '@api/utils/super-agents/skills';
 import {
-  type ReactiveAgentsConfig,
   StrategyModes,
+  type SuperAgentsConfig,
 } from '@shared/types/api/request/headers';
 import type { Agent } from '@shared/types/data/agent';
 import type { Skill } from '@shared/types/data/skill';
@@ -12,8 +12,8 @@ import type { Next } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the utility functions
-vi.mock('@api/utils/reactive-agents/agents');
-vi.mock('@api/utils/reactive-agents/skills');
+vi.mock('@api/utils/super-agents/agents');
+vi.mock('@api/utils/super-agents/skills');
 
 describe('agentAndSkillMiddleware', () => {
   let mockNext: Next; // Mock connector
@@ -43,15 +43,15 @@ describe('agentAndSkillMiddleware', () => {
     createTool: vi.fn(),
     deleteTool: vi.fn(),
   };
-  let mockReactiveAgentsConfig: ReactiveAgentsConfig;
+  let mockSuperAgentsConfig: SuperAgentsConfig;
 
   const createMockContext = (url: string): AppContext => {
     return {
       req: { url } as unknown,
       get: vi.fn().mockImplementation((key: string) => {
         switch (key) {
-          case 'ra_config_pre_processed':
-            return mockReactiveAgentsConfig;
+          case 'sa_config_pre_processed':
+            return mockSuperAgentsConfig;
           case 'user_data_storage_connector':
             return mockConnector;
           default:
@@ -65,8 +65,8 @@ describe('agentAndSkillMiddleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock Reactive Agents config
-    const mockReactiveAgentsConfig2: ReactiveAgentsConfig = {
+    // Mock Super Agents config
+    const mockSuperAgentsConfig2: SuperAgentsConfig = {
       agent_name: 'test-agent',
       skill_name: 'test-skill',
       strategy: { mode: StrategyModes.SINGLE },
@@ -75,14 +75,14 @@ describe('agentAndSkillMiddleware', () => {
       trace_id: 'test-trace',
     };
 
-    mockReactiveAgentsConfig = mockReactiveAgentsConfig2;
+    mockSuperAgentsConfig = mockSuperAgentsConfig2;
 
     // Mock next function
     mockNext = vi.fn();
   });
 
   describe('URL filtering', () => {
-    it('should process v1 API requests (not Reactive Agents)', async () => {
+    it('should process v1 API requests (not Super Agents)', async () => {
       const mockAgent: Agent = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'test-agent',
@@ -138,9 +138,9 @@ describe('agentAndSkillMiddleware', () => {
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
 
-    it('should skip processing for Reactive Agents API requests', async () => {
+    it('should skip processing for Super Agents API requests', async () => {
       const mockContext = createMockContext(
-        'https://api.example.com/v1/reactive-agents/logs',
+        'https://api.example.com/v1/super-agents/logs',
       );
       await agentAndSkillMiddleware(mockContext, mockNext);
 
@@ -224,14 +224,14 @@ describe('agentAndSkillMiddleware', () => {
     });
   });
 
-  describe('Reactive Agents API endpoint variations', () => {
-    const raUrls = [
-      'https://api.example.com/v1/reactive-agents/logs',
-      'https://api.example.com/v1/reactive-agents/auth/login',
-      'https://api.example.com/v1/reactive-agents/feedbacks',
+  describe('Super Agents API endpoint variations', () => {
+    const saUrls = [
+      'https://api.example.com/v1/super-agents/logs',
+      'https://api.example.com/v1/super-agents/auth/login',
+      'https://api.example.com/v1/super-agents/feedbacks',
     ];
 
-    raUrls.forEach((url) => {
+    saUrls.forEach((url) => {
       it(`should skip processing for ${url}`, async () => {
         const mockContext = createMockContext(url);
         await agentAndSkillMiddleware(mockContext, mockNext);
@@ -280,7 +280,7 @@ describe('agentAndSkillMiddleware', () => {
 
   describe('configuration scenarios', () => {
     it('should handle different agent and skill names', async () => {
-      const customConfig: ReactiveAgentsConfig = {
+      const customConfig: SuperAgentsConfig = {
         agent_name: 'custom-agent-123',
         skill_name: 'custom-skill-456',
         strategy: { mode: StrategyModes.SINGLE },
@@ -302,7 +302,7 @@ describe('agentAndSkillMiddleware', () => {
         req: { url: 'https://api.example.com/v1/chat/completions' } as unknown,
         get: vi.fn().mockImplementation((key: string) => {
           switch (key) {
-            case 'ra_config_pre_processed':
+            case 'sa_config_pre_processed':
               return customConfig;
             case 'user_data_storage_connector':
               return mockConnector;

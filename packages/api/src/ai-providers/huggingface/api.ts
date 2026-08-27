@@ -2,18 +2,18 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 const HuggingfaceAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raTarget }) => {
+  getBaseURL: ({ saTarget }) => {
     return (
-      raTarget.huggingface_base_url || 'https://api-inference.huggingface.co'
+      saTarget.huggingface_base_url || 'https://api-inference.huggingface.co'
     );
   },
-  headers: ({ raTarget }) => ({
-    Authorization: `Bearer ${raTarget.api_key}`,
+  headers: ({ saTarget }) => ({
+    Authorization: `Bearer ${saTarget.api_key}`,
   }),
-  getEndpoint: ({ raRequestData, raTarget }) => {
-    const { model } = raRequestData.requestBody as { model: string };
-    const modelPath = raTarget.huggingface_base_url ? '' : `/models/${model}`;
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData, saTarget }) => {
+    const { model } = saRequestData.requestBody as { model: string };
+    const modelPath = saTarget.huggingface_base_url ? '' : `/models/${model}`;
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return `${modelPath}/v1/chat/completions`;
       case FunctionName.COMPLETE:

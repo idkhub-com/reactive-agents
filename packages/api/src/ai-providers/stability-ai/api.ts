@@ -9,27 +9,27 @@ import { isStabilityV1Model } from './utils';
 
 const StabilityAIAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.stability.ai',
-  headers: ({ raTarget, raRequestData }) => {
+  headers: ({ saTarget, saRequestData }) => {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${raTarget.api_key}`,
+      Authorization: `Bearer ${saTarget.api_key}`,
     };
-    if (raRequestData.functionName === FunctionName.GENERATE_IMAGE) {
-      if (isStabilityV1Model(raRequestData.requestBody.model)) return headers;
+    if (saRequestData.functionName === FunctionName.GENERATE_IMAGE) {
+      if (isStabilityV1Model(saRequestData.requestBody.model)) return headers;
     }
     headers.Content_Type = ContentTypeName.MULTIPART_FORM_DATA;
     headers.Accept = ContentTypeName.APPLICATION_JSON;
     return headers;
   },
-  getEndpoint: ({ raRequestData, raTarget }) => {
-    const { stability_url_to_fetch } = raTarget;
-    let updatedRequestData = raRequestData;
+  getEndpoint: ({ saRequestData, saTarget }) => {
+    const { stability_url_to_fetch } = saTarget;
+    let updatedRequestData = saRequestData;
     if (
-      raRequestData.functionName === FunctionName.PROXY &&
+      saRequestData.functionName === FunctionName.PROXY &&
       stability_url_to_fetch &&
       stability_url_to_fetch?.indexOf('text-to-image') > -1
     ) {
       updatedRequestData = {
-        ...raRequestData,
+        ...saRequestData,
         functionName: FunctionName.GENERATE_IMAGE,
       } as GenerateImageRequestData;
     }
@@ -44,9 +44,9 @@ const StabilityAIAPIConfig: InternalProviderAPIConfig = {
         return '';
     }
   },
-  transformToFormData: ({ raRequestData }) => {
+  transformToFormData: ({ saRequestData }) => {
     const generateImageRequestBody =
-      raRequestData.requestBody as GenerateImageRequestBody;
+      saRequestData.requestBody as GenerateImageRequestBody;
     if (isStabilityV1Model(generateImageRequestBody.model)) return false;
     return true;
   },

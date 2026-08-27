@@ -1,7 +1,7 @@
 'use client';
 import { type Log, LogsQueryParams } from '@shared/types/data/log';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryLogs } from '@web/api/v1/reactive-agents/observability/logs';
+import { queryLogs } from '@web/api/v1/super-agents/observability/logs';
 import { useToast } from '@web/hooks/use-toast';
 import { useNavigation } from '@web/providers/navigation';
 import type React from 'react';

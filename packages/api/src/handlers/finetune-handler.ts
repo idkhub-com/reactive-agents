@@ -2,21 +2,21 @@ import { tryTargets } from '@api/handlers/handler-utils';
 import type { AppContext } from '@api/types/hono';
 
 async function finetuneHandler(c: AppContext): Promise<Response> {
-  const raConfig = c.get('ra_config');
-  const raRequestData = c.get('ra_request_data');
+  const saConfig = c.get('sa_config');
+  const saRequestData = c.get('sa_request_data');
 
   try {
-    const tryTargetsResponse = await tryTargets(c, raConfig, raRequestData);
+    const tryTargetsResponse = await tryTargets(c, saConfig, saRequestData);
 
     return tryTargetsResponse;
   } catch (err: unknown) {
     if (err instanceof Error) {
       console.error({
-        message: `${raRequestData.functionName} error ${err.message}`,
+        message: `${saRequestData.functionName} error ${err.message}`,
       });
     } else {
       console.error({
-        message: `${raRequestData.functionName} error ${err}`,
+        message: `${saRequestData.functionName} error ${err}`,
       });
     }
     return new Response(

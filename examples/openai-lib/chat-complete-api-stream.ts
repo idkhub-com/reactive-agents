@@ -3,13 +3,13 @@ import 'dotenv/config';
 import logger from '@shared/console-logging';
 
 const client = new OpenAI({
-  // This is the API key to Reactive Agents
+  // This is the API key to Super Agents
   // You can use a custom key by setting it as the value of BEARER_TOKEN in your .env file (restart server after saving)
   apiKey: process.env.BEARER_TOKEN ?? '',
   baseURL: 'http://localhost:3000/v1',
 });
 
-const raConfig = {
+const saConfig = {
   agent_name: 'captain_code',
   skill_name: 'programming',
 };
@@ -20,11 +20,11 @@ logger.printWithHeader('User', userMessage1);
 const stream1 = await client
   .withOptions({
     defaultHeaders: {
-      'ra-config': JSON.stringify(raConfig),
+      'sa-config': JSON.stringify(saConfig),
     },
   })
   .chat.completions.create({
-    model: 'gpt-4o-mini', // The model value is ignored by Reactive Agents
+    model: 'gpt-4o-mini', // The model value is ignored by Super Agents
     messages: [
       {
         role: 'user',
@@ -49,11 +49,11 @@ logger.printWithHeader('User', userMessage2);
 const stream2 = await client
   .withOptions({
     defaultHeaders: {
-      'ra-config': JSON.stringify(raConfig),
+      'sa-config': JSON.stringify(saConfig),
     },
   })
   .chat.completions.create({
-    model: 'gpt-4o-mini', // The model value is ignored by Reactive Agents
+    model: 'gpt-4o-mini', // The model value is ignored by Super Agents
     messages: [
       {
         role: 'user',

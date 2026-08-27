@@ -24,9 +24,9 @@ export const deepSeekChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      if (!raRequestBody.messages) return [];
-      return raRequestBody.messages?.map((message) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      if (!saRequestBody.messages) return [];
+      return saRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;

@@ -340,7 +340,7 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.7.2
         version: 0.7.6(hono@4.11.3)(zod@4.2.1)
-      '@reactive-agents/shared':
+      '@super-agents/shared':
         specifier: workspace:*
         version: link:../shared
       '@smithy/signature-v4':
@@ -507,7 +507,7 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.2(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@reactive-agents/shared':
+      '@super-agents/shared':
         specifier: workspace:*
         version: link:../shared
       '@tailwindcss/typography':
@@ -616,7 +616,7 @@ importers:
         specifier: ^4.1.5
         version: 4.2.1
     devDependencies:
-      '@reactive-agents/api':
+      '@super-agents/api':
         specifier: workspace:*
         version: link:../api
       '@tailwindcss/postcss':

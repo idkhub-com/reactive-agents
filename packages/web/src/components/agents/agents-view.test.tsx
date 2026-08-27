@@ -15,11 +15,11 @@ import {
 // TanStack Router is mocked globally in vitest.setup.tsx
 
 // Mock API functions
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn(),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
@@ -93,8 +93,8 @@ vi.mock('@web/components/agents/skills/models/models-view', () => ({
   ModelsView: () => <div data-testid="models-view">Models</div>,
 }));
 
-import { getAgents } from '@web/api/v1/reactive-agents/agents';
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getAgents } from '@web/api/v1/super-agents/agents';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 
 // Mock localStorage
 const mockLocalStorage = {

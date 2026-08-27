@@ -7,10 +7,10 @@ export const palmApiConfig: InternalProviderAPIConfig = {
   headers: () => {
     return { 'Content-Type': 'application/json' };
   },
-  getEndpoint: ({ raTarget, raRequestData }) => {
-    const { api_key } = raTarget;
-    const { model } = raRequestData.requestBody as ChatCompletionRequestBody;
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saTarget, saRequestData }) => {
+    const { api_key } = saTarget;
+    const { model } = saRequestData.requestBody as ChatCompletionRequestBody;
+    switch (saRequestData.functionName) {
       case FunctionName.COMPLETE: {
         return `/models/${model}:generateText?key=${api_key}`;
       }

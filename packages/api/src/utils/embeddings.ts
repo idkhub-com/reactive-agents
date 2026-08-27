@@ -21,9 +21,9 @@ export class RequestEmbeddingError extends Error {
 }
 
 function extractMessagesFromResponsesRequest(
-  raRequestData: ResponsesRequestData,
+  saRequestData: ResponsesRequestData,
 ): ChatCompletionMessage[] {
-  const input = raRequestData.requestBody.input;
+  const input = saRequestData.requestBody.input;
   let messages: ChatCompletionMessage[] = [];
 
   if (typeof input === 'string') {
@@ -105,18 +105,18 @@ function extractMessagesFromResponsesRequest(
 }
 
 export function extractMessagesFromRequestData(
-  raRequestData:
+  saRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
 ): ChatCompletionMessage[] {
-  switch (raRequestData.functionName) {
+  switch (saRequestData.functionName) {
     case FunctionName.CHAT_COMPLETE:
-      return raRequestData.requestBody.messages;
+      return saRequestData.requestBody.messages;
     case FunctionName.STREAM_CHAT_COMPLETE:
-      return raRequestData.requestBody.messages;
+      return saRequestData.requestBody.messages;
     case FunctionName.CREATE_MODEL_RESPONSE:
-      return extractMessagesFromResponsesRequest(raRequestData);
+      return extractMessagesFromResponsesRequest(saRequestData);
   }
 }
 
@@ -195,7 +195,7 @@ export function formatMessagesForEmbedding(
 
 export async function generateEmbeddingForRequest(
   c: AppContext,
-  raRequestData:
+  saRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
@@ -233,7 +233,7 @@ export async function generateEmbeddingForRequest(
   }
 
   try {
-    const messages = extractMessagesFromRequestData(raRequestData);
+    const messages = extractMessagesFromRequestData(saRequestData);
     const inputText = formatMessagesForEmbedding(messages);
 
     if (!inputText.trim()) {
@@ -242,7 +242,7 @@ export async function generateEmbeddingForRequest(
       );
     }
 
-    const raConfig = {
+    const saConfig = {
       targets: [
         {
           provider: providerConfig.ai_provider,
@@ -250,7 +250,7 @@ export async function generateEmbeddingForRequest(
           api_key: providerConfig.api_key,
         },
       ],
-      agent_name: 'reactive-agents',
+      agent_name: 'super-agents',
       skill_name: 'embedding',
     };
 
@@ -262,7 +262,7 @@ export async function generateEmbeddingForRequest(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${getBearerToken(c)}`,
-        'ra-config': JSON.stringify(raConfig),
+        'sa-config': JSON.stringify(saConfig),
       },
       body: JSON.stringify({
         model: embeddingConfig.model.model_name,

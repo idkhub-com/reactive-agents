@@ -17,7 +17,7 @@ import {
 } from 'vitest';
 
 // Mock the API functions
-vi.mock('@web/api/v1/reactive-agents/system-settings', () => ({
+vi.mock('@web/api/v1/super-agents/system-settings', () => ({
   getSystemSettings: vi.fn(),
   updateSystemSettings: vi.fn(),
 }));
@@ -25,7 +25,7 @@ vi.mock('@web/api/v1/reactive-agents/system-settings', () => ({
 import {
   getSystemSettings,
   updateSystemSettings,
-} from '@web/api/v1/reactive-agents/system-settings';
+} from '@web/api/v1/super-agents/system-settings';
 
 const mockGetSystemSettings = getSystemSettings as Mock;
 const mockUpdateSystemSettings = updateSystemSettings as Mock;

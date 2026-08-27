@@ -20,14 +20,14 @@ import { jwt } from 'hono/jwt';
  * 2. Bearer token header — for programmatic API access
  *
  * If neither ACCESS_PASSWORD nor BEARER_TOKEN is configured, all requests are allowed through.
- * Auth endpoints (/v1/reactive-agents/auth/*) are always exempt.
+ * Auth endpoints (/v1/super-agents/auth/*) are always exempt.
  */
 export const authenticatedMiddleware = (
   factory: Factory<AppEnv>,
 ): MiddlewareHandler =>
   factory.createMiddleware(async (c, next) => {
     // Allow access to auth endpoints so that we can login or verify authorization
-    if (c.req.path.startsWith('/v1/reactive-agents/auth/')) {
+    if (c.req.path.startsWith('/v1/super-agents/auth/')) {
       await next();
       return;
     }

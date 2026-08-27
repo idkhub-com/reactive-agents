@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { createRouter, RouterProvider } from '@tanstack/react-router';
-import { getAuthStatus } from '@web/api/v1/reactive-agents/auth';
+import { getAuthStatus } from '@web/api/v1/super-agents/auth';
 import { Toaster } from '@web/components/ui/toaster';
 import { SidebarProvider } from '@web/providers/side-bar';
 import { ThemeProvider } from '@web/providers/theme';

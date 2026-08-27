@@ -80,7 +80,7 @@ pnpm format     # Check formatting
 pnpm format:fix # Auto-fix formatting
 
 # API testing (all requests go through port 3000, proxied to API)
-curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer reactive-agents"
+curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer super-agents"
 ```
 
 ## Architecture
@@ -112,9 +112,9 @@ In Docker, nginx handles the proxying.
 
 Key API endpoints:
 - `/v1/chat/completions` - OpenAI-compatible chat API
-- `/v1/reactive-agents/agents` - Agent management
-- `/v1/reactive-agents/evaluations` - Dataset and evaluation management
-- `/v1/reactive-agents/observability/logs` - Request logging
+- `/v1/super-agents/agents` - Agent management
+- `/v1/super-agents/evaluations` - Dataset and evaluation management
+- `/v1/super-agents/observability/logs` - Request logging
 
 **Hono Syntax**: Always use chained method syntax for proper type inference:
 ```typescript
@@ -178,7 +178,7 @@ const mockUserDataStorageConnector: unknown = {
 
 **Client API Tests**: Mock the entire API module:
 ```typescript
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn().mockImplementation(async (params) => {
     const response = await mockGet({ query: params });
     if (!response.ok) throw new Error('Failed to fetch agents');
@@ -211,7 +211,7 @@ Provider implementations are in `packages/api/src/ai-providers/[provider]/`.
 
 ## Authentication
 
-- **API**: Hono middleware with Bearer token validation (`Authorization: Bearer reactive-agents`)
+- **API**: Hono middleware with Bearer token validation (`Authorization: Bearer super-agents`)
 - **Dashboard**: Client-side authentication (when ACCESS_PASSWORD is set)
 
 ## Docker Deployment
@@ -260,7 +260,7 @@ System prompts evolve through two distinct phases:
 
 ### Internal Skills
 
-The system uses special auto-generated skills in the `reactive-agents` agent (defined in `RA_SKILLS` constant):
+The system uses special auto-generated skills in the `super-agents` agent (defined in `SA_SKILLS` constant):
 - `system-prompt-seeding`: Initial prompt generation
 - `system-prompt-seeding-with-context`: Context-aware generation
 - `system-prompt-reflection`: Reflection-based improvements

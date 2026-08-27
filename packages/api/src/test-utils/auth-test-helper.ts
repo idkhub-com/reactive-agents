@@ -29,7 +29,7 @@ function createMockConnector() {
  * bindings, a mock `user_data_storage_connector`, and then mounts the given router.
  *
  * The `basePath` option controls the mount point so that `c.req.path` matches
- * what the middleware expects in production (e.g. `/v1/reactive-agents/auth/login`).
+ * what the middleware expects in production (e.g. `/v1/super-agents/auth/login`).
  *
  * Use this to assert that endpoints return 401 when no credentials are supplied
  * and pass-through when valid credentials are present.

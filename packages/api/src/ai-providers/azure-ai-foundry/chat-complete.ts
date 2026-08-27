@@ -23,10 +23,10 @@ export const azureAIInferenceChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'messages',
     default: '',
     transform: (
-      raRequestData: ChatCompletionRequestBody,
+      saRequestData: ChatCompletionRequestBody,
     ): ChatCompletionMessage[] | undefined => {
-      if (!raRequestData.messages) return undefined;
-      return raRequestData.messages.map((message) => {
+      if (!saRequestData.messages) return undefined;
+      return saRequestData.messages.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;

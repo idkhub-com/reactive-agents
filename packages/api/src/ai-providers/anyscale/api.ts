@@ -3,11 +3,11 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const anyscaleAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.endpoints.anyscale.com/v1',
-  headers: ({ raTarget: providerOptions }) => {
+  headers: ({ saTarget: providerOptions }) => {
     return { Authorization: `Bearer ${providerOptions.api_key}` };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       case FunctionName.COMPLETE:

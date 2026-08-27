@@ -26,14 +26,14 @@ vi.mock('@web/providers/agents', () => ({
 }));
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: vi.fn(),
   createSkill: vi.fn(),
   updateSkill: vi.fn(),
   deleteSkill: vi.fn(),
 }));
 
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 
 const mockSkills: Skill[] = [
   {

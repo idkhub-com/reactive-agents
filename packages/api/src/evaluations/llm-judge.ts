@@ -206,7 +206,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
       });
     }
 
-    const raConfig = {
+    const saConfig = {
       targets: [
         {
           provider: provider,
@@ -217,7 +217,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           api_key: apiKey,
         },
       ],
-      agent_name: 'reactive-agents',
+      agent_name: 'super-agents',
       skill_name: 'judge',
     };
 
@@ -228,7 +228,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         const prompt = generateEvaluationPrompt(input);
         const clientWithHeaders = client.withOptions({
           defaultHeaders: {
-            'ra-config': JSON.stringify(raConfig),
+            'sa-config': JSON.stringify(saConfig),
           },
         });
 

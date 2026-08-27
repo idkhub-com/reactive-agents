@@ -10,7 +10,7 @@ import {
   createModel,
   getModelById,
   updateModel,
-} from '@web/api/v1/reactive-agents/models';
+} from '@web/api/v1/super-agents/models';
 import { Button } from '@web/components/ui/button';
 import {
   Card,

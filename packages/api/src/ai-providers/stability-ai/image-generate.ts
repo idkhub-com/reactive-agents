@@ -14,10 +14,10 @@ export const StabilityAIImageGenerateV1Config: AIProviderFunctionConfig = {
   prompt: {
     param: 'text_prompts',
     required: true,
-    transform: (raRequestBody: GenerateImageRequestBody) => {
+    transform: (saRequestBody: GenerateImageRequestBody) => {
       return [
         {
-          text: raRequestBody.prompt,
+          text: saRequestBody.prompt,
           weight: 1,
         },
       ];
@@ -31,14 +31,14 @@ export const StabilityAIImageGenerateV1Config: AIProviderFunctionConfig = {
   size: [
     {
       param: 'height',
-      transform: (raRequestBody: GenerateImageRequestBody): number =>
-        parseInt(raRequestBody.size?.toLowerCase().split('x')[1] || '0', 10),
+      transform: (saRequestBody: GenerateImageRequestBody): number =>
+        parseInt(saRequestBody.size?.toLowerCase().split('x')[1] || '0', 10),
       min: 320,
     },
     {
       param: 'width',
-      transform: (raRequestBody: GenerateImageRequestBody): number =>
-        parseInt(raRequestBody.size?.toLowerCase().split('x')[0] || '0', 10),
+      transform: (saRequestBody: GenerateImageRequestBody): number =>
+        parseInt(saRequestBody.size?.toLowerCase().split('x')[0] || '0', 10),
       min: 320,
     },
   ],

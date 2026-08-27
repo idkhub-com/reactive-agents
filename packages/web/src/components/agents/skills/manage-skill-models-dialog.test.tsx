@@ -7,7 +7,7 @@ import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock API calls
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   addModelsToSkill: vi.fn(),
   removeModelsFromSkill: vi.fn(),
 }));

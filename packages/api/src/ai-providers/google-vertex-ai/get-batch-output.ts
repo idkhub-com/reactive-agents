@@ -52,13 +52,13 @@ const getOpenAIBatchRow = ({
 
 export const googleBatchOutputRequestHandler: RequestHandlerFunction = async ({
   c,
-  raTarget,
-  raRequestData,
+  saTarget,
+  saRequestData,
 }) => {
   const headers = await vertexAPIConfig.headers({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
 
   const options = {
@@ -67,20 +67,20 @@ export const googleBatchOutputRequestHandler: RequestHandlerFunction = async ({
   };
 
   // URL: <gateway>/v1/batches/<batchId>/output
-  const batchId = raRequestData.url.split('/').at(-2);
+  const batchId = saRequestData.url.split('/').at(-2);
 
-  // const batchDetailsURL = raRequestData.url.replace(/\/output$/, '');  // TODO: Fix this
+  // const batchDetailsURL = saRequestData.url.replace(/\/output$/, '');  // TODO: Fix this
 
   const baseURL = await vertexAPIConfig.getBaseURL({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
 
   const endpoint = vertexAPIConfig.getEndpoint({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
 
   const batchesURL = `${baseURL}${endpoint}`;

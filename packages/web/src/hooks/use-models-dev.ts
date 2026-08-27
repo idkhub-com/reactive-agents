@@ -7,7 +7,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { mapAIProviderToModelsDev } from '@web/utils/models-dev-mapping';
 
-const MODELS_DEV_API_URL = '/v1/reactive-agents/models-dev';
+const MODELS_DEV_API_URL = '/v1/super-agents/models-dev';
 
 /**
  * Fetch models from models.dev API via our proxy endpoint

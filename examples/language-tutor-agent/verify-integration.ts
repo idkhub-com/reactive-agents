@@ -66,7 +66,7 @@ try {
 console.log('\n🎉 Integration verification complete!');
 console.log('\n📝 Next steps:');
 console.log('   1. Set up environment variables (OPENAI_API_KEY, etc.)');
-console.log('   2. Start Reactive Agents server: pnpm dev');
+console.log('   2. Start Super Agents server: pnpm dev');
 console.log(
   '   3. Run language tutor: tsx examples/language-tutor-agent/language-tutor.ts',
 );

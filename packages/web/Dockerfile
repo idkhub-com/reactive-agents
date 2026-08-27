@@ -1,4 +1,4 @@
-# Build from repo root: docker build -f packages/web/Dockerfile -t reactive-agents-web .
+# Build from repo root: docker build -f packages/web/Dockerfile -t super-agents-web .
 FROM node:22-alpine AS base
 
 ENV PNPM_HOME="/root/.local/share/pnpm"
@@ -23,7 +23,7 @@ COPY . .
 
 ENV NODE_ENV=production
 
-RUN pnpm --filter @reactive-agents/web build
+RUN pnpm --filter @super-agents/web build
 
 FROM nginx:alpine AS runner
 

@@ -3,14 +3,14 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const cerebrasAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.cerebras.ai/v1',
-  headers: ({ raTarget: providerOptions }) => {
+  headers: ({ saTarget: providerOptions }) => {
     return {
       Authorization: `Bearer ${providerOptions.api_key}`,
-      'User-Agent': 'Reactive Agents/1.0',
+      'User-Agent': 'Super Agents/1.0',
     };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       default:

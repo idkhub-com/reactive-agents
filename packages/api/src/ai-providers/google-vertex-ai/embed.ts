@@ -26,8 +26,8 @@ export const googleEmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'instances',
     required: true,
-    transform: (raRequestBody: CreateEmbeddingsRequestBody) =>
-      googleTransformEmbeddingInput(raRequestBody) as Record<string, unknown>[],
+    transform: (saRequestBody: CreateEmbeddingsRequestBody) =>
+      googleTransformEmbeddingInput(saRequestBody) as Record<string, unknown>[],
   },
   parameters: {
     param: 'parameters',
@@ -36,8 +36,8 @@ export const googleEmbedConfig: AIProviderFunctionConfig = {
   dimensions: {
     param: 'parameters',
     required: false,
-    transform: (raRequestBody: CreateEmbeddingsRequestBody) =>
-      googleTransformEmbeddingsDimension(raRequestBody),
+    transform: (saRequestBody: CreateEmbeddingsRequestBody) =>
+      googleTransformEmbeddingsDimension(saRequestBody),
   },
 };
 
@@ -46,7 +46,7 @@ export const vertexGoogleEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   const googleResponse = aiProviderResponseBody as unknown as
     | GoogleEmbedResponse
@@ -94,7 +94,7 @@ export const vertexGoogleEmbedResponseTransform: ResponseTransformFunction = (
       item.index = index;
     });
     const embeddingsResponseBody: CreateEmbeddingsResponseBody = {
-      model: (raRequestData.requestBody as CreateEmbeddingsRequestBody).model,
+      model: (saRequestData.requestBody as CreateEmbeddingsRequestBody).model,
       object: 'list',
       data: data,
       usage: {

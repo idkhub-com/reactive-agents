@@ -1,4 +1,4 @@
-# Build from repo root: docker build -f packages/api/Dockerfile -t reactive-agents-api .
+# Build from repo root: docker build -f packages/api/Dockerfile -t super-agents-api .
 # Uses Node.js with @hono/node-server instead of wrangler for Docker deployment
 FROM node:22-alpine AS base
 
@@ -23,7 +23,7 @@ COPY tsconfig.base.json ./
 COPY packages/api ./packages/api
 COPY packages/shared ./packages/shared
 
-RUN pnpm --filter @reactive-agents/api build
+RUN pnpm --filter @super-agents/api build
 
 FROM node:22-alpine AS runner
 WORKDIR /app

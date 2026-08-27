@@ -1,5 +1,5 @@
 import { FunctionName } from '@shared/types/api/request';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type {
   ResponsesAPIFunctionCall,
   ResponsesAPIFunctionCallOutput,
@@ -42,7 +42,7 @@ describe('MessagesView - Responses API Conversion', () => {
     url: 'http://localhost:8787/v1/responses',
     requestHeaders: {},
     method: 'POST',
-  } as ReactiveAgentsRequestData;
+  } as SuperAgentsRequestData;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -71,7 +71,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -101,7 +101,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -128,7 +128,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -163,7 +163,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -193,7 +193,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -234,7 +234,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -265,7 +265,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -307,12 +307,12 @@ describe('MessagesView - Responses API Conversion', () => {
         },
         responseSchema: z.object({}),
         requestSchema: z.object({}),
-      } as unknown as ReactiveAgentsRequestData;
+      } as unknown as SuperAgentsRequestData;
 
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -337,7 +337,7 @@ describe('MessagesView - Responses API Conversion', () => {
       const { container } = render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -358,7 +358,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -383,7 +383,7 @@ describe('MessagesView - Responses API Conversion', () => {
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -402,12 +402,12 @@ describe('MessagesView - Responses API Conversion', () => {
         },
         responseSchema: z.object({}),
         requestSchema: z.object({}),
-      } as unknown as ReactiveAgentsRequestData;
+      } as unknown as SuperAgentsRequestData;
 
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -423,12 +423,12 @@ describe('MessagesView - Responses API Conversion', () => {
         },
         responseSchema: z.object({}),
         requestSchema: z.object({}),
-      } as unknown as ReactiveAgentsRequestData;
+      } as unknown as SuperAgentsRequestData;
 
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 
@@ -444,12 +444,12 @@ describe('MessagesView - Responses API Conversion', () => {
         },
         responseSchema: z.object({}),
         requestSchema: z.object({}),
-      } as unknown as ReactiveAgentsRequestData;
+      } as unknown as SuperAgentsRequestData;
 
       render(
         <MessagesView
           logId="test-log"
-          raRequestData={requestData as unknown as ReactiveAgentsRequestData}
+          saRequestData={requestData as unknown as SuperAgentsRequestData}
         />,
       );
 

@@ -29,7 +29,7 @@ describe('Latency - evaluateLog', () => {
       first_token_time: null,
       end_time: 2000,
       duration: 1000,
-      base_ra_config: {},
+      base_sa_config: {},
       ai_provider: AIProvider.OPENAI,
       model: 'gpt-4',
       hook_logs: [],

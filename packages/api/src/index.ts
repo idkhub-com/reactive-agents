@@ -5,4 +5,4 @@ export default {
 };
 
 // Re-export types for the client
-export type { ReactiveAgentsRoute } from './v1';
+export type { SuperAgentsRoute } from './v1';

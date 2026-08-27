@@ -136,7 +136,7 @@ export const togetherAICompleteResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = togetherAIErrorResponseTransform(
@@ -149,7 +149,7 @@ export const togetherAICompleteResponseTransform: ResponseTransformFunction = (
     const response =
       aiProviderResponseBody as unknown as TogetherAICompleteResponse;
     const _requestBody =
-      raRequestData.requestBody as unknown as CompletionRequestBody;
+      saRequestData.requestBody as unknown as CompletionRequestBody;
 
     const responseBody: CompletionResponseBody = {
       id: response.id,

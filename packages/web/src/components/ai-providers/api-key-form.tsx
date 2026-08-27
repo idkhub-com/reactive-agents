@@ -11,8 +11,8 @@ import type {
   AIProviderConfigCreateParams,
   AIProviderConfigUpdateParams,
 } from '@shared/types/data/ai-provider';
-import type { AIProviderSchemaResponse } from '@web/api/v1/reactive-agents/ai-providers';
-import { getAIProviderSchemas } from '@web/api/v1/reactive-agents/ai-providers';
+import type { AIProviderSchemaResponse } from '@web/api/v1/super-agents/ai-providers';
+import { getAIProviderSchemas } from '@web/api/v1/super-agents/ai-providers';
 import { Button } from '@web/components/ui/button';
 import {
   Card,

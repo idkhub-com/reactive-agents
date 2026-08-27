@@ -3,13 +3,13 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const deepInfraApiConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.deepinfra.com/v1/openai',
-  headers: ({ raTarget: providerOptions }) => {
+  headers: ({ saTarget: providerOptions }) => {
     return {
       Authorization: `Bearer ${providerOptions.api_key}`,
     };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       default:

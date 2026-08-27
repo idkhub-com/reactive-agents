@@ -12,13 +12,13 @@ import {
   GoogleToolChoiceType,
 } from '@api/ai-providers/google/types';
 import {
-  FinishReasonsGeminiToReactiveAgents,
-  RoleReactiveAgentsToGemini,
-  transformToolChoiceReactiveAgentsToGemini,
+  FinishReasonsGeminiToSuperAgents,
+  RoleSuperAgentsToGemini,
+  transformToolChoiceSuperAgentsToGemini,
 } from '@api/ai-providers/google/utils';
 import {
   FunctionName,
-  type ReactiveAgentsRequestData,
+  type SuperAgentsRequestData,
 } from '@shared/types/api/request';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
 import { ChatCompletionFinishReason } from '@shared/types/api/routes/chat-completions-api';
@@ -65,7 +65,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct headers with API key', () => {
       const headers = googleAPIConfig.headers({
-        raTarget: { provider: AIProvider.GOOGLE, api_key: 'test-key' },
+        saTarget: { provider: AIProvider.GOOGLE, api_key: 'test-key' },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -76,7 +76,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should handle missing API key', () => {
       const headers = googleAPIConfig.headers({
-        raTarget: { provider: AIProvider.GOOGLE },
+        saTarget: { provider: AIProvider.GOOGLE },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -87,7 +87,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'gemini-1.5-pro', messages: [] },
         },
@@ -98,7 +98,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct endpoint for streaming', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.STREAM_CHAT_COMPLETE,
           requestBody: { model: 'gemini-1.5-flash', messages: [] },
         },
@@ -111,7 +111,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return correct endpoint for embeddings', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.EMBED,
           requestBody: { model: 'text-embedding-004', input: 'test' },
         },
@@ -122,7 +122,7 @@ describe('Google AI Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = googleAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: 'UNSUPPORTED' as FunctionName,
           requestBody: { model: 'test', messages: [] },
         },
@@ -227,7 +227,7 @@ describe('Google AI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('test-uuid-1234');
@@ -277,7 +277,7 @@ describe('Google AI Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -353,7 +353,7 @@ describe('Google AI Provider Tests', () => {
         'test-id',
         streamState,
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(typeof result).toBe('string');
@@ -379,7 +379,7 @@ describe('Google AI Provider Tests', () => {
           'test-id',
           streamState,
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
       }).toThrow(); // It tries to parse "[DONE]" as JSON which fails
     });
@@ -411,7 +411,7 @@ describe('Google AI Provider Tests', () => {
         'test-id',
         streamState,
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as string;
 
       const parsedResult = JSON.parse(result.replace('data: ', '').trim());
@@ -424,57 +424,57 @@ describe('Google AI Provider Tests', () => {
 
   describe('Utility Functions', () => {
     it('should map finish reasons correctly', () => {
-      expect(FinishReasonsGeminiToReactiveAgents.STOP).toBe(
+      expect(FinishReasonsGeminiToSuperAgents.STOP).toBe(
         ChatCompletionFinishReason.STOP,
       );
-      expect(FinishReasonsGeminiToReactiveAgents.MAX_TOKENS).toBe(
+      expect(FinishReasonsGeminiToSuperAgents.MAX_TOKENS).toBe(
         ChatCompletionFinishReason.LENGTH,
       );
-      expect(FinishReasonsGeminiToReactiveAgents.SAFETY).toBe(
+      expect(FinishReasonsGeminiToSuperAgents.SAFETY).toBe(
         ChatCompletionFinishReason.CONTENT_FILTER,
       );
-      expect(FinishReasonsGeminiToReactiveAgents.RECITATION).toBe(
+      expect(FinishReasonsGeminiToSuperAgents.RECITATION).toBe(
         ChatCompletionFinishReason.CONTENT_FILTER,
       );
-      expect(FinishReasonsGeminiToReactiveAgents.MALFORMED_FUNCTION_CALL).toBe(
+      expect(FinishReasonsGeminiToSuperAgents.MALFORMED_FUNCTION_CALL).toBe(
         ChatCompletionFinishReason.FUNCTION_CALL,
       );
-      expect(FinishReasonsGeminiToReactiveAgents.UNEXPECTED_TOOL_CALL).toBe(
+      expect(FinishReasonsGeminiToSuperAgents.UNEXPECTED_TOOL_CALL).toBe(
         ChatCompletionFinishReason.TOOL_CALLS,
       );
     });
 
     it('should map roles correctly', () => {
-      expect(RoleReactiveAgentsToGemini[ChatCompletionMessageRole.USER]).toBe(
+      expect(RoleSuperAgentsToGemini[ChatCompletionMessageRole.USER]).toBe(
         GoogleMessageRole.USER,
       );
-      expect(
-        RoleReactiveAgentsToGemini[ChatCompletionMessageRole.ASSISTANT],
-      ).toBe(GoogleMessageRole.MODEL);
-      expect(RoleReactiveAgentsToGemini[ChatCompletionMessageRole.SYSTEM]).toBe(
+      expect(RoleSuperAgentsToGemini[ChatCompletionMessageRole.ASSISTANT]).toBe(
+        GoogleMessageRole.MODEL,
+      );
+      expect(RoleSuperAgentsToGemini[ChatCompletionMessageRole.SYSTEM]).toBe(
         GoogleMessageRole.SYSTEM,
       );
-      expect(RoleReactiveAgentsToGemini[ChatCompletionMessageRole.TOOL]).toBe(
+      expect(RoleSuperAgentsToGemini[ChatCompletionMessageRole.TOOL]).toBe(
         GoogleMessageRole.FUNCTION,
       );
-      expect(
-        RoleReactiveAgentsToGemini[ChatCompletionMessageRole.FUNCTION],
-      ).toBe(GoogleMessageRole.FUNCTION);
+      expect(RoleSuperAgentsToGemini[ChatCompletionMessageRole.FUNCTION]).toBe(
+        GoogleMessageRole.FUNCTION,
+      );
     });
 
     it('should transform tool choice correctly', () => {
       expect(
-        transformToolChoiceReactiveAgentsToGemini(
+        transformToolChoiceSuperAgentsToGemini(
           'auto' as ChatCompletionToolChoice,
         ),
       ).toBe(GoogleToolChoiceType.AUTO);
       expect(
-        transformToolChoiceReactiveAgentsToGemini(
+        transformToolChoiceSuperAgentsToGemini(
           'none' as ChatCompletionToolChoice,
         ),
       ).toBe(GoogleToolChoiceType.NONE);
       expect(
-        transformToolChoiceReactiveAgentsToGemini(
+        transformToolChoiceSuperAgentsToGemini(
           'required' as ChatCompletionToolChoice,
         ),
       ).toBe(GoogleToolChoiceType.ANY);
@@ -483,26 +483,26 @@ describe('Google AI Provider Tests', () => {
         type: 'function',
         function: { name: 'test' },
       };
-      expect(transformToolChoiceReactiveAgentsToGemini(functionChoice)).toBe(
+      expect(transformToolChoiceSuperAgentsToGemini(functionChoice)).toBe(
         GoogleToolChoiceType.ANY,
       );
     });
 
     it('should handle invalid tool choices', () => {
       expect(
-        transformToolChoiceReactiveAgentsToGemini(
+        transformToolChoiceSuperAgentsToGemini(
           'invalid' as ChatCompletionToolChoice,
         ),
       ).toBeUndefined();
       expect(
-        transformToolChoiceReactiveAgentsToGemini(
+        transformToolChoiceSuperAgentsToGemini(
           undefined as unknown as ChatCompletionToolChoice,
         ),
       ).toBeUndefined();
 
       // null causes a TypeError because the function checks tool_choice.type without null check
       expect(() =>
-        transformToolChoiceReactiveAgentsToGemini(
+        transformToolChoiceSuperAgentsToGemini(
           null as unknown as ChatCompletionToolChoice,
         ),
       ).toThrow();
@@ -551,7 +551,7 @@ describe('Google AI Provider Tests', () => {
           'test-id',
           streamState,
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
       }).toThrow();
     });
@@ -581,7 +581,7 @@ describe('Google AI Provider Tests', () => {
         'test-id',
         streamState,
         false, // not strict OpenAI compliance
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as string;
 
       const parsedResult = JSON.parse(result.replace('data: ', '').trim());
@@ -608,7 +608,7 @@ describe('Google AI Provider Tests', () => {
     it('should construct complete request URLs', () => {
       const baseURL = googleAPIConfig.getBaseURL({} as unknown as TestContext);
       const endpoint = googleAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'gemini-1.5-pro', messages: [] },
         },

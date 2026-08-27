@@ -1,9 +1,9 @@
 import type {
   FunctionName,
-  ReactiveAgentsRequestBody,
-  ReactiveAgentsRequestData,
+  SuperAgentsRequestBody,
+  SuperAgentsRequestData,
 } from '@shared/types/api/request';
-import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { SuperAgentsTarget } from '@shared/types/api/request/headers';
 import type { Context } from 'hono';
 
 // Use generic Context type to avoid circular dependency with API package
@@ -12,7 +12,7 @@ type AppContext = Context<any>;
 
 import type {
   ParameterConfig,
-  ReactiveAgentsResponseBody,
+  SuperAgentsResponseBody,
 } from '@shared/types/api/response/body';
 import type { AIProvider } from '@shared/types/constants';
 import { z } from 'zod';
@@ -32,27 +32,27 @@ export interface InternalProviderAPIConfig {
   /** A function to generate the headers for the API request. */
   headers: (args: {
     c: AppContext;
-    raTarget: ReactiveAgentsTarget;
-    raRequestData: ReactiveAgentsRequestData;
+    saTarget: SuperAgentsTarget;
+    saRequestData: SuperAgentsRequestData;
   }) => Promise<Record<string, string>> | Record<string, string>;
   /** A function to generate the baseURL based on parameters */
   getBaseURL: (args: {
     c: AppContext;
-    raTarget: ReactiveAgentsTarget;
-    raRequestData: ReactiveAgentsRequestData;
+    saTarget: SuperAgentsTarget;
+    saRequestData: SuperAgentsRequestData;
   }) => Promise<string> | string;
   /** A function to generate the endpoint based on parameters */
   getEndpoint: (args: {
     c: AppContext;
-    raTarget: ReactiveAgentsTarget;
-    raRequestData: ReactiveAgentsRequestData;
+    saTarget: SuperAgentsTarget;
+    saRequestData: SuperAgentsRequestData;
   }) => string;
   /** A function to determine if the request body should be transformed to form data */
   transformToFormData?: (args: {
-    raRequestData: ReactiveAgentsRequestData;
+    saRequestData: SuperAgentsRequestData;
   }) => boolean;
   getProxyEndpoint?: (args: {
-    raTarget: ReactiveAgentsTarget;
+    saTarget: SuperAgentsTarget;
     reqPath: string;
     reqQuery: string;
   }) => string;
@@ -71,8 +71,8 @@ export interface InternalProviderAPIConfigs {
 
 export type RequestHandlerFunction = (params: {
   c: AppContext;
-  raTarget: ReactiveAgentsTarget;
-  raRequestData: ReactiveAgentsRequestData;
+  saTarget: SuperAgentsTarget;
+  saRequestData: SuperAgentsRequestData;
 }) => Promise<Response>;
 
 export type CustomTransformer<T, U> = (response: T, isError?: boolean) => U;
@@ -86,8 +86,8 @@ export type ResponseTransformFunction = (
   aiProviderResponseStatus: number,
   aiProviderResponseHeaders: Headers,
   strictOpenAiCompliance: boolean,
-  raRequestData: ReactiveAgentsRequestData,
-) => ReactiveAgentsResponseBody;
+  saRequestData: SuperAgentsRequestData,
+) => SuperAgentsResponseBody;
 
 export type StreamResponseTransformFunction = (
   aiProviderResponseBody: Record<string, unknown>,
@@ -101,7 +101,7 @@ export type ResponseChunkStreamTransformFunction = (
   fallbackId: string,
   streamState: Record<string, unknown>,
   strictOpenAiCompliance: boolean,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
 ) => string | string[];
 
 export type JSONToStreamGeneratorTransformFunction = (
@@ -123,8 +123,8 @@ export type ResponseTransformFunctionType =
 export interface AIProviderConfig extends FunctionNameToFunctionConfig {
   api: InternalProviderAPIConfig;
   getConfig?: (
-    raRequestBody?:
-      | ReactiveAgentsRequestBody
+    saRequestBody?:
+      | SuperAgentsRequestBody
       | ReadableStream
       | FormData
       | ArrayBuffer,

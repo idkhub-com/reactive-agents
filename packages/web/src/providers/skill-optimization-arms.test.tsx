@@ -14,12 +14,12 @@ vi.mock('@web/providers/navigation', () => ({
 }));
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkillArms: vi.fn(),
 }));
 
 // Import after mocking
-import { getSkillArms } from '@web/api/v1/reactive-agents/skills';
+import { getSkillArms } from '@web/api/v1/super-agents/skills';
 import { useNavigation } from '@web/providers/navigation';
 import {
   armQueryKeys,

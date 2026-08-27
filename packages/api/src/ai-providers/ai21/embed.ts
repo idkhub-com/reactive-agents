@@ -11,11 +11,11 @@ export const aI21EmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'texts',
     required: true,
-    transform: (raRequestBody: CreateEmbeddingsRequestBody): string => {
-      if ('input' in raRequestBody) {
-        return Array.isArray(raRequestBody.input)
-          ? raRequestBody.input.join(' ')
-          : raRequestBody.input || '';
+    transform: (saRequestBody: CreateEmbeddingsRequestBody): string => {
+      if ('input' in saRequestBody) {
+        return Array.isArray(saRequestBody.input)
+          ? saRequestBody.input.join(' ')
+          : saRequestBody.input || '';
       }
       throw new Error('Invalid params type for embedding');
     },
@@ -23,8 +23,8 @@ export const aI21EmbedConfig: AIProviderFunctionConfig = {
   type: {
     param: 'type',
     required: true,
-    transform: (raRequestBody: CreateEmbeddingsRequestBody): string => {
-      if ('input' in raRequestBody) {
+    transform: (saRequestBody: CreateEmbeddingsRequestBody): string => {
+      if ('input' in saRequestBody) {
         return 'embed';
       }
       throw new Error('Invalid params type for embedding');

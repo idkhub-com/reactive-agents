@@ -2,13 +2,13 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 const sambanovaAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raTarget }) =>
-    raTarget.custom_host || 'https://api.sambanova.ai',
-  headers: ({ raTarget }) => {
-    return { Authorization: `Bearer ${raTarget.api_key}` };
+  getBaseURL: ({ saTarget }) =>
+    saTarget.custom_host || 'https://api.sambanova.ai',
+  headers: ({ saTarget }) => {
+    return { Authorization: `Bearer ${saTarget.api_key}` };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/v1/chat/completions';
       default:

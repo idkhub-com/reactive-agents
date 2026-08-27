@@ -5,12 +5,12 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
 import type {
-  ReactiveAgentsConfig,
-  ReactiveAgentsConfigPreProcessed,
+  SuperAgentsConfig,
+  SuperAgentsConfigPreProcessed,
 } from '@shared/types/api/request/headers';
-import type { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response';
 import type { SkillOptimizationArm } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
 import type {
@@ -42,9 +42,9 @@ export interface AppEnv {
     WEB_APP_URL?: string;
   };
   Variables: {
-    ra_config: ReactiveAgentsConfig;
-    ra_config_pre_processed: ReactiveAgentsConfigPreProcessed;
-    ra_request_data: ReactiveAgentsRequestData;
+    sa_config: SuperAgentsConfig;
+    sa_config_pre_processed: SuperAgentsConfigPreProcessed;
+    sa_request_data: SuperAgentsRequestData;
     embedding: number[] | null;
     agent: Agent;
     skill: Skill;
@@ -72,19 +72,19 @@ export interface AppEnv {
       hookType: HookType,
       statusCode: number | null,
       isStreamingRequest: boolean,
-      raRequestData: ReactiveAgentsRequestData,
-      raResponseBody?: ReactiveAgentsResponseBody,
+      saRequestData: SuperAgentsRequestData,
+      saResponseBody?: SuperAgentsResponseBody,
     ) => Promise<HookLog[]>;
     getAIProviderResponseFromCache: (
       c: AppContext,
       cacheSettings: CacheSettings,
-      raRequestData: ReactiveAgentsRequestData,
+      saRequestData: SuperAgentsRequestData,
     ) => Promise<GetFromCacheResult>;
     getHookResponseFromCache: (
       c: AppContext,
       hook: Hook,
-      raRequestData: ReactiveAgentsRequestData,
-      raResponseBody?: ReactiveAgentsResponseBody,
+      saRequestData: SuperAgentsRequestData,
+      saResponseBody?: SuperAgentsResponseBody,
     ) => Promise<GetFromCacheResult>;
     putHookResponsesInCache: (
       c: AppContext,

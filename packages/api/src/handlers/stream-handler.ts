@@ -8,8 +8,8 @@ import type {
   ResponseChunkStreamTransformFunction,
   ResponseTransformFunction,
 } from '@shared/types/ai-providers/config';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
-import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
+import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
 import type { CompletionResponseBody } from '@shared/types/api/routes/completions-api';
 import {
@@ -97,7 +97,7 @@ export async function* readAWSStream(
   transformFunction: ResponseChunkStreamTransformFunction | undefined,
   fallbackChunkId: string,
   strictOpenAiCompliance: boolean,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   onFirstChunk?: () => void,
 ): AsyncGenerator<string | Uint8Array, void, unknown> {
   let buffer = new Uint8Array() as Uint8Array<ArrayBufferLike>;
@@ -120,7 +120,7 @@ export async function* readAWSStream(
               fallbackChunkId,
               streamState,
               strictOpenAiCompliance,
-              raRequestData,
+              saRequestData,
             );
             if (Array.isArray(transformedChunk)) {
               for (const item of transformedChunk) {
@@ -161,7 +161,7 @@ export async function* readAWSStream(
           fallbackChunkId,
           streamState,
           strictOpenAiCompliance,
-          raRequestData,
+          saRequestData,
         );
         if (Array.isArray(transformedChunk)) {
           for (const item of transformedChunk) {
@@ -184,7 +184,7 @@ export async function* readStream(
   isSleepTimeRequired: boolean,
   fallbackChunkId: string,
   strictOpenAiCompliance: boolean,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   onFirstChunk?: () => void,
 ): AsyncGenerator<string | Uint8Array, void, unknown> {
   let buffer = '';
@@ -202,7 +202,7 @@ export async function* readStream(
             fallbackChunkId,
             streamState,
             strictOpenAiCompliance,
-            raRequestData,
+            saRequestData,
           );
           if (Array.isArray(transformedChunk)) {
             for (const item of transformedChunk) {
@@ -248,7 +248,7 @@ export async function* readStream(
               fallbackChunkId,
               streamState,
               strictOpenAiCompliance,
-              raRequestData,
+              saRequestData,
             );
             if (Array.isArray(transformedChunk)) {
               for (const item of transformedChunk) {
@@ -271,7 +271,7 @@ export async function* readStream(
 export async function handleTextResponse(
   aiProviderResponse: Response,
   responseTransformer: ResponseTransformFunction | undefined,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
 ): Promise<Response> {
   const text = await aiProviderResponse.text();
 
@@ -281,7 +281,7 @@ export async function handleTextResponse(
       aiProviderResponse.status,
       aiProviderResponse.headers,
       false,
-      raRequestData,
+      saRequestData,
     );
     return new Response(JSON.stringify(transformedText), {
       ...aiProviderResponse,
@@ -300,11 +300,11 @@ export async function handleNonStreamingMode(
   aiProviderResponse: Response,
   responseTransformer: ResponseTransformFunction | undefined,
   strictOpenAiCompliance: boolean,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   areSyncHooksAvailable: boolean,
 ): Promise<{
   response: Response;
-  raResponseBody: ReactiveAgentsResponseBody | null;
+  saResponseBody: SuperAgentsResponseBody | null;
   originalBodyJson?: Record<string, unknown> | null;
 }> {
   // 408 is thrown whenever a request takes more than request_timeout to respond.
@@ -318,7 +318,7 @@ export async function handleNonStreamingMode(
   ) {
     return {
       response: aiProviderResponse,
-      raResponseBody: await aiProviderResponse.clone().json(),
+      saResponseBody: await aiProviderResponse.clone().json(),
     };
   }
 
@@ -340,28 +340,27 @@ export async function handleNonStreamingMode(
       aiProviderResponse.status,
       aiProviderResponse.headers,
       strictOpenAiCompliance,
-      raRequestData,
+      saRequestData,
     );
   }
 
   // Make sure that the response body is in the expected format.
-  let raResponseBody: ReactiveAgentsResponseBody | null = null;
+  let saResponseBody: SuperAgentsResponseBody | null = null;
   if (transformedBodyJson) {
-    const raResponseBodyParseResult =
-      raRequestData.responseSchema.safeParse(transformedBodyJson);
-    if (!raResponseBodyParseResult.success) {
+    const saResponseBodyParseResult =
+      saRequestData.responseSchema.safeParse(transformedBodyJson);
+    if (!saResponseBodyParseResult.success) {
       throw new Error(
-        `Invalid response body: ${raResponseBodyParseResult.error}`,
+        `Invalid response body: ${saResponseBodyParseResult.error}`,
       );
     }
-    raResponseBody =
-      raResponseBodyParseResult.data as ReactiveAgentsResponseBody;
+    saResponseBody = saResponseBodyParseResult.data as SuperAgentsResponseBody;
   }
   if (!areSyncHooksAvailable) {
     return {
       response: new Response(
-        raResponseBody
-          ? JSON.stringify(raResponseBody)
+        saResponseBody
+          ? JSON.stringify(saResponseBody)
           : originalResponseBodyText,
         {
           ...aiProviderResponse,
@@ -370,18 +369,18 @@ export async function handleNonStreamingMode(
           ),
         },
       ),
-      raResponseBody, // TODO: Review if this is necessary
+      saResponseBody, // TODO: Review if this is necessary
       originalBodyJson:
         transformedBodyJson instanceof Blob ? null : transformedBodyJson,
     };
   }
 
   return {
-    response: new Response(JSON.stringify(raResponseBody), {
+    response: new Response(JSON.stringify(saResponseBody), {
       ...aiProviderResponse,
       headers: new Headers(cleanResponseHeaders(aiProviderResponse.headers)),
     }),
-    raResponseBody,
+    saResponseBody,
     // Send original response if transformer exists
     ...(responseTransformer && {
       originalBodyJson:
@@ -407,7 +406,7 @@ export function handleStreamingMode(
   provider: AIProvider,
   responseTransformer: ResponseChunkStreamTransformFunction | undefined,
   aiProviderRequestURL: string,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   strictOpenAiCompliance: boolean,
   onFirstChunk?: () => void,
   onStreamEnd?: (accumulatedChunks: string) => void,
@@ -441,7 +440,7 @@ export function handleStreamingMode(
           responseTransformer,
           fallbackChunkId,
           strictOpenAiCompliance,
-          raRequestData,
+          saRequestData,
           onFirstChunk,
         )) {
           const encodedChunk = encoder.encode(chunk as string);
@@ -491,7 +490,7 @@ export function handleStreamingMode(
           isSleepTimeRequired,
           fallbackChunkId,
           strictOpenAiCompliance,
-          raRequestData,
+          saRequestData,
           onFirstChunk,
         )) {
           const encodedChunk = encoder.encode(chunk as string);

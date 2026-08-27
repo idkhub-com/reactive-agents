@@ -1,6 +1,6 @@
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { FunctionName } from '@shared/types/api/request';
-import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { SuperAgentsTarget } from '@shared/types/api/request/headers';
 import type { endpointStrings } from '@shared/types/api/response/body';
 import type { CompletionRequestBody } from '@shared/types/api/routes/completions-api/request';
 import { GatewayError } from '../../errors/gateway';
@@ -67,50 +67,50 @@ const getService = (fn: FunctionName): string => {
 const setRouteSpecificHeaders = (
   fn: FunctionName,
   headers: Record<string, string>,
-  raTarget: ReactiveAgentsTarget,
+  saTarget: SuperAgentsTarget,
 ): void => {
   if (fn === FunctionName.RETRIEVE_FILE) {
     headers['x-amz-object-attributes'] = 'ObjectSize';
   }
   if (fn === FunctionName.INITIATE_MULTIPART_UPLOAD) {
-    if (raTarget.aws_server_side_encryption_kms_key_id) {
+    if (saTarget.aws_server_side_encryption_kms_key_id) {
       headers['x-amz-server-side-encryption-aws-kms-key-id'] =
-        raTarget.aws_server_side_encryption_kms_key_id;
+        saTarget.aws_server_side_encryption_kms_key_id;
       headers['x-amz-server-side-encryption'] = 'aws:kms';
     }
-    if (raTarget.aws_server_side_encryption) {
+    if (saTarget.aws_server_side_encryption) {
       headers['x-amz-server-side-encryption'] =
-        raTarget.aws_server_side_encryption;
+        saTarget.aws_server_side_encryption;
     }
   }
 };
 
 const bedrockAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raTarget, raRequestData }) => {
-    if (raRequestData.functionName === FunctionName.RETRIEVE_FILE) {
+  getBaseURL: ({ saTarget, saRequestData }) => {
+    if (saRequestData.functionName === FunctionName.RETRIEVE_FILE) {
       const s3URL = decodeURIComponent(
-        raRequestData.url.split('/v1/files/')[1],
+        saRequestData.url.split('/v1/files/')[1],
       );
       const bucketName = s3URL.replace('s3://', '').split('/')[0];
-      return `https://${bucketName}.s3.${raTarget.aws_region || 'us-east-1'}.amazonaws.com`;
+      return `https://${bucketName}.s3.${saTarget.aws_region || 'us-east-1'}.amazonaws.com`;
     }
-    if (raRequestData.functionName === FunctionName.RETRIEVE_FILE_CONTENT) {
+    if (saRequestData.functionName === FunctionName.RETRIEVE_FILE_CONTENT) {
       const s3URL = decodeURIComponent(
-        raRequestData.url.split('/v1/files/')[1],
+        saRequestData.url.split('/v1/files/')[1],
       );
       const bucketName = s3URL.replace('s3://', '').split('/')[0];
-      return `https://${bucketName}.s3.${raTarget.aws_region || 'us-east-1'}.amazonaws.com`;
+      return `https://${bucketName}.s3.${saTarget.aws_region || 'us-east-1'}.amazonaws.com`;
     }
-    if (raRequestData.functionName === FunctionName.UPLOAD_FILE)
-      return `https://${raTarget.aws_s3_bucket}.s3.${raTarget.aws_region || 'us-east-1'}.amazonaws.com`;
+    if (saRequestData.functionName === FunctionName.UPLOAD_FILE)
+      return `https://${saTarget.aws_s3_bucket}.s3.${saTarget.aws_region || 'us-east-1'}.amazonaws.com`;
     const isAWSControlPlaneEndpoint =
-      raRequestData.functionName &&
-      AWS_CONTROL_PLANE_ENDPOINTS.includes(raRequestData.functionName);
-    return `https://${isAWSControlPlaneEndpoint ? 'bedrock' : 'bedrock-runtime'}.${raTarget.aws_region || 'us-east-1'}.amazonaws.com`;
+      saRequestData.functionName &&
+      AWS_CONTROL_PLANE_ENDPOINTS.includes(saRequestData.functionName);
+    return `https://${isAWSControlPlaneEndpoint ? 'bedrock' : 'bedrock-runtime'}.${saTarget.aws_region || 'us-east-1'}.amazonaws.com`;
   },
-  headers: async ({ raTarget, raRequestData }) => {
-    const method = getMethod(raRequestData.functionName, raRequestData.url);
-    const service = getService(raRequestData.functionName);
+  headers: async ({ saTarget, saRequestData }) => {
+    const method = getMethod(saRequestData.functionName, saRequestData.url);
+    const service = getService(saRequestData.functionName);
 
     const headers: Record<string, string> = {
       'content-type': 'application/json',
@@ -120,17 +120,17 @@ const bedrockAPIConfig: InternalProviderAPIConfig = {
       delete headers['content-type'];
     }
 
-    setRouteSpecificHeaders(raRequestData.functionName, headers, raTarget);
+    setRouteSpecificHeaders(saRequestData.functionName, headers, saTarget);
 
-    if (raTarget.aws_auth_type === 'assumedRole') {
-      await providerAssumedRoleCredentials(raTarget);
+    if (saTarget.aws_auth_type === 'assumedRole') {
+      await providerAssumedRoleCredentials(saTarget);
     }
 
-    let finalRequestBody = raRequestData.requestBody;
+    let finalRequestBody = saRequestData.requestBody;
 
     if (
       ['cancelFinetune', 'cancelBatch'].includes(
-        raRequestData.functionName as endpointStrings,
+        saRequestData.functionName as endpointStrings,
       )
     ) {
       // Cancel doesn't require any body, but fetch is sending empty body, to match the signature this block is required.
@@ -140,27 +140,27 @@ const bedrockAPIConfig: InternalProviderAPIConfig = {
     return generateAWSHeaders(
       finalRequestBody,
       headers,
-      raRequestData.url,
+      saRequestData.url,
       method,
       service,
-      raTarget.aws_region || '',
-      raTarget.aws_access_key_id || '',
-      raTarget.aws_secret_access_key || '',
-      raTarget.aws_session_token || '',
+      saTarget.aws_region || '',
+      saTarget.aws_access_key_id || '',
+      saTarget.aws_secret_access_key || '',
+      saTarget.aws_session_token || '',
     );
   },
-  getEndpoint: ({ raRequestData }) => {
-    if (raRequestData.functionName === FunctionName.RETRIEVE_FILE) {
+  getEndpoint: ({ saRequestData }) => {
+    if (saRequestData.functionName === FunctionName.RETRIEVE_FILE) {
       const fileId = decodeURIComponent(
-        raRequestData.url.split('/v1/files/')[1],
+        saRequestData.url.split('/v1/files/')[1],
       );
       const s3ObjectKeyParts = fileId.replace('s3://', '').split('/');
       const s3ObjectKey = s3ObjectKeyParts.slice(1).join('/');
       return `/${s3ObjectKey}?attributes`;
     }
-    if (raRequestData.functionName === FunctionName.RETRIEVE_FILE_CONTENT) {
+    if (saRequestData.functionName === FunctionName.RETRIEVE_FILE_CONTENT) {
       const fileId = decodeURIComponent(
-        raRequestData.url.split('/v1/files/')[1],
+        saRequestData.url.split('/v1/files/')[1],
       );
       const s3ObjectKeyParts = fileId
         .replace('s3://', '')
@@ -169,25 +169,25 @@ const bedrockAPIConfig: InternalProviderAPIConfig = {
       const s3ObjectKey = s3ObjectKeyParts.slice(1).join('/');
       return `/${s3ObjectKey}`;
     }
-    if (raRequestData.functionName === FunctionName.UPLOAD_FILE) return '';
-    if (raRequestData.functionName === FunctionName.CANCEL_BATCH) {
-      const batchId = raRequestData.url.split('/v1/batches/')[1].split('/')[0];
+    if (saRequestData.functionName === FunctionName.UPLOAD_FILE) return '';
+    if (saRequestData.functionName === FunctionName.CANCEL_BATCH) {
+      const batchId = saRequestData.url.split('/v1/batches/')[1].split('/')[0];
       return `/model-invocation-job/${batchId}/stop`;
     }
     const { model, stream } =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
     const uriEncodedModel = encodeURIComponent(decodeURIComponent(model ?? ''));
     if (
       !model &&
       !BEDROCK_NO_MODEL_ENDPOINTS.includes(
-        raRequestData.functionName as endpointStrings,
+        saRequestData.functionName as endpointStrings,
       )
     ) {
       throw new GatewayError('Model is required');
     }
-    let mappedFn: string = raRequestData.functionName;
+    let mappedFn: string = saRequestData.functionName;
     if (stream) {
-      mappedFn = `stream-${raRequestData.functionName}`;
+      mappedFn = `stream-${saRequestData.functionName}`;
     }
     let endpoint = `/model/${uriEncodedModel}/invoke`;
     let streamEndpoint = `/model/${uriEncodedModel}/invoke-with-response-stream`;
@@ -201,10 +201,10 @@ const bedrockAPIConfig: InternalProviderAPIConfig = {
     }
 
     const jobIdIndex =
-      raRequestData.functionName === FunctionName.CANCEL_FINE_TUNING_JOB
+      saRequestData.functionName === FunctionName.CANCEL_FINE_TUNING_JOB
         ? -2
         : -1;
-    const jobId = raRequestData.url.split('/').at(jobIdIndex);
+    const jobId = saRequestData.url.split('/').at(jobIdIndex);
 
     switch (mappedFn) {
       case 'chatComplete': {
@@ -229,10 +229,10 @@ const bedrockAPIConfig: InternalProviderAPIConfig = {
         return '/model-invocation-job';
       }
       case 'cancelBatch': {
-        return `/model-invocation-job/${raRequestData.url.split('/').pop()}/stop`;
+        return `/model-invocation-job/${saRequestData.url.split('/').pop()}/stop`;
       }
       case 'retrieveBatch': {
-        return `/model-invocation-job/${raRequestData.url.split('/v1/batches/')[1]}`;
+        return `/model-invocation-job/${saRequestData.url.split('/v1/batches/')[1]}`;
       }
       case 'listBatches': {
         return '/model-invocation-jobs';

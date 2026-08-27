@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getSkillEvaluationScoresByTimeBucket,
   resetSkill,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 import { ManageSkillModelsDialog } from '@web/components/agents/skills/manage-skill-models-dialog';
 import { SkillStatusIndicator } from '@web/components/agents/skills/skill-status-indicator';
 import { SkillWarmingUpIndicator } from '@web/components/agents/skills/skill-warming-up-indicator';

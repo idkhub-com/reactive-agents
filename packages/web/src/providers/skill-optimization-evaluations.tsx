@@ -8,7 +8,7 @@ import {
   deleteSkillEvaluation,
   getSkillEvaluations,
   updateSkillEvaluation,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 import type { ReactElement, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
 

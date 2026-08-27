@@ -2,7 +2,7 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:17-alpine
-    container_name: ra-postgres
+    container_name: sa-postgres
     restart: unless-stopped
     ports:
       - "${DOCKER_HOST_IP:-127.0.0.1}:5432:5432"
@@ -20,12 +20,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - ra-network
+      - sa-network
 
   # Database Migrations
   migrations:
     image: postgres:17-alpine
-    container_name: ra-migrations
+    container_name: sa-migrations
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,12 +40,12 @@ services:
       - ./docker/postgres/migrations/run-migrations.sh:/run-migrations.sh:ro
     entrypoint: ["/bin/sh", "/run-migrations.sh"]
     networks:
-      - ra-network
+      - sa-network
 
   # PostgREST API Server
   postgrest:
     image: postgrest/postgrest:v14.1
-    container_name: ra-postgrest
+    container_name: sa-postgrest
     restart: unless-stopped
     ports:
       - "${DOCKER_HOST_IP:-127.0.0.1}:3001:3000"
@@ -62,13 +62,13 @@ services:
       migrations:
         condition: service_completed_successfully
     networks:
-      - ra-network
+      - sa-network
 
   # API Server (Hono)
   api:
-    image: ghcr.io/idkhub-com/reactive-agents-api:${RA_VERSION:-latest}
+    image: ghcr.io/idkhub-com/super-agents-api:${SA_VERSION:-latest}
     pull_policy: always
-    container_name: reactive-agents-api
+    container_name: super-agents-api
     restart: unless-stopped
     ports:
       - "${DOCKER_HOST_IP:-127.0.0.1}:8787:8787"
@@ -90,24 +90,24 @@ services:
       postgrest:
         condition: service_started
     networks:
-      - ra-network
+      - sa-network
 
   # Web App (Vite SPA with nginx)
   web:
-    image: ghcr.io/idkhub-com/reactive-agents-web:${RA_VERSION:-latest}
+    image: ghcr.io/idkhub-com/super-agents-web:${SA_VERSION:-latest}
     pull_policy: always
-    container_name: reactive-agents-web
+    container_name: super-agents-web
     restart: unless-stopped
     ports:
       - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
     depends_on:
       - api
     networks:
-      - ra-network
+      - sa-network
 
 volumes:
   postgres_data:
 
 networks:
-  ra-network:
+  sa-network:
     driver: bridge

@@ -1,12 +1,12 @@
 ![./.github/assets/screenshot.png](./.github/assets/screenshot.png)
 
-# Reactive Agents
+# Super Agents
 
 > Automatically optimize your AI agents based on performance with OpenAI API compatibility.
 
-## What is Reactive Agents?
+## What is Super Agents?
 
-Reactive Agents is a self-optimizing AI agent platform that automatically improves your agents by adjusting hyperparameters and system prompts based on their performance. Simply point your existing application to Reactive Agents instead of your AI provider, and it handles the optimization for you.
+Super Agents is a self-optimizing AI agent platform that automatically improves your agents by adjusting hyperparameters and system prompts based on their performance. Simply point your existing application to Super Agents instead of your AI provider, and it handles the optimization for you.
 
 **Key Features:**
 - 🔄 **Automatic optimization** - Continuously improves agents based on real-world performance
@@ -16,8 +16,8 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 - 📊 **Performance tracking** - Monitor agent performance and improvements over time
 
 **How it works:**
-1. Change your API URL from `api.openai.com` to your Reactive Agents instance
-2. Reactive Agents proxies requests to your chosen AI provider
+1. Change your API URL from `api.openai.com` to your Super Agents instance
+2. Super Agents proxies requests to your chosen AI provider
 3. Performance is tracked and agents are automatically optimized
 4. Your application benefits from continuously improving AI agents
 
@@ -29,8 +29,8 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 
 1. Download the repo:
    ```bash
-   git clone https://github.com/idkhub-com/reactive-agents.git
-   cd reactive-agents
+   git clone https://github.com/idkhub-com/super-agents.git
+   cd super-agents
    ```
    
 2. Start the application (Requires [Docker Compose](https://docs.docker.com/compose/install/)):
@@ -64,7 +64,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 
 ## 🗨️ Sending Requests
 
-1. Create a request as you normally would, in whatever programming language you prefer. Here we will use Python with the OpenAI library, however, you can also make an HTTP request to connect to the Reactive Agents API.
+1. Create a request as you normally would, in whatever programming language you prefer. Here we will use Python with the OpenAI library, however, you can also make an HTTP request to connect to the Super Agents API.
 
     ```python
     from openai import OpenAI
@@ -96,7 +96,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
     print("\nAgent Response:", agent_response)
     ```
     
-2. Configure your request to use Reactive Agents.    
+2. Configure your request to use Super Agents.    
     ```python
       import json
       from datetime import datetime
@@ -118,7 +118,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
     # print("User:", user_message)
     
     # Create an object that includes the agent name and skill name and any system prompt variables that you want to pass to the agent.
-      ra_config = {
+      sa_config = {
           "agent_name": "calendar_event_planner",
           "skill_name": "generate",
           "system_prompt_variables": {
@@ -137,7 +137,7 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
     #     ],
     #     response_format=CalendarEvent,
           extra_headers={
-              "ra-config": json.dumps(ra_config),
+              "sa-config": json.dumps(sa_config),
           },
     # )
     
@@ -156,26 +156,26 @@ Reactive Agents is a self-optimizing AI agent platform that automatically improv
 ### Production Deployment
 
 > [!WARNING]
-> **Experimental Project** - Reactive Agents is currently in active development and is **not production-ready**. We are working on critical features including authorization, performance optimizations, and stability improvements. Use this project for experimentation and development only.
+> **Experimental Project** - Super Agents is currently in active development and is **not production-ready**. We are working on critical features including authorization, performance optimizations, and stability improvements. Use this project for experimentation and development only.
 
-For future production deployment guides and best practices, visit our [documentation](https://docs.reactiveagents.ai).
+For future production deployment guides and best practices, visit our [documentation](https://docs.superagents.ai).
 
 ---
 
 ## 📖 Examples
 
-Check out the [examples/](examples/) directory for sample implementations showing how to integrate Reactive Agents with your applications.
+Check out the [examples/](examples/) directory for sample implementations showing how to integrate Super Agents with your applications.
 
 ---
 
 ## 📚 Learn More
 
-- **[Documentation](https://docs.reactiveagents.ai)** - Complete guides and API reference
+- **[Documentation](https://docs.superagents.ai)** - Complete guides and API reference
 - [Contributing Guide](CONTRIBUTING.md)
 - [Notice](NOTICE)
 
 ---
 
 <p align="center">
-  <b>Made with ❤️ by the Reactive Agents team</b>
+  <b>Made with ❤️ by the Super Agents team</b>
 </p>

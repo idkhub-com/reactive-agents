@@ -14,22 +14,22 @@ import {
   validateAndTransformParameter,
   validateParameter,
 } from '@api/utils/model-validator';
-import { constructRequest } from '@api/utils/reactive-agents/requests';
+import { constructRequest } from '@api/utils/super-agents/requests';
 import {
   type CommonRequestOptions,
   type CreateResponseOptions,
   createResponse,
-} from '@api/utils/reactive-agents/responses';
+} from '@api/utils/super-agents/responses';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import { ModelParameter } from '@shared/types/ai-providers/model-capabilities';
 import { FunctionName } from '@shared/types/api/request';
 import type {
-  ReactiveAgentsRequestBody,
-  ReactiveAgentsRequestData,
+  SuperAgentsRequestBody,
+  SuperAgentsRequestData,
 } from '@shared/types/api/request/body';
 import type {
-  ReactiveAgentsConfig,
-  ReactiveAgentsTarget,
+  SuperAgentsConfig,
+  SuperAgentsTarget,
 } from '@shared/types/api/request/headers';
 import { HeaderKey, StrategyModes } from '@shared/types/api/request/headers';
 import type { ChatCompletionRequestBody } from '@shared/types/api/routes/chat-completions-api';
@@ -45,7 +45,7 @@ function getProxyPath(
   proxyProvider: AIProvider,
   proxyEndpointPath: string,
   baseURL: string,
-  raTarget: ReactiveAgentsTarget,
+  saTarget: SuperAgentsTarget,
 ): string {
   const reqURL = new URL(requestURL);
   let reqPath = reqURL.pathname;
@@ -70,7 +70,7 @@ function getProxyPath(
   const providerConfig = providerConfigs[proxyProvider];
 
   if (providerConfig?.api?.getProxyEndpoint) {
-    return `${baseURL}${providerConfig.api.getProxyEndpoint({ reqPath, reqQuery, raTarget: raTarget })}`;
+    return `${baseURL}${providerConfig.api.getProxyEndpoint({ reqPath, reqQuery, saTarget: saTarget })}`;
   }
 
   let proxyPath = `${baseURL}${reqPath}${reqQuery}`;
@@ -85,15 +85,15 @@ function getProxyPath(
 
 function getHyperParamDefaults(
   functionName: FunctionName,
-  raTarget: ReactiveAgentsTarget,
+  saTarget: SuperAgentsTarget,
 ) {
   // Apply configuration params as defaults (before override params)
   const configDefaults: Record<string, unknown> = {
-    model: raTarget.configuration.model,
+    model: saTarget.configuration.model,
   };
 
-  const provider = raTarget.configuration.ai_provider;
-  const modelId = raTarget.configuration.model;
+  const provider = saTarget.configuration.ai_provider;
+  const modelId = saTarget.configuration.model;
 
   // Helper function to validate, transform, and add parameter
   const addParameter = (
@@ -128,36 +128,36 @@ function getHyperParamDefaults(
   // Validate and add each parameter
   addParameter(
     ModelParameter.TEMPERATURE,
-    raTarget.configuration.temperature,
+    saTarget.configuration.temperature,
     'temperature',
   );
 
   addParameter(
     ModelParameter.MAX_TOKENS,
-    raTarget.configuration.max_tokens,
+    saTarget.configuration.max_tokens,
     'max_tokens',
   );
 
-  addParameter(ModelParameter.TOP_P, raTarget.configuration.top_p, 'top_p');
+  addParameter(ModelParameter.TOP_P, saTarget.configuration.top_p, 'top_p');
 
   addParameter(
     ModelParameter.FREQUENCY_PENALTY,
-    raTarget.configuration.frequency_penalty,
+    saTarget.configuration.frequency_penalty,
     'frequency_penalty',
   );
 
   addParameter(
     ModelParameter.PRESENCE_PENALTY,
-    raTarget.configuration.presence_penalty,
+    saTarget.configuration.presence_penalty,
     'presence_penalty',
   );
 
-  addParameter(ModelParameter.STOP, raTarget.configuration.stop, 'stop');
+  addParameter(ModelParameter.STOP, saTarget.configuration.stop, 'stop');
 
-  addParameter(ModelParameter.SEED, raTarget.configuration.seed, 'seed');
+  addParameter(ModelParameter.SEED, saTarget.configuration.seed, 'seed');
 
   // Handle reasoning_effort (different structure for different function names)
-  if (raTarget.configuration.reasoning_effort !== null) {
+  if (saTarget.configuration.reasoning_effort !== null) {
     const validation = validateParameter(
       provider,
       modelId,
@@ -170,11 +170,11 @@ function getHyperParamDefaults(
         case FunctionName.STREAM_CHAT_COMPLETE:
         case FunctionName.CHAT_COMPLETE:
           configDefaults.reasoning_effort =
-            raTarget.configuration.reasoning_effort;
+            saTarget.configuration.reasoning_effort;
           break;
         case FunctionName.CREATE_MODEL_RESPONSE:
           configDefaults.reasoning = {
-            effort: raTarget.configuration.reasoning_effort,
+            effort: saTarget.configuration.reasoning_effort,
           };
           break;
         default:
@@ -188,7 +188,7 @@ function getHyperParamDefaults(
       }
     } else if (validation.reason) {
       console.warn(
-        `[${provider}/${modelId}][${functionName}] ✗ Skipped reasoning_effort (value: ${JSON.stringify(raTarget.configuration.reasoning_effort)}): ${validation.reason}`,
+        `[${provider}/${modelId}][${functionName}] ✗ Skipped reasoning_effort (value: ${JSON.stringify(saTarget.configuration.reasoning_effort)}): ${validation.reason}`,
       );
     }
   }
@@ -203,24 +203,24 @@ function getHyperParamDefaults(
  */
 export async function tryPost(
   c: AppContext,
-  raConfig: ReactiveAgentsConfig,
-  raTarget: ReactiveAgentsTarget,
-  raRequestData: ReactiveAgentsRequestData,
+  saConfig: SuperAgentsConfig,
+  saTarget: SuperAgentsTarget,
+  saRequestData: SuperAgentsRequestData,
   currentIndex: number,
 ): Promise<Response> {
   try {
     const hyperParamDefaults = getHyperParamDefaults(
-      raRequestData.functionName,
-      raTarget,
+      saRequestData.functionName,
+      saTarget,
     );
 
-    const overrideParams = raConfig?.override_params || {};
+    const overrideParams = saConfig?.override_params || {};
     // Merge: base request body -> config defaults -> override params
-    const overriddenReactiveAgentsRequestBody: ReactiveAgentsRequestBody = {
-      ...(raRequestData.requestBody as Record<string, unknown>),
+    const overriddenSuperAgentsRequestBody: SuperAgentsRequestBody = {
+      ...(saRequestData.requestBody as Record<string, unknown>),
       ...hyperParamDefaults,
       ...overrideParams,
-    } as ReactiveAgentsRequestBody;
+    } as SuperAgentsRequestBody;
 
     // Helper to generate JSON schema instructions for response_format
     const getJsonSchemaInstructions = (
@@ -242,17 +242,17 @@ export async function tryPost(
     };
 
     if (
-      raTarget.configuration.system_prompt &&
-      (raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE ||
-        raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-        raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
+      saTarget.configuration.system_prompt &&
+      (saRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE ||
+        saRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+        saRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
     ) {
       // Handle system prompt with template variables
-      let systemPrompt = raTarget.configuration.system_prompt;
+      let systemPrompt = saTarget.configuration.system_prompt;
 
       // Augment system prompt with JSON schema instructions if response_format is present
       const responseFormat = (
-        overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+        overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
       ).response_format;
       const jsonSchemaInstructions = getJsonSchemaInstructions(responseFormat);
 
@@ -264,11 +264,11 @@ export async function tryPost(
       }
 
       // Add system prompt if not overridden by the user
-      switch (raRequestData.functionName) {
+      switch (saRequestData.functionName) {
         case FunctionName.CHAT_COMPLETE:
         case FunctionName.STREAM_CHAT_COMPLETE: {
           const messages = (
-            overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+            overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
           ).messages;
 
           // Find existing system message or add new one at the beginning
@@ -289,13 +289,13 @@ export async function tryPost(
           }
 
           (
-            overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+            overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
           ).messages = messages;
           break;
         }
         case FunctionName.CREATE_MODEL_RESPONSE: {
           const inputPreview = (
-            overriddenReactiveAgentsRequestBody as ResponsesRequestBody
+            overriddenSuperAgentsRequestBody as ResponsesRequestBody
           ).input;
 
           let input: Record<string, unknown>[] = [];
@@ -328,27 +328,26 @@ export async function tryPost(
             input.unshift(systemMessage);
           }
 
-          (
-            overriddenReactiveAgentsRequestBody as Record<string, unknown>
-          ).input = input;
+          (overriddenSuperAgentsRequestBody as Record<string, unknown>).input =
+            input;
         }
       }
     } else if (
-      !raTarget.configuration.system_prompt &&
-      (raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-        raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
+      !saTarget.configuration.system_prompt &&
+      (saRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+        saRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE)
     ) {
       // If there's no system prompt from the optimization arm,
       // we still need to augment any existing system message in the user's request
       // with JSON schema instructions if response_format is present
       const responseFormat = (
-        overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+        overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
       ).response_format;
       const jsonInstructions = getJsonSchemaInstructions(responseFormat);
 
       if (jsonInstructions) {
         const messages = (
-          overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+          overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
         ).messages;
 
         // Find existing system message
@@ -370,92 +369,92 @@ export async function tryPost(
         }
 
         (
-          overriddenReactiveAgentsRequestBody as ChatCompletionRequestBody
+          overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
         ).messages = messages;
       }
     }
 
     let isStreamingMode = false;
-    if ('stream' in overriddenReactiveAgentsRequestBody) {
-      isStreamingMode = overriddenReactiveAgentsRequestBody.stream
-        ? (overriddenReactiveAgentsRequestBody.stream as boolean)
+    if ('stream' in overriddenSuperAgentsRequestBody) {
+      isStreamingMode = overriddenSuperAgentsRequestBody.stream
+        ? (overriddenSuperAgentsRequestBody.stream as boolean)
         : false;
     }
 
-    const overriddenReactiveAgentsRequestData = cloneDeep(raRequestData);
-    overriddenReactiveAgentsRequestData.requestBody =
-      overriddenReactiveAgentsRequestBody;
+    const overriddenSuperAgentsRequestData = cloneDeep(saRequestData);
+    overriddenSuperAgentsRequestData.requestBody =
+      overriddenSuperAgentsRequestBody;
 
     let strictOpenAiCompliance = true;
 
-    if (raConfig.strict_open_ai_compliance === false) {
+    if (saConfig.strict_open_ai_compliance === false) {
       strictOpenAiCompliance = false;
     }
 
     // Mapping providers to corresponding URLs
     const internalProviderConfig =
-      providerConfigs[raTarget.configuration.ai_provider];
+      providerConfigs[saTarget.configuration.ai_provider];
 
     if (!internalProviderConfig) {
       throw new Error(
-        `Provider config not found for provider: ${raTarget.configuration.ai_provider}`,
+        `Provider config not found for provider: ${saTarget.configuration.ai_provider}`,
       );
     }
 
     const apiConfig: InternalProviderAPIConfig = internalProviderConfig.api;
 
-    const customHost = raTarget.custom_host || '';
+    const customHost = saTarget.custom_host || '';
 
     const baseUrl =
       customHost ||
       (await apiConfig.getBaseURL({
         c,
-        raTarget,
-        raRequestData: overriddenReactiveAgentsRequestData,
+        saTarget,
+        saRequestData: overriddenSuperAgentsRequestData,
       }));
     const endpoint = apiConfig.getEndpoint({
       c,
-      raTarget,
-      raRequestData: overriddenReactiveAgentsRequestData,
+      saTarget,
+      saRequestData: overriddenSuperAgentsRequestData,
     });
 
     const url =
-      overriddenReactiveAgentsRequestData.functionName === FunctionName.PROXY
+      overriddenSuperAgentsRequestData.functionName === FunctionName.PROXY
         ? getProxyPath(
-            overriddenReactiveAgentsRequestData.url,
-            raTarget.configuration.ai_provider,
-            overriddenReactiveAgentsRequestData.url.indexOf('/v1/proxy') > -1
+            overriddenSuperAgentsRequestData.url,
+            saTarget.configuration.ai_provider,
+            overriddenSuperAgentsRequestData.url.indexOf('/v1/proxy') > -1
               ? '/v1/proxy'
               : '/v1',
             baseUrl,
-            raTarget,
+            saTarget,
           )
         : `${baseUrl}${endpoint}`;
 
     let fetchConfig: RequestInit = {};
 
-    const outputSyncHooks = raConfig.hooks?.filter(
+    const outputSyncHooks = saConfig.hooks?.filter(
       (hook) => hook.type === HookType.OUTPUT_HOOK && hook.await === true,
     );
 
-    c.set('ra_request_data', overriddenReactiveAgentsRequestData);
+    c.set('sa_request_data', overriddenSuperAgentsRequestData);
 
     const commonRequestOptions: CommonRequestOptions = {
-      raRequestData: overriddenReactiveAgentsRequestData,
+      saRequestData: overriddenSuperAgentsRequestData,
       aiProviderRequestURL: url,
       isStreamingMode,
-      provider: raTarget.configuration.ai_provider,
+      provider: saTarget.configuration.ai_provider,
       strictOpenAiCompliance,
       areSyncHooksAvailable: outputSyncHooks?.length > 0,
       currentIndex,
       fetchOptions: fetchConfig,
-      cacheSettings: raTarget.cache,
+      cacheSettings: saTarget.cache,
     };
 
     const {
       errorResponse: inputHooksErrorResponse,
-      transformedReactiveAgentsBody,
-    } = await inputHookHandler(c, overriddenReactiveAgentsRequestData);
+      transformedSuperAgentsBody,
+    } = await inputHookHandler(c, overriddenSuperAgentsRequestData);
 
     if (inputHooksErrorResponse) {
       const createResponseOptions: CreateResponseOptions = {
@@ -470,16 +469,15 @@ export async function tryPost(
       return createResponse(c, createResponseOptions);
     }
 
-    if (transformedReactiveAgentsBody) {
-      overriddenReactiveAgentsRequestData.requestBody =
-        transformedReactiveAgentsBody;
+    if (transformedSuperAgentsBody) {
+      overriddenSuperAgentsRequestData.requestBody = transformedSuperAgentsBody;
     }
 
     let aiProviderRequestBody:
       | Record<string, unknown>
       | ReadableStream
       | ArrayBuffer
-      | FormData = overriddenReactiveAgentsRequestBody as
+      | FormData = overriddenSuperAgentsRequestBody as
       | Record<string, unknown>
       | ReadableStream
       | ArrayBuffer
@@ -488,28 +486,28 @@ export async function tryPost(
     // Attach the body of the request
     if (
       !internalProviderConfig?.requestHandlers?.[
-        overriddenReactiveAgentsRequestData.functionName
+        overriddenSuperAgentsRequestData.functionName
       ]
     ) {
       aiProviderRequestBody =
-        overriddenReactiveAgentsRequestData.method === HttpMethod.POST
+        overriddenSuperAgentsRequestData.method === HttpMethod.POST
           ? transformToProviderRequest(
-              raTarget.configuration.ai_provider,
-              raTarget,
-              overriddenReactiveAgentsRequestData,
+              saTarget.configuration.ai_provider,
+              saTarget,
+              overriddenSuperAgentsRequestData,
             )
-          : overriddenReactiveAgentsRequestBody;
+          : overriddenSuperAgentsRequestBody;
     }
 
     const apiConfigHeaders = await apiConfig.headers({
       c,
-      raTarget,
-      raRequestData: overriddenReactiveAgentsRequestData,
+      saTarget,
+      saRequestData: overriddenSuperAgentsRequestData,
     });
 
     // Construct the base object for the POST request
     fetchConfig = constructRequest(
-      overriddenReactiveAgentsRequestData,
+      overriddenSuperAgentsRequestData,
       apiConfigHeaders as Record<string, string>,
       {},
       {},
@@ -521,7 +519,7 @@ export async function tryPost(
 
     if (!apiConfigContentTypeHeader) {
       apiConfigContentTypeHeader =
-        overriddenReactiveAgentsRequestData.requestHeaders[
+        overriddenSuperAgentsRequestData.requestHeaders[
           HeaderKey.CONTENT_TYPE
         ]?.split(';')[0];
       if (!apiConfigContentTypeHeader) {
@@ -534,20 +532,20 @@ export async function tryPost(
     }
 
     const requestContentType =
-      overriddenReactiveAgentsRequestData.requestHeaders[
+      overriddenSuperAgentsRequestData.requestHeaders[
         HeaderKey.CONTENT_TYPE
       ]?.split(';')[0];
 
     if (
       apiConfigContentTypeHeader === ContentTypeName.MULTIPART_FORM_DATA ||
-      (overriddenReactiveAgentsRequestData.functionName === 'proxy' &&
+      (overriddenSuperAgentsRequestData.functionName === 'proxy' &&
         requestContentType === ContentTypeName.MULTIPART_FORM_DATA)
     ) {
       fetchConfig.body = aiProviderRequestBody as FormData;
     } else if (aiProviderRequestBody instanceof ReadableStream) {
       fetchConfig.body = aiProviderRequestBody;
     } else if (
-      overriddenReactiveAgentsRequestData.functionName === 'proxy' &&
+      overriddenSuperAgentsRequestData.functionName === 'proxy' &&
       requestContentType?.startsWith(ContentTypeName.GENERIC_AUDIO_PATTERN)
     ) {
       fetchConfig.body = aiProviderRequestBody as ArrayBuffer;
@@ -555,9 +553,7 @@ export async function tryPost(
       fetchConfig.body = JSON.stringify(aiProviderRequestBody);
     }
 
-    if (
-      ['GET', 'DELETE'].includes(overriddenReactiveAgentsRequestData.method)
-    ) {
+    if (['GET', 'DELETE'].includes(overriddenSuperAgentsRequestData.method)) {
       delete fetchConfig.body;
     }
 
@@ -578,9 +574,9 @@ export async function tryPost(
       commonRequestOptions,
       url,
       fetchConfig,
-      raTarget,
+      saTarget,
       isStreamingMode,
-      overriddenReactiveAgentsRequestData,
+      overriddenSuperAgentsRequestData,
       0,
       strictOpenAiCompliance,
     );
@@ -619,29 +615,29 @@ export async function tryPost(
 
 export async function tryTarget(
   c: AppContext,
-  raConfig: ReactiveAgentsConfig,
-  raTarget: ReactiveAgentsTarget,
-  raRequestData: ReactiveAgentsRequestData,
+  saConfig: SuperAgentsConfig,
+  saTarget: SuperAgentsTarget,
+  saRequestData: SuperAgentsRequestData,
 ): Promise<Response> {
-  return await tryPost(c, raConfig, raTarget, raRequestData, 0);
+  return await tryPost(c, saConfig, saTarget, saRequestData, 0);
 }
 
 export async function tryTargets(
   c: AppContext,
-  raConfig: ReactiveAgentsConfig,
-  raRequestData: ReactiveAgentsRequestData,
+  saConfig: SuperAgentsConfig,
+  saRequestData: SuperAgentsRequestData,
 ): Promise<Response> {
-  const strategyMode = raConfig.strategy.mode;
+  const strategyMode = saConfig.strategy.mode;
 
   let response: Response | undefined;
 
   switch (strategyMode) {
     case StrategyModes.FALLBACK:
-      for (const target of raConfig.targets) {
-        response = await tryTarget(c, raConfig, target, raRequestData);
+      for (const target of saConfig.targets) {
+        response = await tryTarget(c, saConfig, target, saRequestData);
         if (
           response?.ok &&
-          !raConfig.strategy.on_status_codes?.includes(response?.status)
+          !saConfig.strategy.on_status_codes?.includes(response?.status)
         ) {
           break;
         }
@@ -649,41 +645,41 @@ export async function tryTargets(
       break;
 
     case StrategyModes.LOADBALANCE: {
-      raConfig.targets.forEach((t: ReactiveAgentsTarget) => {
+      saConfig.targets.forEach((t: SuperAgentsTarget) => {
         if (t.weight === undefined) {
           t.weight = 1;
         }
       });
-      const totalWeight = raConfig.targets.reduce(
-        (sum: number, raTarget: ReactiveAgentsTarget) => sum + raTarget.weight!,
+      const totalWeight = saConfig.targets.reduce(
+        (sum: number, saTarget: SuperAgentsTarget) => sum + saTarget.weight!,
         0,
       );
 
       let randomWeight = Math.random() * totalWeight;
-      for (const raTarget of raConfig.targets) {
-        if (randomWeight < raTarget.weight) {
-          response = await tryTarget(c, raConfig, raTarget, raRequestData);
+      for (const saTarget of saConfig.targets) {
+        if (randomWeight < saTarget.weight) {
+          response = await tryTarget(c, saConfig, saTarget, saRequestData);
           break;
         }
-        randomWeight -= raTarget.weight;
+        randomWeight -= saTarget.weight;
       }
       break;
     }
 
     case StrategyModes.CONDITIONAL: {
-      const metadata = raConfig.metadata;
+      const metadata = saConfig.metadata;
 
       const params =
-        raRequestData.requestBody instanceof FormData ||
-        raRequestData.requestBody instanceof ReadableStream ||
-        raRequestData.requestBody instanceof ArrayBuffer
+        saRequestData.requestBody instanceof FormData ||
+        saRequestData.requestBody instanceof ReadableStream ||
+        saRequestData.requestBody instanceof ArrayBuffer
           ? {} // Send empty object if not JSON
-          : raRequestData.requestBody;
+          : saRequestData.requestBody;
 
       let conditionalRouter: ConditionalRouter;
-      let finalTarget: ReactiveAgentsTarget;
+      let finalTarget: SuperAgentsTarget;
       try {
-        conditionalRouter = new ConditionalRouter(raConfig, {
+        conditionalRouter = new ConditionalRouter(saConfig, {
           metadata,
           params,
         });
@@ -695,16 +691,16 @@ export async function tryTargets(
         throw new RouterError('Unknown error');
       }
 
-      response = await tryTarget(c, raConfig, finalTarget, raRequestData);
+      response = await tryTarget(c, saConfig, finalTarget, saRequestData);
       break;
     }
 
     case StrategyModes.SINGLE:
       response = await tryTarget(
         c,
-        raConfig,
-        raConfig.targets[0],
-        raRequestData,
+        saConfig,
+        saConfig.targets[0],
+        saRequestData,
       );
       break;
 
@@ -712,9 +708,9 @@ export async function tryTargets(
       try {
         response = await tryPost(
           c,
-          raConfig,
-          raConfig.targets[0],
-          raRequestData,
+          saConfig,
+          saConfig.targets[0],
+          saRequestData,
           0,
         );
       } catch (e) {
@@ -734,7 +730,7 @@ export async function tryTargets(
               headers: {
                 'content-type': 'application/json',
                 // Add this header so that the fallback loop can be interrupted if its an exception.
-                'ra-gateway-exception': 'true',
+                'sa-gateway-exception': 'true',
               },
             },
           );
@@ -762,9 +758,9 @@ export async function recursiveOutputHookHandler(
   commonRequestOptions: CommonRequestOptions,
   aiProviderRequestURL: string,
   options: RequestInit,
-  raTarget: ReactiveAgentsTarget,
+  saTarget: SuperAgentsTarget,
   isStreamingMode: boolean,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   retryAttemptsMade: number,
   strictOpenAiCompliance: boolean,
 ): Promise<{
@@ -777,18 +773,18 @@ export async function recursiveOutputHookHandler(
     retryCount: number | undefined,
     createdAt: Date,
     retrySkipped: boolean;
-  const requestTimeout = raTarget.request_timeout || null;
+  const requestTimeout = saTarget.request_timeout || null;
 
-  const { retry } = raTarget;
+  const { retry } = saTarget;
 
-  const providerConfig = providerConfigs[raTarget.configuration.ai_provider];
+  const providerConfig = providerConfigs[saTarget.configuration.ai_provider];
   if (!providerConfig) {
-    throw new Error(`Provider ${raTarget.configuration.ai_provider} not found`);
+    throw new Error(`Provider ${saTarget.configuration.ai_provider} not found`);
   }
   const requestHandlers = providerConfig.requestHandlers;
   let requestHandler: (() => Promise<Response>) | undefined;
 
-  const fn = raRequestData.functionName;
+  const fn = saRequestData.functionName;
 
   if (requestHandlers?.[fn]) {
     const requestHandlerFunction = requestHandlers[fn];
@@ -796,8 +792,8 @@ export async function recursiveOutputHookHandler(
     requestHandler = async (): Promise<Response> =>
       requestHandlerFunction({
         c,
-        raTarget,
-        raRequestData,
+        saTarget,
+        saRequestData,
       });
   }
 
@@ -838,16 +834,16 @@ export async function recursiveOutputHookHandler(
 
   const {
     response: mappedResponse,
-    raResponseBody,
+    saResponseBody,
     originalResponseJson,
   } = await responseHandler(
     response,
     isStreamingMode,
-    raTarget.configuration.ai_provider,
-    raRequestData.functionName,
+    saTarget.configuration.ai_provider,
+    saRequestData.functionName,
     aiProviderRequestURL,
     CacheStatus.MISS,
-    raRequestData,
+    saRequestData,
     strictOpenAiCompliance,
     commonRequestOptions.areSyncHooksAvailable,
     onFirstChunk,
@@ -863,7 +859,7 @@ export async function recursiveOutputHookHandler(
     });
   }
 
-  if (!raResponseBody && !isStreamingMode) {
+  if (!saResponseBody && !isStreamingMode) {
     throw new GatewayError('No response body from target');
   }
 
@@ -879,9 +875,9 @@ export async function recursiveOutputHookHandler(
 
   const outputHookResponse = await outputHookHandler(
     c,
-    raRequestData,
+    saRequestData,
     mappedResponse,
-    raResponseBody!, // Non-null assertion: we've already checked and returned early for streaming
+    saResponseBody!, // Non-null assertion: we've already checked and returned early for streaming
     retryAttemptsMade,
   );
 
@@ -898,9 +894,9 @@ export async function recursiveOutputHookHandler(
       commonRequestOptions,
       aiProviderRequestURL,
       options,
-      raTarget,
+      saTarget,
       isStreamingMode,
-      raRequestData,
+      saRequestData,
       (retryCount || 0) + 1 + retryAttemptsMade,
       strictOpenAiCompliance,
     );

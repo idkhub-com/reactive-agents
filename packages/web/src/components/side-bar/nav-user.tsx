@@ -1,6 +1,6 @@
 'use client';
 
-import { logout } from '@web/api/v1/reactive-agents/auth';
+import { logout } from '@web/api/v1/super-agents/auth';
 import {
   SidebarMenu,
   SidebarMenuButton,

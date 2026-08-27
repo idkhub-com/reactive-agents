@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies - must be before other imports
-vi.mock('@web/api/v1/reactive-agents/observability/logs', () => ({
+vi.mock('@web/api/v1/super-agents/observability/logs', () => ({
   queryLogs: vi.fn().mockResolvedValue([
     {
       id: '1',
@@ -20,7 +20,7 @@ vi.mock('@web/api/v1/reactive-agents/observability/logs', () => ({
   ]),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn().mockResolvedValue([]),
   createAgent: vi.fn(),
   updateAgent: vi.fn(),

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkillModels: vi.fn(),
   getSkillEvaluations: vi.fn(),
 }));
@@ -14,7 +14,7 @@ vi.mock('@web/api/v1/reactive-agents/skills', () => ({
 import {
   getSkillEvaluations,
   getSkillModels,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 import { useSkillValidation } from '@web/hooks/use-skill-validation';
 
 const mockGetSkillModels = vi.mocked(getSkillModels);

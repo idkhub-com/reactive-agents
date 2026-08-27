@@ -1,9 +1,9 @@
 'use client';
 
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import { EvaluationMethodName } from '@shared/types/evaluations';
-import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
+import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 import { CompletionViewer } from '@web/components/agents/skills/logs/components/completion-viewer';
 import { MessagesView } from '@web/components/agents/skills/logs/components/messages-view';
 import { Badge } from '@web/components/ui/badge';
@@ -58,8 +58,8 @@ export function LogDetailsView(): ReactElement {
     setLogId: setEvalLogId,
   } = useSkillOptimizationEvaluationRuns();
   const smartBack = useSmartBack();
-  const [raRequestData, setReactiveAgentsRequestData] =
-    useState<ReactiveAgentsRequestData | null>(null);
+  const [saRequestData, setSuperAgentsRequestData] =
+    useState<SuperAgentsRequestData | null>(null);
   const [showEvaluationDetails, setShowEvaluationDetails] = useState(false);
   const [expandedEvaluations, setExpandedEvaluations] = useState<Set<string>>(
     new Set(),
@@ -173,7 +173,7 @@ export function LogDetailsView(): ReactElement {
 
   useEffect(() => {
     if (selectedLog) {
-      const raRequestData = produceReactiveAgentsRequestData(
+      const saRequestData = produceSuperAgentsRequestData(
         selectedLog.ai_provider_request_log.method,
         selectedLog.ai_provider_request_log.request_url,
         {},
@@ -181,7 +181,7 @@ export function LogDetailsView(): ReactElement {
         selectedLog.ai_provider_request_log.response_body,
       );
 
-      setReactiveAgentsRequestData(raRequestData);
+      setSuperAgentsRequestData(saRequestData);
     }
   }, [selectedLog]);
 
@@ -458,14 +458,14 @@ export function LogDetailsView(): ReactElement {
               <LogMap logs={[selectedLog]} />
             </div>*/}
             <div className="inset-0 flex flex-col flex-1 w-full p-4 gap-4 overflow-hidden overflow-y-auto">
-              {selectedLog && raRequestData && (
+              {selectedLog && saRequestData && (
                 <MessagesView
                   logId={selectedLog.id}
-                  raRequestData={raRequestData}
+                  saRequestData={saRequestData}
                 />
               )}
               {selectedLog &&
-                raRequestData &&
+                saRequestData &&
                 selectedLog.ai_provider_request_log.response_body &&
                 ('choices' in
                   selectedLog.ai_provider_request_log.response_body ||
@@ -473,7 +473,7 @@ export function LogDetailsView(): ReactElement {
                     selectedLog.ai_provider_request_log.response_body) && (
                   <CompletionViewer
                     logId={selectedLog.id}
-                    raRequestData={raRequestData}
+                    saRequestData={saRequestData}
                   />
                 )}
             </div>

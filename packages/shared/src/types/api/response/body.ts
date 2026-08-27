@@ -1,6 +1,6 @@
 import type {
-  ReactiveAgentsRequestBody,
-  ReactiveAgentsTarget,
+  SuperAgentsRequestBody,
+  SuperAgentsTarget,
 } from '@shared/types/api/request';
 import {
   CreateSpeechResponseBody,
@@ -67,36 +67,36 @@ export type ParameterValueTypes =
   | null;
 
 export type ParameterConfigDefaultFunction = (params: {
-  raRequestBody: ReactiveAgentsRequestBody;
-  raTarget: ReactiveAgentsTarget;
+  saRequestBody: SuperAgentsRequestBody;
+  saTarget: SuperAgentsTarget;
 }) => ParameterValueTypes;
 
 export type CreateBatchRequestParameterTransformFunction = (
-  raRequestBody: CreateBatchRequestBody,
+  saRequestBody: CreateBatchRequestBody,
 ) => ParameterValueTypes;
 
 export type ChatCompletionParameterTransformFunction = (
-  raRequestBody: ChatCompletionRequestBody,
+  saRequestBody: ChatCompletionRequestBody,
 ) => ParameterValueTypes;
 
 export type CompletionParameterTransformFunction = (
-  raRequestBody: CompletionRequestBody,
+  saRequestBody: CompletionRequestBody,
 ) => ParameterValueTypes;
 
 export type CreateFineTuningJobParameterTransformFunction = (
-  raRequestBody: CreateFineTuningJobRequestBody,
+  saRequestBody: CreateFineTuningJobRequestBody,
 ) => ParameterValueTypes;
 
 export type ImageGenerationParameterTransformFunction = (
-  raRequestBody: GenerateImageRequestBody,
+  saRequestBody: GenerateImageRequestBody,
 ) => ParameterValueTypes;
 
 export type ResponsesParameterTransformFunction = (
-  raRequestBody: ResponsesRequestBody,
+  saRequestBody: ResponsesRequestBody,
 ) => ParameterValueTypes;
 
 export type EmbeddingsParameterTransformFunction = (
-  raRequestBody: CreateEmbeddingsRequestBody,
+  saRequestBody: CreateEmbeddingsRequestBody,
 ) => ParameterValueTypes;
 
 /**
@@ -183,7 +183,7 @@ export const ErrorResponseBody = z.object({
 
 export type ErrorResponseBody = z.infer<typeof ErrorResponseBody>;
 
-export const ReactiveAgentsResponseBody = z.union([
+export const SuperAgentsResponseBody = z.union([
   // Audio API
   CreateSpeechResponseBody,
   CreateTranscriptionResponseBody,
@@ -237,9 +237,7 @@ export const ReactiveAgentsResponseBody = z.union([
   ErrorResponseBody,
 ]);
 
-export type ReactiveAgentsResponseBody = z.infer<
-  typeof ReactiveAgentsResponseBody
->;
+export type SuperAgentsResponseBody = z.infer<typeof SuperAgentsResponseBody>;
 
 export type AIProviderResponseBody =
   | Record<string, unknown>

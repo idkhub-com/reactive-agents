@@ -6,7 +6,7 @@ import {
   getSkillArmStats,
   getSkillEvaluationScoresByTimeBucket,
   resetCluster,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {

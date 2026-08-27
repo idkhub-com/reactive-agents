@@ -1,7 +1,7 @@
 import {
-  type ReactiveAgentsConfig,
-  type ReactiveAgentsTarget,
   StrategyModes,
+  type SuperAgentsConfig,
+  type SuperAgentsTarget,
 } from '@shared/types/api/request/headers';
 
 type Query = {
@@ -31,23 +31,23 @@ enum Operator {
 }
 
 export class ConditionalRouter {
-  private raConfig: ReactiveAgentsConfig;
+  private saConfig: SuperAgentsConfig;
   private context: RouterContext;
 
-  constructor(config: ReactiveAgentsConfig, context: RouterContext) {
-    this.raConfig = config;
+  constructor(config: SuperAgentsConfig, context: RouterContext) {
+    this.saConfig = config;
     this.context = context;
-    if (this.raConfig.strategy.mode !== StrategyModes.CONDITIONAL) {
+    if (this.saConfig.strategy.mode !== StrategyModes.CONDITIONAL) {
       throw new Error('Unsupported strategy mode');
     }
   }
 
-  resolveTarget(): ReactiveAgentsTarget {
-    if (!this.raConfig.strategy.conditions) {
+  resolveTarget(): SuperAgentsTarget {
+    if (!this.saConfig.strategy.conditions) {
       throw new Error('No conditions passed in the query router');
     }
 
-    for (const condition of this.raConfig.strategy.conditions) {
+    for (const condition of this.saConfig.strategy.conditions) {
       if (this.evaluateQuery(condition.query)) {
         const cond = condition as unknown as Record<string, unknown>;
         const targetName = (cond.target as string) ?? (cond.then as string);
@@ -56,8 +56,8 @@ export class ConditionalRouter {
     }
 
     // If no conditions matched and a default is specified, return the default target
-    if (this.raConfig.strategy.default) {
-      return this.findTarget(this.raConfig.strategy.default);
+    if (this.saConfig.strategy.default) {
+      return this.findTarget(this.saConfig.strategy.default);
     }
 
     throw new Error('Query router did not resolve to any valid target');
@@ -148,20 +148,20 @@ export class ConditionalRouter {
     return true;
   }
 
-  private findTarget(id: string): ReactiveAgentsTarget {
+  private findTarget(id: string): SuperAgentsTarget {
     const index =
-      this.raConfig.targets?.findIndex((target) => target.id === id) ?? -1;
+      this.saConfig.targets?.findIndex((target) => target.id === id) ?? -1;
     if (index === -1) {
       throw new Error(`Invalid target id found in the query router: ${id}`);
     }
 
-    const target = this.raConfig.targets?.[index];
+    const target = this.saConfig.targets?.[index];
 
     if (!target) {
       throw new Error(`Invalid target id found in the query router: ${id}`);
     }
 
-    const targets: ReactiveAgentsTarget = {
+    const targets: SuperAgentsTarget = {
       ...target,
       index,
     };

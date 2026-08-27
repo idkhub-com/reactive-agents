@@ -10,10 +10,10 @@ export async function createTranscriptionHandler(
   c: AppContext,
 ): Promise<Response> {
   try {
-    const raRequestData = c.get('ra_request_data');
-    const raConfig = c.get('ra_config');
+    const saRequestData = c.get('sa_request_data');
+    const saConfig = c.get('sa_config');
 
-    const tryTargetsResponse = await tryTargets(c, raConfig, raRequestData);
+    const tryTargetsResponse = await tryTargets(c, saConfig, saRequestData);
 
     return tryTargetsResponse;
   } catch (err: unknown) {

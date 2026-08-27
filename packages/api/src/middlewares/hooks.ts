@@ -1,9 +1,9 @@
 import type { HooksConnector } from '@api/types/connector';
 import type { AppContext, AppEnv } from '@api/types/hono';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import { FunctionName } from '@shared/types/api/request/function-name';
-import type { ReactiveAgentsConfig } from '@shared/types/api/request/headers';
-import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
+import type { SuperAgentsConfig } from '@shared/types/api/request/headers';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response/body';
 import type { HookLog } from '@shared/types/data';
 
 import { CacheStatus } from '@shared/types/middleware/cache';
@@ -45,8 +45,8 @@ function shouldSkipHook(
   fn: FunctionName,
   statusCode: number | null,
   isStreamingRequest: boolean,
-  raResponseBody?:
-    | ReactiveAgentsResponseBody
+  saResponseBody?:
+    | SuperAgentsResponseBody
     | ReadableStream
     | FormData
     | ArrayBuffer,
@@ -61,7 +61,7 @@ function shouldSkipHook(
     (hook.type === HookType.OUTPUT_HOOK && statusCode !== 200) ||
     (hook.type === HookType.OUTPUT_HOOK &&
       isStreamingRequest &&
-      !raResponseBody)
+      !saResponseBody)
   );
 }
 
@@ -70,8 +70,8 @@ async function executeHook(
   hook: Hook,
   statusCode: number | null,
   isStreamingRequest: boolean,
-  raRequestData: ReactiveAgentsRequestData,
-  raResponseBody?: ReactiveAgentsResponseBody,
+  saRequestData: SuperAgentsRequestData,
+  saResponseBody?: SuperAgentsResponseBody,
 ): Promise<{
   hookResult: HookResult;
   cacheStatus: CacheStatus;
@@ -79,10 +79,10 @@ async function executeHook(
   if (
     shouldSkipHook(
       hook,
-      raRequestData.functionName,
+      saRequestData.functionName,
       statusCode,
       isStreamingRequest,
-      raResponseBody,
+      saResponseBody,
     )
   ) {
     const hookResult: HookResult = {
@@ -97,17 +97,17 @@ async function executeHook(
     };
   }
 
-  const raConfig = c.get('ra_config');
+  const saConfig = c.get('sa_config');
 
   let cacheStatus = CacheStatus.MISS;
-  if (!raConfig.force_hook_refresh) {
+  if (!saConfig.force_hook_refresh) {
     const getHookResponseFromCache = c.get('getHookResponseFromCache');
 
     const cacheResult = await getHookResponseFromCache(
       c,
       hook,
-      raRequestData,
-      raResponseBody,
+      saRequestData,
+      saResponseBody,
     );
 
     if (cacheResult.status === CacheStatus.HIT) {
@@ -131,7 +131,7 @@ async function executeHook(
 }
 
 function getHooksToExecute(
-  config: ReactiveAgentsConfig,
+  config: SuperAgentsConfig,
   hookType: HookType,
 ): Hook[] {
   const hooksToExecute: Hook[] = [];
@@ -145,12 +145,12 @@ export async function executeHooks(
   hookType: HookType,
   statusCode: number | null,
   isStreamingRequest: boolean,
-  raRequestData: ReactiveAgentsRequestData,
-  raResponseBody?: ReactiveAgentsResponseBody,
+  saRequestData: SuperAgentsRequestData,
+  saResponseBody?: SuperAgentsResponseBody,
 ): Promise<HookLog[]> {
-  const raConfig = c.get('ra_config');
+  const saConfig = c.get('sa_config');
 
-  const hooksToExecute = getHooksToExecute(raConfig, hookType);
+  const hooksToExecute = getHooksToExecute(saConfig, hookType);
 
   if (hooksToExecute.length === 0) {
     return [];
@@ -165,14 +165,14 @@ export async function executeHooks(
           hook,
           statusCode,
           isStreamingRequest,
-          raRequestData,
-          raResponseBody,
+          saRequestData,
+          saResponseBody,
         );
         const endTime = Date.now();
         const duration = endTime - startTime;
 
         const hookLog: HookLog = {
-          trace_id: raConfig.trace_id,
+          trace_id: saConfig.trace_id,
           hook: hook,
           result: hookResult,
           start_time: startTime,

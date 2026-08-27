@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
-import { login } from '@web/api/v1/reactive-agents/auth';
+import { login } from '@web/api/v1/super-agents/auth';
 import { AnimatedLogo } from '@web/components/side-bar/animated-logo';
 import { Button } from '@web/components/ui/button';
 import {

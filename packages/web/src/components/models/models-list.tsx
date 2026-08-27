@@ -2,7 +2,7 @@
 
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { Model } from '@shared/types/data/model';
-import { deleteModel } from '@web/api/v1/reactive-agents/models';
+import { deleteModel } from '@web/api/v1/super-agents/models';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {

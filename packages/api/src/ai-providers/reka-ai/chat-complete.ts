@@ -26,7 +26,7 @@ export const rekaAIChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'conversation_history',
     transform: (
-      raRequestBody: ChatCompletionRequestBody,
+      saRequestBody: ChatCompletionRequestBody,
     ): Record<string, unknown> => {
       const messages: RekaMessageItem[] = [];
       let lastType: 'human' | 'model' | undefined;
@@ -62,7 +62,7 @@ export const rekaAIChatCompleteConfig: AIProviderFunctionConfig = {
         lastType = type;
       };
 
-      raRequestBody.messages?.forEach((message) => {
+      saRequestBody.messages?.forEach((message) => {
         const currentType: 'human' | 'model' =
           message.role === 'user' ? 'human' : 'model';
 
@@ -102,12 +102,12 @@ export const rekaAIChatCompleteConfig: AIProviderFunctionConfig = {
   },
   stop: {
     param: 'stop_words',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      if (raRequestBody.stop && !Array.isArray(raRequestBody.stop)) {
-        return [raRequestBody.stop];
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      if (saRequestBody.stop && !Array.isArray(saRequestBody.stop)) {
+        return [saRequestBody.stop];
       }
 
-      return raRequestBody.stop;
+      return saRequestBody.stop;
     },
   },
   seed: {

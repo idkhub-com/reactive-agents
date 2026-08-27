@@ -14,12 +14,12 @@ import {
 // The global mock from vitest.setup.tsx handles @tanstack/react-router
 
 // Mock API functions and providers
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn(),
   updateAgent: vi.fn(),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
@@ -27,8 +27,8 @@ vi.mock('@web/providers/agents', () => ({
   useAgents: vi.fn(),
 }));
 
-import { getAgents } from '@web/api/v1/reactive-agents/agents';
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getAgents } from '@web/api/v1/super-agents/agents';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 import { useAgents } from '@web/providers/agents';
 
 const mockAgents: Agent[] = [

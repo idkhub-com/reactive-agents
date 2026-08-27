@@ -5,7 +5,7 @@ import {
 } from '@api/ai-providers/deepseek/chat-complete';
 import { deepSeekConfig } from '@api/ai-providers/deepseek/index';
 import type { DeepSeekStreamChunk } from '@api/ai-providers/deepseek/types';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
 import { FunctionName } from '@shared/types/api/request';
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
@@ -47,11 +47,11 @@ describe('DeepSeek Provider Tests', () => {
 
     it('should return correct headers with API key', () => {
       const headers = deepSeekAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.DEEPSEEK,
           api_key: 'deepseek-test-key',
         },
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
         },
       } as unknown as TestContext);
@@ -63,7 +63,7 @@ describe('DeepSeek Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = deepSeekAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
         },
       } as unknown as TestContext);
@@ -73,7 +73,7 @@ describe('DeepSeek Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = deepSeekAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.EMBED,
         },
       } as unknown as TestContext);
@@ -111,7 +111,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('chatcmpl-test123');
@@ -164,7 +164,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -188,7 +188,7 @@ describe('DeepSeek Provider Tests', () => {
         401,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -210,7 +210,7 @@ describe('DeepSeek Provider Tests', () => {
         500,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -225,7 +225,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -244,7 +244,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -272,7 +272,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.usage).toBeUndefined();
@@ -304,7 +304,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices).toHaveLength(2);
@@ -338,7 +338,7 @@ describe('DeepSeek Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('data:');
@@ -353,7 +353,7 @@ describe('DeepSeek Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
       expect(result).toBe('data: [DONE]\n\n');
     });
@@ -384,7 +384,7 @@ describe('DeepSeek Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"usage"');
@@ -408,7 +408,7 @@ describe('DeepSeek Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"choices":[]');
@@ -444,7 +444,7 @@ describe('DeepSeek Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"tool_calls"');
@@ -457,7 +457,7 @@ describe('DeepSeek Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
       expect(result).toBe('data: [DONE]\n\n');
     });
@@ -495,7 +495,7 @@ describe('DeepSeek Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -508,7 +508,7 @@ describe('DeepSeek Provider Tests', () => {
         {} as unknown as TestContext,
       );
       const endpoint = deepSeekAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
         },
       } as unknown as TestContext);

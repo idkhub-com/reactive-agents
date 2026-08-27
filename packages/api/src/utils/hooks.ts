@@ -1,9 +1,9 @@
 import type { AppContext } from '@api/types/hono';
 import type {
-  ReactiveAgentsRequestBody,
-  ReactiveAgentsRequestData,
+  SuperAgentsRequestBody,
+  SuperAgentsRequestData,
 } from '@shared/types/api/request/body';
-import type { ReactiveAgentsResponseBody } from '@shared/types/api/response/body';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response/body';
 import type { HookLog } from '@shared/types/data';
 
 import { HookType } from '@shared/types/middleware/hooks';
@@ -11,7 +11,7 @@ import { HookType } from '@shared/types/middleware/hooks';
 function createHookResponse(
   baseResponse: Response,
   baseResponseBody:
-    | ReactiveAgentsResponseBody
+    | SuperAgentsResponseBody
     | ReadableStream
     | FormData
     | ArrayBuffer
@@ -44,16 +44,16 @@ function createHookResponse(
 
 function handleFailedOutputHook(
   response: Response,
-  raResponseBody:
-    | ReactiveAgentsResponseBody
+  saResponseBody:
+    | SuperAgentsResponseBody
     | ReadableStream
     | FormData
     | ArrayBuffer,
   hookLogs: HookLog[],
   failedHook?: HookLog,
 ): Response {
-  if (!raResponseBody) {
-    return new Response(raResponseBody, {
+  if (!saResponseBody) {
+    return new Response(saResponseBody, {
       ...response,
       status: 246,
       statusText: 'Hooks failed',
@@ -69,9 +69,9 @@ function handleFailedOutputHook(
 
 export async function outputHookHandler(
   c: AppContext,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
   response: Response,
-  raResponseBody: ReactiveAgentsResponseBody,
+  saResponseBody: SuperAgentsResponseBody,
   retryAttemptsMade: number,
 ): Promise<Response> {
   try {
@@ -94,22 +94,22 @@ export async function outputHookHandler(
       HookType.OUTPUT_HOOK,
       response.status,
       false,
-      raRequestData,
-      raResponseBody,
+      saRequestData,
+      saResponseBody,
     );
 
     for (const hookLog of hookLogs) {
       if (hookLog.result.deny_request) {
         return handleFailedOutputHook(
           response,
-          raResponseBody,
+          saResponseBody,
           hookLogs,
           hookLog,
         );
       }
     }
 
-    return createHookResponse(response, raResponseBody, hookLogs);
+    return createHookResponse(response, saResponseBody, hookLogs);
   } catch (err) {
     console.error(err);
     return response;
@@ -128,10 +128,10 @@ function handleFailedInputHook(
 
 export async function inputHookHandler(
   c: AppContext,
-  raRequestData: ReactiveAgentsRequestData,
+  saRequestData: SuperAgentsRequestData,
 ): Promise<{
   errorResponse?: Response;
-  transformedReactiveAgentsBody?: ReactiveAgentsRequestBody;
+  transformedSuperAgentsBody?: SuperAgentsRequestBody;
 }> {
   try {
     const executeHooks = c.get('executeHooks');
@@ -141,11 +141,11 @@ export async function inputHookHandler(
       HookType.INPUT_HOOK,
       null,
       false,
-      raRequestData,
+      saRequestData,
     );
 
-    let latestTransformedReactiveAgentsBody:
-      | ReactiveAgentsRequestBody
+    let latestTransformedSuperAgentsBody:
+      | SuperAgentsRequestBody
       | ReadableStream
       | ArrayBuffer
       | FormData
@@ -155,17 +155,16 @@ export async function inputHookHandler(
       if (hookLog.result.deny_request) {
         return {
           errorResponse: handleFailedInputHook(hookLogs, hookLog),
-          transformedReactiveAgentsBody: raRequestData.requestBody,
+          transformedSuperAgentsBody: saRequestData.requestBody,
         };
       }
       if (hookLog.result.request_body_override) {
-        latestTransformedReactiveAgentsBody =
-          hookLog.result.request_body_override;
+        latestTransformedSuperAgentsBody = hookLog.result.request_body_override;
       }
     }
-    if (latestTransformedReactiveAgentsBody) {
+    if (latestTransformedSuperAgentsBody) {
       return {
-        transformedReactiveAgentsBody: latestTransformedReactiveAgentsBody,
+        transformedSuperAgentsBody: latestTransformedSuperAgentsBody,
       };
     }
   } catch (err) {

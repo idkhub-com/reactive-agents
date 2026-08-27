@@ -9,7 +9,7 @@ const mockGetSkills = vi.fn();
 const mockGetSkillModels = vi.fn();
 const mockGetSkillEvaluations = vi.fn();
 
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: (...args: unknown[]) => mockGetSkills(...args),
   getSkillModels: (...args: unknown[]) => mockGetSkillModels(...args),
   getSkillEvaluations: (...args: unknown[]) => mockGetSkillEvaluations(...args),

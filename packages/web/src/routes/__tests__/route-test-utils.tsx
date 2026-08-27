@@ -75,7 +75,7 @@ export function renderRoute(path: string) {
  * Configure a global `fetch` mock that responds to `/auth/status` requests.
  *
  * Both `__root.tsx` (beforeLoad) and `login.tsx` (beforeLoad) call
- * `fetch('/v1/reactive-agents/auth/status')` to decide whether to render
+ * `fetch('/v1/super-agents/auth/status')` to decide whether to render
  * the page or redirect.
  *
  * Returns the mock so callers can add further assertions.

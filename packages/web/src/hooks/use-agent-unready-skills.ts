@@ -5,7 +5,7 @@ import {
   getSkillEvaluations,
   getSkillModels,
   getSkills,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 
 export interface UseAgentUnreadySkillsResult {
   hasUnreadySkills: boolean;

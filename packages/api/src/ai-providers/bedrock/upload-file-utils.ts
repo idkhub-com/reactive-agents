@@ -140,12 +140,12 @@ const BedrockAnthropicChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'messages',
       required: true,
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown>[] => {
         const messages: AnthropicMessage[] = [];
         // Transform the chat messages into a simple prompt
-        if (raRequestBody.messages) {
-          raRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
+        if (saRequestBody.messages) {
+          saRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
             if (msg.role === ChatCompletionMessageRole.SYSTEM) return;
 
             if (msg.role === ChatCompletionMessageRole.ASSISTANT) {
@@ -239,11 +239,11 @@ const BedrockAnthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'tools',
     required: false,
     transform: (
-      raRequestBody: ChatCompletionRequestBody,
+      saRequestBody: ChatCompletionRequestBody,
     ): Record<string, unknown> => {
       const tools: AnthropicTool[] = [];
-      if (raRequestBody.tools) {
-        raRequestBody.tools.forEach((tool) => {
+      if (saRequestBody.tools) {
+        saRequestBody.tools.forEach((tool) => {
           if (tool.function) {
             tools.push({
               name: tool.function.name,

@@ -7,20 +7,20 @@ import type { AppContext } from '@api/types/hono';
 import { extractMessagesFromRequestData } from '@api/utils/embeddings';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@api/utils/messages';
-import { extractOutputFromResponseBody } from '@api/utils/reactive-agents/responses';
+import { extractOutputFromResponseBody } from '@api/utils/super-agents/responses';
 import type {
   ChatCompletionRequestData,
   ResponsesRequestData,
   StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
-import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import { SuperAgentsResponseBody } from '@shared/types/api/response';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
-import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
+import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 
 // Use a template builder to construct prompts
 function buildPromptForToolArgs(
@@ -57,18 +57,18 @@ export async function evaluateLog(
     evaluation,
     storageConnector,
   );
-  const raRequestData = produceReactiveAgentsRequestData(
+  const saRequestData = produceSuperAgentsRequestData(
     log.ai_provider_request_log.method,
     log.ai_provider_request_log.request_url,
     {},
     log.ai_provider_request_log.request_body,
   );
-  const responseBody = ReactiveAgentsResponseBody.parse(
+  const responseBody = SuperAgentsResponseBody.parse(
     log.ai_provider_request_log.response_body,
   );
 
   const messages = extractMessagesFromRequestData(
-    raRequestData as
+    saRequestData as
       | ChatCompletionRequestData
       | StreamChatCompletionRequestData
       | ResponsesRequestData,

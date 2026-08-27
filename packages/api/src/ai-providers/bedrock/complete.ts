@@ -53,11 +53,11 @@ export const bedrockAnthropicCompleteConfig: AIProviderFunctionConfig = {
   },
   stop: {
     param: 'stop_sequences',
-    transform: (raRequestBody: CompletionRequestBody) => {
-      if (raRequestBody.stop === null) {
+    transform: (saRequestBody: CompletionRequestBody) => {
+      if (saRequestBody.stop === null) {
         return [];
       }
-      return raRequestBody.stop;
+      return saRequestBody.stop;
     },
   },
   user: {
@@ -203,18 +203,18 @@ export const bedrockTitanCompleteConfig: AIProviderFunctionConfig = {
   },
   temperature: {
     param: 'textGenerationConfig',
-    transform: (raRequestBody: CompletionRequestBody) =>
-      transformTitanGenerationConfig(raRequestBody),
+    transform: (saRequestBody: CompletionRequestBody) =>
+      transformTitanGenerationConfig(saRequestBody),
   },
   max_tokens: {
     param: 'textGenerationConfig',
-    transform: (raRequestBody: CompletionRequestBody) =>
-      transformTitanGenerationConfig(raRequestBody),
+    transform: (saRequestBody: CompletionRequestBody) =>
+      transformTitanGenerationConfig(saRequestBody),
   },
   top_p: {
     param: 'textGenerationConfig',
-    transform: (raRequestBody: CompletionRequestBody) =>
-      transformTitanGenerationConfig(raRequestBody),
+    transform: (saRequestBody: CompletionRequestBody) =>
+      transformTitanGenerationConfig(saRequestBody),
   },
 };
 
@@ -273,7 +273,7 @@ export const bedrockLlamaCompleteResponseTransform: ResponseTransformFunction =
     responseStatus,
     _responseHeaders,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResponse = bedrockErrorResponseTransform(response);
@@ -281,7 +281,7 @@ export const bedrockLlamaCompleteResponseTransform: ResponseTransformFunction =
     }
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     if ('generation' in response) {
       const bedrockResponse =
@@ -324,14 +324,14 @@ export const bedrockLlamaCompleteStreamChunkResponseTransform: ResponseChunkStre
     fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     let chunk = responseChunk.trim();
     chunk = chunk.trim();
     const parsedChunk: BedrockLlamaStreamChunk = JSON.parse(chunk);
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     const model = completionRequestBody.model ?? '';
     if (parsedChunk.stop_reason) {
@@ -386,7 +386,7 @@ export const bedrockTitanCompleteResponseTransform: ResponseTransformFunction =
     responseStatus,
     _responseHeaders,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResponse = bedrockErrorResponseTransform(response);
@@ -394,7 +394,7 @@ export const bedrockTitanCompleteResponseTransform: ResponseTransformFunction =
     }
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     if ('results' in response) {
       const bedrockResponse =
@@ -434,14 +434,14 @@ export const bedrockTitanCompleteStreamChunkResponseTransform: ResponseChunkStre
     fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     let chunk = responseChunk.trim();
     chunk = chunk.trim();
     const parsedChunk: BedrockTitanStreamChunk = JSON.parse(chunk);
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     return [
       `data: ${JSON.stringify({
@@ -490,7 +490,7 @@ export const bedrockAI21CompleteResponseTransform: ResponseTransformFunction = (
   responseStatus,
   responseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (responseStatus !== 200) {
     const errorResposne = bedrockErrorResponseTransform(response);
@@ -498,7 +498,7 @@ export const bedrockAI21CompleteResponseTransform: ResponseTransformFunction = (
   }
 
   const completionRequestBody =
-    raRequestData.requestBody as CompletionRequestBody;
+    saRequestData.requestBody as CompletionRequestBody;
 
   if ('completions' in response) {
     const bedrockResponse = response as unknown as BedrockAI21CompleteResponse;
@@ -539,7 +539,7 @@ export const bedrockAnthropicCompleteResponseTransform: ResponseTransformFunctio
     responseStatus,
     responseHeaders,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResposne = bedrockErrorResponseTransform(response);
@@ -547,7 +547,7 @@ export const bedrockAnthropicCompleteResponseTransform: ResponseTransformFunctio
     }
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     if ('completion' in response) {
       const bedrockResponse =
@@ -591,11 +591,11 @@ export const bedrockAnthropicCompleteStreamChunkResponseTransform: ResponseChunk
     fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     const chunk = responseChunk.trim();
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
     const model = completionRequestBody.model ?? '';
 
     const parsedChunk: BedrockAnthropicStreamChunk = JSON.parse(chunk);
@@ -666,7 +666,7 @@ export const bedrockCohereCompleteResponseTransform: ResponseTransformFunction =
     responseStatus,
     responseHeaders,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResposne = bedrockErrorResponseTransform(response);
@@ -674,7 +674,7 @@ export const bedrockCohereCompleteResponseTransform: ResponseTransformFunction =
     }
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     if ('generations' in response) {
       const bedrockResponse =
@@ -715,7 +715,7 @@ export const bedrockCohereCompleteStreamChunkResponseTransform: ResponseChunkStr
     fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     let chunk = responseChunk.trim();
     chunk = chunk.replace(/^data: /, '');
@@ -723,7 +723,7 @@ export const bedrockCohereCompleteStreamChunkResponseTransform: ResponseChunkStr
     const parsedChunk: BedrockCohereStreamChunk = JSON.parse(chunk);
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     // discard the last cohere chunk as it sends the whole response combined.
     if (parsedChunk.is_finished) {
@@ -779,14 +779,14 @@ export const bedrockMistralCompleteStreamChunkResponseTransform: ResponseChunkSt
     fallbackId,
     _streamState,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     let chunk = responseChunk.trim();
     chunk = chunk.trim();
     const parsedChunk: BedrockMistralStreamChunk = JSON.parse(chunk);
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     if (parsedChunk.outputs[0].stop_reason) {
       return [
@@ -841,7 +841,7 @@ export const bedrockMistralCompleteResponseTransform: ResponseTransformFunction 
     responseStatus,
     responseHeaders,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     if (responseStatus !== 200) {
       const errorResponse = bedrockErrorResponseTransform(response);
@@ -849,7 +849,7 @@ export const bedrockMistralCompleteResponseTransform: ResponseTransformFunction 
     }
 
     const completionRequestBody =
-      raRequestData.requestBody as CompletionRequestBody;
+      saRequestData.requestBody as CompletionRequestBody;
 
     if ('outputs' in response) {
       const bedrockResponse =

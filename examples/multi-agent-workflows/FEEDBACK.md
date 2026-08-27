@@ -1,4 +1,4 @@
-# Reactive Agents Feedback
+# Super Agents Feedback
 
 ## Strengths
 - Clean 3-layer architecture (client/server/shared)
@@ -6,7 +6,7 @@
 - TypeScript throughout with good test coverage
 
 ## Quick Wins Needed
-1. **Document ra-config format** - Most common blocker
+1. **Document sa-config format** - Most common blocker
 2. **Add provider setup examples** - Missing from docs
 3. **Simplify basic usage** - Current config is verbose for simple cases
 
