@@ -34,6 +34,8 @@ export interface AppEnv {
     API_URL?: string;
     AUTH_JWT_SECRET?: string;
     BEARER_TOKEN?: string;
+    LIBSQL_AUTH_TOKEN?: string;
+    LIBSQL_URL?: string;
     NODE_ENV?: string;
     POSTGREST_SERVICE_ROLE_KEY?: string;
     POSTGREST_URL?: string;

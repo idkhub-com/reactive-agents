@@ -37,6 +37,28 @@ export const getPostgrestUrl = (c: AppContext) => {
 };
 
 /**
+ * libSQL database URL.
+ *
+ * `file:` points at an embedded SQLite database, which is what the
+ * single-container deployment uses; `libsql://` or `https://` points at a
+ * remote database (Turso), which is what a Workers deployment or any
+ * multi-instance deployment needs.
+ */
+export const getLibsqlUrl = (c: AppContext): string | undefined =>
+  c.env.LIBSQL_URL;
+
+/** Auth token for a remote libSQL database. Unused by `file:` databases. */
+export const getLibsqlAuthToken = (c: AppContext): string | undefined =>
+  c.env.LIBSQL_AUTH_TOKEN;
+
+/**
+ * How long a cached response stays valid, in seconds.
+ *
+ * `CacheStorageConnector.setCache` takes no TTL, so the backend decides.
+ */
+export const CACHE_TTL_SECONDS = 60 * 60; // 1 hour
+
+/**
  * Supabase Secret key
  */
 export const getSupabaseSecretKey = (c: AppContext): string | undefined => {
