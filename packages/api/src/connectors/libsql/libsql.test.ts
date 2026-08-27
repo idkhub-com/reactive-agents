@@ -1,6 +1,7 @@
+import { CACHE_TTL_SECONDS } from '@api/constants';
 import type { AppContext } from '@api/types/hono';
 import type { Client } from '@libsql/client';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { libsqlCacheStorageConnector } from './cache';
 import {
   createLibsqlClient,
@@ -448,6 +449,10 @@ describe('evaluation_runs_with_scores', () => {
 });
 
 describe('libsql cache connector', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('round-trips a value', async () => {
     const { c } = await freshDatabase();
 
@@ -478,6 +483,34 @@ describe('libsql cache connector', () => {
     await libsqlCacheStorageConnector.deleteCache(c, 'k');
 
     expect(await libsqlCacheStorageConnector.getCache(c, 'k')).toBeNull();
+  });
+
+  it('sets the expiry one full TTL in the future', async () => {
+    /**
+     * Pins the TTL to the shared constant rather than merely checking that a
+     * fresh entry reads back. Both connectors have to agree on how long a
+     * cached response stays live -- the Supabase side once wrote `now`, which
+     * expired every entry on write and turned its cache into a permanent miss
+     * without failing anything.
+     *
+     * Only `Date` is faked; the database underneath is a real file and faking
+     * timers wholesale would stall its I/O.
+     */
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const t0 = new Date('2026-03-01T12:00:00.000Z').getTime();
+    vi.setSystemTime(t0);
+
+    const { client, c } = await freshDatabase();
+    await libsqlCacheStorageConnector.setCache(c, 'k', 'v');
+
+    const stored = await client.execute({
+      sql: 'SELECT expires_at FROM cache WHERE key = ?',
+      args: ['k'],
+    });
+
+    expect(new Date(String(stored.rows[0].expires_at)).getTime()).toBe(
+      t0 + CACHE_TTL_SECONDS * 1000,
+    );
   });
 
   it('does not return an expired entry', async () => {

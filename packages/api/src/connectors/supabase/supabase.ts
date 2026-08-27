@@ -1,3 +1,4 @@
+import { CACHE_TTL_SECONDS } from '@api/constants';
 import type {
   CacheStorageConnector,
   LogsStorageConnector,
@@ -1222,7 +1223,14 @@ export const supabaseCacheStorageConnector: CacheStorageConnector = {
     const cachedValue: CachedValue = {
       key,
       value,
-      expires_at: new Date().toISOString(),
+      /**
+       * This used to be `new Date()`, which is the same instant `getCache`
+       * compares against with `expires_at >= now` -- so every entry was
+       * already expired when it was written and the cache never returned a
+       * hit. `CacheStorageConnector.setCache` takes no TTL, so the backend
+       * picks one; this matches the libSQL connector.
+       */
+      expires_at: new Date(Date.now() + CACHE_TTL_SECONDS * 1000).toISOString(),
     };
     // We use upsert to replace the existing value if it exists
     await insertIntoSupabase(c, 'cache', cachedValue, null, true);

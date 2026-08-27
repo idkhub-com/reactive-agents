@@ -7,13 +7,9 @@ import { nowIso } from './rows';
 /**
  * Cache backed by libSQL.
  *
- * Note a deliberate difference from the Supabase connector: that one writes
- * `expires_at: new Date().toISOString()` on every `setCache`, so every entry is
- * already expired by the time `getCache` filters on `expires_at >= now` and the
- * cache never returns a hit. `CacheStorageConnector.setCache` has no TTL
- * parameter, so the backend has to pick one; this uses `CACHE_TTL_SECONDS`.
- * Fixing the Supabase side is left alone here on purpose — it changes cache
- * behaviour for existing deployments and belongs in its own change.
+ * `CacheStorageConnector.setCache` takes no TTL parameter, so each backend has
+ * to pick one. Both use `CACHE_TTL_SECONDS`, which is what keeps a cached
+ * response live for the same length of time whichever storage is configured.
  */
 export const libsqlCacheStorageConnector: CacheStorageConnector = {
   getCache: async (c: AppContext, key: string): Promise<string | null> => {
