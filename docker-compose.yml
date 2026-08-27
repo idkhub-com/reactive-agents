@@ -64,14 +64,14 @@ services:
     networks:
       - sa-network
 
-  # API Server (Hono)
-  api:
-    image: ghcr.io/idkhub-com/super-agents-api:${SA_VERSION:-latest}
+  # API + dashboard (single Hono process, no reverse proxy container)
+  super-agents:
+    image: ghcr.io/idkhub-com/super-agents:${SA_VERSION:-latest}
     pull_policy: always
-    container_name: super-agents-api
+    container_name: super-agents
     restart: unless-stopped
     ports:
-      - "${DOCKER_HOST_IP:-127.0.0.1}:8787:8787"
+      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
     environment:
       POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:3000}
       POSTGREST_SERVICE_ROLE_KEY: ${POSTGREST_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
@@ -79,29 +79,18 @@ services:
       BEARER_TOKEN: ${BEARER_TOKEN}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-you-should-change-this-in-production}
       # Only needed when the dashboard is hosted on a different origin than the
-      # API. The bundled web container proxies /v1/* to the API, so same-origin
-      # deployments can leave this unset. Accepts a comma-separated list.
+      # API. This container serves both from the same origin, so leave it unset
+      # unless you host the dashboard elsewhere. Accepts a comma-separated list.
       WEB_APP_URL: ${WEB_APP_URL:-}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
+      # Set to "false" to run the gateway without serving the dashboard.
+      SERVE_DASHBOARD: ${SERVE_DASHBOARD:-true}
       NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
       postgrest:
         condition: service_started
-    networks:
-      - sa-network
-
-  # Web App (Vite SPA with nginx)
-  web:
-    image: ghcr.io/idkhub-com/super-agents-web:${SA_VERSION:-latest}
-    pull_policy: always
-    container_name: super-agents-web
-    restart: unless-stopped
-    ports:
-      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
-    depends_on:
-      - api
     networks:
       - sa-network
 

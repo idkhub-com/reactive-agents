@@ -7,10 +7,14 @@ export const AUTH_COOKIE_NAME = 'access_token';
 /**
  * Whether the request reached us over HTTPS.
  *
- * In production the API usually sits behind a TLS-terminating proxy (nginx in
- * the Docker deployment), so `c.req.url` reports `http:` even though the
+ * In production the server usually sits behind a TLS-terminating reverse proxy
+ * that the operator supplies, so `c.req.url` reports `http:` even though the
  * browser is on HTTPS. Trust `X-Forwarded-Proto` when the proxy sets it, and
  * fall back to the request's own protocol.
+ *
+ * This matters more now than it did when the image bundled nginx: that proxy
+ * is no longer ours, so the header is the only signal that the session cookie
+ * needs `secure`.
  */
 const isSecureRequest = (c: AppContext): boolean => {
   const forwardedProto = c.req.header('X-Forwarded-Proto');
