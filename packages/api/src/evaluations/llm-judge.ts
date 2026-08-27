@@ -116,6 +116,8 @@ export interface LLMJudgeModelConfig {
   model: string;
   provider: AIProvider;
   apiKey: string;
+  /** The provider's configured base URL, where it has one. */
+  customHost?: string;
 }
 
 export function createLLMJudge(
@@ -134,6 +136,7 @@ export function createLLMJudge(
   // Provider and API key from model config or defaults
   const provider = modelConfig?.provider || AIProviderEnum.OPENAI;
   const apiKey = modelConfig?.apiKey || '';
+  const customHost = modelConfig?.customHost;
 
   // Create OpenAI client once (or use injected client for testing)
   const client =
@@ -215,6 +218,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
             mode: CacheMode.SIMPLE,
           },
           api_key: apiKey,
+          ...(customHost ? { custom_host: customHost } : {}),
         },
       ],
       agent_name: 'super-agents',

@@ -12,6 +12,16 @@ export interface ResolvedModelConfig {
   model: string;
   provider: AIProvider;
   apiKey: string;
+  /**
+   * The provider's configured base URL, where it has one.
+   *
+   * Internal skills call back through the gateway with a target naming only a
+   * provider and a model, so without this a self-hosted provider is sent to its
+   * vendor default -- Ollama to `http://localhost:11434` -- no matter what the
+   * user configured. The failure is quiet: the call cannot connect, the error
+   * is logged, and optimization simply stops happening.
+   */
+  customHost?: string;
 }
 
 /**
@@ -69,6 +79,7 @@ async function resolveModelById(
     model: model.model_name,
     provider: providerConfig.ai_provider as AIProvider,
     apiKey: providerConfig.api_key,
+    customHost: providerConfig.custom_fields?.custom_host as string | undefined,
   };
 }
 

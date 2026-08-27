@@ -378,6 +378,24 @@ Set `SERVE_DASHBOARD=false` to run the all-in-one image as a gateway only.
   - Agent validation: `packages/shared/src/utils/agent-validation.ts`
   - Skill validation: `packages/shared/src/utils/skill-validation.ts`
 
+## Internal Skill Calls
+
+The internal skills in `SA_SKILLS` are not a separate code path: each one is a
+normal gateway request that the server sends to its own `/v1`, carrying an
+`sa-config` header that names `super-agents` as the agent and the internal skill
+by name. Two consequences worth remembering:
+
+- **`API_URL` must point at this process.** See the environment notes above.
+- **The target has to carry the provider's `custom_host`.** Internal skills
+  resolve a model through system settings, and `resolveSystemSettingsModel`
+  returns the provider's configured host alongside the model and key. Without
+  it a self-hosted provider is sent to its vendor default — Ollama to
+  `http://localhost:11434` — regardless of what the user configured.
+
+Both failures are quiet: the call cannot connect, the caller logs and continues,
+and optimization simply never happens. `e2e/contract/optimizer.spec.ts` covers
+the whole path against the stub provider.
+
 ## Skill Optimization System
 
 ### System Prompt Evolution
@@ -426,7 +444,15 @@ The system uses special auto-generated skills in the `super-agents` agent (defin
 
 - **Secrets**: Never commit secrets; use `.env` for local development
 - **Environment variables**:
-  - `API_URL` - API server URL (server-side)
+  - `API_URL` - the URL the API uses to call *itself*. The internal skills
+    (judging, embedding, prompt generation) are ordinary gateway requests sent
+    back to this server's own `/v1`, so it has to name the port the process is
+    listening on. It defaults to `http://localhost:$PORT`, which is correct for
+    every packaged deployment; set it explicitly only when the API is reachable
+    at some other address (behind a proxy, or on Workers, where `localhost`
+    means nothing). Getting it wrong is silent — each internal call fails to
+    connect, every caller swallows the error, and optimization stops happening
+    while ordinary requests carry on being served
   - `BEARER_TOKEN` - API authentication token
   - `ACCESS_PASSWORD` - Dashboard password (optional)
   - `AUTH_JWT_SECRET` - JWT signing secret for the dashboard session cookie (required in production)

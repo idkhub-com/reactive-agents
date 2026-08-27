@@ -36,6 +36,8 @@ export interface AppEnv {
     BEARER_TOKEN?: string;
     LIBSQL_AUTH_TOKEN?: string;
     LIBSQL_URL?: string;
+    /** Set by the Node entrypoint; absent on Workers. */
+    PORT?: string;
     NODE_ENV?: string;
     POSTGREST_SERVICE_ROLE_KEY?: string;
     POSTGREST_URL?: string;

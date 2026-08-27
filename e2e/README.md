@@ -121,6 +121,14 @@ POST /__control/fail                  {model, times, status}
 POST /__control/reset                 {model}
 ```
 
+The stub also answers **structured output**: when a request carries a
+`response_format` JSON schema it synthesises the smallest conforming value
+rather than echoing text. That is what makes the internal skills testable —
+prompt seeding, evaluation generation and judging all parse their replies
+against the schema they sent, so an echo would fail. String fields come back as
+`stub: <property>`, which is how `optimizer.spec.ts` can tell a generated prompt
+apart from anything the system produced itself.
+
 Cache behaviour is asserted by **counting provider calls**, not by reading a
 response header — no header distinguishes a hit from a miss, and the call count
 is the behaviour that actually matters. That test is the end-to-end half of the

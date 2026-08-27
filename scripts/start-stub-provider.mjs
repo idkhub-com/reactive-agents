@@ -73,6 +73,81 @@ const replyText = (body) => {
   return `echo: ${content}`;
 };
 
+/**
+ * Build the smallest value satisfying a JSON Schema.
+ *
+ * The internal skills -- prompt seeding, reflection, evaluation generation,
+ * judging -- all ask for structured output and parse the reply against the
+ * schema they sent. Echoing text back would fail that parse, so the stub reads
+ * the schema off the request and answers in its shape instead. That keeps the
+ * stub generic: it needs no knowledge of any particular internal skill.
+ *
+ * Strings carry the property name so a test can tell a stubbed value apart from
+ * anything the system might have produced itself.
+ */
+const instanceOf = (schema, root, name = 'value') => {
+  if (!schema || typeof schema !== 'object') {
+    return null;
+  }
+
+  if (typeof schema.$ref === 'string') {
+    const key = schema.$ref.replace('#/$defs/', '');
+    return instanceOf(root?.$defs?.[key], root, name);
+  }
+
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    return schema.enum[0];
+  }
+
+  // A union: the first branch is as good as any for a stub.
+  for (const branches of [schema.anyOf, schema.oneOf, schema.allOf]) {
+    if (Array.isArray(branches) && branches.length > 0) {
+      return instanceOf(branches[0], root, name);
+    }
+  }
+
+  const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
+
+  switch (type) {
+    case 'object': {
+      const properties = schema.properties ?? {};
+      const required = Array.isArray(schema.required)
+        ? schema.required
+        : Object.keys(properties);
+      const built = {};
+      for (const key of required) {
+        built[key] = instanceOf(properties[key], root, key);
+      }
+      return built;
+    }
+    case 'array': {
+      const count = Math.max(schema.minItems ?? 1, 1);
+      return Array.from({ length: count }, () =>
+        instanceOf(schema.items, root, name),
+      );
+    }
+    case 'number':
+    case 'integer':
+      // Mid-range where one is given, so a score lands inside its bounds.
+      return typeof schema.minimum === 'number' &&
+        typeof schema.maximum === 'number'
+        ? (schema.minimum + schema.maximum) / 2
+        : 1;
+    case 'boolean':
+      return true;
+    case 'null':
+      return null;
+    default:
+      return `stub: ${name}`;
+  }
+};
+
+/** The schema an OpenAI-style structured-output request is asking for. */
+const requestedSchema = (body) =>
+  body?.response_format?.type === 'json_schema'
+    ? (body.response_format.json_schema?.schema ?? null)
+    : null;
+
 const completionPayload = (body, text) => ({
   id: 'chatcmpl-stub',
   object: 'chat.completion',
@@ -186,7 +261,10 @@ const server = createServer(async (request, response) => {
   }
 
   if (url.pathname === '/v1/chat/completions') {
-    const text = replyText(body);
+    const schema = requestedSchema(body);
+    const text = schema
+      ? JSON.stringify(instanceOf(schema, schema))
+      : replyText(body);
     if (body?.stream) {
       streamCompletion(response, body, text);
     } else {
