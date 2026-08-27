@@ -132,6 +132,56 @@ jobs:
       - name: Test
         run: pnpm turbo test
 
+  worker:
+    name: Worker Runtime
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+
+    env:
+      WRANGLER_SEND_METRICS: "false"
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 10.10.0
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # `pnpm dev:api` runs on workerd, so the Workers build is exercised
+      # constantly in development but was never built or booted outside a
+      # developer's machine.
+      - name: Check Cloudflare Workers build
+        run: ./scripts/check-worker-runtime.sh
+
+  container:
+    name: Container Image
+    timeout-minutes: 25
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      # The API and dashboard share one process; that static-serving path runs
+      # in neither `pnpm dev` nor the unit tests, so the image is the only
+      # place it executes.
+      - name: Smoke test the all-in-one image
+        run: ./scripts/check-container-image.sh
+
   migrations:
     name: Test Migrations
     timeout-minutes: 10
