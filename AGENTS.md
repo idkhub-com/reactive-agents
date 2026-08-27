@@ -159,12 +159,44 @@ app.post();
 app.fetch();
 ```
 
-## Database Integration (Supabase)
+## Database Integration
 
 Uses **connector pattern** for data access:
-- Abstract interfaces: `UserDataStorageConnector`, `LogsStorageConnector`
-- Concrete implementation: Supabase connector
+- Abstract interfaces in `packages/api/src/types/connector.ts`:
+  `UserDataStorageConnector`, `LogsStorageConnector`, `CacheStorageConnector`
 - All CRUD operations use Zod schema validation
+
+### Backends
+
+| Backend | Location | Status |
+| --- | --- | --- |
+| Supabase / PostgREST | `packages/api/src/connectors/supabase/` | complete; what the app uses |
+| libSQL | `packages/api/src/connectors/libsql/` | schema, client, migrations, cache |
+
+The libSQL backend is **not yet selectable** — `v1/index.ts` still wires the
+Supabase connectors unconditionally. Its remaining connectors land before the
+selection is added, so a half-implemented backend is never reachable.
+
+Its schema (`connectors/libsql/schema.ts`) is a translation of
+`supabase/migrations/`, not a replay: one consolidated migration describing the
+current shape. Notable differences, all deliberate:
+
+- **No stored procedures.** SQLite has none, so the five RPCs the API calls
+  become explicit transactions in the connector.
+- **Row-level security is dropped.** The Postgres policies grant unrestricted
+  access to the service role, which is the only role the API connects as.
+- **`PRAGMA foreign_keys = ON` per connection.** SQLite leaves foreign keys
+  unenforced by default, so without it no `ON DELETE CASCADE` would fire.
+- **Types are narrower.** `JSONB`, `TIMESTAMPTZ`, `BOOLEAN`, `TEXT[]` and
+  `FLOAT[]` all collapse onto TEXT/INTEGER/REAL; `connectors/libsql/rows.ts`
+  owns the conversions and the mapping table is documented in `schema.ts`.
+
+Database management:
+- Postgres migrations: `supabase/migrations/` (immutable once merged — CI
+  verifies existing files are unchanged; add a new file instead)
+- libSQL migrations: append to `libsqlMigrations` in `connectors/libsql/schema.ts`
+- Seed data: `supabase/seed.sql`
+- Start/stop: `supabase start|stop`
 
 Core data models:
 - `Agent` - AI agent configurations
@@ -331,6 +363,10 @@ The system uses special auto-generated skills in the `super-agents` agent (defin
   - `ACCESS_PASSWORD` - Dashboard password (optional)
   - `AUTH_JWT_SECRET` - JWT signing secret for the dashboard session cookie (required in production)
   - `AI_PROVIDER_API_KEY_ENCRYPTION_KEY` - Encryption key for stored AI provider API keys (required in production)
+  - `LIBSQL_URL` - libSQL database. `file:` for an embedded SQLite file,
+    `libsql://` or `https://` for a remote one. Only read by the libSQL
+    connector, which is not wired up yet.
+  - `LIBSQL_AUTH_TOKEN` - Auth token for a remote libSQL database. Not used by `file:` databases.
   - `WEB_APP_URL` - Comma-separated origins allowed to make credentialed cross-origin
     requests. Only needed when the dashboard is hosted separately from the API; the
     Docker and Vite setups both proxy `/v1/*` from the same origin.
