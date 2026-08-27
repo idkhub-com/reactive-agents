@@ -77,7 +77,7 @@ pnpm test:e2e:ui       # interactive runner (skips the build)
 pnpm test:e2e:report   # open the report from the last run
 
 # Coverage (unit tests only; the e2e suite runs a built bundle out-of-process)
-pnpm test:coverage     # writes coverage/index.html
+pnpm test:coverage     # writes coverage/index.html and coverage/lcov.info
 
 # Runtime checks (also run in CI; both are slow, so they are not part of `pnpm test`)
 pnpm verify:worker     # Bundle and boot the API on workerd
@@ -254,7 +254,20 @@ Database management:
 - **Location**: beside the code they cover, inside `packages/`
 - **Naming**: `*.test.ts` or `*.test.tsx`
 - **Run**: `pnpm test` (CI mode) or `pnpm test:watch` (dev)
-- **Coverage**: Reports generated in text/json/html
+- **Coverage**: see below
+
+**Coverage** — Vitest + v8, published to GitHub Pages
+- `pnpm test:coverage` writes `coverage/` (browsable `index.html`, `lcov.info`)
+- The `coverage-pages` CI job publishes the report on every push to `main`, and
+  writes `coverage/coverage.json` — a shields.io *endpoint* payload — beside it,
+  which is what the README badge reads. No Gist, no token, no third-party service
+- **The number is unit coverage only.** The e2e suite runs a built bundle in a
+  separate process, so v8 cannot instrument it; a well-covered end-to-end path
+  still reads as 0% here. Judge gateway and storage coverage from `e2e/`, not
+  from this figure
+- `coverage.exclude` in `vitest.config.ts` drops dependencies, examples, build
+  output and vendored `components/ui/**`. Without it the figure is inflated by
+  roughly thirty points, because `node_modules` counts as fully covered
 
 **End-to-end tests** — Playwright, in `e2e/` (see `e2e/README.md`)
 - **Run**: `pnpm test:e2e`; browsers install with `pnpm exec playwright install chromium`

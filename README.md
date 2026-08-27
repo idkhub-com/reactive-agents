@@ -2,6 +2,8 @@
 
 # Super Agents
 
+[![coverage](https://img.shields.io/endpoint?url=https://jorge-menjivar.github.io/super-agents/coverage.json)](https://jorge-menjivar.github.io/super-agents/)
+
 > Automatically optimize your AI agents based on performance with OpenAI API compatibility.
 
 ## What is Super Agents?

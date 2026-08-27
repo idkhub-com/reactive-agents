@@ -241,6 +241,97 @@ jobs:
         if: always()
         run: scripts/e2e-postgres.sh down
 
+  # Publishes the browsable HTML coverage report to GitHub Pages, and writes a
+  # shields.io "endpoint" JSON beside it so the README badge reads the current
+  # line-% straight from Pages -- no Gist, no PAT, no third-party service.
+  #
+  # One-time repo setup: Settings -> Pages -> Source = "GitHub Actions".
+  # Served at https://jorge-menjivar.github.io/super-agents/.
+  #
+  # This is unit-test coverage only. The end-to-end suite runs a built bundle in
+  # a separate process, so v8 cannot instrument it and it contributes nothing to
+  # this number -- see e2e/README.md for what it covers instead.
+  coverage-pages:
+    name: Coverage (Pages)
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    # Serialize deploys; never cancel an in-flight Pages deployment.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 10.10.0
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+
+      - name: Write the badge endpoint JSON
+        run: |
+          set -euo pipefail
+          pct=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+          if   awk "BEGIN{exit !($pct>=90)}"; then color=brightgreen
+          elif awk "BEGIN{exit !($pct>=75)}"; then color=green
+          elif awk "BEGIN{exit !($pct>=60)}"; then color=yellow
+          elif awk "BEGIN{exit !($pct>=40)}"; then color=orange
+          else color=red
+          fi
+          printf '{"schemaVersion":1,"label":"coverage","message":"%.1f%%","color":"%s"}\n' \
+            "$pct" "$color" > coverage/coverage.json
+          cat coverage/coverage.json
+
+      # The `lcov` reporter renders a second copy of the same HTML here. Keep
+      # `lcov.info` for anything external, drop the duplicate report.
+      - name: Trim the duplicate report
+        run: rm -rf coverage/lcov-report
+
+      - name: Upload the lcov report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          retention-days: 14
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: coverage
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
   migrations:
     name: Test Migrations
     timeout-minutes: 10

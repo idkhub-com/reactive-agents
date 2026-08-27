@@ -241,6 +241,55 @@ jobs:
         if: always()
         run: scripts/e2e-postgres.sh down
 
+  # Coverage on a pull request: the report is an artifact to download, not a
+  # Pages deploy. Only main publishes, so a PR cannot overwrite the badge with
+  # a number that was never merged.
+  coverage:
+    name: Coverage
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 10.10.0
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+
+      - name: Report the line coverage
+        run: |
+          set -euo pipefail
+          node -p "'Line coverage: ' + require('./coverage/coverage-summary.json').total.lines.pct + '%'" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage/index.html
+            coverage/lcov.info
+          retention-days: 14
+
   migrations:
     name: Test Migrations
     timeout-minutes: 10
