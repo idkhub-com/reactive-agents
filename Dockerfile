@@ -33,10 +33,21 @@ ENV NODE_ENV=production
 RUN pnpm --filter @super-agents/api build
 RUN pnpm --filter @super-agents/web build
 
+# Pin the runtime's `libsql` to whatever version pnpm resolved for the
+# workspace, so the image and the lockfile cannot drift.
+RUN node -e "const p=require('./packages/api/package.json'); require('fs').writeFileSync('runtime-package.json', JSON.stringify({ name: 'super-agents-runtime', private: true, dependencies: { libsql: p.dependencies.libsql } }, null, 2))"
+
 FROM node:22-alpine AS runner
 WORKDIR /app
 
-# The API is bundled by esbuild, so no node_modules are needed at runtime.
+# `libsql` loads a platform-specific native addon through a runtime require, so
+# esbuild leaves it external (see packages/api/build.js) and it is installed
+# here instead. Only the local-file libSQL backend loads it -- Supabase and
+# remote libSQL deployments never touch it.
+COPY --from=builder /app/runtime-package.json ./package.json
+RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+
+# Everything else is bundled by esbuild.
 COPY --from=builder /app/packages/api/dist ./dist
 # `DASHBOARD_ROOT` defaults to ./public, relative to WORKDIR.
 COPY --from=builder /app/packages/web/dist ./public

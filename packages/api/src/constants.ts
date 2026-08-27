@@ -45,11 +45,14 @@ export const getPostgrestUrl = (c: AppContext) => {
  * multi-instance deployment needs.
  */
 export const getLibsqlUrl = (c: AppContext): string | undefined =>
-  c.env.LIBSQL_URL;
+  // Optional access: these two are read on every request by the storage
+  // middleware, including from apps constructed without bindings, where
+  // `c.env` is undefined.
+  c.env?.LIBSQL_URL;
 
 /** Auth token for a remote libSQL database. Unused by `file:` databases. */
 export const getLibsqlAuthToken = (c: AppContext): string | undefined =>
-  c.env.LIBSQL_AUTH_TOKEN;
+  c.env?.LIBSQL_AUTH_TOKEN;
 
 /**
  * How long a cached response stays valid, in seconds.

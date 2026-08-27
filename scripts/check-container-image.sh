@@ -119,6 +119,30 @@ check "GET / (dashboard off)" "404" "$(status /)"
 check "GET /v1/super-agents/nope" "404" "$(status /v1/super-agents/nope)"
 echo
 
+# The libSQL backend is the reason the image carries node_modules at all:
+# `libsql` loads a native addon that esbuild cannot bundle. Exercising a real
+# write proves the addon resolved, the migrations ran, and the connector works
+# -- a bundling regression here shows up as a 500, not a build failure.
+echo "==> libSQL backend (embedded database)"
+start_container -e LIBSQL_URL=file:/app/data/super-agents.db --tmpfs /app/data
+
+agent_status="$(curl -s -o "$repo_root/.container-agent.json" -w '%{http_code}' -m 20 \
+  -X POST "$base/v1/super-agents/agents" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"smoke-agent","description":"Created by the container smoke test to exercise libSQL."}' \
+  || echo "000")"
+check "POST /v1/super-agents/agents" "201" "$agent_status"
+
+listed="$(curl -s -m 20 "$base/v1/super-agents/agents")"
+if printf '%s' "$listed" | grep -q 'smoke-agent'; then
+  printf '    ok   the agent reads back from libSQL\n'
+else
+  printf '    FAIL agent did not read back: %s\n' "$listed"
+  failures=$((failures + 1))
+fi
+rm -f "$repo_root/.container-agent.json"
+echo
+
 if [ "$failures" -gt 0 ]; then
   echo "Container image check FAILED ($failures problem(s))." >&2
   docker logs "$name" >&2 || true

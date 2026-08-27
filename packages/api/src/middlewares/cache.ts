@@ -160,10 +160,10 @@ const getHookResponseFromCache = async (
  */
 export const cacheMiddleware = (
   factory: Factory<AppEnv>,
-  connector: CacheStorageConnector,
+  resolve: (c: AppContext) => CacheStorageConnector,
 ): MiddlewareHandler =>
   factory.createMiddleware(async (c, next) => {
-    c.set('cache_storage_connector', connector);
+    c.set('cache_storage_connector', resolve(c));
     c.set('getAIProviderResponseFromCache', getAIProviderResponseFromCache);
     c.set('getHookResponseFromCache', getHookResponseFromCache);
 
