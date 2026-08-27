@@ -100,13 +100,15 @@ curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer super-agents"
 
 ### Request Flow
 ```
-Browser (port 3000) → Vite/nginx proxy → API (port 8787)
-                           ↓
-                    /v1/* requests proxied
+Development:  Browser (:3000) → Vite proxy → API (:8787)
+Production:   Browser (:3000) → Hono (:3000)
 ```
 
-In development, Vite proxies `/v1/*` requests to the API server.
-In Docker, nginx handles the proxying.
+In development, Vite proxies `/v1/*` requests to the API server on port 8787.
+
+In production there is no proxy: a single Hono process serves both. Because the
+API carries a `/v1` base path, `/v1/*` reaches the API routes and every other
+path falls through to the dashboard's static build. See `packages/api/src/server.ts`.
 
 ## API Structure (Hono-based)
 
@@ -229,14 +231,20 @@ docker compose up  # Start all services
 
 Services:
 - **postgres**: PostgreSQL database
+- **migrations**: one-shot migration runner
 - **postgrest**: PostgREST API for database access
-- **api**: Hono API server (port 8787 internal)
-- **web**: nginx serving Vite SPA (port 3000, proxies /v1/* to api)
+- **super-agents**: Hono API + dashboard in one process (port 3000)
 
-The web container uses nginx to:
-1. Serve static files from the Vite build
-2. Proxy `/v1/*` requests to the API container
-3. Handle SPA routing (fallback to index.html)
+The `super-agents` container serves both halves itself — no nginx:
+1. `/v1/*` routes to the API
+2. Static files from the Vite build are served from `./public`
+3. Unmatched paths fall back to `index.html` for SPA routing
+
+Two images are published:
+- `ghcr.io/idkhub-com/super-agents` — API + dashboard (used by compose)
+- `ghcr.io/idkhub-com/super-agents-api` — API only, for gateway-only deployments
+
+Set `SERVE_DASHBOARD=false` to run the all-in-one image as a gateway only.
 
 ## Agent Validation & Readiness
 
