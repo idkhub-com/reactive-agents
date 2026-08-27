@@ -1052,7 +1052,7 @@ describe('Improved Responses API', () => {
       authenticatedApp.use('*', commonVariablesMiddleware);
       authenticatedApp.use(
         '*',
-        userDataMiddleware(factory, mockUserDataStorageConnector),
+        userDataMiddleware(factory, () => mockUserDataStorageConnector),
       );
       authenticatedApp.use('*', authenticatedMiddleware(factory));
 

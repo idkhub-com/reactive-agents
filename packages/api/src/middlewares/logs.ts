@@ -612,10 +612,10 @@ async function processLogsAndOptimizeSkill(
 
 export const logsMiddleware = (
   factory: Factory<AppEnv>,
-  connector: LogsStorageConnector,
+  resolve: (c: AppContext) => LogsStorageConnector,
 ): MiddlewareHandler =>
   factory.createMiddleware(async (c, next) => {
-    c.set('logs_storage_connector', connector);
+    c.set('logs_storage_connector', resolve(c));
     c.set('addLogsClient', addLogsClient);
     c.set('removeLogsClient', removeLogsClient);
 

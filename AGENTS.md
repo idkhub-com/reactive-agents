@@ -171,11 +171,21 @@ Uses **connector pattern** for data access:
 | Backend | Location | Status |
 | --- | --- | --- |
 | Supabase / PostgREST | `packages/api/src/connectors/supabase/` | complete; what the app uses |
-| libSQL | `packages/api/src/connectors/libsql/` | complete; not yet selectable |
+| libSQL | `packages/api/src/connectors/libsql/` | complete |
 
-The libSQL backend implements all three interfaces but is **not yet
-selectable** — `v1/index.ts` still wires the Supabase connectors
-unconditionally. Wiring it up is the remaining step.
+**Selection** lives in `packages/api/src/connectors/index.ts`. Setting
+`LIBSQL_URL` chooses libSQL; leaving it unset keeps Supabase, which is what
+every existing deployment does. The URL scheme carries the rest of the
+decision — `file:` is an embedded database, `libsql://` or `https://` is a
+remote one.
+
+The choice is made **per request**, not at module load, because on Workers
+there is no environment until a request arrives. That is why the three storage
+middlewares take a resolver rather than a connector.
+
+libSQL migrations run on the first request that touches storage
+(`ensureStorageReady`); Postgres is migrated by the `migrations` compose
+service. Single-container deployment: see `docker-compose.libsql.yml`.
 
 Its schema (`connectors/libsql/schema.ts`) is a translation of
 `supabase/migrations/`, not a replay: one consolidated migration describing the
@@ -189,6 +199,10 @@ current shape. Notable differences, all deliberate:
   mapping it to `undefined`.
 - **Updates re-select instead of using `RETURNING`.** SQLite computes RETURNING
   before AFTER triggers run, so it would return a stale `updated_at`.
+- **`libsql` is external to the esbuild bundle.** It loads a platform-specific
+  native addon through a runtime require, so `packages/api/build.js` excludes it
+  and the Docker images install it in the runner stage. Bundling it produces an
+  image that fails at boot with `Cannot find module '@libsql/linux-x64-gnu'`.
 - **Row-level security is dropped.** The Postgres policies grant unrestricted
   access to the service role, which is the only role the API connects as.
 - **`PRAGMA foreign_keys = ON` per connection.** SQLite leaves foreign keys
@@ -369,9 +383,9 @@ The system uses special auto-generated skills in the `super-agents` agent (defin
   - `ACCESS_PASSWORD` - Dashboard password (optional)
   - `AUTH_JWT_SECRET` - JWT signing secret for the dashboard session cookie (required in production)
   - `AI_PROVIDER_API_KEY_ENCRYPTION_KEY` - Encryption key for stored AI provider API keys (required in production)
-  - `LIBSQL_URL` - libSQL database. `file:` for an embedded SQLite file,
-    `libsql://` or `https://` for a remote one. Only read by the libSQL
-    connector, which is not wired up yet.
+  - `LIBSQL_URL` - libSQL database, and the switch that selects the libSQL
+    backend. `file:` for an embedded SQLite file, `libsql://` or `https://`
+    for a remote one. Unset means Supabase.
   - Note: tests for the libSQL connector use a temp **file** database, not
     `:memory:` — `client.transaction()` checks out a separate connection, and
     for an in-memory database that is a separate, empty database.

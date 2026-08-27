@@ -1,4 +1,9 @@
 import { initializeModelCapabilities } from '@api/ai-providers/initialize-capabilities';
+import {
+  resolveCacheConnector,
+  resolveLogsConnector,
+  resolveUserDataConnector,
+} from '@api/connectors';
 // import { argumentCorrectnessEvaluationConnector } from '@api/connectors/evaluations/argument-correctness';
 import { conversationCompletenessEvaluationConnector } from '@api/connectors/evaluations/conversation-completeness';
 import { knowledgeRetentionEvaluationConnector } from '@api/connectors/evaluations/knowledge-retention';
@@ -7,11 +12,6 @@ import { latencyEvaluationConnector } from '@api/connectors/evaluations/latency/
 import { taskCompletionEvaluationConnector } from '@api/connectors/evaluations/task-completion';
 import { toolCorrectnessEvaluationConnector } from '@api/connectors/evaluations/tool-correctness';
 import { turnRelevancyEvaluationConnector } from '@api/connectors/evaluations/turn-relevancy';
-import {
-  supabaseCacheStorageConnector,
-  supabaseLogsStorageConnector,
-  supabaseUserDataStorageConnector,
-} from '@api/connectors/supabase';
 import { getAllowedOrigins } from '@api/constants';
 import { agentAndSkillMiddleware } from '@api/middlewares/agent-and-skill';
 import { authenticatedMiddleware } from '@api/middlewares/auth';
@@ -81,11 +81,11 @@ app.use('*', commonVariablesMiddleware);
 
 // Keep this middleware before agent and skill middleware
 // Use user data middleware for all routes
-app.use('*', userDataMiddleware(factory, supabaseUserDataStorageConnector));
+app.use('*', userDataMiddleware(factory, resolveUserDataConnector));
 
 // Use logs middleware for all routes
 // Runs skill optimizer after processing logs
-app.use('*', logsMiddleware(factory, supabaseLogsStorageConnector));
+app.use('*', logsMiddleware(factory, resolveLogsConnector));
 
 // Use hooks middleware for all routes
 app.use('*', hooksMiddleware(factory, []));
@@ -106,7 +106,7 @@ app.use(
 );
 
 // Use cache middleware for all routes
-app.use('*', cacheMiddleware(factory, supabaseCacheStorageConnector));
+app.use('*', cacheMiddleware(factory, resolveCacheConnector));
 
 // Use authenticated middleware for all routes
 app.use('*', authenticatedMiddleware(factory));

@@ -39,6 +39,9 @@ Super Agents is a self-optimizing AI agent platform that automatically improves 
    ```
    The web application will be available at `http://localhost:3000`.
 
+   For a single container with an embedded database and no Postgres to run
+   alongside it, use `docker compose -f docker-compose.libsql.yml up` instead.
+
 3. Configure your application from the UI. 
     
     1. In the "AI Providers & Models" section, add the models you want to use. You will be able to select these models within the app settings and within each of your agent's skills later on. You will need at least one LLM model and one embedding model from any provider to configure the application.

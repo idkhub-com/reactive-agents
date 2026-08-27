@@ -1,0 +1,42 @@
+# Single-container deployment backed by an embedded libSQL (SQLite) database.
+#
+# The default docker-compose.yml runs four services: postgres, a one-shot
+# migration runner, postgrest, and the app. Setting LIBSQL_URL to a file path
+# moves storage into the container's own volume, which leaves nothing else to
+# orchestrate.
+#
+#   docker compose -f docker-compose.libsql.yml up
+#
+# Or without compose at all:
+#
+#   docker run -d --name super-agents -p 3000:3000 \
+#     -v super-agents:/app/data \
+#     -e LIBSQL_URL=file:/app/data/super-agents.db \
+#     ghcr.io/idkhub-com/super-agents:latest
+#
+# Migrations run on the first request. To point at a hosted database instead,
+# set LIBSQL_URL to a libsql:// URL and supply LIBSQL_AUTH_TOKEN; the volume is
+# then unused.
+services:
+  super-agents:
+    image: ghcr.io/idkhub-com/super-agents:${SA_VERSION:-latest}
+    pull_policy: always
+    container_name: super-agents
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_HOST_IP:-127.0.0.1}:3000:3000"
+    environment:
+      LIBSQL_URL: ${LIBSQL_URL:-file:/app/data/super-agents.db}
+      LIBSQL_AUTH_TOKEN: ${LIBSQL_AUTH_TOKEN:-}
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD}
+      BEARER_TOKEN: ${BEARER_TOKEN}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-you-should-change-this-in-production}
+      AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
+      # Set to "false" to run the gateway without serving the dashboard.
+      SERVE_DASHBOARD: ${SERVE_DASHBOARD:-true}
+      NODE_ENV: production
+    volumes:
+      - super_agents_data:/app/data
+
+volumes:
+  super_agents_data:
