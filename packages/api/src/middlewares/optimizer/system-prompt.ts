@@ -84,7 +84,12 @@ function extractRequestConstraints(
  * Attempts to acquire a reflection lock for a cluster
  * Returns the lock timestamp if successful, null otherwise
  */
-async function acquireReflectionLock(
+/**
+ * Exported for tests. Reached only from inside a regeneration cycle that needs
+ * a database, a model and a live cluster before it gets here, so the locking
+ * behaviour itself is only reachable directly.
+ */
+export async function acquireReflectionLock(
   c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   _skill: Skill,
@@ -314,7 +319,12 @@ async function fetchReflectionExamples(
 /**
  * Performs reflection: updates arms with new prompt and resets stats
  */
-async function performReflection(
+/**
+ * Exported for tests. This is the conservative update the whole optimizer rests
+ * on -- the best arm is deliberately left alone -- and it is otherwise reachable
+ * only after a model call has produced a new prompt.
+ */
+export async function performReflection(
   c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   cluster: SkillOptimizationCluster,
