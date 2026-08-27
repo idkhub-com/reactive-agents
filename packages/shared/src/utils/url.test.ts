@@ -1,4 +1,9 @@
-import { removeEndingPath, removeTrailingSlash } from '@shared/utils/url';
+import {
+  parseAgentSkillPath,
+  removeEndingPath,
+  removeTrailingSlash,
+  stripAgentSkillPath,
+} from '@shared/utils/url';
 import { describe, expect, it } from 'vitest';
 
 describe('URL Utilities', () => {
@@ -236,6 +241,86 @@ describe('URL Utilities', () => {
         'https://resource.cognitiveservices.azure.com/models/';
       const result2 = removeEndingPath(removeTrailingSlash(cognitiveUrl));
       expect(result2).toBe('https://resource.cognitiveservices.azure.com');
+    });
+  });
+
+  describe('parseAgentSkillPath', () => {
+    it('should read the agent and skill names out of a scoped path', () => {
+      expect(
+        parseAgentSkillPath(
+          '/v1/agents/my-agent/skills/my-skill/chat/completions',
+        ),
+      ).toEqual({
+        agent_name: 'my-agent',
+        skill_name: 'my-skill',
+        pathname: '/v1/chat/completions',
+      });
+    });
+
+    it('should support every gateway endpoint', () => {
+      expect(
+        parseAgentSkillPath('/v1/agents/a/skills/s/embeddings')?.pathname,
+      ).toBe('/v1/embeddings');
+      expect(
+        parseAgentSkillPath('/v1/agents/a/skills/s/responses')?.pathname,
+      ).toBe('/v1/responses');
+      expect(
+        parseAgentSkillPath('/v1/agents/a/skills/s/completions')?.pathname,
+      ).toBe('/v1/completions');
+    });
+
+    it('should decode percent-encoded names', () => {
+      expect(
+        parseAgentSkillPath(
+          '/v1/agents/captain%20code/skills/programming%2Fbasics/chat/completions',
+        ),
+      ).toEqual({
+        agent_name: 'captain code',
+        skill_name: 'programming/basics',
+        pathname: '/v1/chat/completions',
+      });
+    });
+
+    it('should keep malformed percent-encoding as-is', () => {
+      expect(
+        parseAgentSkillPath('/v1/agents/%zz/skills/my-skill/chat/completions')
+          ?.agent_name,
+      ).toBe('%zz');
+    });
+
+    it('should return null for paths that are not scoped', () => {
+      expect(parseAgentSkillPath('/v1/chat/completions')).toBeNull();
+      expect(parseAgentSkillPath('/v1/super-agents/agents')).toBeNull();
+      expect(
+        parseAgentSkillPath('/v1/agents/my-agent/chat/completions'),
+      ).toBeNull();
+      expect(
+        parseAgentSkillPath('/agents/my-agent/skills/my-skill'),
+      ).toBeNull();
+    });
+  });
+
+  describe('stripAgentSkillPath', () => {
+    it('should rewrite a scoped URL to its canonical form', () => {
+      expect(
+        stripAgentSkillPath(
+          'http://localhost:8787/v1/agents/my-agent/skills/my-skill/chat/completions',
+        ),
+      ).toBe('http://localhost:8787/v1/chat/completions');
+    });
+
+    it('should preserve the query string', () => {
+      expect(
+        stripAgentSkillPath(
+          'http://localhost:8787/v1/agents/a/skills/s/embeddings?foo=bar',
+        ),
+      ).toBe('http://localhost:8787/v1/embeddings?foo=bar');
+    });
+
+    it('should leave unscoped URLs untouched', () => {
+      expect(
+        stripAgentSkillPath('http://localhost:8787/v1/chat/completions'),
+      ).toBe('http://localhost:8787/v1/chat/completions');
     });
   });
 });

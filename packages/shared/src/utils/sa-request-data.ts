@@ -5,6 +5,65 @@ import {
 } from '@shared/types/api/request/body';
 import type { SuperAgentsResponseBody } from '@shared/types/api/response';
 import type { HttpMethod } from '@shared/types/http';
+import { parseAgentSkillPath } from '@shared/utils/url';
+
+/**
+ * Thrown when no known API route matches the request's method, path and stream
+ * mode. Callers should surface this as a 404 rather than a server error.
+ */
+export class UnknownRouteError extends Error {
+  constructor(method: HttpMethod, pathname: string) {
+    super(`Unknown method: ${method} for pathname: ${pathname}`);
+    this.name = 'UnknownRouteError';
+  }
+}
+
+/**
+ * Thrown when the request body does not match the schema of the matched route.
+ * Callers should surface this as a 422 rather than a server error.
+ */
+export class InvalidRequestBodyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidRequestBodyError';
+  }
+}
+
+/**
+ * Requests may name the agent and skill in the path
+ * (`/v1/agents/:agent_name/skills/:skill_name/chat/completions`). Route matching
+ * happens on the canonical path so both request styles resolve to the same
+ * function.
+ */
+function canonicalizeUrl(urlString: string): {
+  pathname: string;
+  url: string;
+} {
+  const url = new URL(urlString);
+  const agentSkillScope = parseAgentSkillPath(url.pathname);
+
+  if (!agentSkillScope) {
+    return { pathname: url.pathname, url: urlString };
+  }
+
+  url.pathname = agentSkillScope.pathname;
+  return { pathname: url.pathname, url: url.toString() };
+}
+
+/**
+ * Whether any known API route serves this method and path.
+ *
+ * This ignores the request body, so it can be checked before the body is read.
+ * A route that matches here can still be rejected by
+ * `produceSuperAgentsRequestData` when the body does not fit its schema.
+ */
+export function isKnownRoute(method: HttpMethod, urlString: string): boolean {
+  const { pathname } = canonicalizeUrl(urlString);
+
+  return functionConfigs.some(
+    (config) => config.method === method && config.route_pattern.test(pathname),
+  );
+}
 
 export function produceSuperAgentsRequestData(
   method: HttpMethod,
@@ -13,8 +72,7 @@ export function produceSuperAgentsRequestData(
   rawRequestBody: Record<string, unknown>,
   rawResponseBody?: Record<string, unknown> | null,
 ): SuperAgentsRequestData {
-  const url = new URL(urlString);
-  const pathname = url.pathname;
+  const { pathname, url: canonicalUrl } = canonicalizeUrl(urlString);
 
   if (!pathname) {
     throw new Error('No pathname found in URL');
@@ -38,7 +96,7 @@ export function produceSuperAgentsRequestData(
       const requestSchemaSafeParseResult =
         config.requestSchema.safeParse(rawRequestBody);
       if (!requestSchemaSafeParseResult.success) {
-        throw new Error(
+        throw new InvalidRequestBodyError(
           `Invalid request body: ${requestSchemaSafeParseResult.error}`,
         );
       }
@@ -65,7 +123,7 @@ export function produceSuperAgentsRequestData(
       const rawSuperAgentsRequestData = {
         route_pattern: config.route_pattern,
         method: config.method,
-        url: urlString,
+        url: canonicalUrl,
         functionName,
         requestHeaders,
         requestBody,
@@ -83,5 +141,5 @@ export function produceSuperAgentsRequestData(
     }
   }
 
-  throw new Error(`Unknown method: ${method} for pathname: ${pathname}`);
+  throw new UnknownRouteError(method, pathname);
 }

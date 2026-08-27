@@ -116,6 +116,13 @@ Key API endpoints:
 - `/v1/super-agents/evaluations` - Dataset and evaluation management
 - `/v1/super-agents/observability/logs` - Request logging
 
+The gateway endpoints (`/v1/chat/completions`, `/v1/completions`, `/v1/responses`,
+`/v1/embeddings`) are also mounted under
+`/v1/agents/:agent_name/skills/:skill_name/...`. That form names the agent and
+skill in the path instead of in the `sa-config` header, which makes the header
+optional. `commonVariablesMiddleware` merges the path names into the config (the
+path wins over the header) and route matching is done against the canonical path.
+
 **Hono Syntax**: Always use chained method syntax for proper type inference:
 ```typescript
 // Use this pattern:

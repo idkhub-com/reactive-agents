@@ -19,5 +19,26 @@ describe('API v1 Index', () => {
       expect(indexModule.default).toBeDefined();
       expect(typeof indexModule.default.fetch).toBe('function');
     }, 30000);
+
+    it('should expose the agent and skill scoped endpoints', async () => {
+      const indexModule = await import('@api/v1/index');
+
+      const paths = new Set(
+        indexModule.default.routes.map((route) => route.path),
+      );
+
+      expect(paths).toContain(
+        '/v1/agents/:agent_name/skills/:skill_name/chat/completions',
+      );
+      expect(paths).toContain(
+        '/v1/agents/:agent_name/skills/:skill_name/completions',
+      );
+      expect(paths).toContain(
+        '/v1/agents/:agent_name/skills/:skill_name/responses',
+      );
+      expect(paths).toContain(
+        '/v1/agents/:agent_name/skills/:skill_name/embeddings',
+      );
+    }, 30000);
   });
 });
