@@ -61,10 +61,12 @@ the environment — the storage backend and whether the dashboard needs a login:
 | Project             | Port | Backend  | Covers                              |
 | ------------------- | ---- | -------- | ----------------------------------- |
 | `api`               | 3100 | libSQL   | server shape: routing, SPA fallback, headers |
-| `contract:libsql`   | 3100 | libSQL   | the storage contract                |
+| `contract:libsql`   | 3100 | libSQL   | the storage contract and the gateway |
 | `contract:supabase` | 3102 | Supabase | the same specs, other connector     |
 | `dashboard`         | 3100 | libSQL   | the dashboard in Chromium           |
 | `auth`              | 3101 | libSQL   | the login flow                      |
+
+A stub AI provider runs alongside them on port 3103.
 
 Neither `api` nor the two `contract` projects launches a browser — they use
 Playwright's `request` fixture only, which is what keeps the whole suite at a
@@ -91,6 +93,38 @@ libSQL cannot tell the difference.
 
 When `E2E_POSTGREST_URL` is unset the Supabase project is not registered, and
 the config says so on stderr rather than skipping quietly.
+
+## The stub provider
+
+`scripts/start-stub-provider.mjs` imitates an OpenAI-compatible provider so the
+gateway has something to proxy to. Pointing at a real provider would need API
+keys, cost money on every run, and answer differently each time.
+
+The `ollama` provider is the shape being imitated because it is
+OpenAI-compatible, requires no API key, and honours `custom_host` — so
+`gateway.spec.ts` names it in `sa-config` and points it at the stub. No AI
+provider or model records are needed in the database.
+
+Beyond answering, the stub **records what the gateway actually sent**. That is
+the only way to assert on the request the gateway builds — the model it
+resolved, the parameters it injected — because none of it appears in the
+response the client receives. It also injects failures on demand, which is how
+the retry tests work.
+
+Everything is keyed by model name. One stub process serves the whole run, so
+tests coin a unique model with `uniqueModelName()` the way they coin agent
+names, and never see each other's traffic.
+
+```
+GET  /__control/requests?model=NAME   what the gateway sent
+POST /__control/fail                  {model, times, status}
+POST /__control/reset                 {model}
+```
+
+Cache behaviour is asserted by **counting provider calls**, not by reading a
+response header — no header distinguishes a hit from a miss, and the call count
+is the behaviour that actually matters. That test is the end-to-end half of the
+fix in #237, and it fails against the pre-fix connector.
 
 ## Writing tests
 

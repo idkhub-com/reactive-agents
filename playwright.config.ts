@@ -21,6 +21,7 @@ import { defineConfig, devices } from '@playwright/test';
 const LIBSQL_PORT = Number(process.env.E2E_LIBSQL_PORT ?? 3100);
 const AUTH_PORT = Number(process.env.E2E_AUTH_PORT ?? 3101);
 const SUPABASE_PORT = Number(process.env.E2E_SUPABASE_PORT ?? 3102);
+const STUB_PORT = Number(process.env.E2E_STUB_PORT ?? 3103);
 
 /** Only ever reaches the throwaway server started below. */
 export const AUTH_PASSWORD = 'e2e-access-password';
@@ -121,6 +122,21 @@ export default defineConfig({
   ],
 
   webServer: [
+    /**
+     * The stub AI provider. One process for the whole run, shared by both
+     * storage backends: the gateway specs separate their traffic by model name
+     * rather than by process, the same way other specs separate theirs by agent
+     * name. Its `/__control` surface doubles as the readiness probe.
+     */
+    {
+      command: 'node scripts/start-stub-provider.mjs',
+      url: `http://127.0.0.1:${STUB_PORT}/__control/requests?model=ready`,
+      env: { E2E_STUB_PORT: String(STUB_PORT) },
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      stdout: 'pipe' as const,
+      stderr: 'pipe' as const,
+    },
     // Each libSQL server owns its database file, so the two cannot see each
     // other's writes and the projects stay independent.
     server(LIBSQL_PORT, { E2E_DB_NAME: 'main.db' }),
