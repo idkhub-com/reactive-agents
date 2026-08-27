@@ -1,8 +1,21 @@
 import type { AppContext } from '@api/types/hono';
 
 const DUMMY_JWT_SECRET = 'default-dev-jwt-secret';
+/**
+ * Base URL the API uses to call *itself*.
+ *
+ * The internal skills (judging, embedding, prompt generation) are ordinary
+ * gateway requests that the server sends back to its own `/v1`, so this has to
+ * name the port it is actually listening on. Deriving it from `PORT` rather
+ * than hardcoding one keeps the all-in-one image (3000), the gateway-only image
+ * (8787) and `wrangler dev` (8787) all correct without configuration.
+ *
+ * Getting this wrong is invisible: every internal call fails to connect, each
+ * caller swallows the error, and optimization simply stops happening while
+ * ordinary requests carry on being served.
+ */
 export const getApiUrl = (c: AppContext) =>
-  c.env.API_URL ?? 'http://localhost:8787';
+  c.env.API_URL ?? `http://localhost:${c.env.PORT ?? 8787}`;
 
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 1 week in seconds
 

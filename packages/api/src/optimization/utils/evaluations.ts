@@ -129,6 +129,9 @@ export async function generateEvaluationCreateParams(
         provider: modelConfig.provider,
         model: modelConfig.model,
         api_key: modelConfig.apiKey,
+        ...(modelConfig.customHost
+          ? { custom_host: modelConfig.customHost }
+          : {}),
       },
     ],
     agent_name: 'super-agents',

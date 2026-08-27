@@ -248,6 +248,11 @@ export async function generateEmbeddingForRequest(
           provider: providerConfig.ai_provider,
           model: embeddingConfig.model.model_name,
           api_key: providerConfig.api_key,
+          // Same reason as the other internal skills: without this a
+          // self-hosted embedding provider is sent to its vendor default.
+          ...(providerConfig.custom_fields?.custom_host
+            ? { custom_host: providerConfig.custom_fields.custom_host }
+            : {}),
         },
       ],
       agent_name: 'super-agents',
