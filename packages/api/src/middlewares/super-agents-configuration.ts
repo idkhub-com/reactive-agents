@@ -28,7 +28,13 @@ import type { SkillOptimizationClusterCreateParams } from '@shared/types/data/sk
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
-async function getOptimalArm(
+/**
+ * Exported for tests. This is the decision that picks which configuration
+ * serves a request, and the middleware around it needs a database, an
+ * embedding and a resolved skill before it is reached -- so the choice itself
+ * is only reachable directly.
+ */
+export async function getOptimalArm(
   c: AppContext,
   arms: SkillOptimizationArm[],
   skillId: string,
@@ -139,7 +145,8 @@ async function getOptimalArm(
   return optimalArm;
 }
 
-function getOptimalCluster(
+/** Exported for tests, for the same reason as `getOptimalArm`. */
+export function getOptimalCluster(
   embedding: number[],
   clusters: SkillOptimizationCluster[],
 ): SkillOptimizationCluster {
