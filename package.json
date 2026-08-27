@@ -19,6 +19,8 @@
     "typecheck": "turbo typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:worker": "./scripts/check-worker-runtime.sh",
+    "verify:container": "./scripts/check-container-image.sh",
     "deploy:api": "pnpm --filter @super-agents/api deploy"
   },
   "dependencies": {

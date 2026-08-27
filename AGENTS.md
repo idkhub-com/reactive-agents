@@ -69,6 +69,10 @@ pnpm test:watch                # Run tests in watch mode
 # In-depth integration tests (slower, more comprehensive)
 INCLUDE_IN_DEPTH=true pnpm test
 
+# Runtime checks (also run in CI; both are slow, so they are not part of `pnpm test`)
+pnpm verify:worker     # Bundle and boot the API on workerd
+pnpm verify:container  # Build the all-in-one image and smoke test it (needs Docker)
+
 # Build (uses Turborepo with caching)
 pnpm build      # Build all packages
 pnpm build:web  # Build only web package
@@ -97,6 +101,24 @@ curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer super-agents"
 - **Framework**: Hono web framework
 - **Entry**: `src/server.ts` (Node.js) or `src/index.ts` (Cloudflare Workers)
 - **Routes**: `src/api/v1/`
+
+#### The API runs on two runtimes
+
+`pnpm dev:api` runs `wrangler dev`, so **workerd is the development runtime**,
+while the Docker image runs the same code on Node through `src/server.ts`.
+Anything reachable from `src/index.ts` has to work on both. In practice:
+
+- **No module-scope I/O, timers, or randomness.** Workers reject these outright
+  — `utils/sse-event-manager.ts` starts its ping interval on first use for this
+  reason. Prefer a first-request flag over doing work at import time.
+- **Node-only packages have to stay off the Workers path.** A driver with native
+  bindings fails to bundle. Where a package ships a Workers build (`/web` entry
+  or a `workerd` export condition), use it.
+- **`node:` builtins are the quiet case.** Wrangler's unenv layer substitutes a
+  stub, so the import resolves and the Worker boots — it throws only when the
+  stub is called. Neither CI check catches this; review does.
+
+`pnpm verify:worker` bundles and boots the Worker, and runs in CI.
 
 ### Request Flow
 ```
