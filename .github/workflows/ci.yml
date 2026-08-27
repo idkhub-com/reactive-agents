@@ -10,8 +10,6 @@ on:
 jobs:
   build:
     name: Build
-    needs: optimize_ci
-    if: needs.optimize_ci.outputs.skip == 'false'
     timeout-minutes: 15
     runs-on: ubuntu-latest
 
@@ -43,8 +41,6 @@ jobs:
 
   check:
     name: Check
-    needs: optimize_ci
-    if: needs.optimize_ci.outputs.skip == 'false'
     timeout-minutes: 15
     runs-on: ubuntu-latest
 
