@@ -110,6 +110,34 @@ export const getAiProviderApiKeyEncryptionKey = (c: AppContext): string => {
 };
 
 /**
+ * Origins allowed to make credentialed cross-origin requests to the API.
+ *
+ * `WEB_APP_URL` accepts a comma-separated list. The Docker deployment serves the
+ * dashboard and proxies `/v1/*` from the same nginx origin, and Vite proxies the
+ * same paths in development, so CORS only matters when the dashboard is hosted
+ * separately — hence the empty production default rather than a permissive one.
+ */
+export const getAllowedOrigins = (c: AppContext): string[] => {
+  const webAppUrl = c.env.WEB_APP_URL;
+  if (webAppUrl) {
+    return webAppUrl
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+  }
+
+  if (c.env.NODE_ENV === 'production') {
+    return [];
+  }
+
+  return [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:8787',
+  ];
+};
+
+/**
  * Special skills that reactive-agents uses internally. We auto generate these if they don't exist.
  */
 export const RA_SKILLS = [

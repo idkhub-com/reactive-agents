@@ -39,6 +39,7 @@ export interface AppEnv {
     POSTGREST_URL?: string;
     SUPABASE_SECRET_KEY?: string;
     SUPABASE_URL?: string;
+    WEB_APP_URL?: string;
   };
   Variables: {
     ra_config: ReactiveAgentsConfig;

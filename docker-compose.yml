@@ -78,6 +78,10 @@ services:
       ACCESS_PASSWORD: ${ACCESS_PASSWORD}
       BEARER_TOKEN: ${BEARER_TOKEN}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-you-should-change-this-in-production}
+      # Only needed when the dashboard is hosted on a different origin than the
+      # API. The bundled web container proxies /v1/* to the API, so same-origin
+      # deployments can leave this unset. Accepts a comma-separated list.
+      WEB_APP_URL: ${WEB_APP_URL:-}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
       NODE_ENV: production
     depends_on:
