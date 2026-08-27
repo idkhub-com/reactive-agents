@@ -11,7 +11,10 @@
       "!**/.claude",
       "!**/.wrangler/**/*",
       "!**/.wrangler-build/**/*",
-      "!**/routeTree.gen.ts"
+      "!**/routeTree.gen.ts",
+      "!**/coverage/**/*",
+      "!**/e2e-results/**/*",
+      "!**/playwright-report/**/*"
     ]
   },
   "formatter": {

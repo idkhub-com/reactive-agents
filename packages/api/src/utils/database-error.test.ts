@@ -94,6 +94,75 @@ describe('parseDatabaseError', () => {
     });
   });
 
+  describe('SQLite / libSQL constraint errors', () => {
+    // The libSQL backend reports constraint violations in SQLite's wording,
+    // which shares nothing with PostgreSQL's SQLSTATE codes. Before these were
+    // translated, every one of them surfaced to the client as a 500.
+    it('should map a UNIQUE violation to 409 with the entity message', () => {
+      const result = parseDatabaseError(
+        new Error('SQLITE_CONSTRAINT: UNIQUE constraint failed: agents.name'),
+      );
+
+      expect(result.code).toBe('23505');
+      expect(result.statusCode).toBe(409);
+      expect(result.table).toBe('agents');
+      expect(result.column).toBe('name');
+      expect(result.message).toBe('An agent with this name already exists.');
+    });
+
+    it('should map a FOREIGN KEY violation to 409', () => {
+      // SQLite names no table or column for this one.
+      const result = parseDatabaseError(
+        new Error('SQLITE_CONSTRAINT: FOREIGN KEY constraint failed'),
+      );
+
+      expect(result.code).toBe('23503');
+      expect(result.statusCode).toBe(409);
+      expect(result.message).toBe('The referenced record does not exist.');
+    });
+
+    it('should map a NOT NULL violation to 400 naming the column', () => {
+      const result = parseDatabaseError(
+        new Error(
+          'SQLITE_CONSTRAINT: NOT NULL constraint failed: skills.agent_id',
+        ),
+      );
+
+      expect(result.code).toBe('23502');
+      expect(result.statusCode).toBe(400);
+      expect(result.message).toBe('The field "agent_id" is required.');
+    });
+
+    it('should map a CHECK violation to 409', () => {
+      const result = parseDatabaseError(
+        new Error('SQLITE_CONSTRAINT: CHECK constraint failed: logs'),
+      );
+
+      expect(result.code).toBe('23514');
+      expect(result.statusCode).toBe(409);
+    });
+
+    it('should reuse the skill entity message for a duplicate skill', () => {
+      const result = parseDatabaseError(
+        new Error('SQLITE_CONSTRAINT: UNIQUE constraint failed: skills.name'),
+      );
+
+      expect(result.message).toBe(
+        'A skill with this name already exists for this agent.',
+      );
+    });
+
+    it('should leave unrelated SQLite errors as a 500', () => {
+      // Only constraint failures are safe to report as client errors; a
+      // corrupt database or a missing table is genuinely the server's problem.
+      const result = parseDatabaseError(
+        new Error('SQLITE_ERROR: no such table: agents'),
+      );
+
+      expect(result.statusCode).toBe(500);
+    });
+  });
+
   describe('error message patterns', () => {
     it('should detect duplicate key in message', () => {
       const error = new Error('duplicate key value violates constraint');

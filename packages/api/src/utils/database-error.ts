@@ -1,7 +1,10 @@
 /**
  * Database error handling utilities
  *
- * Parses PostgreSQL/PostgREST error responses and converts them to user-friendly messages.
+ * Parses PostgreSQL/PostgREST and SQLite/libSQL error responses and converts
+ * them to user-friendly messages. SQLite errors are translated into the
+ * PostgreSQL codes below so that both storage backends produce the same
+ * messages and the same HTTP status codes.
  * PostgreSQL error codes: https://www.postgresql.org/docs/current/errcodes-appendix.html
  */
 
@@ -105,6 +108,48 @@ const ENTITY_MESSAGES: Record<string, Record<string, string>> = {
   },
 };
 
+/**
+ * SQLite constraint failures, keyed by the PostgreSQL code they correspond to.
+ *
+ * The libSQL backend reports violations in SQLite's wording -- "UNIQUE
+ * constraint failed: agents.name" -- which shares no vocabulary with
+ * PostgreSQL's SQLSTATE codes. Translating here rather than at each call site
+ * keeps one set of messages and status codes for both backends. Without it
+ * every constraint violation on libSQL falls through to a 500, because the
+ * message checks further down look for PostgreSQL's lowercase phrasing
+ * ("unique constraint") and SQLite shouts its own ("UNIQUE constraint").
+ */
+const SQLITE_CONSTRAINT_CODES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/UNIQUE constraint failed/i, '23505'],
+  [/FOREIGN KEY constraint failed/i, '23503'],
+  [/NOT NULL constraint failed/i, '23502'],
+  [/CHECK constraint failed/i, '23514'],
+];
+
+/**
+ * SQLite names the offending column as `table.column`, which is enough to
+ * reuse the same entity-specific messages the PostgREST path produces. A
+ * foreign key failure reports no target at all, so both stay optional.
+ */
+function parseSqliteError(message: string): DatabaseErrorInfo | undefined {
+  const matched = SQLITE_CONSTRAINT_CODES.find(([pattern]) =>
+    pattern.test(message),
+  );
+  if (!matched) {
+    return undefined;
+  }
+
+  const target = message.match(
+    /constraint failed:\s*([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)/,
+  );
+
+  return parsePostgrestError({
+    code: matched[1],
+    table: target?.[1],
+    column: target?.[2],
+  });
+}
+
 /** Public HTTP status codes for API responses */
 export type PublicStatusCode = 400 | 404 | 409 | 500;
 
@@ -171,6 +216,14 @@ export function parseDatabaseError(error: unknown): DatabaseErrorInfo {
   // Handle Error objects
   if (error instanceof Error) {
     const errorMessage = error.message;
+
+    // Checked before the PostgREST parsing below: a SQLite message carries no
+    // JSON and no SQLSTATE, so it would otherwise reach the generic patterns
+    // and be reported as an unexplained 500.
+    const sqliteError = parseSqliteError(errorMessage);
+    if (sqliteError) {
+      return sqliteError;
+    }
 
     // Try to extract JSON error from PostgREST response
     const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
