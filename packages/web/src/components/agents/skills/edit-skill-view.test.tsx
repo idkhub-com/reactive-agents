@@ -56,7 +56,7 @@ const mockNavigationState = {
 };
 
 // Mock the skills API
-vi.mock('@web/api/v1/reactive-agents/skills', () => {
+vi.mock('@web/api/v1/super-agents/skills', () => {
   const mockUpdateSkill = vi.fn();
 
   return {

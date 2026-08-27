@@ -3,7 +3,7 @@ import {
   type CommonRequestOptions,
   type CreateResponseOptions,
   createResponse,
-} from '@api/utils/reactive-agents/responses';
+} from '@api/utils/super-agents/responses';
 import { FunctionName } from '@shared/types/api/request';
 import { CacheStatus } from '@shared/types/middleware/cache';
 
@@ -33,7 +33,7 @@ export async function getCachedResponse(
       FunctionName.CREATE_FINE_TUNING_JOB,
       FunctionName.RETRIEVE_FINE_TUNING_JOB,
       FunctionName.CANCEL_FINE_TUNING_JOB,
-    ].includes(commonRequestOptions.raRequestData.functionName)
+    ].includes(commonRequestOptions.saRequestData.functionName)
   ) {
     return;
   }
@@ -45,7 +45,7 @@ export async function getCachedResponse(
   const cacheResult = await getAIProviderResponseFromCache(
     c,
     commonRequestOptions.cacheSettings,
-    commonRequestOptions.raRequestData,
+    commonRequestOptions.saRequestData,
   );
 
   if (

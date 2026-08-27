@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS logs (
   first_token_time BIGINT, -- Timestamp (ms) when first token received (for streaming), NULL for non-streaming
   end_time BIGINT NOT NULL, -- Timestamp (ms) when request completed
   duration BIGINT NOT NULL, -- Total duration in milliseconds (end_time - start_time)
-  base_ra_config JSONB NOT NULL,
+  base_sa_config JSONB NOT NULL,
   -- Maybe redundant. Used for indexing.
   ai_provider TEXT NOT NULL,
   model TEXT NOT NULL,

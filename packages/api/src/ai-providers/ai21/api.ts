@@ -3,15 +3,15 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const aI21APIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.ai21.com/studio/v1',
-  headers: ({ raTarget }) => {
+  headers: ({ saTarget }) => {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${raTarget.api_key}`,
+      Authorization: `Bearer ${saTarget.api_key}`,
     };
     return headers;
   },
-  getEndpoint: ({ raRequestData }) => {
-    const { model } = raRequestData.requestBody as { model: string };
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    const { model } = saRequestData.requestBody as { model: string };
+    switch (saRequestData.functionName) {
       case FunctionName.COMPLETE: {
         return `/${model}/complete`;
       }

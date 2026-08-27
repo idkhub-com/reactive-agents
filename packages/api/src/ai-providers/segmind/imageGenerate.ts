@@ -45,13 +45,13 @@ export const segmindImageGenerateConfig: AIProviderFunctionConfig = {
   size: [
     {
       param: 'img_height',
-      transform: (raRequestBody: GenerateImageRequestBody): number =>
-        parseDimension(raRequestBody.size, 1, 512), // Default height: 512
+      transform: (saRequestBody: GenerateImageRequestBody): number =>
+        parseDimension(saRequestBody.size, 1, 512), // Default height: 512
     },
     {
       param: 'img_width',
-      transform: (raRequestBody: GenerateImageRequestBody): number =>
-        parseDimension(raRequestBody.size, 0, 512), // Default width: 512
+      transform: (saRequestBody: GenerateImageRequestBody): number =>
+        parseDimension(saRequestBody.size, 0, 512), // Default width: 512
     },
   ],
   style: {
@@ -120,7 +120,7 @@ export const segmindImageGenerateConfig: AIProviderFunctionConfig = {
   },
   qr_text: {
     param: 'qr_text',
-    default: 'https://reactiveagents.ai',
+    default: 'https://superagents.ai',
   },
   invert: {
     param: 'invert',

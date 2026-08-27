@@ -59,13 +59,13 @@ export const chatCompleteParams = (
       param: 'messages',
       default: '',
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown>[] => {
-        if (!raRequestBody.messages) {
+        if (!saRequestBody.messages) {
           return [];
         }
 
-        const updatedMessages = raRequestBody.messages?.map(
+        const updatedMessages = saRequestBody.messages?.map(
           (message: ChatCompletionMessage) => {
             if (message.role === ChatCompletionMessageRole.DEVELOPER) {
               return { ...message, role: ChatCompletionMessageRole.SYSTEM };
@@ -470,7 +470,7 @@ export const openAICreateModelResponseTransformer = (
 
     if (!parsedResponse.success) {
       throw new Error(
-        `Reactive Agents failed to parse response: ${parsedResponse.error.message}`,
+        `Super Agents failed to parse response: ${parsedResponse.error.message}`,
       );
     }
 

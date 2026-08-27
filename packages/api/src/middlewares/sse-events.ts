@@ -73,7 +73,7 @@ function mapRouteToEventType(
   path: string,
 ): SSEEventType | null {
   // Normalize path to handle base paths
-  const normalizedPath = path.replace(/^\/v1\/reactive-agents/, '');
+  const normalizedPath = path.replace(/^\/v1\/super-agents/, '');
 
   // Agent events
   if (normalizedPath.startsWith('/agents')) {

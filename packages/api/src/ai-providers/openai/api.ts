@@ -3,38 +3,38 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const openAIAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.openai.com/v1',
-  headers: ({ raTarget, raRequestData }) => {
+  headers: ({ saTarget, saRequestData }) => {
     const headersObj: Record<string, string> = {
-      Authorization: `Bearer ${raTarget.api_key}`,
+      Authorization: `Bearer ${saTarget.api_key}`,
     };
-    if (raTarget.openai_organization) {
+    if (saTarget.openai_organization) {
       headersObj['OpenAI-Organization'] =
-        raTarget.openai_organization as string;
+        saTarget.openai_organization as string;
     }
 
-    if (raTarget.openai_project) {
-      headersObj['OpenAI-Project'] = raTarget.openai_project as string;
+    if (saTarget.openai_project) {
+      headersObj['OpenAI-Project'] = saTarget.openai_project as string;
     }
 
     if (
-      raRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
-      raRequestData.functionName === FunctionName.CREATE_TRANSLATION ||
-      raRequestData.functionName === FunctionName.UPLOAD_FILE
+      saRequestData.functionName === FunctionName.CREATE_TRANSCRIPTION ||
+      saRequestData.functionName === FunctionName.CREATE_TRANSLATION ||
+      saRequestData.functionName === FunctionName.UPLOAD_FILE
     ) {
       headersObj['Content-Type'] = 'multipart/form-data';
     } else {
       headersObj['Content-Type'] = 'application/json';
     }
 
-    if (raTarget.openai_beta) {
-      headersObj['OpenAI-Beta'] = raTarget.openai_beta as string;
+    if (saTarget.openai_beta) {
+      headersObj['OpenAI-Beta'] = saTarget.openai_beta as string;
     }
 
     return headersObj;
   },
-  getEndpoint: ({ raRequestData }) => {
-    const basePath = raRequestData.url.split('/v1')?.[1];
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    const basePath = saRequestData.url.split('/v1')?.[1];
+    switch (saRequestData.functionName) {
       case FunctionName.COMPLETE:
       case FunctionName.STREAM_COMPLETE:
         return '/completions';

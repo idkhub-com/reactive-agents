@@ -26,7 +26,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 // Mock auth API
-vi.mock('@web/api/v1/reactive-agents/auth', () => ({
+vi.mock('@web/api/v1/super-agents/auth', () => ({
   logout: mockLogout,
 }));
 

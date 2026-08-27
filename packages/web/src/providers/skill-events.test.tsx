@@ -8,12 +8,12 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the API module - use loose typing for mock to avoid JSONValue compatibility issues
-vi.mock('@web/api/v1/reactive-agents/skill-events', () => ({
+vi.mock('@web/api/v1/super-agents/skill-events', () => ({
   getSkillEvents: vi.fn(),
 }));
 
 // Import after mocking
-import { getSkillEvents } from '@web/api/v1/reactive-agents/skill-events';
+import { getSkillEvents } from '@web/api/v1/super-agents/skill-events';
 import {
   SkillEventsProvider,
   useSkillEvents,

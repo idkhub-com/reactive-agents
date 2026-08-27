@@ -26,7 +26,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 // Mock the skills API to prevent real HTTP calls
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkillEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
   getSkills: vi.fn().mockResolvedValue([]),
   getSkillClusterStates: vi.fn().mockResolvedValue([]),

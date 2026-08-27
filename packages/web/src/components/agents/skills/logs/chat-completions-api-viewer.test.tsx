@@ -99,8 +99,8 @@ describe('ChatCompletionsAPIViewer - Tool Calls', () => {
     render(
       <ChatCompletionsAPIViewer
         logId="test-log"
-        raRequestBody={requestBody}
-        raResponseBody={responseBody}
+        saRequestBody={requestBody}
+        saResponseBody={responseBody}
       />,
     );
 
@@ -165,8 +165,8 @@ describe('ChatCompletionsAPIViewer - Tool Calls', () => {
     render(
       <ChatCompletionsAPIViewer
         logId="test-log"
-        raRequestBody={requestBody}
-        raResponseBody={responseBody}
+        saRequestBody={requestBody}
+        saResponseBody={responseBody}
       />,
     );
 
@@ -202,8 +202,8 @@ describe('ChatCompletionsAPIViewer - Tool Calls', () => {
     render(
       <ChatCompletionsAPIViewer
         logId="test-log"
-        raRequestBody={requestBody}
-        raResponseBody={responseBody}
+        saRequestBody={requestBody}
+        saResponseBody={responseBody}
       />,
     );
 
@@ -250,8 +250,8 @@ describe('ChatCompletionsAPIViewer - Tool Calls', () => {
     render(
       <ChatCompletionsAPIViewer
         logId="test-log"
-        raRequestBody={requestBody}
-        raResponseBody={responseBody}
+        saRequestBody={requestBody}
+        saResponseBody={responseBody}
       />,
     );
 

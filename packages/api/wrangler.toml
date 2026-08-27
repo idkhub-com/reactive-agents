@@ -1,4 +1,4 @@
-name = "reactive-agents-api"
+name = "super-agents-api"
 main = "src/index.ts"
 compatibility_date = "2025-04-24"
 compatibility_flags = ["nodejs_compat_v2"]
@@ -20,5 +20,5 @@ enabled = true
 # JWT_SECRET = ""
 
 # [[kv_namespaces]]
-# binding = "RA_CACHE"
+# binding = "SA_CACHE"
 # id = "<your-kv-namespace-id>"

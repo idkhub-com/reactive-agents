@@ -2,7 +2,7 @@
 
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { EvaluationMethodDetails } from '@shared/types/evaluations';
-import { getEvaluationMethods } from '@web/api/v1/reactive-agents/skills';
+import { getEvaluationMethods } from '@web/api/v1/super-agents/skills';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {

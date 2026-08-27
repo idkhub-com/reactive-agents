@@ -1,13 +1,13 @@
 #!/usr/bin/env tsx
 
 /**
- * Reactive Agents Language Tutor Agent Example
+ * Super Agents Language Tutor Agent Example
  *
  * This example demonstrates a language tutor agent that can explain
- * learners' mistakes using Reactive Agents's unified AI provider system.
+ * learners' mistakes using Super Agents's unified AI provider system.
  *
  * FEATURES:
- * ✅ Proper Reactive Agents integration with type safety
+ * ✅ Proper Super Agents integration with type safety
  * ✅ Input validation and sanitization
  * ✅ Error handling and retry logic
  * ✅ Evaluation functionality for correctness assessment
@@ -56,12 +56,12 @@ import { allSkills, getLanguageSkill } from './skills';
 
 // Configuration with strict validation
 function validateConfiguration(): {
-  raUrl: string;
+  saUrl: string;
   authToken: string;
   openaiApiKey: string;
 } {
-  const raUrl = process.env.RA_URL || 'http://localhost:3000';
-  const authToken = process.env.RA_AUTH_TOKEN || 'reactive-agents';
+  const saUrl = process.env.SA_URL || 'http://localhost:3000';
+  const authToken = process.env.SA_AUTH_TOKEN || 'super-agents';
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
   if (!openaiApiKey) {
@@ -72,35 +72,35 @@ function validateConfiguration(): {
 
   // Production environment validation
   if (process.env.NODE_ENV === 'production') {
-    if (raUrl.includes('localhost') || raUrl.includes('127.0.0.1')) {
+    if (saUrl.includes('localhost') || saUrl.includes('127.0.0.1')) {
       throw new Error(
-        'Production environment cannot use localhost URLs. Set RA_URL to a proper production endpoint.',
+        'Production environment cannot use localhost URLs. Set SA_URL to a proper production endpoint.',
       );
     }
-    if (authToken === 'reactive-agents') {
+    if (authToken === 'super-agents') {
       throw new Error(
-        'Production environment cannot use default auth token. Set RA_AUTH_TOKEN to a secure token.',
+        'Production environment cannot use default auth token. Set SA_AUTH_TOKEN to a secure token.',
       );
     }
-    if (raUrl.startsWith('http://') && !raUrl.includes('localhost')) {
+    if (saUrl.startsWith('http://') && !saUrl.includes('localhost')) {
       throw new Error(
-        'Production environment must use HTTPS URLs for security. Update RA_URL to use https://',
+        'Production environment must use HTTPS URLs for security. Update SA_URL to use https://',
       );
     }
   }
 
   // Validate URL format
   try {
-    new URL(raUrl);
+    new URL(saUrl);
   } catch {
-    throw new Error(`Invalid RA_URL format: ${raUrl}. Must be a valid URL.`);
+    throw new Error(`Invalid SA_URL format: ${saUrl}. Must be a valid URL.`);
   }
 
-  return { raUrl, authToken, openaiApiKey };
+  return { saUrl, authToken, openaiApiKey };
 }
 
 const config = validateConfiguration();
-const RA_URL = config.raUrl;
+const SA_URL = config.saUrl;
 const AUTH_TOKEN = config.authToken;
 const OPENAI_API_KEY = config.openaiApiKey;
 
@@ -243,7 +243,7 @@ interface ChatMessage {
   content: string;
 }
 
-interface ReactiveAgentsConfig {
+interface SuperAgentsConfig {
   agent_name: string;
   skill_name: string;
   strategy: { mode: string };
@@ -326,21 +326,21 @@ function extractResponseContent(data: ChatCompletionResponseBody): string {
   return content;
 }
 
-// Reactive Agents AI provider request function
+// Super Agents AI provider request function
 export async function makeLanguageTutorRequest(
   messages: ChatMessage[],
-  config: ReactiveAgentsConfig,
+  config: SuperAgentsConfig,
 ): Promise<string> {
   try {
-    // Use the Reactive Agents API endpoint
-    const raUrl = `${RA_URL}/v1/chat/completions`;
+    // Use the Super Agents API endpoint
+    const saUrl = `${SA_URL}/v1/chat/completions`;
 
-    const response = await fetch(raUrl, {
+    const response = await fetch(saUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${AUTH_TOKEN}`,
         'Content-Type': 'application/json',
-        'ra-config': JSON.stringify(config),
+        'sa-config': JSON.stringify(config),
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
@@ -426,7 +426,7 @@ export async function multiLanguageTutorWorkflow(
     },
   ];
 
-  const englishConfig: ReactiveAgentsConfig = {
+  const englishConfig: SuperAgentsConfig = {
     agent_name: 'language-tutor',
     skill_name: 'english-language-analysis',
     strategy: { mode: 'single' },
@@ -492,7 +492,7 @@ Text: "${validatedText}"
 ${meta ? `Metadata: ${JSON.stringify(meta)}` : ''}
 Return ONLY a JSON object with keys: correct, and explanation if correct is false.`;
 
-  const raConfig: ReactiveAgentsConfig = {
+  const saConfig: SuperAgentsConfig = {
     agent_name: 'language-tutor',
     skill_name: `${targetSkill.code}-evaluation`,
     strategy: { mode: 'single' },
@@ -514,7 +514,7 @@ Return ONLY a JSON object with keys: correct, and explanation if correct is fals
       { role: 'user', content: userPrompt },
     ];
 
-    const responseText = await makeLanguageTutorRequest(messages, raConfig);
+    const responseText = await makeLanguageTutorRequest(messages, saConfig);
     return tryParseEvaluationJson(responseText);
   } catch (_error) {
     // Fallback evaluation
@@ -522,7 +522,7 @@ Return ONLY a JSON object with keys: correct, and explanation if correct is fals
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ];
-    const fallbackConfig: ReactiveAgentsConfig = {
+    const fallbackConfig: SuperAgentsConfig = {
       agent_name: 'language-tutor',
       skill_name: `${targetSkill.code}-evaluation-fallback`,
       strategy: { mode: 'single' },
@@ -623,7 +623,7 @@ const exampleLearnerTexts: ProcessedExample[] = (() => {
 
 // Main execution function
 async function runLanguageTutorExamples(runInParallel = false): Promise<void> {
-  console.log('Reactive Agents Multi-Language Tutor Agent Example');
+  console.log('Super Agents Multi-Language Tutor Agent Example');
   console.log('==========================================\n');
 
   try {

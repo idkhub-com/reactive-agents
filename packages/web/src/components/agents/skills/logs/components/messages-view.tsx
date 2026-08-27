@@ -1,7 +1,7 @@
 'use client';
 
 import { FunctionName } from '@shared/types/api/request';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request/body';
+import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type {
   ResponsesAPIFunctionCall,
   ResponsesAPIFunctionCallOutput,
@@ -34,25 +34,25 @@ function getMessageValue(
 
 export function MessagesView({
   logId,
-  raRequestData,
+  saRequestData,
 }: {
   logId: string;
-  raRequestData: ReactiveAgentsRequestData;
+  saRequestData: SuperAgentsRequestData;
 }): React.ReactElement {
   const [messages, setMessages] = useState<ChatCompletionMessage[]>([]);
 
   useEffect(() => {
-    if (raRequestData) {
+    if (saRequestData) {
       if (
-        raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-        raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
+        saRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+        saRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
       ) {
-        setMessages(raRequestData.requestBody.messages);
+        setMessages(saRequestData.requestBody.messages);
       } else if (
-        raRequestData.functionName === FunctionName.COMPLETE ||
-        raRequestData.functionName === FunctionName.STREAM_COMPLETE
+        saRequestData.functionName === FunctionName.COMPLETE ||
+        saRequestData.functionName === FunctionName.STREAM_COMPLETE
       ) {
-        const messageValue = getMessageValue(raRequestData.requestBody.prompt);
+        const messageValue = getMessageValue(saRequestData.requestBody.prompt);
         setMessages([
           {
             role: ChatCompletionMessageRole.USER,
@@ -60,20 +60,20 @@ export function MessagesView({
           },
         ]);
       } else if (
-        raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
+        saRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
       ) {
-        if (typeof raRequestData.requestBody.input === 'string') {
+        if (typeof saRequestData.requestBody.input === 'string') {
           setMessages([
             {
               role: ChatCompletionMessageRole.USER,
-              content: raRequestData.requestBody.input,
+              content: saRequestData.requestBody.input,
             },
           ]);
         } else {
           // Convert Responses API input items to ChatCompletionMessage format
           const convertedMessages: ChatCompletionMessage[] = [];
 
-          for (const item of raRequestData.requestBody.input) {
+          for (const item of saRequestData.requestBody.input) {
             if (typeof item !== 'object' || item === null) continue;
 
             // Regular chat messages
@@ -120,24 +120,24 @@ export function MessagesView({
 
           setMessages(convertedMessages);
         }
-      } else if (raRequestData.functionName === FunctionName.EMBED) {
-        const messageValue = getMessageValue(raRequestData.requestBody.input);
+      } else if (saRequestData.functionName === FunctionName.EMBED) {
+        const messageValue = getMessageValue(saRequestData.requestBody.input);
         setMessages([
           {
             role: ChatCompletionMessageRole.USER,
             content: messageValue,
           },
         ]);
-      } else if (raRequestData.functionName === FunctionName.GENERATE_IMAGE) {
+      } else if (saRequestData.functionName === FunctionName.GENERATE_IMAGE) {
         setMessages([
           {
             role: ChatCompletionMessageRole.USER,
-            content: raRequestData.requestBody.prompt,
+            content: saRequestData.requestBody.prompt,
           },
         ]);
       }
     }
-  }, [raRequestData]);
+  }, [saRequestData]);
 
   return (
     <>

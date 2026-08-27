@@ -44,7 +44,7 @@ export const SideBarData: SideBarDataSchema = {
     },
     {
       title: 'Documentation',
-      url: 'https://docs.reactiveagents.ai',
+      url: 'https://docs.superagents.ai',
       icon: BookOpenIcon,
       external: true,
     },

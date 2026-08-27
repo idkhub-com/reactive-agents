@@ -1,8 +1,8 @@
 import type { RealtimeLlmEventParser } from '@api/services/realtime-llm-event-parser';
 import type { AppContext } from '@api/types/hono';
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
-import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsTarget } from '@shared/types/api/request/headers';
 import type { RealtimeSessionOptions } from '@shared/types/realtime';
 
 export const addListeners = (
@@ -52,16 +52,16 @@ export const addListeners = (
 export const getOptionsForOutgoingConnection = async (
   c: AppContext,
   apiConfig: InternalProviderAPIConfig,
-  raTarget: ReactiveAgentsTarget,
+  saTarget: SuperAgentsTarget,
 ): Promise<{
   headers: Record<string, string>;
   method: string;
 }> => {
-  const raRequestData = c.get('ra_request_data');
+  const saRequestData = c.get('sa_request_data');
   const headers = await apiConfig.headers({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
   headers.Upgrade = 'websocket';
   headers.Connection = 'Keep-Alive';
@@ -75,18 +75,18 @@ export const getOptionsForOutgoingConnection = async (
 export const getURLForOutgoingConnection = (
   c: AppContext,
   apiConfig: InternalProviderAPIConfig,
-  raTarget: ReactiveAgentsTarget,
-  raRequestData: ReactiveAgentsRequestData,
+  saTarget: SuperAgentsTarget,
+  saRequestData: SuperAgentsRequestData,
 ): string => {
   const baseUrl = apiConfig.getBaseURL({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
   const endpoint = apiConfig.getEndpoint({
     c,
-    raTarget,
-    raRequestData,
+    saTarget,
+    saRequestData,
   });
   return `${baseUrl}${endpoint}`;
 };

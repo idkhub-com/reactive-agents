@@ -14,12 +14,12 @@ vi.mock('@web/providers/navigation', () => ({
 }));
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkillClusterStates: vi.fn(),
 }));
 
 // Import after mocking
-import { getSkillClusterStates } from '@web/api/v1/reactive-agents/skills';
+import { getSkillClusterStates } from '@web/api/v1/super-agents/skills';
 import { useNavigation } from '@web/providers/navigation';
 import {
   clusterQueryKeys,

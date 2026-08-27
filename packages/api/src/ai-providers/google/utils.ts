@@ -6,7 +6,7 @@ import { ChatCompletionFinishReason } from '@shared/types/api/routes/chat-comple
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import type { ChatCompletionToolChoice } from '@shared/types/api/routes/shared/tools';
 
-export const FinishReasonsGeminiToReactiveAgents: {
+export const FinishReasonsGeminiToSuperAgents: {
   [key: string]: ChatCompletionFinishReason;
 } = {
   FINISH_REASON_UNSPECIFIED: ChatCompletionFinishReason.STOP,
@@ -25,7 +25,7 @@ export const FinishReasonsGeminiToReactiveAgents: {
   IMAGE_SAFETY: ChatCompletionFinishReason.CONTENT_FILTER,
 };
 
-export const RoleReactiveAgentsToGemini: Record<
+export const RoleSuperAgentsToGemini: Record<
   ChatCompletionMessageRole,
   GoogleMessageRole
 > = {
@@ -37,7 +37,7 @@ export const RoleReactiveAgentsToGemini: Record<
   [ChatCompletionMessageRole.USER]: GoogleMessageRole.USER,
 };
 
-const ToolChoiceReactiveAgentsStringToGemini: Record<
+const ToolChoiceSuperAgentsStringToGemini: Record<
   string,
   GoogleToolChoiceType
 > = {
@@ -46,13 +46,13 @@ const ToolChoiceReactiveAgentsStringToGemini: Record<
   required: GoogleToolChoiceType.ANY,
 };
 
-export const transformToolChoiceReactiveAgentsToGemini = (
+export const transformToolChoiceSuperAgentsToGemini = (
   tool_choice: ChatCompletionToolChoice,
 ): GoogleToolChoiceType | undefined => {
   if (typeof tool_choice === 'object' && tool_choice.type === 'function')
     return GoogleToolChoiceType.ANY;
   if (typeof tool_choice === 'string') {
-    return ToolChoiceReactiveAgentsStringToGemini[tool_choice];
+    return ToolChoiceSuperAgentsStringToGemini[tool_choice];
   }
   return undefined;
 };

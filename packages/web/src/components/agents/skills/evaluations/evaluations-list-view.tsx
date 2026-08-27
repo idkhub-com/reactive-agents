@@ -5,7 +5,7 @@ import type {
   EvaluationMethodDetails,
   EvaluationMethodName,
 } from '@shared/types/evaluations';
-import { getEvaluationMethods } from '@web/api/v1/reactive-agents/skills';
+import { getEvaluationMethods } from '@web/api/v1/super-agents/skills';
 import { Button } from '@web/components/ui/button';
 import { Card, CardContent } from '@web/components/ui/card';
 import { Checkbox } from '@web/components/ui/checkbox';

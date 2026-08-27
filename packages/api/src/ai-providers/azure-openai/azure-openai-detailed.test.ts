@@ -24,7 +24,7 @@ import {
 } from '@api/ai-providers/azure-openai/utils';
 import {
   FunctionName,
-  type ReactiveAgentsRequestData,
+  type SuperAgentsRequestData,
 } from '@shared/types/api/request';
 import type { ParameterConfig } from '@shared/types/api/response/body';
 import type { CreateSpeechResponseBody } from '@shared/types/api/routes/audio-api';
@@ -94,7 +94,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
   describe('API Configuration', () => {
     it('should return base URL from azure_openai_config', () => {
       const baseURL = azureOpenAIAPIConfig.getBaseURL({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           azure_openai_config: {
             url: 'https://my-resource.openai.azure.com',
@@ -108,7 +108,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
     it('should throw error when azure_openai_config is missing', () => {
       expect(() => {
         azureOpenAIAPIConfig.getBaseURL({
-          raTarget: {
+          saTarget: {
             provider: AIProvider.AZURE_OPENAI,
           },
         } as unknown as TestContext);
@@ -117,11 +117,11 @@ describe('Azure OpenAI AI Provider Tests', () => {
 
     it('should return correct headers with API key authentication', async () => {
       const headers = await azureOpenAIAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           api_key: 'test-api-key',
         },
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: {},
         },
@@ -142,14 +142,14 @@ describe('Azure OpenAI AI Provider Tests', () => {
       );
 
       const headers = await azureOpenAIAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           azure_auth_mode: 'entra',
           azure_entra_tenant_id: 'tenant-123',
           azure_entra_client_id: 'client-123',
           azure_entra_client_secret: 'secret-123',
         },
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: {},
         },
@@ -177,12 +177,12 @@ describe('Azure OpenAI AI Provider Tests', () => {
       );
 
       const headers = await azureOpenAIAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           azure_auth_mode: 'managed',
           azure_managed_client_id: 'managed-client-123',
         },
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: {},
         },
@@ -204,11 +204,11 @@ describe('Azure OpenAI AI Provider Tests', () => {
 
     it('should handle multipart form data for file operations', async () => {
       const headers = await azureOpenAIAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           api_key: 'test-key',
         },
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.UPLOAD_FILE,
           requestBody: {},
         },
@@ -222,12 +222,12 @@ describe('Azure OpenAI AI Provider Tests', () => {
 
     it('should handle OpenAI beta features', async () => {
       const headers = await azureOpenAIAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           api_key: 'test-key',
           openai_beta: 'assistants=v2',
         },
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: {},
         },
@@ -261,7 +261,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
 
       testCases.forEach(({ function: fn, expected }) => {
         const endpoint = azureOpenAIAPIConfig.getEndpoint({
-          raRequestData: {
+          saRequestData: {
             functionName: fn,
             requestBody: {},
           },
@@ -274,7 +274,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
     it('should throw error for unsupported endpoints', () => {
       expect(() => {
         azureOpenAIAPIConfig.getEndpoint({
-          raRequestData: {
+          saRequestData: {
             functionName: 'UNSUPPORTED' as FunctionName,
             requestBody: {},
           },
@@ -503,7 +503,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as ChatCompletionResponseBody;
 
         expect(result.id).toBe('chatcmpl-123');
@@ -556,7 +556,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as ChatCompletionResponseBody;
 
         expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -580,7 +580,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           400,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
 
         expect((result as { error: unknown }).error).toBeDefined();
@@ -616,7 +616,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CreateEmbeddingsResponseBody;
 
         expect(result.object).toBe('list');
@@ -640,7 +640,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           404,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
 
         expect((result as { error: unknown }).error).toBeDefined();
@@ -666,7 +666,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CreateFineTuningJobResponseBody;
 
         expect(result.id).toBe('ft-123');
@@ -687,7 +687,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CreateFineTuningJobResponseBody;
 
         expect(result.status).toBe('queued');
@@ -707,7 +707,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CreateFineTuningJobResponseBody;
 
         expect(result.status).toBe('running');
@@ -733,7 +733,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as GenerateImageResponseBody;
 
         expect(result.created).toBe(1677652288);
@@ -752,7 +752,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CreateSpeechResponseBody;
 
         expect(result).toBeInstanceOf(ArrayBuffer);
@@ -812,7 +812,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
         429,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect((result as { error: unknown }).error).toBeDefined();
@@ -838,7 +838,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
         401,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect((result as { error: unknown }).error).toBeDefined();
@@ -864,7 +864,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
 
     it('should construct complete request URLs', () => {
       const baseURL = azureOpenAIAPIConfig.getBaseURL({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.AZURE_OPENAI,
           azure_openai_config: {
             url: 'https://my-resource.openai.azure.com',
@@ -873,7 +873,7 @@ describe('Azure OpenAI AI Provider Tests', () => {
       } as unknown as TestContext);
 
       const endpoint = azureOpenAIAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: {},
         },

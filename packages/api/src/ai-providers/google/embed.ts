@@ -57,7 +57,7 @@ export const googleEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = googleErrorResponseTransform(aiProviderResponseBody);
@@ -65,7 +65,7 @@ export const googleEmbedResponseTransform: ResponseTransformFunction = (
   }
 
   const createEmbeddingsRequestBody =
-    raRequestData.requestBody as CreateEmbeddingsRequestBody;
+    saRequestData.requestBody as CreateEmbeddingsRequestBody;
 
   const model = (createEmbeddingsRequestBody.model as string) || '';
 

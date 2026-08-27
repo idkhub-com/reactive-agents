@@ -19,7 +19,7 @@ import { cacheMiddleware } from '@api/middlewares/cache';
 import { evaluationMethodConnectors } from '@api/middlewares/evaluations';
 import { hooksMiddleware } from '@api/middlewares/hooks';
 import { logsMiddleware } from '@api/middlewares/logs';
-import { raConfigurationInjectorMiddleware } from '@api/middlewares/reactive-agents-configuration';
+import { saConfigurationInjectorMiddleware } from '@api/middlewares/super-agents-configuration';
 import { toolMiddleware } from '@api/middlewares/tool';
 import { userDataMiddleware } from '@api/middlewares/user-data';
 import { commonVariablesMiddleware } from '@api/middlewares/variables';
@@ -27,8 +27,8 @@ import type { AppContext, AppEnv, AppHono } from '@api/types/hono';
 import { chatRouter } from '@api/v1/chat';
 import { completionsRouter } from '@api/v1/completions';
 import { embeddingsRouter } from '@api/v1/embeddings';
-import { reactiveAgentsRouter } from '@api/v1/reactive-agents';
 import { responsesRouter } from '@api/v1/responses';
+import { superAgentsRouter } from '@api/v1/super-agents';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createFactory } from 'hono/factory';
@@ -51,7 +51,7 @@ app.use('*', async (_c, next) => {
   await next();
 });
 
-app.get('/', (c) => c.text('Reactive Agents'));
+app.get('/', (c) => c.text('Super Agents'));
 
 app.use('*', logger());
 
@@ -64,7 +64,7 @@ app.use(
     origin: (origin, c) =>
       getAllowedOrigins(c as AppContext).includes(origin) ? origin : null,
     credentials: true,
-    allowHeaders: ['Content-Type', 'Authorization', 'ra-config'],
+    allowHeaders: ['Content-Type', 'Authorization', 'sa-config'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   }),
 );
@@ -111,8 +111,8 @@ app.use('*', authenticatedMiddleware(factory));
 // Use agent and skill middleware for all routes
 app.use('*', agentAndSkillMiddleware);
 
-// Use Reactive Agents configuration injector middleware for all routes
-app.use('*', raConfigurationInjectorMiddleware);
+// Use Super Agents configuration injector middleware for all routes
+app.use('*', saConfigurationInjectorMiddleware);
 
 // Use tool middleware for all routes
 app.use(toolMiddleware);
@@ -121,9 +121,9 @@ app.route('/chat', chatRouter);
 app.route('/completions', completionsRouter);
 app.route('/responses', responsesRouter);
 app.route('/embeddings', embeddingsRouter);
-const reactiveAgentsRoute = app.route('/reactive-agents', reactiveAgentsRouter);
+const superAgentsRoute = app.route('/super-agents', superAgentsRouter);
 
-export type ReactiveAgentsRoute = typeof reactiveAgentsRoute;
+export type SuperAgentsRoute = typeof superAgentsRoute;
 
 // Export the app for Cloudflare Workers
 export default app;

@@ -138,9 +138,9 @@ export const getAllowedOrigins = (c: AppContext): string[] => {
 };
 
 /**
- * Special skills that reactive-agents uses internally. We auto generate these if they don't exist.
+ * Special skills that super-agents uses internally. We auto generate these if they don't exist.
  */
-export const RA_SKILLS = [
+export const SA_SKILLS = [
   'judge',
   'extract-task-and-outcome',
   'create-evaluations',

@@ -25,17 +25,17 @@ const encoder = new TextEncoder();
 
 export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
   c,
-  raTarget,
-  raRequestData,
+  saTarget,
+  saRequestData,
 }) => {
-  if (!(raRequestData.requestBody instanceof ReadableStream)) {
+  if (!(saRequestData.requestBody instanceof ReadableStream)) {
     return GoogleResponseHandler(
       'Invalid request, please provide a readable stream',
       400,
     );
   }
 
-  const { vertex_storage_bucket_name, filename, vertex_model_name } = raTarget;
+  const { vertex_storage_bucket_name, filename, vertex_model_name } = saTarget;
 
   if (!vertex_model_name || !vertex_storage_bucket_name) {
     return GoogleResponseHandler(
@@ -45,7 +45,7 @@ export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
   }
 
   const objectKey = filename ?? `${crypto.randomUUID()}.jsonl`;
-  const bytes = raRequestData.requestHeaders['content-length'];
+  const bytes = saRequestData.requestHeaders['content-length'];
   const { provider } = getModelAndProvider(vertex_model_name ?? '');
   let providerConfig =
     PROVIDER_CONFIG[provider as keyof typeof PROVIDER_CONFIG];
@@ -95,7 +95,7 @@ export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
         const transformedBody = transformUsingProviderConfig(
           providerConfig,
           toTranspose,
-          raTarget,
+          saTarget,
         );
 
         delete transformedBody.model;
@@ -123,14 +123,14 @@ export const googleFileUploadRequestHandler: RequestHandlerFunction = async ({
   });
 
   // Pipe the node stream through our line splitter and into the transform stream.
-  raRequestData.requestBody
+  saRequestData.requestBody
     .pipeThrough(lineSplitter)
     .pipeTo(transformStream.writable);
 
   const providerHeaders = await vertexAPIConfig.headers({
     c,
-    raTarget: raTarget,
-    raRequestData,
+    saTarget: saTarget,
+    saRequestData,
   });
 
   const encodedFile = encodeURIComponent(objectKey ?? '');

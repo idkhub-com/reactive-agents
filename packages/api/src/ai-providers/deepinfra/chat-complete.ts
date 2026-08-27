@@ -25,8 +25,8 @@ export const deepInfraChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'messages',
     required: true,
     default: [],
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      return raRequestBody.messages?.map((message) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      return saRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;

@@ -22,8 +22,8 @@ export const palmCompleteConfig: AIProviderFunctionConfig = {
   prompt: {
     param: 'prompt',
     default: '',
-    transform: (raRequestBody: CompletionRequestBody) => {
-      const { prompt: text } = raRequestBody;
+    transform: (saRequestBody: CompletionRequestBody) => {
+      const { prompt: text } = saRequestBody;
       const prompt = {
         text,
       };

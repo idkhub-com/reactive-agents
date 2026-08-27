@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
   evaluation_generation_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
   embedding_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
   judge_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
-  -- Developer mode: when enabled, shows the reactive-agents internal agent and its skills
+  -- Developer mode: when enabled, shows the super-agents internal agent and its skills
   developer_mode BOOLEAN NOT NULL DEFAULT FALSE,
   -- Timestamps
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

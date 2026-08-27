@@ -95,7 +95,7 @@ export function AnimatedLogo({ isCollapsed }: AnimatedLogoProps) {
 
       {/* Logo text */}
       <div className="relative z-10 flex items-center justify-center h-full">
-        {/* Collapsed state: "RA" */}
+        {/* Collapsed state: "SA" */}
         <motion.span
           className="text-xl font-bold text-white absolute"
           initial={false}
@@ -112,10 +112,10 @@ export function AnimatedLogo({ isCollapsed }: AnimatedLogoProps) {
             visibility: isCollapsed ? 'visible' : 'hidden',
           }}
         >
-          RA
+          SA
         </motion.span>
 
-        {/* Expanded state: "Reactive Agents" */}
+        {/* Expanded state: "Super Agents" */}
         <motion.span
           className="text-xl font-bold text-white whitespace-nowrap"
           initial={false}
@@ -132,7 +132,7 @@ export function AnimatedLogo({ isCollapsed }: AnimatedLogoProps) {
             visibility: isCollapsed ? 'hidden' : 'visible',
           }}
         >
-          Reactive Agents
+          Super Agents
         </motion.span>
       </div>
     </div>

@@ -2,38 +2,38 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 const tritonAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raTarget }) => {
+  getBaseURL: ({ saTarget }) => {
     // Use custom host if provided, otherwise default to localhost with standard Triton port
-    if (raTarget.custom_host) {
-      return raTarget.custom_host;
+    if (saTarget.custom_host) {
+      return saTarget.custom_host;
     }
 
     // Default Triton HTTP port is 8000
     return 'http://localhost:8000';
   },
 
-  headers: ({ raTarget }) => {
+  headers: ({ saTarget }) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     // Add API key authentication if provided
-    if (raTarget.api_key) {
-      headers.Authorization = `Bearer ${raTarget.api_key}`;
+    if (saTarget.api_key) {
+      headers.Authorization = `Bearer ${saTarget.api_key}`;
     }
 
     return headers;
   },
 
-  getEndpoint: ({ raRequestData }) => {
+  getEndpoint: ({ saRequestData }) => {
     // Extract model name from request body for KServe v2 endpoints
     const model =
-      ((raRequestData.requestBody as Record<string, unknown>)?.model as
+      ((saRequestData.requestBody as Record<string, unknown>)?.model as
         | string
         | undefined) || 'default';
     const encodedModel = encodeURIComponent(model);
 
-    switch (raRequestData.functionName) {
+    switch (saRequestData.functionName) {
       // Core inference endpoints using KServe v2 protocol
       case FunctionName.COMPLETE:
       case FunctionName.CHAT_COMPLETE:

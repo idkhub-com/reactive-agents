@@ -20,8 +20,8 @@ import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import { error, warn } from '@shared/console-logging';
 import type { FunctionName } from '@shared/types/api/request';
 import {
-  NonPrivateReactiveAgentsConfig,
-  type ReactiveAgentsConfig,
+  NonPrivateSuperAgentsConfig,
+  type SuperAgentsConfig,
 } from '@shared/types/api/request/headers';
 import type {
   SkillOptimizationArm,
@@ -352,7 +352,7 @@ interface ProcessLogsParams {
   status: number;
   method: HttpMethod;
   functionName: FunctionName;
-  raConfig: ReactiveAgentsConfig;
+  saConfig: SuperAgentsConfig;
   agent: Agent;
   skill: Skill;
   startTime: number;
@@ -375,7 +375,7 @@ async function processLogs({
   status,
   method,
   functionName,
-  raConfig,
+  saConfig,
   agent,
   skill,
   startTime,
@@ -395,8 +395,7 @@ async function processLogs({
 }> {
   const duration = endTime - startTime;
 
-  const baseReactiveAgentsConfig =
-    NonPrivateReactiveAgentsConfig.parse(raConfig);
+  const baseSuperAgentsConfig = NonPrivateSuperAgentsConfig.parse(saConfig);
 
   if (!('model' in aiProviderLog.request_body)) {
     error('No model found in request body');
@@ -411,7 +410,7 @@ async function processLogs({
     first_token_time: firstTokenTime,
     end_time: endTime,
     duration: duration,
-    trace_id: raConfig.trace_id,
+    trace_id: saConfig.trace_id,
     status: status,
     method: method,
     model: (aiProviderLog.request_body.model as string | undefined) || '',
@@ -421,16 +420,16 @@ async function processLogs({
     ai_provider_request_log: aiProviderLog,
     embedding: embedding ?? undefined,
     endpoint: url.pathname,
-    base_ra_config: baseReactiveAgentsConfig,
+    base_sa_config: baseSuperAgentsConfig,
     ai_provider: aiProviderLog.provider,
     cache_status: aiProviderLog.cache_status,
-    parent_span_id: raConfig.parent_span_id,
-    span_id: raConfig.span_id,
-    span_name: raConfig.span_name,
-    app_id: raConfig.app_id,
+    parent_span_id: saConfig.parent_span_id,
+    span_id: saConfig.span_id,
+    span_name: saConfig.span_name,
+    app_id: saConfig.app_id,
     external_user_id:
       (aiProviderLog.request_body.user as string | null) || undefined,
-    external_user_human_name: raConfig.user_human_name || undefined,
+    external_user_human_name: saConfig.user_human_name || undefined,
     user_metadata: undefined,
   };
 
@@ -503,13 +502,13 @@ async function processLogs({
 }
 
 const shouldLogRequest = (url: URL): boolean => {
-  // Only log requests to the Reactive Agents API
+  // Only log requests to the Super Agents API
   if (!url.pathname.startsWith('/v1/')) {
     return false;
   }
 
-  // Don't log requests to the Reactive Agents app APIs
-  if (url.pathname.startsWith('/v1/reactive-agents')) {
+  // Don't log requests to the Super Agents app APIs
+  if (url.pathname.startsWith('/v1/super-agents')) {
     return false;
   }
 
@@ -651,8 +650,8 @@ export const logsMiddleware = (
       const accumulatedChunks = c.get('accumulated_stream_chunks') as
         | string
         | undefined;
-      const raRequestData = c.get('ra_request_data');
-      if (accumulatedChunks && aiProviderLog && raRequestData) {
+      const saRequestData = c.get('sa_request_data');
+      if (accumulatedChunks && aiProviderLog && saRequestData) {
         // Validate size to prevent processing extremely large accumulated chunks
         const chunkSize = new TextEncoder().encode(accumulatedChunks).length;
         const MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -663,7 +662,7 @@ export const logsMiddleware = (
             {
               size: chunkSize,
               maxSize: MAX_CHUNK_SIZE,
-              functionName: raRequestData.functionName,
+              functionName: saRequestData.functionName,
             },
           );
           // Keep the log with placeholders rather than trying to parse
@@ -674,7 +673,7 @@ export const logsMiddleware = (
             const { response_body, raw_response_body } =
               parseStreamChunksToResponseBody(
                 accumulatedChunks,
-                raRequestData.functionName,
+                saRequestData.functionName,
               );
             aiProviderLog.response_body = response_body;
             aiProviderLog.raw_response_body = raw_response_body;
@@ -710,7 +709,7 @@ export const logsMiddleware = (
               status: c.res.status,
               hasEmptyResponseBody,
               hasEmptyRawResponseBody,
-              functionName: raRequestData.functionName,
+              functionName: saRequestData.functionName,
             },
           );
           return; // Skip saving this log
@@ -721,9 +720,9 @@ export const logsMiddleware = (
         c,
         url,
         status: c.res.status,
-        method: raRequestData.method,
-        functionName: raRequestData.functionName,
-        raConfig: c.get('ra_config'),
+        method: saRequestData.method,
+        functionName: saRequestData.functionName,
+        saConfig: c.get('sa_config'),
         agent: c.get('agent'),
         skill: c.get('skill'),
         startTime,

@@ -19,12 +19,12 @@ export const FireworksAIEmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'input',
     required: true,
-    transform: (raRequestBody: CreateEmbeddingsRequestBody): string => {
-      if ('input' in raRequestBody) {
-        if (Array.isArray(raRequestBody.input)) {
-          return raRequestBody.input.join('\n');
+    transform: (saRequestBody: CreateEmbeddingsRequestBody): string => {
+      if ('input' in saRequestBody) {
+        if (Array.isArray(saRequestBody.input)) {
+          return saRequestBody.input.join('\n');
         }
-        return raRequestBody.input as string;
+        return saRequestBody.input as string;
       }
       return '';
     },

@@ -16,7 +16,7 @@ import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   createAgent: vi.fn(),
   getAgents: vi.fn(),
   updateAgent: vi.fn(),
@@ -65,7 +65,7 @@ import {
   deleteAgent,
   getAgents,
   updateAgent,
-} from '@web/api/v1/reactive-agents/agents';
+} from '@web/api/v1/super-agents/agents';
 
 const mockAgents: Agent[] = [
   {

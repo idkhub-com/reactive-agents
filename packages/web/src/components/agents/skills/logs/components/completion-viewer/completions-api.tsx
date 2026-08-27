@@ -9,17 +9,17 @@ import { GenericViewer } from '@web/components/agents/skills/logs/components/gen
 
 export function CompletionsAPIViewer({
   logId,
-  raResponseBody,
+  saResponseBody,
 }: {
   logId: string;
-  raResponseBody: CompletionResponseBody;
+  saResponseBody: CompletionResponseBody;
 }): React.ReactElement {
   return (
     <div className="">
       <GenericViewer
         path={`${logId}-completion`}
         language={'text'}
-        defaultValue={raResponseBody.choices[0].text}
+        defaultValue={saResponseBody.choices[0].text}
         readOnly={false}
         onSave={async (): Promise<void> => {
           //pass

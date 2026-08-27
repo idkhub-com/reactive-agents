@@ -98,7 +98,7 @@ async function createSystemPromptClient(
     baseURL: `${getApiUrl(c)}/v1`,
   });
 
-  const raConfig = {
+  const saConfig = {
     targets: [
       {
         provider: modelConfig.provider,
@@ -106,11 +106,11 @@ async function createSystemPromptClient(
         api_key: modelConfig.apiKey,
       },
     ],
-    agent_name: 'reactive-agents',
+    agent_name: 'super-agents',
     skill_name: skillName,
   };
 
-  return { client, raConfig, model: modelConfig.model };
+  return { client, saConfig, model: modelConfig.model };
 }
 
 /**
@@ -118,7 +118,7 @@ async function createSystemPromptClient(
  */
 async function callSystemPromptAPI(
   client: OpenAI,
-  raConfig: unknown,
+  saConfig: unknown,
   model: string,
   systemPrompt: string,
   userMessage: string,
@@ -126,7 +126,7 @@ async function callSystemPromptAPI(
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
       defaultHeaders: {
-        'ra-config': JSON.stringify(raConfig),
+        'sa-config': JSON.stringify(saConfig),
       },
     })
     .chat.completions.parse({
@@ -215,7 +215,7 @@ export async function generateSeedSystemPromptForSkill(
   skill: Skill,
   connector: UserDataStorageConnector,
 ) {
-  const { client, raConfig, model } = await createSystemPromptClient(
+  const { client, saConfig, model } = await createSystemPromptClient(
     c,
     'system-prompt-seeding',
     connector,
@@ -226,7 +226,7 @@ export async function generateSeedSystemPromptForSkill(
 
   return await callSystemPromptAPI(
     client,
-    raConfig,
+    saConfig,
     model,
     systemPrompt,
     userMessage,
@@ -242,7 +242,7 @@ export async function generateSeedSystemPromptWithContext(
   responseFormat?: unknown,
   allowedTemplateVariables?: string[],
 ) {
-  const { client, raConfig, model } = await createSystemPromptClient(
+  const { client, saConfig, model } = await createSystemPromptClient(
     c,
     'system-prompt-seeding-with-context',
     connector,
@@ -259,7 +259,7 @@ export async function generateSeedSystemPromptWithContext(
 
   return await callSystemPromptAPI(
     client,
-    raConfig,
+    saConfig,
     model,
     systemPrompt,
     userMessage,
@@ -339,7 +339,7 @@ export async function generateReflectiveSystemPromptForSkill(
   allowedTemplateVariables: string[],
   connector: UserDataStorageConnector,
 ) {
-  const { client, raConfig, model } = await createSystemPromptClient(
+  const { client, saConfig, model } = await createSystemPromptClient(
     c,
     'system-prompt-reflection',
     connector,
@@ -357,7 +357,7 @@ export async function generateReflectiveSystemPromptForSkill(
 
   return await callSystemPromptAPI(
     client,
-    raConfig,
+    saConfig,
     model,
     systemPrompt,
     userMessage,

@@ -3,20 +3,20 @@ import { tryTargets } from './handler-utils';
 
 function batchesHandler(): (c: AppContext) => Promise<Response> {
   async function handler(c: AppContext): Promise<Response> {
-    const raRequestData = c.get('ra_request_data');
-    const raConfig = c.get('ra_config');
+    const saRequestData = c.get('sa_request_data');
+    const saConfig = c.get('sa_config');
     try {
-      const tryTargetsResponse = await tryTargets(c, raConfig, raRequestData);
+      const tryTargetsResponse = await tryTargets(c, saConfig, saRequestData);
 
       return tryTargetsResponse;
     } catch (err) {
       if (err instanceof Error) {
         console.error({
-          message: `${raRequestData.functionName} error ${err.message}`,
+          message: `${saRequestData.functionName} error ${err.message}`,
         });
       } else {
         console.error({
-          message: `${raRequestData.functionName} error ${err}`,
+          message: `${saRequestData.functionName} error ${err}`,
         });
       }
       return new Response(

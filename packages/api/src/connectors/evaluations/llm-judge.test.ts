@@ -34,7 +34,7 @@ vi.mock('@api/constants', async (importOriginal) => {
   return {
     ...actual,
     getApiUrl: () => 'http://localhost:8787',
-    getBearerToken: () => 'reactive-agents',
+    getBearerToken: () => 'super-agents',
   };
 });
 
@@ -105,7 +105,7 @@ describe('LLM Judge', () => {
     // Verify the OpenAI client was called correctly
     expect(mockWithOptions).toHaveBeenCalledWith({
       defaultHeaders: {
-        'ra-config': expect.stringContaining('"provider":"openai"'),
+        'sa-config': expect.stringContaining('"provider":"openai"'),
       },
     });
     expect(mockParse).toHaveBeenCalledWith(

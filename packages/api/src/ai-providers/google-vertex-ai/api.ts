@@ -1,7 +1,7 @@
 import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/config';
 import {
   FunctionName,
-  type ReactiveAgentsTarget,
+  type SuperAgentsTarget,
 } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
 import { getAccessToken, getBucketAndFile, getModelAndProvider } from './utils';
@@ -12,11 +12,11 @@ const getApiVersion = (provider: string): string => {
 };
 
 const getProjectRoute = (
-  raTarget: ReactiveAgentsTarget,
+  saTarget: SuperAgentsTarget,
   inputModel: string,
 ): string => {
   const { vertex_project_id, vertex_region, vertex_service_account_json } =
-    raTarget;
+    saTarget;
   let projectId = vertex_project_id;
   if (vertex_service_account_json) {
     projectId = (
@@ -53,16 +53,16 @@ const NON_INFERENCE_ENDPOINTS = [...FILE_ENDPOINTS, ...BATCH_ENDPOINTS];
 // Good reference for using REST: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal#gemini-beginner-samples-drest
 // Difference versus Studio AI: https://cloud.google.com/vertex-ai/docs/start/ai-platform-users
 export const vertexAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raTarget, raRequestData }) => {
-    const { vertex_region } = raTarget;
+  getBaseURL: ({ saTarget, saRequestData }) => {
+    const { vertex_region } = saTarget;
 
-    if (FILE_ENDPOINTS.includes(raRequestData.functionName as string)) {
+    if (FILE_ENDPOINTS.includes(saRequestData.functionName as string)) {
       return `https://storage.googleapis.com`;
     }
 
     return `https://${vertex_region}-aiplatform.googleapis.com`;
   },
-  headers: async ({ raTarget: providerOptions }) => {
+  headers: async ({ saTarget: providerOptions }) => {
     const { api_key, vertex_service_account_json } = providerOptions;
     let authToken = api_key;
     if (vertex_service_account_json) {
@@ -76,21 +76,21 @@ export const vertexAPIConfig: InternalProviderAPIConfig = {
       Authorization: `Bearer ${authToken}`,
     };
   },
-  getEndpoint: ({ raTarget, raRequestData }) => {
+  getEndpoint: ({ saTarget, saRequestData }) => {
     const { vertex_project_id, vertex_region, vertex_service_account_json } =
-      raTarget;
+      saTarget;
 
-    if (NON_INFERENCE_ENDPOINTS.includes(raRequestData.functionName)) {
+    if (NON_INFERENCE_ENDPOINTS.includes(saRequestData.functionName)) {
       const jobIdIndex = [
         'cancelBatch',
         'retrieveFileContent',
         'cancelFinetune',
-      ].includes(raRequestData.functionName)
+      ].includes(saRequestData.functionName)
         ? -2
         : -1;
-      const jobId = raRequestData.url.split('/').at(jobIdIndex);
+      const jobId = saRequestData.url.split('/').at(jobIdIndex);
 
-      const url = new URL(raRequestData.url);
+      const url = new URL(saRequestData.url);
       const searchParams = url.searchParams;
       const pageSize = searchParams.get('limit') ?? 20;
       const after = searchParams.get('after') ?? '';
@@ -101,7 +101,7 @@ export const vertexAPIConfig: InternalProviderAPIConfig = {
           vertex_service_account_json as unknown as { project_id: string }
         ).project_id;
       }
-      switch (raRequestData.functionName) {
+      switch (saRequestData.functionName) {
         case FunctionName.GET_BATCH_OUTPUT:
           return `/v1/projects/${projectId}/locations/${vertex_region}/batchPredictionJobs/${jobId}`;
         case FunctionName.LIST_BATCHES: {
@@ -137,14 +137,14 @@ export const vertexAPIConfig: InternalProviderAPIConfig = {
     }
     // Manually doing logic (over .includes) for better static typing
     else if (
-      raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-      raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE ||
-      raRequestData.functionName === FunctionName.EMBED ||
-      raRequestData.functionName === FunctionName.GENERATE_IMAGE
+      saRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+      saRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE ||
+      saRequestData.functionName === FunctionName.EMBED ||
+      saRequestData.functionName === FunctionName.GENERATE_IMAGE
     ) {
-      const model = raRequestData.requestBody?.model;
-      const innerProvider = raTarget.inner_provider;
-      const projectRoute = getProjectRoute(raTarget, model as string);
+      const model = saRequestData.requestBody?.model;
+      const innerProvider = saTarget.inner_provider;
+      const projectRoute = getProjectRoute(saTarget, model as string);
 
       const googleUrlMap = new Map<string, string>([
         [
@@ -168,15 +168,15 @@ export const vertexAPIConfig: InternalProviderAPIConfig = {
       switch (innerProvider) {
         case AIProvider.GOOGLE: {
           return (
-            googleUrlMap.get(raRequestData.functionName) || `${projectRoute}`
+            googleUrlMap.get(saRequestData.functionName) || `${projectRoute}`
           );
         }
 
         case AIProvider.ANTHROPIC: {
-          if (raRequestData.functionName === FunctionName.CHAT_COMPLETE) {
+          if (saRequestData.functionName === FunctionName.CHAT_COMPLETE) {
             return `${projectRoute}/publishers/${innerProvider}/models/${model}:rawPredict`;
           } else if (
-            raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
+            saRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
           ) {
             return `${projectRoute}/publishers/${innerProvider}/models/${model}:streamRawPredict`;
           }
@@ -195,6 +195,6 @@ export const vertexAPIConfig: InternalProviderAPIConfig = {
           return `${projectRoute}`;
       }
     }
-    throw new Error(`Unknown function name: ${raRequestData.functionName}`);
+    throw new Error(`Unknown function name: ${saRequestData.functionName}`);
   },
 };

@@ -1,4 +1,4 @@
-import { ReactiveAgentsRequestBody } from '@shared/types/api/request/body';
+import { SuperAgentsRequestBody } from '@shared/types/api/request/body';
 import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 
 import { AIProvider, RETRY_STATUS_CODES } from '@shared/types/constants';
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 
 export enum HeaderKey {
-  CONFIG = 'ra-config',
+  CONFIG = 'sa-config',
   CONTENT_TYPE = 'content-type',
 }
 
@@ -48,7 +48,7 @@ export const AnthropicConfig = z.object({
     .transform(removeEndingPath),
 });
 
-export const ReactiveAgentsTargetBase = z.object({
+export const SuperAgentsTargetBase = z.object({
   // Target Details
   id: z.string().optional(),
   index: z.number().optional(),
@@ -158,46 +158,44 @@ export const ReactiveAgentsTargetBase = z.object({
   // Mistral AI specific
 });
 
-export type ReactiveAgentsTargetBase = z.infer<typeof ReactiveAgentsTargetBase>;
+export type SuperAgentsTargetBase = z.infer<typeof SuperAgentsTargetBase>;
 
 export enum OptimizationType {
   AUTO = 'auto',
   NONE = 'none',
 }
 
-export const ReactiveAgentsTargetPreProcessed = ReactiveAgentsTargetBase.extend(
-  {
-    /** Reactive Agents optimization type */
-    optimization: z
-      .enum(OptimizationType)
-      .optional()
-      .default(OptimizationType.NONE)
-      .describe('The name of the Reactive Agents configuration to use'),
+export const SuperAgentsTargetPreProcessed = SuperAgentsTargetBase.extend({
+  /** Super Agents optimization type */
+  optimization: z
+    .enum(OptimizationType)
+    .optional()
+    .default(OptimizationType.NONE)
+    .describe('The name of the Super Agents configuration to use'),
 
-    /** Reactive Agents optimization version */
-    optimization_version: z
-      .number()
-      .min(0)
-      .optional()
-      .describe('The version of the Reactive Agents configuration to use'),
+  /** Super Agents optimization version */
+  optimization_version: z
+    .number()
+    .min(0)
+    .optional()
+    .describe('The version of the Super Agents configuration to use'),
 
-    /** The AI provider to use if no configuration is provided */
-    provider: z
-      .enum(AIProvider, {
-        error: (err) => {
-          return `Invalid provider: ${err.input}`;
-        },
-      })
-      .optional()
-      .describe('The AI provider to use if no configuration is provided'),
+  /** The AI provider to use if no configuration is provided */
+  provider: z
+    .enum(AIProvider, {
+      error: (err) => {
+        return `Invalid provider: ${err.input}`;
+      },
+    })
+    .optional()
+    .describe('The AI provider to use if no configuration is provided'),
 
-    /** The AI model to use if no configuration is provided */
-    model: z
-      .string()
-      .optional()
-      .describe('The AI model to use if no configuration is provided'),
-  },
-)
+  /** The AI model to use if no configuration is provided */
+  model: z
+    .string()
+    .optional()
+    .describe('The AI model to use if no configuration is provided'),
+})
   .refine((data) => {
     if (!data.provider && data.optimization === OptimizationType.NONE) {
       return false;
@@ -220,8 +218,8 @@ export const ReactiveAgentsTargetPreProcessed = ReactiveAgentsTargetBase.extend(
     return true;
   }, 'A model is required when using a provider.');
 
-export type ReactiveAgentsTargetPreProcessed = z.infer<
-  typeof ReactiveAgentsTargetPreProcessed
+export type SuperAgentsTargetPreProcessed = z.infer<
+  typeof SuperAgentsTargetPreProcessed
 >;
 
 // Configuration parameters - the AI parameters for a specific version
@@ -244,16 +242,16 @@ export type TargetConfigurationParams = z.infer<
   typeof TargetConfigurationParams
 >;
 
-/** Reactive Agents Target with configuration name and version validated and processed.
+/** Super Agents Target with configuration name and version validated and processed.
  * The configuration options have already been applied to the target.
  *
  * For example, the `provider` and `model` fields have already been set to the value of the configuration. */
-export const ReactiveAgentsTarget = ReactiveAgentsTargetBase.extend({
+export const SuperAgentsTarget = SuperAgentsTargetBase.extend({
   configuration: TargetConfigurationParams,
   api_key: z.string().describe('The API key for the provider').optional(),
 });
 
-export type ReactiveAgentsTarget = z.infer<typeof ReactiveAgentsTarget>;
+export type SuperAgentsTarget = z.infer<typeof SuperAgentsTarget>;
 
 export enum StrategyModes {
   LOADBALANCE = 'loadbalance',
@@ -278,10 +276,10 @@ export const Strategy = z.object({
 
 export type Strategy = z.infer<typeof Strategy>;
 
-export const NonPrivateReactiveAgentsConfig = z.object({
+export const NonPrivateSuperAgentsConfig = z.object({
   agent_name: z.string({ error: 'Agent name is required' }),
   skill_name: z.string({ error: 'Skill name is required' }),
-  override_params: ReactiveAgentsRequestBody.optional(),
+  override_params: SuperAgentsRequestBody.optional(),
   request_timeout: z.number().optional(),
   forward_headers: z.array(z.string()).optional(),
   force_refresh: z.boolean().optional(),
@@ -289,20 +287,20 @@ export const NonPrivateReactiveAgentsConfig = z.object({
   strict_open_ai_compliance: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 
-  /** Variables for the system prompt template in the Reactive Agents configuration */
+  /** Variables for the system prompt template in the Super Agents configuration */
   system_prompt_variables: z
     .record(z.string(), z.unknown())
     .optional()
     .describe(
-      'The variables for the system prompt template in the Reactive Agents configuration',
+      'The variables for the system prompt template in the Super Agents configuration',
     ),
 });
 
-export type NonPrivateReactiveAgentsConfig = z.infer<
-  typeof NonPrivateReactiveAgentsConfig
+export type NonPrivateSuperAgentsConfig = z.infer<
+  typeof NonPrivateSuperAgentsConfig
 >;
 
-export const BaseReactiveAgentsConfig = NonPrivateReactiveAgentsConfig.extend({
+export const BaseSuperAgentsConfig = NonPrivateSuperAgentsConfig.extend({
   strategy: Strategy.default({
     mode: StrategyModes.SINGLE,
   }),
@@ -319,10 +317,10 @@ export const BaseReactiveAgentsConfig = NonPrivateReactiveAgentsConfig.extend({
   user_human_name: z.string().optional(),
 });
 
-export type BaseReactiveAgentsConfig = z.infer<typeof BaseReactiveAgentsConfig>;
+export type BaseSuperAgentsConfig = z.infer<typeof BaseSuperAgentsConfig>;
 
-export const ReactiveAgentsConfig = BaseReactiveAgentsConfig.extend({
-  targets: z.array(ReactiveAgentsTarget),
+export const SuperAgentsConfig = BaseSuperAgentsConfig.extend({
+  targets: z.array(SuperAgentsTarget),
 })
   // Validate Google Vertex AI specific fields
   .refine(
@@ -344,17 +342,15 @@ export const ReactiveAgentsConfig = BaseReactiveAgentsConfig.extend({
     },
   );
 
-export type ReactiveAgentsConfig = z.infer<typeof ReactiveAgentsConfig>;
+export type SuperAgentsConfig = z.infer<typeof SuperAgentsConfig>;
 
-export const ReactiveAgentsConfigPreProcessed = BaseReactiveAgentsConfig.extend(
-  {
-    targets: z.preprocess(
-      (val) => val ?? [{ optimization: OptimizationType.AUTO }],
-      z.array(ReactiveAgentsTargetPreProcessed),
-    ),
-  },
-);
+export const SuperAgentsConfigPreProcessed = BaseSuperAgentsConfig.extend({
+  targets: z.preprocess(
+    (val) => val ?? [{ optimization: OptimizationType.AUTO }],
+    z.array(SuperAgentsTargetPreProcessed),
+  ),
+});
 
-export type ReactiveAgentsConfigPreProcessed = z.infer<
-  typeof ReactiveAgentsConfigPreProcessed
+export type SuperAgentsConfigPreProcessed = z.infer<
+  typeof SuperAgentsConfigPreProcessed
 >;

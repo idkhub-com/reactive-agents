@@ -3,4 +3,4 @@
 
 // Re-export the route type from the main index
 // This is safe for client bundling because it's only used as a type
-export type { ReactiveAgentsRoute } from './index';
+export type { SuperAgentsRoute } from './index';

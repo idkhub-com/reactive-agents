@@ -27,9 +27,9 @@ export const openrouterChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
       return (
-        raRequestBody.messages?.map((message) => {
+        saRequestBody.messages?.map((message) => {
           if (message.role === ChatCompletionMessageRole.DEVELOPER)
             return { ...message, role: ChatCompletionMessageRole.SYSTEM };
           return message;
@@ -174,10 +174,10 @@ export const openrouterChatCompleteStreamChunkTransform: ResponseChunkStreamTran
     _fallbackId,
     _streamState,
     strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     const chatCompleteRequestBody =
-      raRequestData.requestBody as ChatCompletionRequestBody;
+      saRequestData.requestBody as ChatCompletionRequestBody;
     let chunk = responseChunk.trim();
     chunk = chunk.replace(/^data: /, '');
     chunk = chunk.trim();

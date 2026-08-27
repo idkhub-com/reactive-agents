@@ -141,16 +141,16 @@ vi.mock('@web/providers/navigation', () => ({
 import { NavigationProvider, useNavigation } from '@web/providers/navigation';
 
 // Mock API functions
-vi.mock('@web/api/v1/reactive-agents/agents', () => ({
+vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn(),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/skills', () => ({
+vi.mock('@web/api/v1/super-agents/skills', () => ({
   getSkills: vi.fn(),
 }));
 
-import { getAgents } from '@web/api/v1/reactive-agents/agents';
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getAgents } from '@web/api/v1/super-agents/agents';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 
 const mockAgents: Agent[] = [
   {

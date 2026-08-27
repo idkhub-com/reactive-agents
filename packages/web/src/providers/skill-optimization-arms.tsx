@@ -2,7 +2,7 @@
 
 import type { SkillOptimizationArm } from '@shared/types/data/skill-optimization-arm';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSkillArms } from '@web/api/v1/reactive-agents/skills';
+import { getSkillArms } from '@web/api/v1/super-agents/skills';
 import { useNavigation } from '@web/providers/navigation';
 import type React from 'react';
 import {

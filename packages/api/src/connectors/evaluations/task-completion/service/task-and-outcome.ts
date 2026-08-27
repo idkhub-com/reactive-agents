@@ -61,7 +61,7 @@ export async function extractTaskAndOutcome(
     baseURL: `${getApiUrl(c)}/v1`,
   });
 
-  const raConfig = {
+  const saConfig = {
     targets: [
       {
         provider: modelConfig.provider,
@@ -69,7 +69,7 @@ export async function extractTaskAndOutcome(
         api_key: modelConfig.apiKey,
       },
     ],
-    agent_name: 'reactive-agents',
+    agent_name: 'super-agents',
     skill_name: 'extract-task-and-outcome',
   };
 
@@ -79,7 +79,7 @@ export async function extractTaskAndOutcome(
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
       defaultHeaders: {
-        'ra-config': JSON.stringify(raConfig),
+        'sa-config': JSON.stringify(saConfig),
       },
     })
     .chat.completions.parse({

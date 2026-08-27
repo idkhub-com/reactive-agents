@@ -24,7 +24,7 @@ export const ollamaEmbedResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _aiProviderResponseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200 && 'error' in aiProviderResponseBody) {
     return ollamaErrorResponseTransform(
@@ -34,7 +34,7 @@ export const ollamaEmbedResponseTransform: ResponseTransformFunction = (
   }
 
   const response = aiProviderResponseBody as unknown as OllamaEmbedResponse;
-  const requestBody = raRequestData.requestBody as { model?: string };
+  const requestBody = saRequestData.requestBody as { model?: string };
   const model = response.model || requestBody.model || '';
 
   if (

@@ -1,12 +1,12 @@
 import type { AIProviderFunctionConfig } from '@shared/types/ai-providers/config';
-import type { ReactiveAgentsRequestBody } from '@shared/types/api/request/body';
-import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { SuperAgentsRequestBody } from '@shared/types/api/request/body';
+import type { SuperAgentsTarget } from '@shared/types/api/request/headers';
 import { describe, expect, it } from 'vitest';
 import { transformUsingProviderConfig } from './transform-to-provider-request';
 
 describe('transform-to-provider-request', () => {
   describe('transformUsingProviderConfig', () => {
-    const mockTarget = {} as ReactiveAgentsTarget;
+    const mockTarget = {} as SuperAgentsTarget;
 
     it('transforms simple parameters correctly', () => {
       const providerConfig: AIProviderFunctionConfig = {
@@ -17,7 +17,7 @@ describe('transform-to-provider-request', () => {
       const requestBody = {
         model: 'gpt-4',
         temperature: 0.7,
-      } as ReactiveAgentsRequestBody;
+      } as SuperAgentsRequestBody;
 
       const result = transformUsingProviderConfig(
         providerConfig,
@@ -36,7 +36,7 @@ describe('transform-to-provider-request', () => {
 
       const requestBody = {
         model: 'gpt-4',
-      } as ReactiveAgentsRequestBody;
+      } as SuperAgentsRequestBody;
 
       const result = transformUsingProviderConfig(
         providerConfig,
@@ -56,7 +56,7 @@ describe('transform-to-provider-request', () => {
 
       const requestBody = {
         model: 'malicious',
-      } as ReactiveAgentsRequestBody;
+      } as SuperAgentsRequestBody;
 
       const result = transformUsingProviderConfig(
         providerConfig,
@@ -77,7 +77,7 @@ describe('transform-to-provider-request', () => {
 
       const requestBody = {
         model: 'malicious',
-      } as ReactiveAgentsRequestBody;
+      } as SuperAgentsRequestBody;
 
       const result = transformUsingProviderConfig(
         providerConfig,
@@ -98,7 +98,7 @@ describe('transform-to-provider-request', () => {
 
       const requestBody = {
         model: 'malicious',
-      } as ReactiveAgentsRequestBody;
+      } as SuperAgentsRequestBody;
 
       const result = transformUsingProviderConfig(
         providerConfig,
@@ -125,7 +125,7 @@ describe('transform-to-provider-request', () => {
       const requestBody = {
         model: 'gpt-4',
         temperature: 0.7,
-      } as ReactiveAgentsRequestBody;
+      } as SuperAgentsRequestBody;
 
       const result = transformUsingProviderConfig(
         providerConfig,

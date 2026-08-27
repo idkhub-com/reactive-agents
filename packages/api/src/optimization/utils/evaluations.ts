@@ -117,13 +117,13 @@ export async function generateEvaluationCreateParams(
     );
   }
 
-  // Create OpenAI client pointing to local Reactive Agents API
+  // Create OpenAI client pointing to local Super Agents API
   const client = new OpenAI({
     apiKey: '',
     baseURL: `${getApiUrl(c)}/v1`,
   });
 
-  const raConfig = {
+  const saConfig = {
     targets: [
       {
         provider: modelConfig.provider,
@@ -131,7 +131,7 @@ export async function generateEvaluationCreateParams(
         api_key: modelConfig.apiKey,
       },
     ],
-    agent_name: 'reactive-agents',
+    agent_name: 'super-agents',
     skill_name: 'create-evaluations',
   };
 
@@ -163,7 +163,7 @@ export async function generateEvaluationCreateParams(
   const response: ParsedChatCompletion<typeof schema> = await client
     .withOptions({
       defaultHeaders: {
-        'ra-config': JSON.stringify(raConfig),
+        'sa-config': JSON.stringify(saConfig),
       },
     })
     .chat.completions.parse({

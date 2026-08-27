@@ -3,19 +3,19 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 export const ollamaAPIConfig: InternalProviderAPIConfig = {
-  headers: ({ raTarget }) => {
+  headers: ({ saTarget }) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    if (raTarget.api_key) {
-      headers['x-ollama-api-key'] = raTarget.api_key;
+    if (saTarget.api_key) {
+      headers['x-ollama-api-key'] = saTarget.api_key;
     }
 
     return headers;
   },
-  getBaseURL: ({ raTarget }) => {
-    const customHost = raTarget.custom_host;
+  getBaseURL: ({ saTarget }) => {
+    const customHost = saTarget.custom_host;
     if (customHost) {
       try {
         // SECURITY: Comprehensive URL validation for custom_host
@@ -58,11 +58,11 @@ export const ollamaAPIConfig: InternalProviderAPIConfig = {
     }
     return 'http://localhost:11434';
   },
-  getEndpoint: ({ raRequestData, raTarget }) => {
-    let mappedFn = raRequestData.functionName;
-    const urlToFetch = raTarget.ollama_url_to_fetch;
+  getEndpoint: ({ saRequestData, saTarget }) => {
+    let mappedFn = saRequestData.functionName;
+    const urlToFetch = saTarget.ollama_url_to_fetch;
 
-    if (raRequestData.functionName === FunctionName.PROXY && urlToFetch) {
+    if (saRequestData.functionName === FunctionName.PROXY && urlToFetch) {
       if (urlToFetch.indexOf('/api/chat') > -1) {
         mappedFn = FunctionName.CHAT_COMPLETE;
       } else if (urlToFetch.indexOf('/embeddings') > -1) {

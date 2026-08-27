@@ -64,8 +64,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -118,8 +118,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -155,8 +155,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -192,8 +192,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -233,8 +233,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -269,8 +269,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -314,8 +314,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -369,8 +369,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -420,8 +420,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -478,8 +478,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -523,8 +523,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -561,8 +561,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -595,8 +595,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 
@@ -636,8 +636,8 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       render(
         <ResponsesAPIViewer
           logId="test-log"
-          raRequestBody={requestBody as ResponsesRequestBody}
-          raResponseBody={responseBody as ResponsesResponseBody}
+          saRequestBody={requestBody as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
         />,
       );
 

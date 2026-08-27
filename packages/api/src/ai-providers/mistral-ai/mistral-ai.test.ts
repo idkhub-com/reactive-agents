@@ -15,7 +15,7 @@ import type {
   MistralAIStreamChunk,
 } from '@api/ai-providers/mistral-ai/types';
 import { mistralAIErrorResponseTransform } from '@api/ai-providers/mistral-ai/utils';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
 import { FunctionName } from '@shared/types/api/request';
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
@@ -76,14 +76,14 @@ describe('Mistral AI Provider Tests', () => {
   describe('API Configuration', () => {
     it('should return Mistral AI API as default base URL', () => {
       const baseURL = mistralAIAPIConfig.getBaseURL({
-        raTarget: { provider: AIProvider.MISTRAL_AI },
+        saTarget: { provider: AIProvider.MISTRAL_AI },
       } as unknown as TestContext);
       expect(baseURL).toBe('https://api.mistral.ai/v1');
     });
 
     it('should use custom_host when provided', () => {
       const baseURL = mistralAIAPIConfig.getBaseURL({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.MISTRAL_AI,
           custom_host: 'https://custom-mistral.example.com/v1',
         },
@@ -93,7 +93,7 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should use custom_host for self-hosted instances', () => {
       const baseURL = mistralAIAPIConfig.getBaseURL({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.MISTRAL_AI,
           custom_host: 'http://localhost:8000/v1',
         },
@@ -103,7 +103,7 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return correct headers with API key', () => {
       const headers = mistralAIAPIConfig.headers({
-        raTarget: {
+        saTarget: {
           provider: AIProvider.MISTRAL_AI,
           api_key: 'mistral-key-123',
         },
@@ -117,7 +117,7 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return headers without API key when not provided', () => {
       const headers = mistralAIAPIConfig.headers({
-        raTarget: { provider: AIProvider.MISTRAL_AI },
+        saTarget: { provider: AIProvider.MISTRAL_AI },
       } as unknown as TestContext);
 
       expect(headers).toEqual({
@@ -127,11 +127,11 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = mistralAIAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'mistral-tiny', messages: [] },
         },
-        raTarget: { provider: AIProvider.MISTRAL_AI },
+        saTarget: { provider: AIProvider.MISTRAL_AI },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('/chat/completions');
@@ -139,11 +139,11 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return correct endpoint for streaming chat completion', () => {
       const endpoint = mistralAIAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.STREAM_CHAT_COMPLETE,
           requestBody: { model: 'mistral-tiny', messages: [] },
         },
-        raTarget: { provider: AIProvider.MISTRAL_AI },
+        saTarget: { provider: AIProvider.MISTRAL_AI },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('/chat/completions');
@@ -151,11 +151,11 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return correct endpoint for embeddings', () => {
       const endpoint = mistralAIAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.EMBED,
           requestBody: { model: 'mistral-embed', input: 'test' },
         },
-        raTarget: { provider: AIProvider.MISTRAL_AI },
+        saTarget: { provider: AIProvider.MISTRAL_AI },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('/embeddings');
@@ -163,11 +163,11 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return FIM endpoint when mistral_fim_completion is true', () => {
       const endpoint = mistralAIAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: { model: 'mistral-tiny', messages: [] },
         },
-        raTarget: {
+        saTarget: {
           provider: AIProvider.MISTRAL_AI,
           mistral_fim_completion: 'true',
         },
@@ -178,11 +178,11 @@ describe('Mistral AI Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = mistralAIAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.GENERATE_IMAGE,
           requestBody: {},
         },
-        raTarget: { provider: AIProvider.MISTRAL_AI },
+        saTarget: { provider: AIProvider.MISTRAL_AI },
       } as unknown as TestContext);
 
       expect(endpoint).toBe('');
@@ -191,7 +191,7 @@ describe('Mistral AI Provider Tests', () => {
     it('should validate custom_host URL format', () => {
       expect(() => {
         mistralAIAPIConfig.getBaseURL({
-          raTarget: {
+          saTarget: {
             provider: AIProvider.MISTRAL_AI,
             custom_host: 'invalid-url',
           },
@@ -202,7 +202,7 @@ describe('Mistral AI Provider Tests', () => {
     it('should reject non-HTTP protocols', () => {
       expect(() => {
         mistralAIAPIConfig.getBaseURL({
-          raTarget: {
+          saTarget: {
             provider: AIProvider.MISTRAL_AI,
             custom_host: 'ftp://example.com',
           },
@@ -421,7 +421,7 @@ describe('Mistral AI Provider Tests', () => {
         200,
         new Headers(),
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('chatcmpl-123');
@@ -449,7 +449,7 @@ describe('Mistral AI Provider Tests', () => {
         404,
         new Headers(),
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -470,7 +470,7 @@ describe('Mistral AI Provider Tests', () => {
         200,
         new Headers(),
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -507,7 +507,7 @@ describe('Mistral AI Provider Tests', () => {
         200,
         new Headers(),
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('chatcmpl-123');
@@ -546,7 +546,7 @@ describe('Mistral AI Provider Tests', () => {
         'fallback-id',
         {},
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('data: ');
@@ -561,7 +561,7 @@ describe('Mistral AI Provider Tests', () => {
         'fallback-id',
         {},
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toBe('data: [DONE]\n\n');
@@ -574,7 +574,7 @@ describe('Mistral AI Provider Tests', () => {
           'fallback-id',
           {},
           false,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
       }).toThrow();
     });
@@ -600,7 +600,7 @@ describe('Mistral AI Provider Tests', () => {
         'fallback-id',
         {},
         false,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"provider":"mistral-ai"');
@@ -632,7 +632,7 @@ describe('Mistral AI Provider Tests', () => {
         false,
         {
           requestBody: { model: 'mistral-embed', input: 'test' },
-        } as ReactiveAgentsRequestData,
+        } as SuperAgentsRequestData,
       ) as EmbedResponseType;
 
       expect(result.object).toBe('list');
@@ -669,7 +669,7 @@ describe('Mistral AI Provider Tests', () => {
         false,
         {
           requestBody: { model: 'mistral-embed', input: 'test' },
-        } as ReactiveAgentsRequestData,
+        } as SuperAgentsRequestData,
       ) as EmbedResponseType;
 
       expect(result.model).toBe('mistral-embed');
@@ -687,7 +687,7 @@ describe('Mistral AI Provider Tests', () => {
         false,
         {
           requestBody: { model: 'mistral-embed', input: 'test' },
-        } as ReactiveAgentsRequestData,
+        } as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -712,7 +712,7 @@ describe('Mistral AI Provider Tests', () => {
         false,
         {
           requestBody: { model: 'mistral-embed', input: 'test' },
-        } as ReactiveAgentsRequestData,
+        } as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();

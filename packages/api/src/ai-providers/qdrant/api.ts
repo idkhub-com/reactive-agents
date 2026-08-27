@@ -2,14 +2,14 @@ import type { InternalProviderAPIConfig } from '@shared/types/ai-providers/confi
 import { FunctionName } from '@shared/types/api/request';
 
 const qdrantAPIConfig: InternalProviderAPIConfig = {
-  getBaseURL: ({ raTarget: providerOptions }) => {
+  getBaseURL: ({ saTarget: providerOptions }) => {
     return providerOptions.custom_host || '';
   },
-  headers: ({ raTarget: providerOptions }) => {
+  headers: ({ saTarget: providerOptions }) => {
     return { 'api-key': `Bearer ${providerOptions.api_key}` };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/v1/chat/completions';
       default:

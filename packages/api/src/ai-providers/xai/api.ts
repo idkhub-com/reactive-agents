@@ -3,16 +3,16 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const xaiAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.x.ai/v1',
-  headers: ({ raTarget }) => {
+  headers: ({ saTarget }) => {
     const headersObj: Record<string, string> = {
-      Authorization: `Bearer ${raTarget.api_key}`,
+      Authorization: `Bearer ${saTarget.api_key}`,
       'Content-Type': 'application/json',
     };
 
     return headersObj;
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return '/chat/completions';
       default:

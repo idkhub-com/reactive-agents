@@ -1,7 +1,7 @@
 import type { AppContext } from '@api/types/hono';
 import type { HttpMethod } from '@api/types/http';
-import { ReactiveAgentsConfigPreProcessed } from '@shared/types/api/request/headers';
-import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
+import { SuperAgentsConfigPreProcessed } from '@shared/types/api/request/headers';
+import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 import type { Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
@@ -14,43 +14,42 @@ export const commonVariablesMiddleware = createMiddleware(
   async (c: AppContext, next: Next) => {
     // Only set variables for  API requests
     if (c.req.url.includes('/v1/')) {
-      // Don't set variables for Reactive Agents API requests
-      if (!c.req.url.includes('/v1/reactive-agents')) {
-        const configString = c.req.header('ra-config');
+      // Don't set variables for Super Agents API requests
+      if (!c.req.url.includes('/v1/super-agents')) {
+        const configString = c.req.header('sa-config');
         if (!configString) {
-          return c.json({ error: 'Missing Reactive Agents config' }, 422);
+          return c.json({ error: 'Missing Super Agents config' }, 422);
         }
         const rawConfig = JSON.parse(configString);
 
-        const raConfigPreProcessed = ReactiveAgentsConfigPreProcessed.safeParse(
+        const saConfigPreProcessed = SuperAgentsConfigPreProcessed.safeParse(
           rawConfig,
           {
-            error: (error) =>
-              `Invalid Reactive Agents config as ${error.message}`,
+            error: (error) => `Invalid Super Agents config as ${error.message}`,
           },
         );
-        if (raConfigPreProcessed.error) {
-          const prettyError = z.prettifyError(raConfigPreProcessed.error);
+        if (saConfigPreProcessed.error) {
+          const prettyError = z.prettifyError(saConfigPreProcessed.error);
 
           return c.json(
             {
-              error: `--Invalid Reactive Agents config--\n ${prettyError}`,
-              details: raConfigPreProcessed.error.message,
+              error: `--Invalid Super Agents config--\n ${prettyError}`,
+              details: saConfigPreProcessed.error.message,
             },
             422,
           );
         }
-        c.set('ra_config_pre_processed', raConfigPreProcessed.data);
+        c.set('sa_config_pre_processed', saConfigPreProcessed.data);
 
         const body = await c.req.json();
 
-        const raRequestData = produceReactiveAgentsRequestData(
+        const saRequestData = produceSuperAgentsRequestData(
           c.req.method as HttpMethod,
           c.req.url,
           c.req.header(),
           body,
         );
-        c.set('ra_request_data', raRequestData);
+        c.set('sa_request_data', saRequestData);
       }
     }
     await next();

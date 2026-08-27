@@ -28,8 +28,8 @@ export const togetherAIChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'messages',
     required: true,
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      return raRequestBody.messages?.map((message) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      return saRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER) {
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         }
@@ -43,9 +43,9 @@ export const togetherAIChatCompleteConfig: AIProviderFunctionConfig = {
       required: true,
       default: 128,
       min: 1,
-      transform: (raRequestBody: ChatCompletionRequestBody): number => {
+      transform: (saRequestBody: ChatCompletionRequestBody): number => {
         return (
-          raRequestBody.max_completion_tokens ?? raRequestBody.max_tokens ?? 128
+          saRequestBody.max_completion_tokens ?? saRequestBody.max_tokens ?? 128
         );
       },
     },
@@ -234,7 +234,7 @@ export const togetherAIChatCompleteResponseTransform: ResponseTransformFunction 
     aiProviderResponseStatus,
     _responseHeaders,
     _strictOpenAiCompliance,
-    raRequestData,
+    saRequestData,
   ) => {
     if (aiProviderResponseStatus !== 200) {
       const errorResponse = togetherAIErrorResponseTransform(
@@ -247,7 +247,7 @@ export const togetherAIChatCompleteResponseTransform: ResponseTransformFunction 
       const response =
         aiProviderResponseBody as unknown as TogetherAIChatCompleteResponse;
       const _requestBody =
-        raRequestData.requestBody as unknown as ChatCompletionRequestBody;
+        saRequestData.requestBody as unknown as ChatCompletionRequestBody;
 
       const responseBody: ChatCompletionResponseBody = {
         id: response.id,

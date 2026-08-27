@@ -4,8 +4,8 @@ import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
-import { extractOutputFromResponseBody } from '@api/utils/reactive-agents/responses';
-import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import { extractOutputFromResponseBody } from '@api/utils/super-agents/responses';
+import { SuperAgentsResponseBody } from '@shared/types/api/response';
 import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
@@ -28,7 +28,7 @@ function pickRoleData(
   let assistant_output = params.assistant_output;
   if (!assistant_output) {
     try {
-      const responseBody = ReactiveAgentsResponseBody.parse(
+      const responseBody = SuperAgentsResponseBody.parse(
         log.ai_provider_request_log.response_body,
       );
       assistant_output = extractOutputFromResponseBody(responseBody);

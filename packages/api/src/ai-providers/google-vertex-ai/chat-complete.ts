@@ -53,8 +53,8 @@ import { AIProvider } from '@shared/types/constants';
 import { nanoid } from 'nanoid';
 import { SYSTEM_INSTRUCTION_DISABLED_MODELS } from '../google/chat-complete';
 import {
-  RoleReactiveAgentsToGemini,
-  transformToolChoiceReactiveAgentsToGemini,
+  RoleSuperAgentsToGemini,
+  transformToolChoiceSuperAgentsToGemini,
 } from '../google/utils';
 import { vertexTransformGenerationConfig } from './transform-generation-config';
 import {
@@ -89,23 +89,23 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'contents',
       default: '',
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown> => {
         let lastRole: GoogleMessageRole | undefined;
         const messages: GoogleMessage[] = [];
 
-        raRequestBody.messages?.forEach((message: ChatCompletionMessage) => {
+        saRequestBody.messages?.forEach((message: ChatCompletionMessage) => {
           // From gemini-1.5 onwards, systemInstruction is supported
           // Skipping system message and sending it in systemInstruction for gemini 1.5 models
           if (
             ChatCompletionSystemMessageRoles.includes(message.role) &&
             !SYSTEM_INSTRUCTION_DISABLED_MODELS.includes(
-              raRequestBody.model as string,
+              saRequestBody.model as string,
             )
           )
             return;
 
-          const role = RoleReactiveAgentsToGemini[message.role];
+          const role = RoleSuperAgentsToGemini[message.role];
           const parts: GoogleMessagePart[] = [];
 
           if (message.role === 'assistant' && message.tool_calls) {
@@ -191,7 +191,7 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
           // @NOTE: This takes care of the "Please ensure that multiturn requests alternate between user and model."
           // error that occurs when we have multiple user messages in a row.
           const shouldCombineMessages =
-            lastRole === role && !raRequestBody.model?.includes('vision');
+            lastRole === role && !saRequestBody.model?.includes('vision');
 
           if (shouldCombineMessages) {
             messages[messages.length - 1].parts.push(...parts);
@@ -209,16 +209,16 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'systemInstruction',
       default: '',
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): GoogleMessage | undefined => {
         // systemInstruction is only supported from gemini 1.5 models
         if (
           SYSTEM_INSTRUCTION_DISABLED_MODELS.includes(
-            raRequestBody.model as string,
+            saRequestBody.model as string,
           )
         )
           return;
-        const firstMessage = raRequestBody.messages?.[0] || null;
+        const firstMessage = saRequestBody.messages?.[0] || null;
         if (!firstMessage) return;
 
         if (
@@ -258,48 +258,48 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
   ],
   temperature: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   top_p: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   top_k: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   max_tokens: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   max_completion_tokens: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   stop: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   response_format: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   logprobs: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   top_logprobs: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
   // https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-attributes
   // Example payload to be included in the request that sets the safety settings:
@@ -319,10 +319,10 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
   tools: {
     param: 'tools',
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
       const functionDeclarations: ChatCompletionToolFunction[] = [];
       const tools: GoogleTool[] = [];
-      (raRequestBody as ChatCompletionRequestBody).tools?.forEach(
+      (saRequestBody as ChatCompletionRequestBody).tools?.forEach(
         (tool: ChatCompletionTool) => {
           if (tool.type === 'function') {
             // these are not supported by google
@@ -356,19 +356,19 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
   tool_choice: {
     param: 'tool_config',
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      if (raRequestBody.tool_choice) {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      if (saRequestBody.tool_choice) {
         const allowedFunctionNames: string[] = [];
         if (
-          typeof raRequestBody.tool_choice === 'object' &&
-          raRequestBody.tool_choice.type === 'function'
+          typeof saRequestBody.tool_choice === 'object' &&
+          saRequestBody.tool_choice.type === 'function'
         ) {
-          allowedFunctionNames.push(raRequestBody.tool_choice.function.name);
+          allowedFunctionNames.push(saRequestBody.tool_choice.function.name);
         }
         const toolConfig: GoogleToolConfig = {
           function_calling_config: {
-            mode: transformToolChoiceReactiveAgentsToGemini(
-              raRequestBody.tool_choice,
+            mode: transformToolChoiceSuperAgentsToGemini(
+              saRequestBody.tool_choice,
             ),
           },
         };
@@ -385,8 +385,8 @@ export const vertexGoogleChatCompleteConfig: AIProviderFunctionConfig = {
   },
   thinking: {
     param: 'generationConfig',
-    transform: (raRequestBody: ChatCompletionRequestBody) =>
-      vertexTransformGenerationConfig(raRequestBody),
+    transform: (saRequestBody: ChatCompletionRequestBody) =>
+      vertexTransformGenerationConfig(saRequestBody),
   },
 };
 
@@ -553,9 +553,9 @@ export const vertexLlamaChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'model',
     required: true,
     default: 'meta/llama-3.1-405b-instruct-maas',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
       return (
-        raRequestBody.model?.replace('meta.', 'meta/') ||
+        saRequestBody.model?.replace('meta.', 'meta/') ||
         'meta/llama-3.1-405b-instruct-maas'
       );
     },

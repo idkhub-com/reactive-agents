@@ -1,5 +1,5 @@
 import { FunctionName } from '@shared/types/api/request/function-name';
-import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
+import { SuperAgentsResponseBody } from '@shared/types/api/response';
 import {
   CreateSpeechRequestBody,
   CreateSpeechResponseBody,
@@ -67,7 +67,7 @@ import {
 import { HttpMethod } from '@shared/types/http';
 import { z } from 'zod';
 
-export const ReactiveAgentsRequestBody = z.union([
+export const SuperAgentsRequestBody = z.union([
   // Audio API
   CreateSpeechRequestBody,
   CreateTranscriptionRequestBody,
@@ -113,9 +113,7 @@ export const ReactiveAgentsRequestBody = z.union([
   ResponsesRequestBody,
 ]);
 
-export type ReactiveAgentsRequestBody = z.infer<
-  typeof ReactiveAgentsRequestBody
->;
+export type SuperAgentsRequestBody = z.infer<typeof SuperAgentsRequestBody>;
 
 export type AIProviderRequestBody =
   | Record<string, unknown>
@@ -135,7 +133,7 @@ const BaseRequestData = z.object({
   /** The headers of the request. */
   requestHeaders: z.record(z.string(), z.string()),
   /** The request body of the request. */
-  requestBody: ReactiveAgentsRequestBody,
+  requestBody: SuperAgentsRequestBody,
   /** The schema of the request body. */
   requestSchema: z.custom<z.ZodSchema<unknown>>(
     (val) =>
@@ -144,7 +142,7 @@ const BaseRequestData = z.object({
   /** Whether the request is a stream. */
   stream: z.boolean().optional(),
   /** The response body of the request. Only used in the UI once the request is complete. */
-  responseBody: ReactiveAgentsResponseBody.optional(),
+  responseBody: SuperAgentsResponseBody.optional(),
   /** The schema of the response body. Only used in the UI once the request is complete.
    *
    * If response schema validation fails, we automatically retry with the error response schema.
@@ -375,7 +373,7 @@ export const ProxyRequestData = BaseRequestData.extend({
 });
 export type ProxyRequestData = z.infer<typeof ProxyRequestData>;
 
-export const ReactiveAgentsRequestData = z.union([
+export const SuperAgentsRequestData = z.union([
   // Audio API
   CreateSpeechRequestData,
   CreateTranscriptionRequestData,
@@ -422,6 +420,4 @@ export const ReactiveAgentsRequestData = z.union([
   ProxyRequestData,
 ]);
 
-export type ReactiveAgentsRequestData = z.infer<
-  typeof ReactiveAgentsRequestData
->;
+export type SuperAgentsRequestData = z.infer<typeof SuperAgentsRequestData>;

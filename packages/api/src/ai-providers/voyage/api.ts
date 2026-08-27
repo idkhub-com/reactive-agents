@@ -3,14 +3,14 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const voyageAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://api.voyageai.com/v1',
-  headers: ({ raTarget }) => {
+  headers: ({ saTarget }) => {
     return {
-      Authorization: `Bearer ${raTarget.api_key}`,
+      Authorization: `Bearer ${saTarget.api_key}`,
       'Content-Type': 'application/json',
     };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.EMBED:
         return '/embeddings';
       default:

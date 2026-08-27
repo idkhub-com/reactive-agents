@@ -3,12 +3,12 @@ import { FunctionName } from '@shared/types/api/request';
 
 export const dashscopeAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: (): string => 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  headers: ({ raTarget: providerOptions }) => {
+  headers: ({ saTarget: providerOptions }) => {
     const { api_key } = providerOptions;
     return { Authorization: `Bearer ${api_key}` };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE:
         return `/chat/completions`;
       case FunctionName.EMBED:

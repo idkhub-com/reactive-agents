@@ -59,7 +59,7 @@ export const azureOpenAIConfig: AIProviderConfig = {
   requestHandlers: {
     [FunctionName.GET_BATCH_OUTPUT]: azureOpenAIGetBatchOutputRequestHandler,
   },
-  // Transforms the Azure OpenAI response to the Reactive Agents response
+  // Transforms the Azure OpenAI response to the Super Agents response
   responseTransforms: {
     [FunctionName.COMPLETE]: azureOpenAICompleteResponseTransform,
     [FunctionName.CHAT_COMPLETE]: azureOpenAIChatCompleteResponseTransform,

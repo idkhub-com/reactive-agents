@@ -3,7 +3,7 @@
 import type { SkillOptimizationArmStat } from '@shared/types/data/skill-optimization-arm-stats';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { useQuery } from '@tanstack/react-query';
-import { getSkillArmStats } from '@web/api/v1/reactive-agents/skills';
+import { getSkillArmStats } from '@web/api/v1/super-agents/skills';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {

@@ -4,7 +4,7 @@ import {
   Outlet,
   redirect,
 } from '@tanstack/react-router';
-import { getAuthStatus } from '@web/api/v1/reactive-agents/auth';
+import { getAuthStatus } from '@web/api/v1/super-agents/auth';
 import { Suspense } from 'react';
 
 async function checkAuth({

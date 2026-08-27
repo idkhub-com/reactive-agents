@@ -56,9 +56,9 @@ async function produceToolCache(
 }
 
 function getToolsFromChatCompletionRequest(
-  raRequestData: ChatCompletionRequestData | StreamChatCompletionRequestData,
+  saRequestData: ChatCompletionRequestData | StreamChatCompletionRequestData,
 ): ChatCompletionTool[] {
-  const tools = raRequestData.requestBody.tools || [];
+  const tools = saRequestData.requestBody.tools || [];
 
   if (!tools) {
     return [];
@@ -68,9 +68,9 @@ function getToolsFromChatCompletionRequest(
 }
 
 function getToolsFromCreateModelResponseRequest(
-  raRequestData: ResponsesRequestData,
+  saRequestData: ResponsesRequestData,
 ): ResponsesTool[] {
-  const tools = raRequestData.requestBody.tools || [];
+  const tools = saRequestData.requestBody.tools || [];
 
   if (!tools) {
     return [];
@@ -82,7 +82,7 @@ function getToolsFromCreateModelResponseRequest(
 async function captureTool(
   c: AppContext,
   agent_id: string,
-  raRequestData:
+  saRequestData:
     | ChatCompletionRequestData
     | StreamChatCompletionRequestData
     | ResponsesRequestData,
@@ -91,14 +91,14 @@ async function captureTool(
   let completionTools: (ChatCompletionTool | ResponsesTool)[] = [];
 
   if (
-    raRequestData.functionName === FunctionName.CHAT_COMPLETE ||
-    raRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
+    saRequestData.functionName === FunctionName.CHAT_COMPLETE ||
+    saRequestData.functionName === FunctionName.STREAM_CHAT_COMPLETE
   ) {
-    completionTools = getToolsFromChatCompletionRequest(raRequestData);
+    completionTools = getToolsFromChatCompletionRequest(saRequestData);
   } else if (
-    raRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
+    saRequestData.functionName === FunctionName.CREATE_MODEL_RESPONSE
   ) {
-    completionTools = getToolsFromCreateModelResponseRequest(raRequestData);
+    completionTools = getToolsFromCreateModelResponseRequest(saRequestData);
   }
 
   await Promise.all(
@@ -153,18 +153,18 @@ export const toolMiddleware = createMiddleware(
   async (c: AppContext, next: Next) => {
     await next();
 
-    const raRequestData = c.get('ra_request_data');
+    const saRequestData = c.get('sa_request_data');
 
-    // If raRequestData is not set, it means that this is not an endpoint that we want to capture
-    if (!raRequestData) {
+    // If saRequestData is not set, it means that this is not an endpoint that we want to capture
+    if (!saRequestData) {
       return;
     }
 
     // These are the endpoints that can contain tools
     if (
-      raRequestData.functionName !== FunctionName.CHAT_COMPLETE &&
-      raRequestData.functionName !== FunctionName.STREAM_CHAT_COMPLETE &&
-      raRequestData.functionName !== FunctionName.CREATE_MODEL_RESPONSE
+      saRequestData.functionName !== FunctionName.CHAT_COMPLETE &&
+      saRequestData.functionName !== FunctionName.STREAM_CHAT_COMPLETE &&
+      saRequestData.functionName !== FunctionName.CREATE_MODEL_RESPONSE
     ) {
       return;
     }
@@ -174,7 +174,7 @@ export const toolMiddleware = createMiddleware(
         captureTool(
           c,
           c.get('agent').id,
-          raRequestData,
+          saRequestData,
           c.get('user_data_storage_connector'),
         ),
       );
@@ -182,7 +182,7 @@ export const toolMiddleware = createMiddleware(
       await captureTool(
         c,
         c.get('agent').id,
-        raRequestData,
+        saRequestData,
         c.get('user_data_storage_connector'),
       );
     }

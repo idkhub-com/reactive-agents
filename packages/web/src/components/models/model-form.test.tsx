@@ -8,7 +8,7 @@ import type React from 'react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@web/api/v1/reactive-agents/models', () => ({
+vi.mock('@web/api/v1/super-agents/models', () => ({
   createModel: vi.fn(),
   getModelById: vi.fn(),
   updateModel: vi.fn(),
@@ -239,9 +239,7 @@ describe('ModelForm', () => {
 
   describe('Form Submission', () => {
     it('should create model on form submission', async () => {
-      const { createModel } = await import(
-        '@web/api/v1/reactive-agents/models'
-      );
+      const { createModel } = await import('@web/api/v1/super-agents/models');
       (createModel as Mock).mockResolvedValue(mockModel);
 
       renderWithQueryClient(<ModelForm />);

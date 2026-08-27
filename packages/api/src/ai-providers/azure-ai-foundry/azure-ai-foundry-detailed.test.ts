@@ -22,7 +22,7 @@ import type {
 } from '@api/ai-providers/azure-ai-foundry/types';
 import {
   FunctionName,
-  type ReactiveAgentsRequestData,
+  type SuperAgentsRequestData,
 } from '@shared/types/api/request';
 import type { ParameterConfig } from '@shared/types/api/response/body';
 import type {
@@ -101,7 +101,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
   describe('API Configuration', () => {
     it('should return GitHub Models URL when provider is GITHUB', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.GITHUB,
             model: 'gpt-4',
@@ -124,7 +124,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should return Azure AI Foundry URL from config', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -153,7 +153,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should throw error when azure_ai_foundry_config is missing for Azure AI', () => {
       expect(() => {
         azureAIInferenceAPI.getBaseURL({
-          raTarget: {
+          saTarget: {
             configuration: {
               ai_provider: AIProvider.AZURE_AI_FOUNDRY,
               model: 'meta-llama-3-8b-instruct',
@@ -175,7 +175,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should return correct headers with API key authentication', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -202,7 +202,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should default extra-parameters to drop when not specified', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -228,7 +228,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should handle Azure AD token authentication', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -255,7 +255,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should strip Bearer prefix from Azure AD token', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -285,7 +285,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       vi.mocked(global.fetch).mockResolvedValue(mockResponse);
 
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -321,7 +321,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       vi.mocked(global.fetch).mockResolvedValue(mockResponse);
 
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -349,7 +349,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should return headers without authorization when no auth method specified', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -389,7 +389,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
       testCases.forEach(({ function: fn, expected }) => {
         const endpoint = azureAIInferenceAPI.getEndpoint({
-          raRequestData: {
+          saRequestData: {
             functionName: fn,
             requestBody: {},
           },
@@ -402,7 +402,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should throw error for unsupported endpoints', () => {
       expect(() => {
         azureAIInferenceAPI.getEndpoint({
-          raRequestData: {
+          saRequestData: {
             functionName: 'UNSUPPORTED' as FunctionName,
             requestBody: {},
           },
@@ -593,7 +593,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as ChatCompletionResponseBody;
 
         expect(result.id).toBe('chatcmpl-123');
@@ -638,7 +638,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as ChatCompletionResponseBody;
 
         expect(result.id).toBe('chatcmpl-456');
@@ -689,7 +689,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as ChatCompletionResponseBody;
 
         expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -716,7 +716,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           404,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
 
         // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -736,7 +736,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           404,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
 
         // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -780,7 +780,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CompletionResponseBody;
 
         expect(result.id).toBe('cmpl-123');
@@ -809,7 +809,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           400,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
 
         // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -854,7 +854,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           200,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         ) as CreateEmbeddingsResponseBody;
 
         expect(result.object).toBe('list');
@@ -882,7 +882,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
           400,
           new Headers(),
           true,
-          {} as ReactiveAgentsRequestData,
+          {} as SuperAgentsRequestData,
         );
 
         // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -951,7 +951,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
         401,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -981,7 +981,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
         429,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -1011,7 +1011,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
         503,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       // biome-ignore lint/suspicious/noExplicitAny: Error response has complex union types
@@ -1041,7 +1041,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should construct complete request URLs for Azure AI Foundry', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -1063,7 +1063,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       } as unknown as TestContext);
 
       const endpoint = azureAIInferenceAPI.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
           requestBody: {},
         },
@@ -1077,7 +1077,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should construct complete request URLs for GitHub Models', () => {
       const baseURL = azureAIInferenceAPI.getBaseURL({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.GITHUB,
             model: 'gpt-4',
@@ -1096,7 +1096,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       } as unknown as TestContext);
 
       const endpoint = azureAIInferenceAPI.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.EMBED,
           requestBody: {},
         },
@@ -1139,7 +1139,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
     it('should handle extra parameter policies correctly', () => {
       expect(async () => {
         await azureAIInferenceAPI.headers({
-          raTarget: {
+          saTarget: {
             configuration: {
               ai_provider: AIProvider.AZURE_AI_FOUNDRY,
               model: 'meta-llama-3-8b-instruct',
@@ -1161,7 +1161,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
       expect(async () => {
         await azureAIInferenceAPI.headers({
-          raTarget: {
+          saTarget: {
             configuration: {
               ai_provider: AIProvider.AZURE_AI_FOUNDRY,
               model: 'meta-llama-3-8b-instruct',
@@ -1199,7 +1199,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
   describe('Authentication Edge Cases', () => {
     it('should handle missing Entra ID credentials gracefully', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -1225,7 +1225,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
 
     it('should handle partial Entra ID credentials', async () => {
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',
@@ -1258,7 +1258,7 @@ describe('Azure AI Foundry AI Provider Tests', () => {
       vi.mocked(global.fetch).mockResolvedValue(mockResponse);
 
       const headers = await azureAIInferenceAPI.headers({
-        raTarget: {
+        saTarget: {
           configuration: {
             ai_provider: AIProvider.AZURE_AI_FOUNDRY,
             model: 'meta-llama-3-8b-instruct',

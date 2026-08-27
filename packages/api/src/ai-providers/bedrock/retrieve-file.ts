@@ -1,37 +1,37 @@
 import type { AppContext } from '@api/types/hono';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
-import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsTarget } from '@shared/types/api/request/headers';
 import { AIProvider } from '@shared/types/constants';
 import bedrockAPIConfig from './api';
 
 export const bedrockRetrieveFileRequestHandler = async ({
   c,
-  raTarget,
-  raRequestData,
+  saTarget,
+  saRequestData,
 }: {
   c: AppContext;
-  raTarget: ReactiveAgentsTarget;
-  raRequestData: ReactiveAgentsRequestData;
+  saTarget: SuperAgentsTarget;
+  saRequestData: SuperAgentsRequestData;
 }): Promise<Response> => {
   try {
     // construct the base url and endpoint
     const baseUrl = await bedrockAPIConfig.getBaseURL({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     const endpoint = bedrockAPIConfig.getEndpoint({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     const retrieveFileURL = `${baseUrl}${endpoint}`;
 
     // generate the headers
     const headers = await bedrockAPIConfig.headers({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
 
     // make the request
@@ -61,9 +61,9 @@ export const bedrockRetrieveFileRequestHandler = async ({
     // transform the response
     const transformedResponse = {
       object: 'file',
-      id: raRequestData.url.split('/v1/files/')[1],
+      id: saRequestData.url.split('/v1/files/')[1],
       purpose: '',
-      filename: decodeURIComponent(raRequestData.url.split('/v1/files/')[1]),
+      filename: decodeURIComponent(saRequestData.url.split('/v1/files/')[1]),
       bytes: size,
       createdAt: Math.floor(
         new Date(responseHeaders.get('last-modified') || '').getTime() / 1000,

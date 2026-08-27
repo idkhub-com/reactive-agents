@@ -48,17 +48,17 @@ export const aI21CompleteConfig: AIProviderFunctionConfig = {
   },
   presence_penalty: {
     param: 'presencePenalty',
-    transform: (raRequestBody: CompletionRequestBody) => {
+    transform: (saRequestBody: CompletionRequestBody) => {
       return {
-        scale: raRequestBody.presence_penalty,
+        scale: saRequestBody.presence_penalty,
       };
     },
   },
   frequency_penalty: {
     param: 'frequencyPenalty',
-    transform: (raRequestBody: CompletionRequestBody) => {
+    transform: (saRequestBody: CompletionRequestBody) => {
       return {
-        scale: raRequestBody.frequency_penalty,
+        scale: saRequestBody.frequency_penalty,
       };
     },
   },
@@ -78,7 +78,7 @@ export const aI21CompleteResponseTransform: ResponseTransformFunction = (
   aiProviderResponseStatus,
   _responseHeaders,
   _strictOpenAiCompliance,
-  raRequestData,
+  saRequestData,
 ) => {
   if (aiProviderResponseStatus !== 200) {
     const errorResponse = aI21ErrorResponseTransform(aiProviderResponseBody);
@@ -100,7 +100,7 @@ export const aI21CompleteResponseTransform: ResponseTransformFunction = (
       id: aiProviderResponseBody.id as string,
       object: 'text_completion',
       created: Math.floor(Date.now() / 1000),
-      model: (raRequestData.requestBody as CompletionRequestBody).model,
+      model: (saRequestData.requestBody as CompletionRequestBody).model,
       choices: completions.map((completion, index) => {
         const completionChoice: CompletionChoice = {
           text: completion.data.text,

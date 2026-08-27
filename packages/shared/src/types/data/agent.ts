@@ -39,9 +39,9 @@ export const AgentCreateParams = z
       })
       .min(3)
       .max(100)
-      .refine((name) => name !== 'reactive-agents', {
+      .refine((name) => name !== 'super-agents', {
         message:
-          'The name "reactive-agents" is reserved for internal system use. Please choose a different name.',
+          'The name "super-agents" is reserved for internal system use. Please choose a different name.',
       }),
     description: z.string().min(25).max(10000),
     metadata: z.record(z.string(), z.unknown()).default({}),

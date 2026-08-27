@@ -132,7 +132,7 @@ export const huggingfaceChatCompleteStreamChunkTransform: ResponseChunkStreamTra
     const parsedChunk = JSON.parse(chunk);
     return `data: ${JSON.stringify({
       ...parsedChunk,
-      id: `ra-${nanoid()}`,
+      id: `sa-${nanoid()}`,
       provider: AIProvider.HUGGINGFACE,
     })}\n\n`;
   };

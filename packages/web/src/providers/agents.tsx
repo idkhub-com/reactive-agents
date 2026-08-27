@@ -17,7 +17,7 @@ import {
   deleteAgent,
   getAgents,
   updateAgent,
-} from '@web/api/v1/reactive-agents/agents';
+} from '@web/api/v1/super-agents/agents';
 import { useToast } from '@web/hooks/use-toast';
 import { useNavigation } from '@web/providers/navigation';
 import { useSystemSettings } from '@web/providers/system-settings';
@@ -128,7 +128,7 @@ export const AgentsProvider = ({
     if (settings?.developer_mode) {
       return allAgents;
     }
-    return allAgents.filter((agent) => agent.name !== 'reactive-agents');
+    return allAgents.filter((agent) => agent.name !== 'super-agents');
   }, [data, settings?.developer_mode]);
 
   // Fetch individual agent by name when URL has a selected agent

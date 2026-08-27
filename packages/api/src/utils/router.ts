@@ -1,4 +1,4 @@
-import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
+import type { SuperAgentsTarget } from '@shared/types/api/request/headers';
 
 /**
  * Selects a provider based on their assigned weights.
@@ -6,8 +6,8 @@ import type { ReactiveAgentsTarget } from '@shared/types/api/request/headers';
  * If all providers have a weight of 0, an error will be thrown.
  */
 export function selectProviderByWeight(
-  targetConfigs: ReactiveAgentsTarget[],
-): ReactiveAgentsTarget {
+  targetConfigs: SuperAgentsTarget[],
+): SuperAgentsTarget {
   // Assign a default weight of 1 to providers with undefined weight
   targetConfigs = targetConfigs.map((targetConfig) => ({
     ...targetConfig,
@@ -16,7 +16,7 @@ export function selectProviderByWeight(
 
   // Compute the total weight
   const totalWeight = targetConfigs.reduce(
-    (sum: number, targetConfig: ReactiveAgentsTarget) =>
+    (sum: number, targetConfig: SuperAgentsTarget) =>
       sum + targetConfig.weight!,
     0,
   );

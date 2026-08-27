@@ -5,7 +5,7 @@ import {
 } from '@api/ai-providers/groq/chat-complete';
 import { groqConfig } from '@api/ai-providers/groq/index';
 import type { GroqStreamChunk } from '@api/ai-providers/groq/types';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
 import { FunctionName } from '@shared/types/api/request';
 import type { ErrorResponseBody } from '@shared/types/api/response/body';
 import type { ChatCompletionResponseBody } from '@shared/types/api/routes/chat-completions-api';
@@ -55,8 +55,8 @@ describe('Groq Provider Tests', () => {
 
     it('should return correct headers with API key', () => {
       const headers = groqAPIConfig.headers({
-        raTarget: { provider: AIProvider.GROQ, api_key: 'groq-test-key' },
-        raRequestData: {
+        saTarget: { provider: AIProvider.GROQ, api_key: 'groq-test-key' },
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
         },
       } as unknown as TestContext);
@@ -69,8 +69,8 @@ describe('Groq Provider Tests', () => {
 
     it('should not set Content-Type for multipart requests', () => {
       const headers = groqAPIConfig.headers({
-        raTarget: { provider: AIProvider.GROQ, api_key: 'groq-test-key' },
-        raRequestData: {
+        saTarget: { provider: AIProvider.GROQ, api_key: 'groq-test-key' },
+        saRequestData: {
           functionName: FunctionName.CREATE_TRANSCRIPTION,
         },
       } as unknown as TestContext) as Record<string, string>;
@@ -81,7 +81,7 @@ describe('Groq Provider Tests', () => {
 
     it('should return correct endpoint for chat completion', () => {
       const endpoint = groqAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
         },
       } as unknown as TestContext);
@@ -91,7 +91,7 @@ describe('Groq Provider Tests', () => {
 
     it('should return correct endpoint for streaming', () => {
       const endpoint = groqAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.STREAM_CHAT_COMPLETE,
         },
       } as unknown as TestContext);
@@ -101,7 +101,7 @@ describe('Groq Provider Tests', () => {
 
     it('should return empty string for unsupported functions', () => {
       const endpoint = groqAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.EMBED,
         },
       } as unknown as TestContext);
@@ -140,7 +140,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.id).toBe('chatcmpl-test123');
@@ -179,7 +179,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as Record<string, unknown>;
 
       expect(result.service_tier).toBeUndefined();
@@ -208,7 +208,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.system_fingerprint).toBe('fp_test123');
@@ -252,7 +252,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices[0].message.tool_calls).toHaveLength(1);
@@ -278,7 +278,7 @@ describe('Groq Provider Tests', () => {
         401,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -300,7 +300,7 @@ describe('Groq Provider Tests', () => {
         500,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -318,7 +318,7 @@ describe('Groq Provider Tests', () => {
         500,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -333,7 +333,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -352,7 +352,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -371,7 +371,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -404,7 +404,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('data:');
@@ -419,7 +419,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
       expect(result).toBe('data: [DONE]\n\n');
     });
@@ -457,7 +457,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"usage"');
@@ -478,7 +478,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toBe('');
@@ -508,7 +508,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"choices":[]');
@@ -545,7 +545,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"tool_calls"');
@@ -558,7 +558,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
       expect(result).toBe('data: [DONE]\n\n');
     });
@@ -605,7 +605,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.usage).toBeUndefined();
@@ -637,7 +637,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ChatCompletionResponseBody;
 
       expect(result.choices).toHaveLength(2);
@@ -657,7 +657,7 @@ describe('Groq Provider Tests', () => {
         200,
         new Headers(),
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       ) as ErrorResponseBody;
 
       expect(result.error).toBeDefined();
@@ -689,7 +689,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       // Should handle gracefully - won't include usage since choices[0] doesn't exist
@@ -731,7 +731,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"prompt_tokens":15');
@@ -770,7 +770,7 @@ describe('Groq Provider Tests', () => {
         'fallback-id',
         {},
         true,
-        {} as ReactiveAgentsRequestData,
+        {} as SuperAgentsRequestData,
       );
 
       expect(result).toContain('"usage"');
@@ -782,7 +782,7 @@ describe('Groq Provider Tests', () => {
     it('should construct complete request URLs', () => {
       const baseURL = groqAPIConfig.getBaseURL({} as unknown as TestContext);
       const endpoint = groqAPIConfig.getEndpoint({
-        raRequestData: {
+        saRequestData: {
           functionName: FunctionName.CHAT_COMPLETE,
         },
       } as unknown as TestContext);

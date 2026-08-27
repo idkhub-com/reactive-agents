@@ -13,8 +13,8 @@ import { workersAIErrorResponseTransform } from './utils';
 export const workersAICompleteConfig: AIProviderFunctionConfig = {
   prompt: {
     param: 'prompt',
-    transform: (raRequestBody: CompletionRequestBody) =>
-      `\n\nHuman: ${raRequestBody.prompt}\n\nAssistant:`,
+    transform: (saRequestBody: CompletionRequestBody) =>
+      `\n\nHuman: ${saRequestBody.prompt}\n\nAssistant:`,
     required: true,
   },
   model: {

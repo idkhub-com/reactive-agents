@@ -15,8 +15,8 @@ export const workersAIChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     required: true,
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      return raRequestBody.messages?.map((message) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      return saRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER)
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         return message;

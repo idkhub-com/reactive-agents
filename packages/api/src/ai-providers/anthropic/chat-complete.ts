@@ -446,8 +446,8 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'model',
     default: 'claude-2.1',
     required: true,
-    transform: (raRequestBody: ChatCompletionRequestBody): string => {
-      const modelName = raRequestBody.model || 'claude-2.1';
+    transform: (saRequestBody: ChatCompletionRequestBody): string => {
+      const modelName = saRequestBody.model || 'claude-2.1';
       return mapModelNameToVersioned(modelName);
     },
   },
@@ -456,12 +456,12 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'messages',
       required: true,
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown> => {
         const messages: AnthropicMessage[] = [];
         // Transform the chat messages into a simple prompt
-        if (raRequestBody.messages) {
-          raRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
+        if (saRequestBody.messages) {
+          saRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
             if (ChatCompletionSystemMessageRoles.includes(msg.role)) return;
 
             if (msg.role === 'assistant') {
@@ -510,12 +510,12 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
       param: 'system',
       required: false,
       transform: (
-        raRequestBody: ChatCompletionRequestBody,
+        saRequestBody: ChatCompletionRequestBody,
       ): Record<string, unknown>[] => {
         const systemMessages: AnthropicMessageContentItem[] = [];
         // Transform the chat messages into a simple prompt
-        if (raRequestBody.messages) {
-          raRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
+        if (saRequestBody.messages) {
+          saRequestBody.messages.forEach((msg: ChatCompletionMessage) => {
             if (
               ChatCompletionSystemMessageRoles.includes(msg.role) &&
               msg.content &&
@@ -545,7 +545,7 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
 
         // Append JSON mode instruction if response_format is specified
         const jsonModeInstruction = getJsonModeSystemPrompt(
-          raRequestBody.response_format,
+          saRequestBody.response_format,
         );
         if (jsonModeInstruction) {
           // If there are existing system messages, append to the last one
@@ -577,11 +577,11 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'tools',
     required: false,
     transform: (
-      raRequestBody: ChatCompletionRequestBody,
+      saRequestBody: ChatCompletionRequestBody,
     ): Record<string, unknown>[] => {
       const tools: AnthropicTool[] = [];
-      if (raRequestBody.tools) {
-        raRequestBody.tools.forEach((tool: ChatCompletionTool) => {
+      if (saRequestBody.tools) {
+        saRequestBody.tools.forEach((tool: ChatCompletionTool) => {
           if (tool.function) {
             const anthropicTool: AnthropicTool = {
               name: tool.function.name,
@@ -607,7 +607,7 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
 
       // Add JSON output tool if response_format is specified
       const jsonOutputTool = createJsonOutputTool(
-        raRequestBody.response_format,
+        saRequestBody.response_format,
       );
       if (jsonOutputTool) {
         tools.push(jsonOutputTool);
@@ -621,26 +621,26 @@ export const anthropicChatCompleteConfig: AIProviderFunctionConfig = {
     param: 'tool_choice',
     required: false,
     transform: (
-      raRequestBody: ChatCompletionRequestBody,
+      saRequestBody: ChatCompletionRequestBody,
     ): { type: 'tool' | 'any' | 'auto'; name?: string } | null => {
       // If response_format is specified, require the JSON output tool
       // unless the user has explicitly set a different tool_choice
-      if (raRequestBody.response_format && !raRequestBody.tool_choice) {
+      if (saRequestBody.response_format && !saRequestBody.tool_choice) {
         return {
           type: 'tool',
           name: '__json_output',
         };
       }
 
-      if (raRequestBody.tool_choice) {
-        if (typeof raRequestBody.tool_choice === 'string') {
-          if (raRequestBody.tool_choice === 'required') return { type: 'any' };
-          else if (raRequestBody.tool_choice === 'auto')
+      if (saRequestBody.tool_choice) {
+        if (typeof saRequestBody.tool_choice === 'string') {
+          if (saRequestBody.tool_choice === 'required') return { type: 'any' };
+          else if (saRequestBody.tool_choice === 'auto')
             return { type: 'auto' };
-        } else if (typeof raRequestBody.tool_choice === 'object') {
+        } else if (typeof saRequestBody.tool_choice === 'object') {
           return {
             type: 'tool',
-            name: raRequestBody.tool_choice.function.name,
+            name: saRequestBody.tool_choice.function.name,
           };
         }
       }

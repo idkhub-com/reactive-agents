@@ -19,35 +19,35 @@ import { useMemo } from 'react';
 
 export function ResponsesAPIViewer({
   logId,
-  raRequestBody,
-  raResponseBody,
+  saRequestBody,
+  saResponseBody,
 }: {
   logId: string;
-  raRequestBody: ResponsesRequestBody;
-  raResponseBody: ResponsesResponseBody;
+  saRequestBody: ResponsesRequestBody;
+  saResponseBody: ResponsesResponseBody;
 }): React.ReactElement {
   const language =
-    'text' in raRequestBody
-      ? raRequestBody.text?.format?.type === 'json_schema'
+    'text' in saRequestBody
+      ? saRequestBody.text?.format?.type === 'json_schema'
         ? 'json'
         : 'text'
       : 'text';
 
   const rawSchema =
-    'text' in raRequestBody ? raRequestBody.text?.format?.schema : undefined;
+    'text' in saRequestBody ? saRequestBody.text?.format?.schema : undefined;
 
   const reasoningOutput = useMemo((): string | undefined => {
-    for (const output of raResponseBody.output) {
+    for (const output of saResponseBody.output) {
       if (output.type === 'reasoning' && 'summary' in output) {
         // Handle reasoning output if it exists
         return output.summary.join('\n');
       }
     }
     return undefined;
-  }, [raResponseBody.output]);
+  }, [saResponseBody.output]);
 
   const messageOutput = useMemo((): string => {
-    for (const message of raResponseBody.output) {
+    for (const message of saResponseBody.output) {
       if (message.type === 'message' && 'role' in message) {
         if (message.role === ChatCompletionMessageRole.ASSISTANT) {
           // Check if this is a structured output with content
@@ -66,17 +66,17 @@ export function ResponsesAPIViewer({
       }
     }
     return '';
-  }, [raResponseBody.output]);
+  }, [saResponseBody.output]);
 
   const functionCalls = useMemo((): ResponsesAPIFunctionCall[] => {
     const calls: ResponsesAPIFunctionCall[] = [];
-    for (const output of raResponseBody.output) {
+    for (const output of saResponseBody.output) {
       if (output.type === 'function_call' && 'name' in output) {
         calls.push(output as ResponsesAPIFunctionCall);
       }
     }
     return calls;
-  }, [raResponseBody.output]);
+  }, [saResponseBody.output]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -101,10 +101,10 @@ export function ResponsesAPIViewer({
           <div className="text-sm font-normal">
             {
               PrettyChatCompletionMessageRole[
-                raResponseBody.output[0].type === 'message' &&
-                'role' in raResponseBody.output[0]
-                  ? raResponseBody.output[0].role
-                  : raResponseBody.output[0].type === 'reasoning'
+                saResponseBody.output[0].type === 'message' &&
+                'role' in saResponseBody.output[0]
+                  ? saResponseBody.output[0].role
+                  : saResponseBody.output[0].type === 'reasoning'
                     ? 'reasoning'
                     : ChatCompletionMessageRole.ASSISTANT
               ]

@@ -17,7 +17,7 @@ import {
   deleteSkill,
   getSkills,
   updateSkill,
-} from '@web/api/v1/reactive-agents/skills';
+} from '@web/api/v1/super-agents/skills';
 import { useToast } from '@web/hooks/use-toast';
 import { useAgents } from '@web/providers/agents';
 import { useNavigation } from '@web/providers/navigation';

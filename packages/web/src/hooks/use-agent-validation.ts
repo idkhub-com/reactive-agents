@@ -1,7 +1,7 @@
 import type { Agent } from '@shared/types/data';
 import { isAgentReady } from '@shared/utils/agent-validation';
 import { useQuery } from '@tanstack/react-query';
-import { getSkills } from '@web/api/v1/reactive-agents/skills';
+import { getSkills } from '@web/api/v1/super-agents/skills';
 
 export interface UseAgentValidationResult {
   isReady: boolean;

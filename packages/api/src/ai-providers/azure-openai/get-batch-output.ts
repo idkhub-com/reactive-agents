@@ -4,7 +4,7 @@ import { azureOpenAIAPIConfig } from './api';
 
 // Return a ReadableStream containing batches output data
 export const azureOpenAIGetBatchOutputRequestHandler: RequestHandlerFunction =
-  async ({ c, raTarget, raRequestData }) => {
+  async ({ c, saTarget, saRequestData }) => {
     // get batch details which has output file id
     // get file content as ReadableStream
     // return file content
@@ -13,20 +13,20 @@ export const azureOpenAIGetBatchOutputRequestHandler: RequestHandlerFunction =
 
     const baseUrl = azureOpenAIAPIConfig.getBaseURL({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     const retrieveBatchURL =
       baseUrl +
       azureOpenAIAPIConfig.getEndpoint({
         c,
-        raTarget,
-        raRequestData,
+        saTarget,
+        saRequestData,
       });
     const retrieveBatchesHeaders = await azureOpenAIAPIConfig.headers({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     const retrieveBatchesResponse = await fetch(retrieveBatchURL, {
       method: 'GET',
@@ -56,13 +56,13 @@ export const azureOpenAIGetBatchOutputRequestHandler: RequestHandlerFunction =
       baseUrl +
       azureOpenAIAPIConfig.getEndpoint({
         c,
-        raTarget,
-        raRequestData,
+        saTarget,
+        saRequestData,
       });
     const retrieveFileContentHeaders = await azureOpenAIAPIConfig.headers({
       c,
-      raTarget,
-      raRequestData,
+      saTarget,
+      saRequestData,
     });
     const response = fetch(retrieveFileContentURL, {
       method: 'GET',

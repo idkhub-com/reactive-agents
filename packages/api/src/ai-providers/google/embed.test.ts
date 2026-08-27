@@ -2,7 +2,7 @@ import {
   googleEmbedConfig,
   googleEmbedResponseTransform,
 } from '@api/ai-providers/google/embed';
-import type { ReactiveAgentsRequestData } from '@shared/types/api/request';
+import type { SuperAgentsRequestData } from '@shared/types/api/request';
 import { describe, expect, it } from 'vitest';
 
 describe('Google Embed Configuration', () => {
@@ -101,7 +101,7 @@ describe('Google Embed Configuration', () => {
         true,
         {
           requestBody: { model: 'text-embedding-004', input: 'test' },
-        } as unknown as ReactiveAgentsRequestData,
+        } as unknown as SuperAgentsRequestData,
       );
 
       expect(result).toEqual({
@@ -138,7 +138,7 @@ describe('Google Embed Configuration', () => {
         true,
         {
           requestBody: { model: 'text-embedding-004', input: 'test' },
-        } as unknown as ReactiveAgentsRequestData,
+        } as unknown as SuperAgentsRequestData,
       );
 
       expect(result).toHaveProperty('error');
@@ -154,7 +154,7 @@ describe('Google Embed Configuration', () => {
         true,
         {
           requestBody: { model: 'text-embedding-004', input: 'test' },
-        } as unknown as ReactiveAgentsRequestData,
+        } as unknown as SuperAgentsRequestData,
       );
 
       expect(result).toHaveProperty('error');

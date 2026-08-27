@@ -14,11 +14,11 @@ export const workersAIEmbedConfig: AIProviderFunctionConfig = {
   input: {
     param: 'text',
     required: true,
-    transform: (raRequestBody: CreateEmbeddingsRequestBody): string[] => {
-      if (Array.isArray(raRequestBody.input)) {
-        return raRequestBody.input as string[];
+    transform: (saRequestBody: CreateEmbeddingsRequestBody): string[] => {
+      if (Array.isArray(saRequestBody.input)) {
+        return saRequestBody.input as string[];
       } else {
-        return [raRequestBody.input];
+        return [saRequestBody.input];
       }
     },
   },

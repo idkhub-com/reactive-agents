@@ -13,7 +13,7 @@ vi.mock('@web/providers/ai-providers', () => ({
   useAIProviders: vi.fn(),
 }));
 
-vi.mock('@web/api/v1/reactive-agents/ai-providers', () => ({
+vi.mock('@web/api/v1/super-agents/ai-providers', () => ({
   getAIProviderSchemas: vi.fn(() =>
     Promise.resolve({
       openai: {

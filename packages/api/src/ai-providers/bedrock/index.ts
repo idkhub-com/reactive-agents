@@ -87,15 +87,15 @@ export const bedrockConfig: AIProviderConfig = {
     [FunctionName.RETRIEVE_FILE_CONTENT]:
       bedrockRetrieveFileContentRequestHandler,
   },
-  getConfig: (raRequestBody): AIProviderConfig => {
+  getConfig: (saRequestBody): AIProviderConfig => {
     // To remove the region in case its a cross-region inference profile ID
     // https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference-support.html
     let config: AIProviderConfig = {
       api: bedrockAPIConfig,
     };
 
-    if (raRequestBody && 'model' in raRequestBody && raRequestBody.model) {
-      const providerModel = raRequestBody.model.replace(/^(us\.|eu\.)/, '');
+    if (saRequestBody && 'model' in saRequestBody && saRequestBody.model) {
+      const providerModel = saRequestBody.model.replace(/^(us\.|eu\.)/, '');
       const providerModelArray = providerModel?.split('.');
       const provider = providerModelArray?.[0];
       const model = providerModelArray?.slice(1).join('.');

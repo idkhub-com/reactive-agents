@@ -23,8 +23,8 @@ export const palmChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'prompt',
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      const { messages } = raRequestBody;
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      const { messages } = saRequestBody;
       const palmMessages = messages?.map((message) => ({
         author:
           message.role === ChatCompletionMessageRole.DEVELOPER

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getAgents } from '@web/api/v1/reactive-agents/agents';
+import { getAgents } from '@web/api/v1/super-agents/agents';
 import {
   Select,
   SelectContent,

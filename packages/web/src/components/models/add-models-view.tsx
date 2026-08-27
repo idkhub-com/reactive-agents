@@ -3,7 +3,7 @@
 import { getKnownEmbeddingDimensions } from '@shared/constants/embedding-models';
 import type { AIProvider } from '@shared/types/constants';
 import { PrettyAIProvider } from '@shared/types/constants';
-import { createModel } from '@web/api/v1/reactive-agents/models';
+import { createModel } from '@web/api/v1/super-agents/models';
 import { Button } from '@web/components/ui/button';
 import {
   Card,

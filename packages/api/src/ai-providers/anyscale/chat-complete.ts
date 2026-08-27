@@ -27,8 +27,8 @@ export const anyscaleChatCompleteConfig: AIProviderFunctionConfig = {
   messages: {
     param: 'messages',
     default: '',
-    transform: (raRequestBody: ChatCompletionRequestBody) => {
-      return raRequestBody.messages?.map((message) => {
+    transform: (saRequestBody: ChatCompletionRequestBody) => {
+      return saRequestBody.messages?.map((message) => {
         if (message.role === ChatCompletionMessageRole.DEVELOPER) {
           return { ...message, role: ChatCompletionMessageRole.SYSTEM };
         }

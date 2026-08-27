@@ -2,7 +2,7 @@ import type { SkillOptimizationEvaluation } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import * as skillsApi from '@web/api/v1/reactive-agents/skills';
+import * as skillsApi from '@web/api/v1/super-agents/skills';
 import {
   SkillOptimizationEvaluationsProvider,
   useSkillOptimizationEvaluations,
@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the API module
-vi.mock('@web/api/v1/reactive-agents/skills');
+vi.mock('@web/api/v1/super-agents/skills');
 
 describe('SkillOptimizationEvaluationsProvider', () => {
   let queryClient: QueryClient;

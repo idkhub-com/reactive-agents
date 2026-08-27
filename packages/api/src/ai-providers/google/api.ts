@@ -7,26 +7,26 @@ function getRouteVersion(_: string): string {
 
 export const googleAPIConfig: InternalProviderAPIConfig = {
   getBaseURL: () => 'https://generativelanguage.googleapis.com',
-  headers: ({ raTarget }) => {
+  headers: ({ saTarget }) => {
     return {
       'Content-Type': 'application/json',
-      'x-goog-api-key': raTarget.api_key ?? '',
+      'x-goog-api-key': saTarget.api_key ?? '',
     };
   },
-  getEndpoint: ({ raRequestData }) => {
-    switch (raRequestData.functionName) {
+  getEndpoint: ({ saRequestData }) => {
+    switch (saRequestData.functionName) {
       case FunctionName.CHAT_COMPLETE: {
-        const model = raRequestData.requestBody.model;
+        const model = saRequestData.requestBody.model;
         const routeVersion = getRouteVersion(model);
         return `/${routeVersion}/models/${model}:generateContent`;
       }
       case FunctionName.STREAM_CHAT_COMPLETE: {
-        const model = raRequestData.requestBody.model;
+        const model = saRequestData.requestBody.model;
         const routeVersion = getRouteVersion(model);
         return `/${routeVersion}/models/${model}:streamGenerateContent`;
       }
       case FunctionName.EMBED: {
-        const model = raRequestData.requestBody.model;
+        const model = saRequestData.requestBody.model;
         const routeVersion = getRouteVersion(model);
         return `/${routeVersion}/models/${model}:embedContent`;
       }

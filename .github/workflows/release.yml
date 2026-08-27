@@ -226,7 +226,7 @@ jobs:
 
             Or use with docker-compose:
             ```bash
-            RA_VERSION=${{ needs.validate-tag.outputs.version }} docker compose -f docker-compose.yml up
+            SA_VERSION=${{ needs.validate-tag.outputs.version }} docker compose -f docker-compose.yml up
             ```
 
             > **Note:** This is a draft release. Publishing this release will tag the Docker images as `latest`.

@@ -8,8 +8,8 @@ import { tryTargets } from './handler-utils';
 // async function getRequestData(
 //   request: Request,
 //   contentType: string,
-// ): Promise<ReactiveAgentsRequestBody | FormData | ArrayBuffer | ReadableStream> {
-//   let finalRequest: ReactiveAgentsRequestBody | FormData | ArrayBuffer | ReadableStream;
+// ): Promise<SuperAgentsRequestBody | FormData | ArrayBuffer | ReadableStream> {
+//   let finalRequest: SuperAgentsRequestBody | FormData | ArrayBuffer | ReadableStream;
 //   if (contentType == ContentTypeName.APPLICATION_JSON) {
 //     if (['GET', 'DELETE'].includes(request.method)) {
 //       finalRequest = {
@@ -42,10 +42,10 @@ export async function proxyHandler(c: AppContext): Promise<Response> {
 
     // const request = await getRequestData(c.req.raw, requestContentType); // TODO: Fix this
 
-    const raConfig = c.get('ra_config');
-    const raRequestData = c.get('ra_request_data');
+    const saConfig = c.get('sa_config');
+    const saRequestData = c.get('sa_request_data');
 
-    const tryTargetsResponse = await tryTargets(c, raConfig, raRequestData);
+    const tryTargetsResponse = await tryTargets(c, saConfig, saRequestData);
 
     return tryTargetsResponse;
   } catch (err: unknown) {

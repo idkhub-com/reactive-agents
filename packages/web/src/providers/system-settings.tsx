@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getSystemSettings,
   updateSystemSettings,
-} from '@web/api/v1/reactive-agents/system-settings';
+} from '@web/api/v1/super-agents/system-settings';
 import { createContext, type ReactNode, useCallback, useContext } from 'react';
 
 export const systemSettingsQueryKeys = {

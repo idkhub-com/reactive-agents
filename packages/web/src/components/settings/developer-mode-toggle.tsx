@@ -47,7 +47,7 @@ export function DeveloperModeToggle({
               Enable Developer Mode
             </h4>
             <p id={descriptionId} className="text-sm text-muted-foreground">
-              When enabled, shows the internal reactive-agents agent and all its
+              When enabled, shows the internal super-agents agent and all its
               skills and data. This is useful for debugging and development.
             </p>
           </div>
