@@ -517,4 +517,42 @@ const initialSchema: LibsqlMigration = {
   ],
 };
 
-export const libsqlMigrations: LibsqlMigration[] = [initialSchema];
+/**
+ * Mirrors `supabase/migrations/20260826000000_feedbacks_updated_at.sql`.
+ *
+ * `Feedback` is `.strict()` and requires `updated_at`, and
+ * `FeedbackCreateParams` generates one on every create, but the table never had
+ * the column on either backend. Appended rather than folded into the initial
+ * schema so the two backends' migration histories stay in step.
+ */
+const feedbacksUpdatedAt: LibsqlMigration = {
+  version: '0002_feedbacks_updated_at',
+  statements: [
+    `ALTER TABLE feedbacks
+      ADD COLUMN updated_at TEXT NOT NULL DEFAULT (${NOW_ISO})`,
+    updatedAtTrigger('feedbacks'),
+  ],
+};
+
+/**
+ * The Postgres initial migration seeds the singleton settings row, and
+ * `getSystemSettings` returns `settings[0]` assuming it is there. The initial
+ * libSQL migration created the table but not the row.
+ *
+ * The id is fixed rather than generated: the row is a singleton whose id is
+ * never referenced by anything, and a constant keeps the migration
+ * deterministic (SQLite has no uuid function).
+ */
+const defaultSystemSettings: LibsqlMigration = {
+  version: '0003_default_system_settings',
+  statements: [
+    `INSERT OR IGNORE INTO system_settings (id, singleton)
+     VALUES ('00000000-0000-4000-8000-000000000001', 1)`,
+  ],
+};
+
+export const libsqlMigrations: LibsqlMigration[] = [
+  initialSchema,
+  feedbacksUpdatedAt,
+  defaultSystemSettings,
+];

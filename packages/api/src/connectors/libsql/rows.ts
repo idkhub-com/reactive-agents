@@ -35,15 +35,12 @@ export const toBoolColumn = (value: boolean | undefined | null): InValue => {
 // --------------------------------------------------------------- from SQLite
 
 /**
- * Parse a JSON column.
- *
- * Returns `fallback` for NULL so that a nullable JSON column reads as
- * `undefined` rather than `null`, matching what the Zod schemas accept for
- * optional fields.
+ * Parse a JSON column. NULL stays `null`, which is what PostgREST returns for
+ * a NULL `jsonb` column and therefore what the Zod schemas expect.
  */
 export const fromJson = <T>(value: unknown, fallback?: T): T | undefined => {
   if (value === null || value === undefined) {
-    return fallback;
+    return fallback === undefined ? (null as T) : fallback;
   }
   if (typeof value !== 'string') {
     // libSQL can hand back an already-decoded value for some drivers.
@@ -60,11 +57,12 @@ export const fromBool = (value: unknown): boolean =>
   value === 1 || value === true;
 
 /**
- * Normalise a raw row: `bigint` to `number`, and NULL to `undefined`.
+ * Normalise a raw row: `bigint` to `number`, everything else as stored.
  *
- * The Zod schemas mark absent fields `.optional()` rather than `.nullable()`,
- * so a NULL column has to arrive as `undefined` or parsing fails. Columns that
- * need JSON or boolean decoding are named by the caller.
+ * NULL is deliberately preserved rather than mapped to `undefined`: PostgREST
+ * serialises a NULL column as JSON `null`, so the Zod schemas are written with
+ * `.nullable()` and would reject `undefined`. Columns that need JSON or boolean
+ * decoding are named by the caller.
  */
 export const normaliseRow = (
   row: Row,
@@ -80,12 +78,11 @@ export const normaliseRow = (
       continue;
     }
     if (bool.has(key)) {
-      out[key] =
-        value === null || value === undefined ? undefined : fromBool(value);
+      out[key] = value === null || value === undefined ? null : fromBool(value);
       continue;
     }
     if (value === null || value === undefined) {
-      out[key] = undefined;
+      out[key] = null;
       continue;
     }
     out[key] = typeof value === 'bigint' ? Number(value) : value;
@@ -142,4 +139,38 @@ export const buildUpdate = (
     sql: `UPDATE ${table} SET ${assignments.join(', ')} WHERE ${where.column} = ?`,
     args: [...entries.map(([, value]) => value), where.value],
   };
+};
+
+/**
+ * Coerce a plain object into bindable column values.
+ *
+ * Used where a create or update object is spread into a statement: strings and
+ * numbers pass through, booleans become 0/1, and anything structural is
+ * stringified for the JSON TEXT column it belongs to. `undefined` survives so
+ * the query builders can drop the column and let its default apply.
+ */
+export const asColumns = (
+  values: Record<string, unknown>,
+): Record<string, InValue | undefined> => {
+  const out: Record<string, InValue | undefined> = {};
+
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined) {
+      out[key] = undefined;
+    } else if (value === null) {
+      out[key] = null;
+    } else if (typeof value === 'boolean') {
+      out[key] = value ? 1 : 0;
+    } else if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'bigint'
+    ) {
+      out[key] = value;
+    } else {
+      out[key] = JSON.stringify(value);
+    }
+  }
+
+  return out;
 };
