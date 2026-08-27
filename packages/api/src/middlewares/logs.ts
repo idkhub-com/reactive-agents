@@ -38,6 +38,7 @@ import type {
 } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
+import { stripAgentSkillPath } from '@shared/utils/url';
 import type { MiddlewareHandler } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
 import type { Factory } from 'hono/factory';
@@ -622,7 +623,9 @@ export const logsMiddleware = (
 
     await next();
 
-    const url = new URL(c.req.url);
+    // Path-scoped requests are logged under their canonical endpoint so that
+    // they group with requests that named the agent and skill in the header.
+    const url = new URL(stripAgentSkillPath(c.req.url));
 
     if (!shouldLogRequest(url)) {
       return;

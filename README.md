@@ -144,7 +144,24 @@ Super Agents is a self-optimizing AI agent platform that automatically improves 
     # agent_response = response.choices[0].message.parsed
     # print("\nAgent Response:", agent_response)
     ```
-    
+
+    Alternatively, you can name the agent and the skill in the URL instead of in the `sa-config` header. Point the base URL at the skill and the rest of the request stays a plain OpenAI request:
+
+    ```python
+    client = OpenAI(
+        api_key="",
+        base_url="http://localhost:3000/v1/agents/calendar_event_planner/skills/generate",
+    )
+
+    response = client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": user_message}],
+        response_format=CalendarEvent,
+    )
+    ```
+
+    This works for `/chat/completions`, `/completions`, `/responses` and `/embeddings`. Agent and skill names must be URL-encoded. The `sa-config` header is optional in this form, and is still the place for anything else you want to send (such as `system_prompt_variables`); if it also carries `agent_name` or `skill_name`, the URL wins.
+
 3. Navigate to the `generate` skill dashboard. When a skill is just created, you will see a "Warming up" message next to the skill name. This is normal and indicates that the skill is warming up. Send 5 requests or so to allow the agent to see the some sample messages, expected response structure, tools, etc. without you having to manually define those. The agent will create the appropriate prompts and evaluations by seeing the sample messages and expected response structure.
 
 4. After a few requests you will see the "Warming up" message disappear. Click on "Manage Evaluations" and double check that the "Task Completion" evaluation is checking for the right qualities. Make adjustments to it if needed. You can also check each log within the skill and see why a specific score was given to it. Setting up evaluations correctly **since the beginning** will allow an agent to find the most optimal configurations faster.

@@ -37,6 +37,9 @@ import { prettyJSON } from 'hono/pretty-json';
 
 const factory = createFactory<AppEnv>();
 
+/** Path prefix that scopes a gateway request to an agent and one of its skills. */
+const AGENT_SKILL_BASE_PATH = '/agents/:agent_name/skills/:skill_name';
+
 // Lazy initialization of model capabilities (Cloudflare Workers can't do this at module load time)
 let modelCapabilitiesInitialized = false;
 
@@ -121,6 +124,14 @@ app.route('/chat', chatRouter);
 app.route('/completions', completionsRouter);
 app.route('/responses', responsesRouter);
 app.route('/embeddings', embeddingsRouter);
+
+// The same endpoints scoped to an agent and a skill through the path, so that
+// OpenAI-compatible clients can point their base URL at a single skill instead
+// of sending the names in the `sa-config` header.
+app.route(`${AGENT_SKILL_BASE_PATH}/chat`, chatRouter);
+app.route(`${AGENT_SKILL_BASE_PATH}/completions`, completionsRouter);
+app.route(`${AGENT_SKILL_BASE_PATH}/responses`, responsesRouter);
+app.route(`${AGENT_SKILL_BASE_PATH}/embeddings`, embeddingsRouter);
 const superAgentsRoute = app.route('/super-agents', superAgentsRouter);
 
 export type SuperAgentsRoute = typeof superAgentsRoute;

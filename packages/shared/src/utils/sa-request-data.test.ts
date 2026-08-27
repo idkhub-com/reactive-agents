@@ -1,6 +1,9 @@
 import { FunctionName } from '@shared/types/api/request';
 import { HttpMethod } from '@shared/types/http';
-import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
+import {
+  isKnownRoute,
+  produceSuperAgentsRequestData,
+} from '@shared/utils/sa-request-data';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('produceSuperAgentsRequestData', () => {
@@ -341,6 +344,90 @@ describe('produceSuperAgentsRequestData', () => {
       );
 
       expect(result.requestBody).toMatchObject(validRequestBody);
+    });
+  });
+
+  describe('agent and skill scoped paths', () => {
+    it('should match the canonical route for a scoped chat completion', () => {
+      const result = produceSuperAgentsRequestData(
+        HttpMethod.POST,
+        `${baseUrl}/v1/agents/captain_code/skills/programming/chat/completions`,
+        requestHeaders,
+        {
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: 'Hello' }],
+        },
+      );
+
+      expect(result.functionName).toBe(FunctionName.CHAT_COMPLETE);
+      expect(result.url).toBe(`${baseUrl}/v1/chat/completions`);
+    });
+
+    it('should match the canonical route for a scoped streaming request', () => {
+      const result = produceSuperAgentsRequestData(
+        HttpMethod.POST,
+        `${baseUrl}/v1/agents/captain_code/skills/programming/chat/completions`,
+        requestHeaders,
+        {
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: 'Hello' }],
+          stream: true,
+        },
+      );
+
+      expect(result.functionName).toBe(FunctionName.STREAM_CHAT_COMPLETE);
+      expect(result.stream).toBe(true);
+    });
+
+    it('should match the canonical route for scoped embeddings', () => {
+      const result = produceSuperAgentsRequestData(
+        HttpMethod.POST,
+        `${baseUrl}/v1/agents/captain_code/skills/embed/embeddings`,
+        requestHeaders,
+        {
+          model: 'text-embedding-3-small',
+          input: 'Hello',
+        },
+      );
+
+      expect(result.functionName).toBe(FunctionName.EMBED);
+      expect(result.url).toBe(`${baseUrl}/v1/embeddings`);
+    });
+  });
+
+  describe('isKnownRoute', () => {
+    it('should recognise the canonical gateway routes', () => {
+      expect(
+        isKnownRoute(HttpMethod.POST, `${baseUrl}/v1/chat/completions`),
+      ).toBe(true);
+      expect(isKnownRoute(HttpMethod.POST, `${baseUrl}/v1/embeddings`)).toBe(
+        true,
+      );
+    });
+
+    it('should recognise the agent and skill scoped routes', () => {
+      expect(
+        isKnownRoute(
+          HttpMethod.POST,
+          `${baseUrl}/v1/agents/captain_code/skills/programming/chat/completions`,
+        ),
+      ).toBe(true);
+    });
+
+    it('should reject unknown paths', () => {
+      expect(isKnownRoute(HttpMethod.POST, `${baseUrl}/v1/nope`)).toBe(false);
+      expect(
+        isKnownRoute(
+          HttpMethod.POST,
+          `${baseUrl}/v1/agents/captain_code/chat/completions`,
+        ),
+      ).toBe(false);
+    });
+
+    it('should reject a known path with the wrong method', () => {
+      expect(
+        isKnownRoute(HttpMethod.GET, `${baseUrl}/v1/chat/completions`),
+      ).toBe(false);
     });
   });
 });
