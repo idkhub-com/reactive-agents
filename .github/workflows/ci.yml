@@ -182,6 +182,65 @@ jobs:
       - name: Smoke test the all-in-one image
         run: ./scripts/check-container-image.sh
 
+  e2e:
+    name: End-to-End
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 10.10.0
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Covers what the unit tests structurally cannot: static serving, the SPA
+      # fallback, the `/v1` 404 boundary, and the dashboard rendering against a
+      # real API.
+      #
+      # `test:e2e:all` also brings up Postgres and PostgREST via compose and
+      # runs the contract specs a second time against the Supabase connector.
+      # That parity pass is the point of the job: libSQL and Supabase are two
+      # implementations of one interface, and the types they disagree about
+      # (JSONB, TIMESTAMPTZ, BOOLEAN, TEXT[]) are converted by hand in
+      # `connectors/libsql/rows.ts`. Running one suite against both is what
+      # proves the translation is faithful rather than merely self-consistent.
+      - name: Run end-to-end tests against both storage backends
+        run: pnpm test:e2e:all
+
+      - name: Upload the report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.job }}
+          path: |
+            playwright-report/
+            e2e-results/
+          retention-days: 7
+
+      - name: Stop Postgres and PostgREST
+        if: always()
+        run: scripts/e2e-postgres.sh down
+
   migrations:
     name: Test Migrations
     timeout-minutes: 10

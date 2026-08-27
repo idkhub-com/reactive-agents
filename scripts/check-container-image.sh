@@ -143,6 +143,22 @@ fi
 rm -f "$repo_root/.container-agent.json"
 echo
 
+# The headline of the single-container story is `docker run` with nothing else
+# alongside it, and a user who leaves off `-v` gets no /app/data. SQLite creates
+# the database file but not the directory above it, and migrations are lazy, so
+# this used to produce a container that passed its health check and then failed
+# every API call with `ConnectionFailed(... 14)`.
+echo "==> libSQL backend (no volume mounted)"
+start_container -e LIBSQL_URL=file:/app/data/super-agents.db
+
+novolume_status="$(curl -s -o /dev/null -w '%{http_code}' -m 20 \
+  -X POST "$base/v1/super-agents/agents" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"novolume-agent","description":"Created without a mounted volume to check the data directory is made."}' \
+  || echo "000")"
+check "POST /v1/super-agents/agents" "201" "$novolume_status"
+echo
+
 if [ "$failures" -gt 0 ]; then
   echo "Container image check FAILED ($failures problem(s))." >&2
   docker logs "$name" >&2 || true

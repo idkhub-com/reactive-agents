@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono, type MiddlewareHandler } from 'hono';
@@ -73,6 +74,34 @@ if (serveDashboard) {
 
   // SPA fallback: any remaining path is a client-side route.
   app.get('*', serveStatic({ path: `${dashboardRoot}/index.html` }));
+}
+
+/**
+ * Create the directory holding an embedded libSQL database.
+ *
+ * SQLite will create the database file but not the directory above it, and
+ * migrations run lazily on the first request, so a missing directory produces
+ * a container that passes its health check and then fails every API call with
+ * `ConnectionFailed(... 14)`. Compose mounts a volume at this path, but a bare
+ * `docker run` without `-v` does not, and neither does running the built
+ * server straight from a checkout.
+ *
+ * Node-only on purpose: this entrypoint is not reachable from `src/index.ts`,
+ * so the `node:fs` import never enters the Workers bundle -- and a `file:`
+ * database is impossible there regardless, since `@libsql/client` resolves to
+ * its HTTP-only build on workerd.
+ */
+const libsqlUrl = process.env.LIBSQL_URL;
+if (libsqlUrl?.startsWith('file:')) {
+  const directory = dirname(libsqlUrl.slice('file:'.length));
+  try {
+    mkdirSync(directory, { recursive: true });
+  } catch (error) {
+    // Not fatal here: the first query reports the real problem with more
+    // context than a startup crash would, and a read-only mount holding an
+    // existing database is still perfectly usable.
+    console.warn(`Could not create the libSQL directory ${directory}:`, error);
+  }
 }
 
 console.log(`Starting server on port ${port}...`);

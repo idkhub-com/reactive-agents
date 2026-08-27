@@ -21,7 +21,28 @@ export default defineConfig({
     teardownTimeout: 3000,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
+      reportsDirectory: './coverage',
+      /**
+       * Without these, the report is dominated by code nobody writes tests
+       * for: dependencies alone are more lines than the entire application,
+       * and they count as fully covered, which lifts the headline number by
+       * roughly thirty points and hides where the real gaps are.
+       */
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/coverage/**',
+        'examples/**',
+        'e2e/**',
+        'scripts/**',
+        '**/*.config.{ts,js,mjs}',
+        '**/*.test.{ts,tsx}',
+        '**/test-utils/**',
+        'packages/web/src/routeTree.gen.ts',
+        'packages/web/src/components/ui/**',
+        'vitest.setup.tsx',
+      ],
     },
     server: {
       deps: {

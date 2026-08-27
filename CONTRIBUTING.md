@@ -50,6 +50,20 @@ Other directories:
    pnpm dev
    ```
 
+To run without Supabase (and without Docker), build once and start the same
+single process the published image runs, backed by an embedded libSQL file:
+
+```sh
+pnpm build
+LIBSQL_URL="file:$PWD/.data/dev.db" DASHBOARD_ROOT=./packages/web/dist \
+  node packages/api/dist/server.js
+```
+
+The dashboard and the API are then both on `http://localhost:3000`. Note that
+this is a build-and-run loop, not hot reload — `pnpm dev` remains the way to
+iterate. It is also the only way to exercise a `file:` database locally, since
+`pnpm dev:api` runs on workerd, where `@libsql/client` is HTTP-only.
+
 ## Development Commands
 
 **Build & Run:**
@@ -78,7 +92,14 @@ pnpm typecheck      # TypeScript type checking (uses Turborepo)
 pnpm test           # Run all tests (CI mode)
 pnpm test:watch     # Run tests in watch mode
 pnpm test path/to/test.ts  # Run specific test file
+
+pnpm exec playwright install chromium  # first run only
+pnpm test:e2e       # End-to-end: build, then drive the real server in a browser
+pnpm test:e2e:ui    # End-to-end in Playwright's interactive runner
 ```
+
+The end-to-end suite (`e2e/`) runs the built app against an embedded libSQL
+database, so it needs no Supabase and no Docker — see `e2e/README.md`.
 
 **Database:**
 ```sh

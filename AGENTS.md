@@ -69,6 +69,16 @@ pnpm test:watch                # Run tests in watch mode
 # In-depth integration tests (slower, more comprehensive)
 INCLUDE_IN_DEPTH=true pnpm test
 
+# End-to-end tests (Playwright, against the built app)
+pnpm exec playwright install chromium  # first run only
+pnpm test:e2e          # build, then drive the real server and dashboard (libSQL)
+pnpm test:e2e:all      # the above, plus the contract specs against Supabase
+pnpm test:e2e:ui       # interactive runner (skips the build)
+pnpm test:e2e:report   # open the report from the last run
+
+# Coverage (unit tests only; the e2e suite runs a built bundle out-of-process)
+pnpm test:coverage     # writes coverage/index.html
+
 # Runtime checks (also run in CI; both are slow, so they are not part of `pnpm test`)
 pnpm verify:worker     # Bundle and boot the API on workerd
 pnpm verify:container  # Build the all-in-one image and smoke test it (needs Docker)
@@ -240,11 +250,31 @@ Database management:
 
 ## Testing Guidelines
 
-**Framework**: Vitest (jsdom) + Testing Library
-- **Location**: under `tests/` mirroring source paths
+**Unit and component tests** — Vitest (jsdom) + Testing Library
+- **Location**: beside the code they cover, inside `packages/`
 - **Naming**: `*.test.ts` or `*.test.tsx`
 - **Run**: `pnpm test` (CI mode) or `pnpm test:watch` (dev)
 - **Coverage**: Reports generated in text/json/html
+
+**End-to-end tests** — Playwright, in `e2e/` (see `e2e/README.md`)
+- **Run**: `pnpm test:e2e`; browsers install with `pnpm exec playwright install chromium`
+- **What runs**: the built single-process server (`packages/api/dist/server.js`)
+  on a throwaway libSQL file, so no Postgres, PostgREST or Docker is involved
+- **Parity**: `e2e/contract/` runs against *both* storage backends —
+  `pnpm test:e2e:all` adds a Supabase pass (Postgres + PostgREST via compose,
+  either docker or podman). This is the check that the hand-written type
+  conversions in `connectors/libsql/rows.ts` match Postgres: JSONB, TIMESTAMPTZ,
+  BOOLEAN, TEXT[], NULL handling, AFTER UPDATE triggers and ON DELETE CASCADE.
+  Put a spec in `contract/` only if it must hold on both backends
+- **Why it exists**: static serving, the SPA fallback, the `/v1` 404 boundary
+  and the native `libsql` addon only execute in the built server — none of them
+  run under `pnpm dev` or in the Vitest suites
+- **It cannot use `pnpm dev`**: that runs the API on workerd, where
+  `@libsql/client` resolves to its HTTP-only build and a `file:` database
+  cannot be opened
+- Agent names are unique per deployment and projects run in parallel, so coin
+  names with `uniqueAgentName()` rather than sharing fixture rows; local runs
+  reuse a server, so no test may assume an empty database
 
 ### Testing Patterns
 

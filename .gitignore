@@ -60,3 +60,9 @@ app.config.timestamp_*.js
 # Docker
 .env.docker
 docker-compose.override.yml
+
+# Playwright / end-to-end
+/e2e-results
+/playwright-report
+/.e2e-data
+**/test-results
