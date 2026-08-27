@@ -21,7 +21,9 @@ export default defineConfig({
     teardownTimeout: 3000,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'json-summary', 'html'],
+      // `html` is what gets published to Pages, `json-summary` is what the
+      // badge reads, and `lcov` is the portable format for anything external.
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
       reportsDirectory: './coverage',
       /**
        * Without these, the report is dominated by code nobody writes tests
