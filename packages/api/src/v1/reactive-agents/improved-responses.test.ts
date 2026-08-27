@@ -130,10 +130,15 @@ vi.stubGlobal('crypto', {
 });
 
 // Mock environment constants for authentication tests
-vi.mock('@api/constants', () => ({
-  BEARER_TOKEN: 'test-bearer-token',
-  JWT_SECRET: 'test-jwt-secret',
-}));
+vi.mock('@api/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@api/constants')>();
+  return {
+    ...actual,
+    getAccessPassword: () => undefined,
+    getBearerToken: () => 'test-bearer-token',
+    getAuthJwtSecret: () => 'test-jwt-secret',
+  };
+});
 
 describe('Improved Responses API', () => {
   let app: Hono<AppEnv>;
@@ -185,7 +190,7 @@ describe('Improved Responses API', () => {
       expect(data).toEqual([mockImprovedResponse]);
       expect(
         mockUserDataStorageConnector.getImprovedResponse,
-      ).toHaveBeenCalledWith({
+      ).toHaveBeenCalledWith(expect.anything(), {
         id: '123e4567-e89b-12d3-a456-426614174000',
         log_id: undefined,
       });
@@ -245,7 +250,7 @@ describe('Improved Responses API', () => {
       expect(data).toEqual([mockImprovedResponse]);
       expect(
         mockUserDataStorageConnector.getImprovedResponse,
-      ).toHaveBeenCalledWith({
+      ).toHaveBeenCalledWith(expect.anything(), {
         id: undefined,
         log_id: '123e4567-e89b-12d3-a456-426614174003',
       });
@@ -349,6 +354,7 @@ describe('Improved Responses API', () => {
       expect(
         mockUserDataStorageConnector.createImprovedResponse,
       ).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
           agent_id: '123e4567-e89b-12d3-a456-426614174002',
           skill_id: '123e4567-e89b-12d3-a456-426614174004',
@@ -512,6 +518,7 @@ describe('Improved Responses API', () => {
       expect(
         mockUserDataStorageConnector.updateImprovedResponse,
       ).toHaveBeenCalledWith(
+        expect.anything(),
         '123e4567-e89b-12d3-a456-426614174000',
         expect.objectContaining({
           improved_response_body: { improved: 'updated content' },
@@ -630,7 +637,7 @@ describe('Improved Responses API', () => {
       // Should directly call deleteImprovedResponse
       expect(
         mockUserDataStorageConnector.deleteImprovedResponse,
-      ).toHaveBeenCalledWith(improvedResponseId);
+      ).toHaveBeenCalledWith(expect.anything(), improvedResponseId);
     });
 
     it('should return 400 for invalid UUID in delete', async () => {
@@ -774,7 +781,7 @@ describe('Improved Responses API', () => {
       // Note: After Zod parsing, limit and offset are numbers
       expect(
         mockUserDataStorageConnector.getImprovedResponse,
-      ).toHaveBeenCalledWith({
+      ).toHaveBeenCalledWith(expect.anything(), {
         id: '123e4567-e89b-12d3-a456-426614174000',
         limit: 10,
         offset: 0,

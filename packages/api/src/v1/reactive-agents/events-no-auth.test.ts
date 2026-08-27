@@ -5,12 +5,12 @@ import { Hono } from 'hono';
 import { createFactory } from 'hono/factory';
 import { describe, expect, it, vi } from 'vitest';
 
-// Mock the constants module with BEARER_TOKEN as undefined (no auth required)
+// Mock the constants module with no bearer token configured (no auth required)
 vi.mock('@api/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@api/constants')>();
   return {
     ...actual,
-    BEARER_TOKEN: undefined,
+    getBearerToken: () => undefined,
   };
 });
 

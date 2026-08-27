@@ -1,14 +1,16 @@
 import { RA_SKILLS } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import type { Skill } from '@shared/types/data/skill';
 
 export async function getSkill(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   agentId: string,
   agentName: string,
   skillName: string,
 ): Promise<Skill | null> {
-  const skills = await userDataStorageConnector.getSkills({
+  const skills = await userDataStorageConnector.getSkills(c, {
     name: skillName,
     agent_id: agentId,
   });
@@ -18,7 +20,7 @@ export async function getSkill(
     // Auto create internal skills
     if (agentName === 'reactive-agents' && RA_SKILLS.includes(skillName)) {
       try {
-        const newSkill = await userDataStorageConnector.createSkill({
+        const newSkill = await userDataStorageConnector.createSkill(c, {
           agent_id: agentId,
           name: skillName,
           description: 'An Reactive Agents internal skill',
@@ -34,7 +36,7 @@ export async function getSkill(
       } catch (_error) {
         // If skill creation fails (e.g., duplicate key from concurrent request),
         // try to fetch the existing skill instead
-        const existingSkills = await userDataStorageConnector.getSkills({
+        const existingSkills = await userDataStorageConnector.getSkills(c, {
           name: skillName,
           agent_id: agentId,
         });

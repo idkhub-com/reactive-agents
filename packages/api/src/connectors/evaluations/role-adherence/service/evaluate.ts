@@ -2,6 +2,7 @@ import { getRoleAdherenceMainTemplate } from '@api/connectors/evaluations/role-a
 import { RoleAdherenceEvaluationParameters } from '@api/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import { extractOutputFromResponseBody } from '@api/utils/reactive-agents/responses';
 import { ReactiveAgentsResponseBody } from '@shared/types/api/response';
@@ -43,6 +44,7 @@ function pickRoleData(
 }
 
 export async function evaluateLog(
+  c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
@@ -51,11 +53,13 @@ export async function evaluateLog(
 
   // Resolve model configuration from evaluation.model_id or system settings
   const modelConfig = await resolveEvaluationModelConfig(
+    c,
     evaluation,
     storageConnector,
   );
 
   const llmJudge = createLLMJudge(
+    c,
     {
       temperature: params.temperature,
       max_tokens: params.max_tokens,

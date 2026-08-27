@@ -1,16 +1,19 @@
 import { supabaseUserDataStorageConnector } from '@api/connectors/supabase';
+import { createMockContext } from '@api/test-utils/mock-context';
 import type {
   ToolCreateParams,
   ToolQueryParams,
 } from '@shared/types/data/tool';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock environment variables
+const mockContext = createMockContext();
+
+// Mock environment variables - constants are now functions that take AppContext
 vi.mock('@api/constants', () => ({
-  POSTGREST_SERVICE_ROLE_KEY: 'test-service-role-key',
-  POSTGREST_URL: 'https://test.supabase.co/rest/v1',
-  SUPABASE_SECRET_KEY: 'test-secret-key',
-  AI_PROVIDER_API_KEY_ENCRYPTION_KEY: 'test-encryption-key-32-bytes-long',
+  getPostgrestServiceRoleKey: () => 'test-service-role-key',
+  getPostgrestUrl: () => 'https://test.supabase.co/rest/v1',
+  getSupabaseSecretKey: () => 'test-secret-key',
+  getAiProviderApiKeyEncryptionKey: () => 'test-encryption-key-32-bytes-long',
 }));
 
 // Mock fetch globally
@@ -46,8 +49,10 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         agent_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
-      const result =
-        await supabaseUserDataStorageConnector.getTools(queryParams);
+      const result = await supabaseUserDataStorageConnector.getTools(
+        mockContext,
+        queryParams,
+      );
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -84,7 +89,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         offset: 5,
       };
 
-      await supabaseUserDataStorageConnector.getTools(queryParams);
+      await supabaseUserDataStorageConnector.getTools(mockContext, queryParams);
 
       const expectedUrl = new URL('https://test.supabase.co/rest/v1/tools');
       expectedUrl.searchParams.set(
@@ -113,7 +118,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         json: async () => mockResponse,
       } as Response);
 
-      await supabaseUserDataStorageConnector.getTools({});
+      await supabaseUserDataStorageConnector.getTools(mockContext, {});
 
       expect(mockFetch).toHaveBeenCalledWith(
         new URL('https://test.supabase.co/rest/v1/tools'),
@@ -131,7 +136,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       } as Response);
 
       await expect(
-        supabaseUserDataStorageConnector.getTools({}),
+        supabaseUserDataStorageConnector.getTools(mockContext, {}),
       ).rejects.toThrow('Failed to fetch from PostgREST');
     });
 
@@ -151,7 +156,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       } as Response);
 
       await expect(
-        supabaseUserDataStorageConnector.getTools({}),
+        supabaseUserDataStorageConnector.getTools(mockContext, {}),
       ).rejects.toThrow('Failed to parse data from PostgREST');
     });
   });
@@ -181,8 +186,10 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         json: async () => mockResponse,
       } as Response);
 
-      const result =
-        await supabaseUserDataStorageConnector.createTool(createParams);
+      const result = await supabaseUserDataStorageConnector.createTool(
+        mockContext,
+        createParams,
+      );
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -219,7 +226,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       } as Response);
 
       await expect(
-        supabaseUserDataStorageConnector.createTool(createParams),
+        supabaseUserDataStorageConnector.createTool(mockContext, createParams),
       ).rejects.toThrow('Failed to insert into PostgREST');
     });
 
@@ -241,7 +248,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       } as Response);
 
       await expect(
-        supabaseUserDataStorageConnector.createTool(createParams),
+        supabaseUserDataStorageConnector.createTool(mockContext, createParams),
       ).rejects.toThrow('Failed to insert into PostgREST');
     });
   });
@@ -255,7 +262,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         ok: true,
       } as Response);
 
-      await supabaseUserDataStorageConnector.deleteTool(toolId);
+      await supabaseUserDataStorageConnector.deleteTool(mockContext, toolId);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -284,7 +291,7 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       } as Response);
 
       await expect(
-        supabaseUserDataStorageConnector.deleteTool(toolId),
+        supabaseUserDataStorageConnector.deleteTool(mockContext, toolId),
       ).rejects.toThrow('Failed to delete from PostgREST');
     });
   });
@@ -294,21 +301,24 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       // Reset modules to ensure fresh import
       vi.resetModules();
 
-      // Mock the constants to return undefined
+      // Mock the constants to return undefined for service role key
       vi.doMock('@api/constants', () => ({
-        POSTGREST_SERVICE_ROLE_KEY: undefined,
-        POSTGREST_URL: 'https://test.supabase.co/rest/v1',
-        SUPABASE_SECRET_KEY: 'test-secret-key',
-        AI_PROVIDER_API_KEY_ENCRYPTION_KEY: 'test-encryption-key-32-bytes-long',
+        getPostgrestServiceRoleKey: () => {
+          throw new Error('POSTGREST_SERVICE_ROLE_KEY is not set');
+        },
+        getPostgrestUrl: () => 'https://test.supabase.co/rest/v1',
+        getSupabaseSecretKey: () => 'test-secret-key',
+        getAiProviderApiKeyEncryptionKey: () =>
+          'test-encryption-key-32-bytes-long',
       }));
 
       // Re-import to get the mocked version
       const { supabaseUserDataStorageConnector: mockedConnector } =
         await import('@api/connectors/supabase');
 
-      await expect(mockedConnector.getTools({})).rejects.toThrow(
-        'POSTGREST_SERVICE_ROLE_KEY is not set',
-      );
+      await expect(
+        mockedConnector.getTools(createMockContext(), {}),
+      ).rejects.toThrow('POSTGREST_SERVICE_ROLE_KEY');
 
       // Reset after test
       vi.doUnmock('@api/constants');
@@ -319,18 +329,21 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
       vi.resetModules();
 
       vi.doMock('@api/constants', () => ({
-        POSTGREST_SERVICE_ROLE_KEY: 'test-key',
-        POSTGREST_URL: undefined,
-        SUPABASE_SECRET_KEY: 'test-secret-key',
-        AI_PROVIDER_API_KEY_ENCRYPTION_KEY: 'test-encryption-key-32-bytes-long',
+        getPostgrestServiceRoleKey: () => 'test-key',
+        getPostgrestUrl: () => {
+          throw new Error('POSTGREST_URL is not set');
+        },
+        getSupabaseSecretKey: () => 'test-secret-key',
+        getAiProviderApiKeyEncryptionKey: () =>
+          'test-encryption-key-32-bytes-long',
       }));
 
       const { supabaseUserDataStorageConnector: mockedConnector } =
         await import('@api/connectors/supabase');
 
-      await expect(mockedConnector.getTools({})).rejects.toThrow(
-        'POSTGREST_URL is not set',
-      );
+      await expect(
+        mockedConnector.getTools(createMockContext(), {}),
+      ).rejects.toThrow('POSTGREST_URL');
 
       // Reset after test
       vi.doUnmock('@api/constants');
@@ -388,8 +401,10 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         json: async () => mockResponse,
       } as Response);
 
-      const result =
-        await supabaseUserDataStorageConnector.createTool(createParams);
+      const result = await supabaseUserDataStorageConnector.createTool(
+        mockContext,
+        createParams,
+      );
 
       expect(result.raw_data).toEqual(createParams.raw_data);
       expect(result.name).toBe('complex_function');
@@ -419,8 +434,10 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
         offset: 10,
       };
 
-      const result =
-        await supabaseUserDataStorageConnector.getTools(queryParams);
+      const result = await supabaseUserDataStorageConnector.getTools(
+        mockContext,
+        queryParams,
+      );
 
       expect(result).toHaveLength(5);
       expect(mockFetch).toHaveBeenCalledWith(

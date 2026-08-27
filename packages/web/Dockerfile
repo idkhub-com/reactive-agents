@@ -1,7 +1,9 @@
 # Build from repo root: docker build -f packages/web/Dockerfile -t reactive-agents-web .
 FROM node:22-alpine AS base
 
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN wget -qO- https://get.pnpm.io/install.sh | PNPM_VERSION=10.10.0 ENV="$HOME/.shrc" SHELL="$(which sh)" sh -
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

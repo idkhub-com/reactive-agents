@@ -14,6 +14,7 @@ export const agentAndSkillMiddleware = createMiddleware(
       if (!url.pathname.startsWith('/v1/reactive-agents')) {
         const raConfig = c.get('ra_config_pre_processed');
         const agent = await getAgent(
+          c,
           c.get('user_data_storage_connector'),
           raConfig.agent_name,
         );
@@ -24,6 +25,7 @@ export const agentAndSkillMiddleware = createMiddleware(
           );
         }
         const skill = await getSkill(
+          c,
           c.get('user_data_storage_connector'),
           agent.id,
           agent.name,

@@ -1,3 +1,4 @@
+import type { AppContext } from '@api/types/hono';
 import type {
   Agent,
   AgentCreateParams,
@@ -81,113 +82,171 @@ import type { z } from 'zod';
 export interface UserDataStorageConnector {
   // Feedback
   getFeedback(
+    c: AppContext,
     queryParams: FeedbackQueryParams,
   ): Promise<Feedback[]> | Feedback[];
-  createFeedback(feedback: FeedbackCreateParams): Promise<Feedback> | Feedback;
-  deleteFeedback(id: string): Promise<void> | void;
+  createFeedback(
+    c: AppContext,
+    feedback: FeedbackCreateParams,
+  ): Promise<Feedback> | Feedback;
+  deleteFeedback(c: AppContext, id: string): Promise<void> | void;
 
   // Improved Response
   getImprovedResponse(
+    c: AppContext,
     params: ImprovedResponseQueryParams,
   ): Promise<ImprovedResponse[]> | ImprovedResponse[];
   createImprovedResponse(
+    c: AppContext,
     improvedResponse: ImprovedResponse,
   ): Promise<ImprovedResponse> | ImprovedResponse;
   updateImprovedResponse(
+    c: AppContext,
     id: string,
     update: ImprovedResponseUpdateParams,
   ): Promise<ImprovedResponse> | ImprovedResponse;
-  deleteImprovedResponse(id: string): Promise<void> | void;
+  deleteImprovedResponse(c: AppContext, id: string): Promise<void> | void;
 
   // Agents
-  getAgents(queryParams: AgentQueryParams): Promise<Agent[]> | Agent[];
-  createAgent(agent: AgentCreateParams): Promise<Agent> | Agent;
-  updateAgent(id: string, update: AgentUpdateParams): Promise<Agent> | Agent;
-  deleteAgent(id: string): Promise<void> | void;
+  getAgents(
+    c: AppContext,
+    queryParams: AgentQueryParams,
+  ): Promise<Agent[]> | Agent[];
+  createAgent(c: AppContext, agent: AgentCreateParams): Promise<Agent> | Agent;
+  updateAgent(
+    c: AppContext,
+    id: string,
+    update: AgentUpdateParams,
+  ): Promise<Agent> | Agent;
+  deleteAgent(c: AppContext, id: string): Promise<void> | void;
 
   // Skills
-  getSkills(queryParams: SkillQueryParams): Promise<Skill[]> | Skill[];
-  createSkill(skill: SkillCreateParams): Promise<Skill> | Skill;
-  updateSkill(id: string, update: SkillUpdateParams): Promise<Skill> | Skill;
-  deleteSkill(id: string): Promise<void> | void;
+  getSkills(
+    c: AppContext,
+    queryParams: SkillQueryParams,
+  ): Promise<Skill[]> | Skill[];
+  createSkill(c: AppContext, skill: SkillCreateParams): Promise<Skill> | Skill;
+  updateSkill(
+    c: AppContext,
+    id: string,
+    update: SkillUpdateParams,
+  ): Promise<Skill> | Skill;
+  deleteSkill(c: AppContext, id: string): Promise<void> | void;
   /** Atomic operation: increment skill total_requests by 1 */
-  incrementSkillTotalRequests(skillId: string): Promise<Skill> | Skill;
+  incrementSkillTotalRequests(
+    c: AppContext,
+    skillId: string,
+  ): Promise<Skill> | Skill;
   /**
    * Atomic operation: try to acquire reclustering lock for a skill
    * Only updates last_clustering_at if it's older than lockThresholdMs
    * Returns the updated skill if lock was acquired, null if lock was already held
    */
   tryAcquireReclusteringLock(
+    c: AppContext,
     skillId: string,
     lockThresholdMs: number,
   ): Promise<Skill | null> | Skill | null;
 
   // Tools
-  getTools(queryParams: ToolQueryParams): Promise<Tool[]> | Tool[];
-  createTool(tool: ToolCreateParams): Promise<Tool> | Tool;
-  deleteTool(id: string): Promise<void> | void;
+  getTools(
+    c: AppContext,
+    queryParams: ToolQueryParams,
+  ): Promise<Tool[]> | Tool[];
+  createTool(c: AppContext, tool: ToolCreateParams): Promise<Tool> | Tool;
+  deleteTool(c: AppContext, id: string): Promise<void> | void;
 
   // AI Provider API Keys
   getAIProviderAPIKeys(
+    c: AppContext,
     queryParams: AIProviderConfigQueryParams,
   ): Promise<AIProviderConfig[]> | AIProviderConfig[];
   getAIProviderAPIKeyById(
+    c: AppContext,
     id: string,
   ): Promise<AIProviderConfig | null> | AIProviderConfig | null;
   createAIProvider(
+    c: AppContext,
     apiKey: AIProviderConfigCreateParams,
   ): Promise<AIProviderConfig> | AIProviderConfig;
   updateAIProvider(
+    c: AppContext,
     id: string,
     update: AIProviderConfigUpdateParams,
   ): Promise<AIProviderConfig> | AIProviderConfig;
-  deleteAIProvider(id: string): Promise<void> | void;
+  deleteAIProvider(c: AppContext, id: string): Promise<void> | void;
 
   // Models
-  getModels(queryParams: ModelQueryParams): Promise<Model[]> | Model[];
-  createModel(model: ModelCreateParams): Promise<Model> | Model;
-  updateModel(id: string, update: ModelUpdateParams): Promise<Model> | Model;
-  deleteModel(id: string): Promise<void> | void;
+  getModels(
+    c: AppContext,
+    queryParams: ModelQueryParams,
+  ): Promise<Model[]> | Model[];
+  createModel(c: AppContext, model: ModelCreateParams): Promise<Model> | Model;
+  updateModel(
+    c: AppContext,
+    id: string,
+    update: ModelUpdateParams,
+  ): Promise<Model> | Model;
+  deleteModel(c: AppContext, id: string): Promise<void> | void;
 
   // Skill-Model Relationships
-  getSkillModels(skillId: string): Promise<Model[]> | Model[];
-  getSkillsByModelId(modelId: string): Promise<Skill[]> | Skill[];
-  addModelsToSkill(skillId: string, modelIds: string[]): Promise<void> | void;
+  getSkillModels(c: AppContext, skillId: string): Promise<Model[]> | Model[];
+  getSkillsByModelId(
+    c: AppContext,
+    modelId: string,
+  ): Promise<Skill[]> | Skill[];
+  addModelsToSkill(
+    c: AppContext,
+    skillId: string,
+    modelIds: string[],
+  ): Promise<void> | void;
   removeModelsFromSkill(
+    c: AppContext,
     skillId: string,
     modelIds: string[],
   ): Promise<void> | void;
 
   // Skill Optimization Cluster
   getSkillOptimizationClusters(
+    c: AppContext,
     queryParams: SkillOptimizationClusterQueryParams,
   ): Promise<SkillOptimizationCluster[]> | SkillOptimizationCluster[];
   createSkillOptimizationClusters(
+    c: AppContext,
     params_list: SkillOptimizationClusterCreateParams[],
   ): Promise<SkillOptimizationCluster[]> | SkillOptimizationCluster[];
   updateSkillOptimizationCluster(
+    c: AppContext,
     id: string,
     update: SkillOptimizationClusterUpdateParams,
   ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
-  deleteSkillOptimizationCluster(id: string): Promise<void> | void;
+  deleteSkillOptimizationCluster(
+    c: AppContext,
+    id: string,
+  ): Promise<void> | void;
   /** Atomic operation: increment both total_steps and observability_total_requests by 1 */
   incrementClusterCounters(
+    c: AppContext,
     clusterId: string,
   ): Promise<SkillOptimizationCluster> | SkillOptimizationCluster;
 
   // Skill Optimization Arms
   getSkillOptimizationArms(
+    c: AppContext,
     queryParams: SkillOptimizationArmQueryParams,
   ): Promise<SkillOptimizationArm[]> | SkillOptimizationArm[];
   createSkillOptimizationArms(
+    c: AppContext,
     params_list: SkillOptimizationArmCreateParams[],
   ): Promise<SkillOptimizationArm[]> | SkillOptimizationArm[];
   updateSkillOptimizationArm(
+    c: AppContext,
     id: string,
     update: SkillOptimizationArmUpdateParams,
   ): Promise<SkillOptimizationArm> | SkillOptimizationArm;
   /** Atomic operation: update arm stats for multiple evaluations and increment cluster/skill counters in a single transaction */
   updateArmAndIncrementCounters(
+    c: AppContext,
     armId: string,
     evaluationResults: Array<{ evaluation_id: string; score: number }>,
   ):
@@ -201,14 +260,19 @@ export interface UserDataStorageConnector {
         cluster: SkillOptimizationCluster;
         skill: Skill;
       };
-  deleteSkillOptimizationArm(id: string): Promise<void> | void;
-  deleteSkillOptimizationArmsForSkill(skillId: string): Promise<void> | void;
+  deleteSkillOptimizationArm(c: AppContext, id: string): Promise<void> | void;
+  deleteSkillOptimizationArmsForSkill(
+    c: AppContext,
+    skillId: string,
+  ): Promise<void> | void;
   deleteSkillOptimizationArmsForCluster(
+    c: AppContext,
     clusterId: string,
   ): Promise<void> | void;
 
   // Skill Optimization Arm Stats
   getSkillOptimizationArmStats(
+    c: AppContext,
     queryParams: import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStatQueryParams,
   ):
     | Promise<
@@ -216,36 +280,50 @@ export interface UserDataStorageConnector {
       >
     | import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStat[];
   deleteSkillOptimizationArmStats(
+    c: AppContext,
     queryParams: import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStatQueryParams,
   ): Promise<void> | void;
 
   // Skill Optimization Evaluations
   getSkillOptimizationEvaluations(
+    c: AppContext,
     queryParams: SkillOptimizationEvaluationQueryParams,
   ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
   createSkillOptimizationEvaluations(
+    c: AppContext,
     params_list: SkillOptimizationEvaluationCreateParams[],
   ): Promise<SkillOptimizationEvaluation[]> | SkillOptimizationEvaluation[];
   updateSkillOptimizationEvaluation(
+    c: AppContext,
     id: string,
     update: import('@shared/types/data').SkillOptimizationEvaluationUpdateParams,
   ): Promise<SkillOptimizationEvaluation> | SkillOptimizationEvaluation;
-  deleteSkillOptimizationEvaluation(id: string): Promise<void> | void;
+  deleteSkillOptimizationEvaluation(
+    c: AppContext,
+    id: string,
+  ): Promise<void> | void;
   deleteSkillOptimizationEvaluationsForSkill(
+    c: AppContext,
     skillId: string,
   ): Promise<void> | void;
 
   // Skill Optimization Evaluation Run
   getSkillOptimizationEvaluationRuns(
+    c: AppContext,
     queryParams: SkillOptimizationEvaluationRunQueryParams,
   ):
     | Promise<SkillOptimizationEvaluationRun[]>
     | SkillOptimizationEvaluationRun[];
   createSkillOptimizationEvaluationRun(
+    c: AppContext,
     params: SkillOptimizationEvaluationRunCreateParams,
   ): Promise<SkillOptimizationEvaluationRun> | SkillOptimizationEvaluationRun;
-  deleteSkillOptimizationEvaluationRun(id: string): Promise<void> | void;
+  deleteSkillOptimizationEvaluationRun(
+    c: AppContext,
+    id: string,
+  ): Promise<void> | void;
   getEvaluationScoresByTimeBucket(
+    c: AppContext,
     params: import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketParams,
   ):
     | Promise<
@@ -255,29 +333,32 @@ export interface UserDataStorageConnector {
 
   // Skill Events
   getSkillEvents(
+    c: AppContext,
     queryParams: SkillEventQueryParams,
   ): Promise<SkillEvent[]> | SkillEvent[];
   createSkillEvent(
+    c: AppContext,
     params: SkillEventCreateParams,
   ): Promise<SkillEvent> | SkillEvent;
 
   // System Settings
-  getSystemSettings(): Promise<SystemSettings> | SystemSettings;
+  getSystemSettings(c: AppContext): Promise<SystemSettings> | SystemSettings;
   updateSystemSettings(
+    c: AppContext,
     update: SystemSettingsUpdateParams,
   ): Promise<SystemSettings> | SystemSettings;
 }
 
 export interface LogsStorageConnector {
-  getLogs(queryParams: LogsQueryParams): Promise<Log[]> | Log[];
-  createLog(createParams: LogCreateParams): Promise<Log> | Log;
-  deleteLog(id: string): Promise<void> | void;
+  getLogs(c: AppContext, queryParams: LogsQueryParams): Promise<Log[]> | Log[];
+  createLog(c: AppContext, createParams: LogCreateParams): Promise<Log> | Log;
+  deleteLog(c: AppContext, id: string): Promise<void> | void;
 }
 
 export interface CacheStorageConnector {
-  getCache(key: string): Promise<string | null> | string | null;
-  setCache(key: string, value: string): Promise<void> | void;
-  deleteCache(key: string): Promise<void> | void;
+  getCache(c: AppContext, key: string): Promise<string | null> | string | null;
+  setCache(c: AppContext, key: string, value: string): Promise<void> | void;
+  deleteCache(c: AppContext, key: string): Promise<void> | void;
 }
 
 export interface HooksConnector {
@@ -288,6 +369,7 @@ export interface HooksConnector {
 export interface EvaluationMethodConnector {
   getDetails: () => EvaluationMethodDetails;
   evaluateLog: (
+    c: AppContext,
     evaluation: SkillOptimizationEvaluation,
     log: Log,
     storageConnector: UserDataStorageConnector,

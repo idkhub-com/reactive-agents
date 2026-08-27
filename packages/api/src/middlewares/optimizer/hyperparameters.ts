@@ -1,4 +1,5 @@
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import type {
   SkillOptimizationArm,
@@ -6,6 +7,7 @@ import type {
 } from '@shared/types/data';
 
 export async function updatePulledArm(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
   evaluationResults: SkillOptimizationEvaluationResult[],
@@ -16,10 +18,11 @@ export async function updatePulledArm(
     score: result.score,
   }));
 
-  await updateArmStats(userDataStorageConnector, arm, evaluationScores);
+  await updateArmStats(c, userDataStorageConnector, arm, evaluationScores);
 }
 
 export async function updateArmStats(
+  c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
   arm: SkillOptimizationArm,
   evaluationResults: Array<{ evaluation_id: string; score: number }>,
@@ -28,6 +31,7 @@ export async function updateArmStats(
   // PostgreSQL calculates new stats (n, mean, n2, total_reward) per evaluation internally
   // This ensures proper tracking of each evaluation method's performance
   const result = await userDataStorageConnector.updateArmAndIncrementCounters(
+    c,
     arm.id,
     evaluationResults,
   );

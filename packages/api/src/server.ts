@@ -6,7 +6,13 @@ const port = Number(process.env.PORT) || 8787;
 console.log(`Starting server on port ${port}...`);
 
 serve({
-  fetch: app.fetch,
+  /**
+   * `@hono/node-server` passes `{ incoming, outgoing }` as the Hono env, so
+   * `c.env` would otherwise be empty of configuration. Merge `process.env` in
+   * so the `@api/constants` getters resolve on Node the same way bindings
+   * resolve on Cloudflare Workers.
+   */
+  fetch: (request, env) => app.fetch(request, { ...process.env, ...env }),
   port,
 });
 

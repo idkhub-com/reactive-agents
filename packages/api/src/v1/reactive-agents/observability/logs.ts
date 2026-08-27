@@ -19,7 +19,7 @@ const app = new Hono<AppEnv>().get(
       const params = c.req.valid('query');
       let logs: Log[] = [];
       try {
-        logs = await c.get('logs_storage_connector').getLogs(params);
+        logs = await c.get('logs_storage_connector').getLogs(c, params);
       } catch (error) {
         console.error('Error from storage connector:', error);
         // Return empty array on storage errors, not an object

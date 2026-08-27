@@ -77,7 +77,11 @@ services:
       POSTGREST_SERVICE_ROLE_KEY: ${POSTGREST_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
       ACCESS_PASSWORD: ${ACCESS_PASSWORD}
       BEARER_TOKEN: ${BEARER_TOKEN}
-      JWT_SECRET: ${JWT_SECRET:-you-should-change-this-in-production}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-you-should-change-this-in-production}
+      # Only needed when the dashboard is hosted on a different origin than the
+      # API. The bundled web container proxies /v1/* to the API, so same-origin
+      # deployments can leave this unset. Accepts a comma-separated list.
+      WEB_APP_URL: ${WEB_APP_URL:-}
       AI_PROVIDER_API_KEY_ENCRYPTION_KEY: ${AI_PROVIDER_API_KEY_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod}
       NODE_ENV: production
     depends_on:

@@ -4,6 +4,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render } from '@testing-library/react';
+import { vi } from 'vitest';
 import { routeTree } from '../../routeTree.gen';
 
 /**
@@ -71,10 +72,27 @@ export function renderRoute(path: string) {
 }
 
 /**
- * Auth mock placeholder. Currently no auth middleware exists on any route.
- * When auth is added, extend this to mock the auth provider/middleware
- * so that route rendering tests can bypass authentication.
+ * Configure a global `fetch` mock that responds to `/auth/status` requests.
+ *
+ * Both `__root.tsx` (beforeLoad) and `login.tsx` (beforeLoad) call
+ * `fetch('/v1/reactive-agents/auth/status')` to decide whether to render
+ * the page or redirect.
+ *
+ * Returns the mock so callers can add further assertions.
  */
-export function setupAuthMocks() {
-  // No-op: no auth exists currently.
+export function setupAuthMocks(
+  options: { authRequired?: boolean; authenticated?: boolean } = {
+    authRequired: false,
+    authenticated: true,
+  },
+) {
+  const { authRequired = false, authenticated = true } = options;
+
+  const mockFetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ authRequired, authenticated }),
+  });
+
+  vi.stubGlobal('fetch', mockFetch);
+  return mockFetch;
 }

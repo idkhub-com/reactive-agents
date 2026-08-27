@@ -1,6 +1,7 @@
 import type { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/task-completion/types';
-import { API_URL } from '@api/constants';
+import { getApiUrl } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import OpenAI from 'openai';
@@ -41,13 +42,14 @@ Extract the TASK and OUTCOME from this interaction.`;
 }
 
 export async function extractTaskAndOutcome(
+  c: AppContext,
   params: TaskCompletionEvaluationParameters,
   input: string,
   output: string,
   connector: UserDataStorageConnector,
 ) {
   // Resolve judge model from system settings for task extraction
-  const modelConfig = await resolveSystemSettingsModel('judge', connector);
+  const modelConfig = await resolveSystemSettingsModel(c, 'judge', connector);
 
   if (!modelConfig) {
     warn('[OPTIMIZER] No judge model configured in system settings');
@@ -56,7 +58,7 @@ export async function extractTaskAndOutcome(
 
   const client = new OpenAI({
     apiKey: '',
-    baseURL: `${API_URL}/v1`,
+    baseURL: `${getApiUrl(c)}/v1`,
   });
 
   const raConfig = {

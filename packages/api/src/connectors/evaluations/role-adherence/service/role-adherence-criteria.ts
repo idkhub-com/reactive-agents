@@ -8,6 +8,7 @@ import type {
   GenericEvaluator,
 } from '@api/types/evaluations/generic';
 import type { LLMJudgeResult } from '@api/types/evaluations/llm-judge';
+import type { AppContext } from '@api/types/hono';
 import { z } from 'zod';
 
 export const RoleAdherenceCriteriaSchema = z.object({
@@ -52,9 +53,10 @@ function parseRoleAdherenceResult(response: LLMJudgeResult): LLMJudgeResult {
 }
 
 async function evaluateRoleAdherenceWithJudge(
+  c: AppContext,
   input: RoleAdherenceInput,
 ): Promise<LLMJudgeResult> {
-  const llmJudge = createLLMJudge();
+  const llmJudge = createLLMJudge(c);
   const tpl = getRoleAdherenceMainTemplate({
     role_definition: input.role_definition,
     assistant_output: input.assistant_output,
@@ -74,10 +76,12 @@ async function evaluateRoleAdherenceWithJudge(
   return parseRoleAdherenceResult(result);
 }
 
-export function createRoleAdherenceEvaluator(): GenericEvaluator<RoleAdherenceMetadata> & {
+export function createRoleAdherenceEvaluator(
+  c: AppContext,
+): GenericEvaluator<RoleAdherenceMetadata> & {
   evaluateRoleAdherence: (input: RoleAdherenceInput) => Promise<LLMJudgeResult>;
 } {
-  const llmJudge = createLLMJudge();
+  const llmJudge = createLLMJudge(c);
   return {
     evaluate: async (input: GenericEvaluationInput<RoleAdherenceMetadata>) => {
       const role_definition = input.metadata?.role_definition || '';
@@ -116,14 +120,15 @@ export function createRoleAdherenceEvaluator(): GenericEvaluator<RoleAdherenceMe
       };
     },
     evaluateRoleAdherence: async (input: RoleAdherenceInput) => {
-      return await evaluateRoleAdherenceWithJudge(input);
+      return await evaluateRoleAdherenceWithJudge(c, input);
     },
     config: llmJudge.config,
   };
 }
 
 export async function evaluateRoleAdherence(
+  c: AppContext,
   input: RoleAdherenceInput,
 ): Promise<LLMJudgeResult> {
-  return await evaluateRoleAdherenceWithJudge(input);
+  return await evaluateRoleAdherenceWithJudge(c, input);
 }

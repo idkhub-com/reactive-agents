@@ -15,7 +15,7 @@ export const feedbacksRouter = new Hono<AppEnv>()
       const queryParams = c.req.valid('query');
       const feedback = await c
         .get('user_data_storage_connector')
-        .getFeedback(queryParams);
+        .getFeedback(c, queryParams);
       return c.json(feedback);
     } catch (error) {
       console.error('Error retrieving feedback:', error);
@@ -30,7 +30,7 @@ export const feedbacksRouter = new Hono<AppEnv>()
 
       const newFeedback = await c
         .get('user_data_storage_connector')
-        .createFeedback(feedbackData);
+        .createFeedback(c, feedbackData);
       return c.json(newFeedback, 201);
     } catch (error) {
       console.error('Error creating feedback:', error);
@@ -47,7 +47,9 @@ export const feedbacksRouter = new Hono<AppEnv>()
         const { feedbackId } = c.req.valid('param');
 
         // Delete the feedback directly without existence check
-        await c.get('user_data_storage_connector').deleteFeedback(feedbackId);
+        await c
+          .get('user_data_storage_connector')
+          .deleteFeedback(c, feedbackId);
 
         return c.body(null, 204);
       } catch (error) {

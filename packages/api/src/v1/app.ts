@@ -12,6 +12,7 @@ import {
   supabaseLogsStorageConnector,
   supabaseUserDataStorageConnector,
 } from '@api/connectors/supabase';
+import { getAllowedOrigins } from '@api/constants';
 import { agentAndSkillMiddleware } from '@api/middlewares/agent-and-skill';
 import { authenticatedMiddleware } from '@api/middlewares/auth';
 import { cacheMiddleware } from '@api/middlewares/cache';
@@ -22,7 +23,7 @@ import { raConfigurationInjectorMiddleware } from '@api/middlewares/reactive-age
 import { toolMiddleware } from '@api/middlewares/tool';
 import { userDataMiddleware } from '@api/middlewares/user-data';
 import { commonVariablesMiddleware } from '@api/middlewares/variables';
-import type { AppEnv, AppHono } from '@api/types/hono';
+import type { AppContext, AppEnv, AppHono } from '@api/types/hono';
 import { chatRouter } from '@api/v1/chat';
 import { completionsRouter } from '@api/v1/completions';
 import { embeddingsRouter } from '@api/v1/embeddings';
@@ -46,17 +47,10 @@ app.get('/', (c) => c.text('Reactive Agents API'));
 app.use(
   '*',
   cors({
-    origin: (origin) => {
-      // Allow configured origins or localhost for development
-      const allowedOrigins = process.env.WEB_APP_URL
-        ? [process.env.WEB_APP_URL]
-        : [
-            'http://localhost:3000',
-            'http://localhost:8787',
-            'http://localhost:3001',
-          ];
-      return allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-    },
+    // `origin` receives the request context, so the allowed list is resolved
+    // per request rather than captured at module load.
+    origin: (origin, c) =>
+      getAllowedOrigins(c as AppContext).includes(origin) ? origin : null,
     credentials: true,
     allowHeaders: ['Content-Type', 'Authorization', 'ra-config'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],

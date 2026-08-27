@@ -2,6 +2,7 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { error } from '@shared/console-logging';
 import type {
   Log,
@@ -14,6 +15,7 @@ import type { EvaluationMethodName } from '@shared/types/evaluations';
  * Run realtime evaluations for a single log using skill optimization evaluations
  */
 export async function runEvaluationsForLog(
+  c: AppContext,
   log: Log,
   skillOptimizationEvaluations: SkillOptimizationEvaluation[],
   evaluationConnectorsMap: Partial<
@@ -38,7 +40,12 @@ export async function runEvaluationsForLog(
         }
 
         // Use the evaluation ID for skill optimization evaluations
-        return await connector.evaluateLog(evaluation, log, storageConnector);
+        return await connector.evaluateLog(
+          c,
+          evaluation,
+          log,
+          storageConnector,
+        );
       } catch (err) {
         // Don't throw - we want other evaluations to continue even if one fails
         error(

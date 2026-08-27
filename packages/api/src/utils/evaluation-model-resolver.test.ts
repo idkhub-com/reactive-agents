@@ -1,3 +1,4 @@
+import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import {
   resolveEmbeddingModelConfig,
@@ -7,6 +8,8 @@ import {
 import type { Model, SkillOptimizationEvaluation } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockContext = createMockContext();
 
 // Mock console.warn to suppress warning messages in tests
 vi.spyOn(console, 'warn').mockImplementation(() => {
@@ -75,7 +78,11 @@ describe('Evaluation Model Resolver', () => {
         mockProvider,
       ]);
 
-      const result = await resolveSystemSettingsModel('judge', mockConnector);
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'judge',
+        mockConnector,
+      );
 
       expect(result).toEqual({
         model: 'gpt-4',
@@ -83,7 +90,7 @@ describe('Evaluation Model Resolver', () => {
         apiKey: 'sk-test-api-key',
       });
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
-      expect(mockConnector.getModels).toHaveBeenCalledWith({
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.judge_model_id,
       });
     });
@@ -98,6 +105,7 @@ describe('Evaluation Model Resolver', () => {
       ]);
 
       const result = await resolveSystemSettingsModel(
+        mockContext,
         'embedding',
         mockConnector,
       );
@@ -107,7 +115,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
       });
-      expect(mockConnector.getModels).toHaveBeenCalledWith({
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.embedding_model_id,
       });
     });
@@ -122,6 +130,7 @@ describe('Evaluation Model Resolver', () => {
       ]);
 
       const result = await resolveSystemSettingsModel(
+        mockContext,
         'system_prompt_reflection',
         mockConnector,
       );
@@ -131,7 +140,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
       });
-      expect(mockConnector.getModels).toHaveBeenCalledWith({
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.system_prompt_reflection_model_id,
       });
     });
@@ -146,6 +155,7 @@ describe('Evaluation Model Resolver', () => {
       ]);
 
       const result = await resolveSystemSettingsModel(
+        mockContext,
         'evaluation_generation',
         mockConnector,
       );
@@ -155,7 +165,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
       });
-      expect(mockConnector.getModels).toHaveBeenCalledWith({
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.evaluation_generation_model_id,
       });
     });
@@ -169,7 +179,11 @@ describe('Evaluation Model Resolver', () => {
         settingsWithNoJudge,
       );
 
-      const result = await resolveSystemSettingsModel('judge', mockConnector);
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'judge',
+        mockConnector,
+      );
 
       expect(result).toBeNull();
       expect(mockConnector.getModels).not.toHaveBeenCalled();
@@ -181,7 +195,11 @@ describe('Evaluation Model Resolver', () => {
       );
       vi.mocked(mockConnector.getModels).mockResolvedValue([]);
 
-      const result = await resolveSystemSettingsModel('judge', mockConnector);
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'judge',
+        mockConnector,
+      );
 
       expect(result).toBeNull();
     });
@@ -193,7 +211,11 @@ describe('Evaluation Model Resolver', () => {
       vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
       vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([]);
 
-      const result = await resolveSystemSettingsModel('judge', mockConnector);
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'judge',
+        mockConnector,
+      );
 
       expect(result).toBeNull();
     });
@@ -207,7 +229,11 @@ describe('Evaluation Model Resolver', () => {
         { ...mockProvider, api_key: null },
       ]);
 
-      const result = await resolveSystemSettingsModel('judge', mockConnector);
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'judge',
+        mockConnector,
+      );
 
       expect(result).toBeNull();
     });
@@ -243,6 +269,7 @@ describe('Evaluation Model Resolver', () => {
       ]);
 
       const result = await resolveEvaluationModelConfig(
+        mockContext,
         evalWithModel,
         mockConnector,
       );
@@ -252,7 +279,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
       });
-      expect(mockConnector.getModels).toHaveBeenCalledWith({
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: 'custom-model-1111-2222-333344445555',
       });
       expect(mockConnector.getSystemSettings).not.toHaveBeenCalled();
@@ -268,6 +295,7 @@ describe('Evaluation Model Resolver', () => {
       ]);
 
       const result = await resolveEvaluationModelConfig(
+        mockContext,
         mockEvaluation,
         mockConnector,
       );
@@ -289,6 +317,7 @@ describe('Evaluation Model Resolver', () => {
       vi.mocked(mockConnector.getModels).mockResolvedValue([]);
 
       const result = await resolveEvaluationModelConfig(
+        mockContext,
         evalWithModel,
         mockConnector,
       );
@@ -303,6 +332,7 @@ describe('Evaluation Model Resolver', () => {
       });
 
       const result = await resolveEvaluationModelConfig(
+        mockContext,
         mockEvaluation,
         mockConnector,
       );
@@ -318,7 +348,10 @@ describe('Evaluation Model Resolver', () => {
       );
       vi.mocked(mockConnector.getModels).mockResolvedValue([mockEmbedModel]);
 
-      const result = await resolveEmbeddingModelConfig(mockConnector);
+      const result = await resolveEmbeddingModelConfig(
+        mockContext,
+        mockConnector,
+      );
 
       expect(result).toEqual({
         modelId: 'embed-1111-2222-3333-444455556666',
@@ -333,7 +366,10 @@ describe('Evaluation Model Resolver', () => {
         embedding_model_id: null,
       });
 
-      const result = await resolveEmbeddingModelConfig(mockConnector);
+      const result = await resolveEmbeddingModelConfig(
+        mockContext,
+        mockConnector,
+      );
 
       expect(result).toBeNull();
       expect(mockConnector.getModels).not.toHaveBeenCalled();
@@ -345,7 +381,10 @@ describe('Evaluation Model Resolver', () => {
       );
       vi.mocked(mockConnector.getModels).mockResolvedValue([]);
 
-      const result = await resolveEmbeddingModelConfig(mockConnector);
+      const result = await resolveEmbeddingModelConfig(
+        mockContext,
+        mockConnector,
+      );
 
       expect(result).toBeNull();
     });
@@ -362,7 +401,10 @@ describe('Evaluation Model Resolver', () => {
         modelWithoutDimensions,
       ]);
 
-      const result = await resolveEmbeddingModelConfig(mockConnector);
+      const result = await resolveEmbeddingModelConfig(
+        mockContext,
+        mockConnector,
+      );
 
       expect(result).toBeNull();
     });
@@ -380,7 +422,10 @@ describe('Evaluation Model Resolver', () => {
       });
       vi.mocked(mockConnector.getModels).mockResolvedValue([model3072]);
 
-      const result = await resolveEmbeddingModelConfig(mockConnector);
+      const result = await resolveEmbeddingModelConfig(
+        mockContext,
+        mockConnector,
+      );
 
       expect(result?.dimensions).toBe(3072);
       expect(result?.model.model_name).toBe('text-embedding-3-large');
@@ -394,7 +439,7 @@ describe('Evaluation Model Resolver', () => {
       );
 
       await expect(
-        resolveSystemSettingsModel('judge', mockConnector),
+        resolveSystemSettingsModel(mockContext, 'judge', mockConnector),
       ).rejects.toThrow('Database error');
     });
 
@@ -407,7 +452,7 @@ describe('Evaluation Model Resolver', () => {
       );
 
       await expect(
-        resolveSystemSettingsModel('judge', mockConnector),
+        resolveSystemSettingsModel(mockContext, 'judge', mockConnector),
       ).rejects.toThrow('Model lookup failed');
     });
 
@@ -421,7 +466,7 @@ describe('Evaluation Model Resolver', () => {
       );
 
       await expect(
-        resolveSystemSettingsModel('judge', mockConnector),
+        resolveSystemSettingsModel(mockContext, 'judge', mockConnector),
       ).rejects.toThrow('Provider lookup failed');
     });
   });

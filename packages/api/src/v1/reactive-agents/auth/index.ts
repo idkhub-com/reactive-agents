@@ -2,7 +2,9 @@ import type { AppEnv } from '@api/types/hono';
 import { Hono } from 'hono';
 import { loginRouter } from './login';
 import { logoutRouter } from './logout';
+import { statusRouter } from './status';
 
 export const authRouter = new Hono<AppEnv>()
   .route('/login', loginRouter)
-  .route('/logout', logoutRouter);
+  .route('/logout', logoutRouter)
+  .route('/status', statusRouter);

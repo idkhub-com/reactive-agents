@@ -9,6 +9,7 @@ import type {
   GenericEvaluator,
 } from '@api/types/evaluations/generic';
 import type { LLMJudgeResult } from '@api/types/evaluations/llm-judge';
+import type { AppContext } from '@api/types/hono';
 import { z } from 'zod';
 
 export const TurnRelevancyCriteriaSchema = z.object({
@@ -51,9 +52,10 @@ function parseTurnRelevancyResult(response: LLMJudgeResult): LLMJudgeResult {
 }
 
 async function evaluateTurnRelevancyWithJudge(
+  c: AppContext,
   input: TurnRelevancyInput,
 ): Promise<LLMJudgeResult> {
-  const llmJudge = createLLMJudge();
+  const llmJudge = createLLMJudge(c);
   const tpl = getTurnRelevancyTemplate({
     conversation_history: input.conversation_history,
     current_turn: input.current_turn,
@@ -72,10 +74,15 @@ async function evaluateTurnRelevancyWithJudge(
   return parseTurnRelevancyResult(result);
 }
 
-export function createTurnRelevancyEvaluator(): GenericEvaluator<TurnRelevancyMetadata> & {
-  evaluateTurnRelevancy: (input: TurnRelevancyInput) => Promise<LLMJudgeResult>;
+export function createTurnRelevancyEvaluator(
+  c: AppContext,
+): GenericEvaluator<TurnRelevancyMetadata> & {
+  evaluateTurnRelevancy: (
+    c: AppContext,
+    input: TurnRelevancyInput,
+  ) => Promise<LLMJudgeResult>;
 } {
-  const llmJudge = createLLMJudge();
+  const llmJudge = createLLMJudge(c);
   return {
     evaluate: async (input: GenericEvaluationInput<TurnRelevancyMetadata>) => {
       const conversation_history = input.metadata?.conversation_history || '';
@@ -117,7 +124,8 @@ export function createTurnRelevancyEvaluator(): GenericEvaluator<TurnRelevancyMe
 }
 
 export async function evaluateTurnRelevancy(
+  c: AppContext,
   input: TurnRelevancyInput,
 ): Promise<LLMJudgeResult> {
-  return await evaluateTurnRelevancyWithJudge(input);
+  return await evaluateTurnRelevancyWithJudge(c, input);
 }

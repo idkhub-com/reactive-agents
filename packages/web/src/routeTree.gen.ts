@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MainSettingsRouteImport } from './routes/_main/settings'
@@ -38,6 +39,11 @@ import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurati
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId.configurations.index'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsArmIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId.configurations.$armId'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
 const MainRoute = MainRouteImport.update({
   id: '/_main',
   getParentRoute: () => rootRouteImport,
@@ -270,6 +276,7 @@ const MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsArmIdRout
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/settings': typeof MainSettingsRoute
   '/agents/$agentName': typeof MainAgentsAgentNameRouteWithChildren
   '/agents/create': typeof MainAgentsCreateRoute
@@ -299,6 +306,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/settings': typeof MainSettingsRoute
   '/agents/create': typeof MainAgentsCreateRoute
   '/ai-providers/create': typeof MainAiProvidersCreateRoute
@@ -325,6 +333,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_main': typeof MainRouteWithChildren
+  '/login': typeof LoginRoute
   '/_main/settings': typeof MainSettingsRoute
   '/_main/agents/$agentName': typeof MainAgentsAgentNameRouteWithChildren
   '/_main/agents/create': typeof MainAgentsCreateRoute
@@ -356,6 +365,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/settings'
     | '/agents/$agentName'
     | '/agents/create'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/settings'
     | '/agents/create'
     | '/ai-providers/create'
@@ -410,6 +421,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_main'
+    | '/login'
     | '/_main/settings'
     | '/_main/agents/$agentName'
     | '/_main/agents/create'
@@ -441,10 +453,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MainRoute: typeof MainRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_main': {
       id: '/_main'
       path: ''
@@ -790,6 +810,7 @@ const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MainRoute: MainRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

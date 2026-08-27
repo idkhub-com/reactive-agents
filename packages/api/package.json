@@ -11,7 +11,7 @@
     "./routers/*": "./src/api/v1/reactive-agents/*.ts"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --env-file ../../.dev.vars",
     "build": "node build.js",
     "start": "node dist/server.js",
     "deploy": "wrangler deploy",

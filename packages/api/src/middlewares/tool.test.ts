@@ -247,7 +247,7 @@ describe('toolMiddleware', () => {
 
       expect(mockNext).toHaveBeenCalledTimes(1);
       expect(mockCreateTool).toHaveBeenCalledTimes(1);
-      expect(mockCreateTool).toHaveBeenCalledWith({
+      expect(mockCreateTool).toHaveBeenCalledWith(expect.anything(), {
         agent_id: mockAgent.id,
         hash: expect.any(String),
         type: 'function',
@@ -332,7 +332,7 @@ describe('toolMiddleware', () => {
       await toolMiddleware(mockContext, mockNext);
 
       expect(mockCreateTool).toHaveBeenCalledTimes(1);
-      expect(mockCreateTool).toHaveBeenCalledWith({
+      expect(mockCreateTool).toHaveBeenCalledWith(expect.anything(), {
         agent_id: mockAgent.id,
         hash: 'abcdef123456789abcdef0123456789a',
         type: 'function',
@@ -374,8 +374,8 @@ describe('toolMiddleware', () => {
 
       // Both calls should generate the same hash
       expect(mockCreateTool).toHaveBeenCalledTimes(2);
-      const call1 = mockCreateTool.mock.calls[0][0];
-      const call2 = mockCreateTool.mock.calls[1][0];
+      const call1 = mockCreateTool.mock.calls[0][1];
+      const call2 = mockCreateTool.mock.calls[1][1];
       expect(call1.hash).toBe(call2.hash);
       expect(call1.hash).toBe('abcdef123456789abcdef0123456789a');
     });
@@ -406,7 +406,7 @@ describe('toolMiddleware', () => {
 
       await toolMiddleware(mockContext, mockNext);
 
-      expect(mockCreateTool).toHaveBeenCalledWith({
+      expect(mockCreateTool).toHaveBeenCalledWith(expect.anything(), {
         agent_id: mockAgent.id,
         hash: 'abcdef123456789abcdef0123456789a',
         type: 'function',
@@ -438,7 +438,7 @@ describe('toolMiddleware', () => {
 
       await toolMiddleware(mockContext, mockNext);
 
-      expect(mockCreateTool).toHaveBeenCalledWith({
+      expect(mockCreateTool).toHaveBeenCalledWith(expect.anything(), {
         agent_id: mockAgent.id,
         hash: 'abcdef123456789abcdef0123456789a',
         type: 'function',
@@ -529,9 +529,9 @@ describe('toolMiddleware', () => {
 
       expect(mockCreateTool).toHaveBeenCalledTimes(3);
 
-      const call1 = mockCreateTool.mock.calls[0][0];
-      const call2 = mockCreateTool.mock.calls[1][0];
-      const call3 = mockCreateTool.mock.calls[2][0];
+      const call1 = mockCreateTool.mock.calls[0][1];
+      const call2 = mockCreateTool.mock.calls[1][1];
+      const call3 = mockCreateTool.mock.calls[2][1];
 
       expect(call1.name).toBe('function_1');
       expect(call2.name).toBe('function_2');

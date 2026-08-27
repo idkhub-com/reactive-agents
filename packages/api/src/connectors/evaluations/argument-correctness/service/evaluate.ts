@@ -3,6 +3,7 @@ import { ArgumentCorrectnessEvaluationParameters } from '@api/connectors/evaluat
 import type { ToolUsage } from '@api/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { extractMessagesFromRequestData } from '@api/utils/embeddings';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@api/utils/messages';
@@ -39,6 +40,7 @@ function buildPromptForToolArgs(
 }
 
 export async function evaluateLog(
+  c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
@@ -51,6 +53,7 @@ export async function evaluateLog(
 
   // Resolve model configuration from evaluation.model_id or system settings
   const modelConfig = await resolveEvaluationModelConfig(
+    c,
     evaluation,
     storageConnector,
   );
@@ -90,6 +93,7 @@ export async function evaluateLog(
   }
 
   const llmJudge = createLLMJudge(
+    c,
     {
       temperature: params.temperature,
       max_tokens: params.max_tokens,

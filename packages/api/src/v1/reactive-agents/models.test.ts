@@ -1,5 +1,6 @@
-import { JWT_SECRET } from '@api/constants';
+import { getAuthJwtSecret } from '@api/constants';
 import { authenticatedMiddleware } from '@api/middlewares/auth';
+import { createMockContext } from '@api/test-utils/mock-context';
 import type { AppEnv } from '@api/types/hono';
 import { modelsRouter } from '@api/v1/reactive-agents/models';
 import type { Model } from '@shared/types/data/model';
@@ -9,17 +10,20 @@ import { sign } from 'hono/jwt';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Hoist the test constant so it's available during mock setup
-const { TEST_BEARER_TOKEN } = vi.hoisted(() => ({
+// Hoist the test constants so they're available during mock setup
+const { TEST_BEARER_TOKEN, TEST_JWT_SECRET } = vi.hoisted(() => ({
   TEST_BEARER_TOKEN: 'test-bearer-token',
+  TEST_JWT_SECRET: 'test-jwt-secret-for-testing',
 }));
 
-// Mock the constants module to provide a test BEARER_TOKEN
+// Mock the constants module to provide test values
 vi.mock('@api/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@api/constants')>();
   return {
     ...actual,
-    BEARER_TOKEN: TEST_BEARER_TOKEN,
+    getAccessPassword: () => undefined,
+    getBearerToken: () => TEST_BEARER_TOKEN,
+    getAuthJwtSecret: () => TEST_JWT_SECRET,
   };
 });
 
@@ -388,7 +392,7 @@ describe('Models API - Authentication Integration', () => {
     it('should accept requests with valid JWT cookie', async () => {
       const token = await sign(
         { sub: 'test-user-123', exp: Math.floor(Date.now() / 1000) + 3600 },
-        JWT_SECRET,
+        getAuthJwtSecret(createMockContext()),
       );
 
       const app = createAuthenticatedApp();

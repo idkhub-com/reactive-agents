@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
-import { AI_PROVIDER_API_KEY_ENCRYPTION_KEY } from '@api/constants';
+import { getAiProviderApiKeyEncryptionKey } from '@api/constants';
 import type {
   CacheStorageConnector,
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import {
   Agent,
@@ -89,11 +90,11 @@ import {
   updateInSupabase,
 } from './base';
 
-const encryptAPIKey = (plaintext: string): string => {
+const encryptAPIKey = (c: AppContext, plaintext: string): string => {
   const algorithm = 'aes-256-gcm';
   const key = crypto
     .createHash('sha256')
-    .update(AI_PROVIDER_API_KEY_ENCRYPTION_KEY)
+    .update(getAiProviderApiKeyEncryptionKey(c))
     .digest();
   const iv = crypto.randomBytes(16);
 
@@ -109,11 +110,11 @@ const encryptAPIKey = (plaintext: string): string => {
   return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
 };
 
-const decryptAPIKey = (encryptedData: string): string => {
+const decryptAPIKey = (c: AppContext, encryptedData: string): string => {
   const algorithm = 'aes-256-gcm';
   const key = crypto
     .createHash('sha256')
-    .update(AI_PROVIDER_API_KEY_ENCRYPTION_KEY)
+    .update(getAiProviderApiKeyEncryptionKey(c))
     .digest();
 
   const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
@@ -136,6 +137,7 @@ const decryptAPIKey = (encryptedData: string): string => {
 
 export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   getFeedback: async (
+    c: AppContext,
     queryParams: FeedbackQueryParams,
   ): Promise<Feedback[]> => {
     const postgrestParams: Record<string, string> = {};
@@ -157,25 +159,31 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const feedbacks = await selectFromSupabase(
+      c,
       'feedbacks',
       postgrestParams,
       z.array(Feedback),
     );
     return feedbacks;
   },
-  createFeedback: async (feedback: Feedback): Promise<Feedback> => {
+  createFeedback: async (
+    c: AppContext,
+    feedback: Feedback,
+  ): Promise<Feedback> => {
     const insertedFeedback = await insertIntoSupabase(
+      c,
       'feedbacks',
       feedback,
       z.array(Feedback),
     );
     return insertedFeedback[0];
   },
-  deleteFeedback: async (id: string): Promise<void> => {
-    await deleteFromSupabase('feedbacks', { id: `eq.${id}` });
+  deleteFeedback: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'feedbacks', { id: `eq.${id}` });
   },
 
   getImprovedResponse: async (
+    c: AppContext,
     params: ImprovedResponseQueryParams,
   ): Promise<ImprovedResponse[]> => {
     const postgrestParams: Record<string, string> = {};
@@ -197,6 +205,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const responses = await selectFromSupabase(
+      c,
       'improved_responses',
       postgrestParams,
       z.array(ImprovedResponse),
@@ -206,9 +215,11 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   createImprovedResponse: async (
+    c: AppContext,
     improvedResponse: ImprovedResponse,
   ): Promise<ImprovedResponse> => {
     const insertedResponse = await insertIntoSupabase(
+      c,
       'improved_responses',
       improvedResponse,
       z.array(ImprovedResponse),
@@ -218,10 +229,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateImprovedResponse: async (
+    c: AppContext,
     id: string,
     update: ImprovedResponseUpdateParams,
   ): Promise<ImprovedResponse> => {
     const updatedResponse = await updateInSupabase(
+      c,
       'improved_responses',
       id,
       update,
@@ -231,11 +244,14 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return updatedResponse[0];
   },
 
-  deleteImprovedResponse: async (id: string): Promise<void> => {
-    await deleteFromSupabase('improved_responses', { id: `eq.${id}` });
+  deleteImprovedResponse: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'improved_responses', { id: `eq.${id}` });
   },
 
-  getAgents: async (queryParams: AgentQueryParams): Promise<Agent[]> => {
+  getAgents: async (
+    c: AppContext,
+    queryParams: AgentQueryParams,
+  ): Promise<Agent[]> => {
     const postgrestParams: Record<string, string> = {};
 
     if (queryParams.id) {
@@ -252,6 +268,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const agents = await selectFromSupabase(
+      c,
       'agents',
       postgrestParams,
       z.array(Agent),
@@ -260,8 +277,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return agents;
   },
 
-  createAgent: async (agent: AgentCreateParams): Promise<Agent> => {
+  createAgent: async (c, agent: AgentCreateParams): Promise<Agent> => {
     const insertedAgent = await insertIntoSupabase(
+      c,
       'agents',
       agent,
       z.array(Agent),
@@ -270,10 +288,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateAgent: async (
+    c: AppContext,
     id: string,
     update: AgentUpdateParams,
   ): Promise<Agent> => {
     const updatedAgent = await updateInSupabase(
+      c,
       'agents',
       id,
       update,
@@ -282,11 +302,14 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return updatedAgent[0];
   },
 
-  deleteAgent: async (id: string): Promise<void> => {
-    await deleteFromSupabase('agents', { id: `eq.${id}` });
+  deleteAgent: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'agents', { id: `eq.${id}` });
   },
 
-  getSkills: async (queryParams: SkillQueryParams): Promise<Skill[]> => {
+  getSkills: async (
+    c: AppContext,
+    queryParams: SkillQueryParams,
+  ): Promise<Skill[]> => {
     const postgrestParams: Record<string, string> = {};
 
     if (queryParams.id) {
@@ -306,6 +329,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const skills = await selectFromSupabase(
+      c,
       'skills',
       postgrestParams,
       z.array(Skill),
@@ -314,8 +338,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return skills;
   },
 
-  createSkill: async (skill: SkillCreateParams): Promise<Skill> => {
+  createSkill: async (
+    c: AppContext,
+    skill: SkillCreateParams,
+  ): Promise<Skill> => {
     const insertedSkill = await insertIntoSupabase(
+      c,
       'skills',
       skill,
       z.array(Skill),
@@ -324,10 +352,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateSkill: async (
+    c: AppContext,
     id: string,
     update: SkillUpdateParams,
   ): Promise<Skill> => {
     const updatedSkill = await updateInSupabase(
+      c,
       'skills',
       id,
       update,
@@ -336,12 +366,16 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return updatedSkill[0];
   },
 
-  deleteSkill: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skills', { id: `eq.${id}` });
+  deleteSkill: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'skills', { id: `eq.${id}` });
   },
 
-  incrementSkillTotalRequests: async (skillId: string): Promise<Skill> => {
+  incrementSkillTotalRequests: async (
+    c: AppContext,
+    skillId: string,
+  ): Promise<Skill> => {
     const result = await rpcFunctionWithResponse(
+      c,
       'increment_skill_total_requests',
       { p_skill_id: skillId },
       z.array(Skill),
@@ -350,10 +384,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   tryAcquireReclusteringLock: async (
+    c: AppContext,
     skillId: string,
     lockThresholdMs: number,
   ): Promise<Skill | null> => {
     const result = await rpcFunctionWithResponse(
+      c,
       'try_acquire_reclustering_lock',
       { p_skill_id: skillId, p_lock_timeout_ms: lockThresholdMs },
       z.array(Skill),
@@ -361,7 +397,10 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return result.length > 0 ? result[0] : null;
   },
 
-  getTools: async (queryParams: ToolQueryParams): Promise<Tool[]> => {
+  getTools: async (
+    c: AppContext,
+    queryParams: ToolQueryParams,
+  ): Promise<Tool[]> => {
     const postgrestParams: Record<string, string> = {};
 
     if (queryParams.id) {
@@ -387,6 +426,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const tools = await selectFromSupabase(
+      c,
       'tools',
       postgrestParams,
       z.array(Tool),
@@ -395,17 +435,23 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return tools;
   },
 
-  createTool: async (tool: ToolCreateParams): Promise<Tool> => {
-    const insertedTool = await insertIntoSupabase('tools', tool, z.array(Tool));
+  createTool: async (c: AppContext, tool: ToolCreateParams): Promise<Tool> => {
+    const insertedTool = await insertIntoSupabase(
+      c,
+      'tools',
+      tool,
+      z.array(Tool),
+    );
     return insertedTool[0];
   },
 
-  deleteTool: async (id: string): Promise<void> => {
-    await deleteFromSupabase('tools', { id: `eq.${id}` });
+  deleteTool: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'tools', { id: `eq.${id}` });
   },
 
   // AI Provider API Keys
   getAIProviderAPIKeys: async (
+    c: AppContext,
     queryParams: AIProviderConfigQueryParams,
   ): Promise<AIProviderConfig[]> => {
     const postgrestParams: Record<string, string> = {};
@@ -427,6 +473,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const encryptedAPIKeys = await selectFromSupabase(
+      c,
       'ai_providers',
       postgrestParams,
       z.array(AIProviderConfig),
@@ -435,14 +482,16 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     // Decrypt the API keys before returning
     return encryptedAPIKeys.map((key) => ({
       ...key,
-      api_key: key.api_key ? decryptAPIKey(key.api_key) : null,
+      api_key: key.api_key ? decryptAPIKey(c, key.api_key) : null,
     }));
   },
 
   getAIProviderAPIKeyById: async (
+    c: AppContext,
     id: string,
   ): Promise<AIProviderConfig | null> => {
     const encryptedAPIKeys = await selectFromSupabase(
+      c,
       'ai_providers',
       { id: `eq.${id}` },
       z.array(AIProviderConfig),
@@ -457,20 +506,22 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return {
       ...encryptedKey,
       api_key: encryptedKey.api_key
-        ? decryptAPIKey(encryptedKey.api_key)
+        ? decryptAPIKey(c, encryptedKey.api_key)
         : null,
     };
   },
 
   createAIProvider: async (
+    c: AppContext,
     apiKey: AIProviderConfigCreateParams,
   ): Promise<AIProviderConfig> => {
     const encryptedAPIKey = {
       ...apiKey,
-      api_key: apiKey.api_key ? encryptAPIKey(apiKey.api_key) : null,
+      api_key: apiKey.api_key ? encryptAPIKey(c, apiKey.api_key) : null,
     };
 
     const insertedAPIKey = await insertIntoSupabase(
+      c,
       'ai_providers',
       encryptedAPIKey,
       z.array(AIProviderConfig),
@@ -480,12 +531,13 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return {
       ...insertedAPIKey[0],
       api_key: insertedAPIKey[0].api_key
-        ? decryptAPIKey(insertedAPIKey[0].api_key)
+        ? decryptAPIKey(c, insertedAPIKey[0].api_key)
         : null,
     };
   },
 
   updateAIProvider: async (
+    c: AppContext,
     id: string,
     update: AIProviderConfigUpdateParams,
   ): Promise<AIProviderConfig> => {
@@ -494,11 +546,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     // Encrypt the API key if it's being updated
     if (update.api_key !== undefined) {
       updateData.api_key = update.api_key
-        ? encryptAPIKey(update.api_key)
+        ? encryptAPIKey(c, update.api_key)
         : undefined;
     }
 
     const updatedAPIKey = await updateInSupabase(
+      c,
       'ai_providers',
       id,
       updateData,
@@ -509,17 +562,20 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return {
       ...updatedAPIKey[0],
       api_key: updatedAPIKey[0].api_key
-        ? decryptAPIKey(updatedAPIKey[0].api_key)
+        ? decryptAPIKey(c, updatedAPIKey[0].api_key)
         : null,
     };
   },
 
-  deleteAIProvider: async (id: string): Promise<void> => {
-    await deleteFromSupabase('ai_providers', { id: `eq.${id}` });
+  deleteAIProvider: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'ai_providers', { id: `eq.${id}` });
   },
 
   // Models
-  getModels: async (queryParams: ModelQueryParams): Promise<Model[]> => {
+  getModels: async (
+    c: AppContext,
+    queryParams: ModelQueryParams,
+  ): Promise<Model[]> => {
     const postgrestParams: Record<string, string> = {};
     if (queryParams.id) {
       postgrestParams.id = `eq.${queryParams.id}`;
@@ -537,11 +593,20 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       postgrestParams.offset = queryParams.offset.toString();
     }
 
-    return await selectFromSupabase('models', postgrestParams, z.array(Model));
+    return await selectFromSupabase(
+      c,
+      'models',
+      postgrestParams,
+      z.array(Model),
+    );
   },
 
-  createModel: async (model: ModelCreateParams): Promise<Model> => {
+  createModel: async (
+    c: AppContext,
+    model: ModelCreateParams,
+  ): Promise<Model> => {
     const newModels = await insertIntoSupabase(
+      c,
       'models',
       [model],
       z.array(Model),
@@ -550,10 +615,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateModel: async (
+    c: AppContext,
     id: string,
     update: ModelUpdateParams,
   ): Promise<Model> => {
     const updatedModels = await updateInSupabase(
+      c,
       'models',
       id,
       update,
@@ -562,14 +629,15 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return updatedModels[0];
   },
 
-  deleteModel: async (id: string): Promise<void> => {
-    await deleteFromSupabase('models', { id: `eq.${id}` });
+  deleteModel: async (c: AppContext, id: string): Promise<void> => {
+    await deleteFromSupabase(c, 'models', { id: `eq.${id}` });
   },
 
   // Skill-Model Relationships
-  getSkillModels: async (skillId: string): Promise<Model[]> => {
+  getSkillModels: async (c: AppContext, skillId: string): Promise<Model[]> => {
     // Join skill_models bridge table with models table
     const models = await selectFromSupabase(
+      c,
       'skill_models',
       { skill_id: `eq.${skillId}`, select: 'models(*)' },
       z.array(z.object({ models: Model })),
@@ -577,9 +645,13 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return models.map((item) => item.models);
   },
 
-  getSkillsByModelId: async (modelId: string): Promise<Skill[]> => {
+  getSkillsByModelId: async (
+    c: AppContext,
+    modelId: string,
+  ): Promise<Skill[]> => {
     // Join skill_models bridge table with skills table to find all skills using this model
     const skills = await selectFromSupabase(
+      c,
       'skill_models',
       { model_id: `eq.${modelId}`, select: 'skills(*)' },
       z.array(z.object({ skills: Skill })),
@@ -588,6 +660,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   addModelsToSkill: async (
+    c: AppContext,
     skillId: string,
     modelIds: string[],
   ): Promise<void> => {
@@ -595,15 +668,21 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       skill_id: skillId,
       model_id: modelId,
     }));
-    await insertIntoSupabase('skill_models', bridgeEntries, z.array(z.any()));
+    await insertIntoSupabase(
+      c,
+      'skill_models',
+      bridgeEntries,
+      z.array(z.any()),
+    );
   },
 
   removeModelsFromSkill: async (
+    c: AppContext,
     skillId: string,
     modelIds: string[],
   ): Promise<void> => {
     for (const modelId of modelIds) {
-      await deleteFromSupabase('skill_models', {
+      await deleteFromSupabase(c, 'skill_models', {
         skill_id: `eq.${skillId}`,
         model_id: `eq.${modelId}`,
       });
@@ -612,6 +691,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   // SkillOptimizationCluster
   getSkillOptimizationClusters: async (
+    c: AppContext,
     queryParams: SkillOptimizationClusterQueryParams,
   ): Promise<SkillOptimizationCluster[]> => {
     const postgRESTParams: Record<string, string> = {
@@ -635,6 +715,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const skillConfigurations = await selectFromSupabase(
+      c,
       'skill_optimization_clusters',
       postgRESTParams,
       z.array(SkillOptimizationCluster),
@@ -644,9 +725,11 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   createSkillOptimizationClusters: async (
+    c: AppContext,
     params_list: SkillOptimizationClusterCreateParams[],
   ): Promise<SkillOptimizationCluster[]> => {
     const insertedSkillConfigurations = await insertIntoSupabase(
+      c,
       'skill_optimization_clusters',
       params_list,
       z.array(SkillOptimizationCluster),
@@ -655,10 +738,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateSkillOptimizationCluster: async (
+    c: AppContext,
     id: string,
     params: SkillOptimizationClusterUpdateParams,
   ): Promise<SkillOptimizationCluster> => {
     const updatedSkillOptimizationClusterStates = await updateInSupabase(
+      c,
       'skill_optimization_clusters',
       id,
       params,
@@ -667,16 +752,21 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return updatedSkillOptimizationClusterStates[0];
   },
 
-  deleteSkillOptimizationCluster: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skill_optimization_clusters', {
+  deleteSkillOptimizationCluster: async (
+    c: AppContext,
+    id: string,
+  ): Promise<void> => {
+    await deleteFromSupabase(c, 'skill_optimization_clusters', {
       id: `eq.${id}`,
     });
   },
 
   incrementClusterCounters: async (
+    c: AppContext,
     clusterId: string,
   ): Promise<SkillOptimizationCluster> => {
     const result = await rpcFunctionWithResponse(
+      c,
       'increment_cluster_counters',
       { p_cluster_id: clusterId },
       z.array(SkillOptimizationCluster),
@@ -686,6 +776,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   //SkillOptimizationArm
   getSkillOptimizationArms: async (
+    c: AppContext,
     queryParams: SkillOptimizationArmQueryParams,
   ): Promise<SkillOptimizationArm[]> => {
     const postgRESTParams: Record<string, string> = {
@@ -712,6 +803,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const skillConfigurations = await selectFromSupabase(
+      c,
       'skill_optimization_arms',
       postgRESTParams,
       z.array(SkillOptimizationArm),
@@ -721,9 +813,11 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   createSkillOptimizationArms: async (
+    c: AppContext,
     params_list: SkillOptimizationArmCreateParams[],
   ): Promise<SkillOptimizationArm[]> => {
     const createdSkillOptimizationArms = await insertIntoSupabase(
+      c,
       'skill_optimization_arms',
       params_list,
       z.array(SkillOptimizationArm),
@@ -733,10 +827,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateSkillOptimizationArm: async (
+    c: AppContext,
     id: string,
     params: SkillOptimizationArmUpdateParams,
   ): Promise<SkillOptimizationArm> => {
     const updatedSkillOptimizationArms = await updateInSupabase(
+      c,
       'skill_optimization_arms',
       id,
       params,
@@ -747,6 +843,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   updateArmAndIncrementCounters: async (
+    c: AppContext,
     armId: string,
     evaluationResults: Array<{ evaluation_id: string; score: number }>,
   ): Promise<{
@@ -755,6 +852,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     skill: Skill;
   }> => {
     const result = await rpcFunctionWithResponse(
+      c,
       'update_arm_and_increment_counters',
       {
         p_arm_id: armId,
@@ -771,28 +869,36 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return result[0];
   },
 
-  deleteSkillOptimizationArm: async (id: string): Promise<void> => {
-    await deleteFromSupabase('skill_optimization_arms', { id: `eq.${id}` });
+  deleteSkillOptimizationArm: async (
+    c: AppContext,
+    id: string,
+  ): Promise<void> => {
+    await deleteFromSupabase(c, 'skill_optimization_arms', {
+      id: `eq.${id}`,
+    });
   },
 
   deleteSkillOptimizationArmsForSkill: async (
+    c: AppContext,
     skillId: string,
   ): Promise<void> => {
-    await deleteFromSupabase('skill_optimization_arms', {
+    await deleteFromSupabase(c, 'skill_optimization_arms', {
       skill_id: `eq.${skillId}`,
     });
   },
 
   deleteSkillOptimizationArmsForCluster: async (
+    c: AppContext,
     clusterId: string,
   ): Promise<void> => {
-    await deleteFromSupabase('skill_optimization_arms', {
+    await deleteFromSupabase(c, 'skill_optimization_arms', {
       cluster_id: `eq.${clusterId}`,
     });
   },
 
   // SkillOptimizationArmStats
   getSkillOptimizationArmStats: async (
+    c: AppContext,
     queryParams: import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStatQueryParams,
   ): Promise<
     import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStat[]
@@ -827,6 +933,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       '@shared/types/data/skill-optimization-arm-stats'
     );
     return await selectFromSupabase(
+      c,
       'skill_optimization_arm_stats',
       postgRESTParams,
       z.array(SkillOptimizationArmStat),
@@ -834,6 +941,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   deleteSkillOptimizationArmStats: async (
+    c: AppContext,
     queryParams: import('@shared/types/data/skill-optimization-arm-stats').SkillOptimizationArmStatQueryParams,
   ): Promise<void> => {
     const postgRESTParams: Record<string, string> = {};
@@ -854,11 +962,16 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
       postgRESTParams.cluster_id = `eq.${queryParams.cluster_id}`;
     }
 
-    await deleteFromSupabase('skill_optimization_arm_stats', postgRESTParams);
+    await deleteFromSupabase(
+      c,
+      'skill_optimization_arm_stats',
+      postgRESTParams,
+    );
   },
 
   // SkillOptimizationEvaluation
   getSkillOptimizationEvaluations: async (
+    c: AppContext,
     queryParams: SkillOptimizationEvaluationQueryParams,
   ): Promise<SkillOptimizationEvaluation[]> => {
     const postgRESTParams: Record<string, string> = {
@@ -885,6 +998,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const evaluations = await selectFromSupabase(
+      c,
       'skill_optimization_evaluations',
       postgRESTParams,
       z.array(SkillOptimizationEvaluation),
@@ -894,9 +1008,11 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   async createSkillOptimizationEvaluations(
+    c: AppContext,
     params: SkillOptimizationEvaluation[],
   ): Promise<SkillOptimizationEvaluation[]> {
     const createdEvaluations = await insertIntoSupabase(
+      c,
       'skill_optimization_evaluations',
       params,
       z.array(SkillOptimizationEvaluation),
@@ -906,10 +1022,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   async updateSkillOptimizationEvaluation(
+    c: AppContext,
     id: string,
     update: import('@shared/types/data').SkillOptimizationEvaluationUpdateParams,
   ): Promise<SkillOptimizationEvaluation> {
     const updatedEvaluations = await updateInSupabase(
+      c,
       'skill_optimization_evaluations',
       id,
       update,
@@ -923,22 +1041,27 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return updatedEvaluations[0];
   },
 
-  async deleteSkillOptimizationEvaluation(id: string): Promise<void> {
-    await deleteFromSupabase('skill_optimization_evaluations', {
+  async deleteSkillOptimizationEvaluation(
+    c: AppContext,
+    id: string,
+  ): Promise<void> {
+    await deleteFromSupabase(c, 'skill_optimization_evaluations', {
       id: `eq.${id}`,
     });
   },
 
   async deleteSkillOptimizationEvaluationsForSkill(
+    c: AppContext,
     skillId: string,
   ): Promise<void> {
-    await deleteFromSupabase('skill_optimization_evaluations', {
+    await deleteFromSupabase(c, 'skill_optimization_evaluations', {
       skill_id: `eq.${skillId}`,
     });
   },
 
   // SkillOptimizationEvaluationRun
   getSkillOptimizationEvaluationRuns: async (
+    c: AppContext,
     queryParams: SkillOptimizationEvaluationRunQueryParams,
   ): Promise<SkillOptimizationEvaluationRun[]> => {
     const postgRESTParams: Record<string, string> = {
@@ -965,6 +1088,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const evaluationRuns = await selectFromSupabase(
+      c,
       'skill_optimization_evaluation_runs',
       postgRESTParams,
       z.array(SkillOptimizationEvaluationRun),
@@ -974,9 +1098,11 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   async createSkillOptimizationEvaluationRun(
+    c: AppContext,
     params: SkillOptimizationEvaluationRunCreateParams,
   ): Promise<SkillOptimizationEvaluationRun> {
     const createdEvaluationRuns = await insertIntoSupabase(
+      c,
       'skill_optimization_evaluation_runs',
       params,
       z.array(SkillOptimizationEvaluationRun),
@@ -985,13 +1111,17 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return createdEvaluationRuns[0];
   },
 
-  async deleteSkillOptimizationEvaluationRun(id: string): Promise<void> {
-    await deleteFromSupabase('skill_optimization_evaluation_runs', {
+  async deleteSkillOptimizationEvaluationRun(
+    c: AppContext,
+    id: string,
+  ): Promise<void> {
+    await deleteFromSupabase(c, 'skill_optimization_evaluation_runs', {
       id: `eq.${id}`,
     });
   },
 
   async getEvaluationScoresByTimeBucket(
+    c: AppContext,
     params: import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketParams,
   ): Promise<
     import('@shared/types/data/evaluation-runs-with-scores').EvaluationScoresByTimeBucketResult[]
@@ -1003,6 +1133,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     // Call PostgreSQL function to get time-bucketed scores
     const interval = `${params.interval_minutes} minutes`;
     const result = await rpcFunctionWithResponse(
+      c,
       'get_evaluation_scores_by_time_bucket',
       {
         p_agent_id: params.agent_id || null,
@@ -1020,6 +1151,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 
   // Skill Events
   async getSkillEvents(
+    c: AppContext,
     queryParams: SkillEventQueryParams,
   ): Promise<SkillEvent[]> {
     const postgRESTParams: Record<string, string> = {
@@ -1050,6 +1182,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
 
     const events = await selectFromSupabase(
+      c,
       'skill_events',
       postgRESTParams,
       z.array(SkillEvent),
@@ -1057,9 +1190,13 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     return events;
   },
 
-  async createSkillEvent(params: SkillEventCreateParams): Promise<SkillEvent> {
+  async createSkillEvent(
+    c: AppContext,
+    params: SkillEventCreateParams,
+  ): Promise<SkillEvent> {
     const validatedParams = SkillEventCreateParams.parse(params);
     const createdEvent = await insertIntoSupabase(
+      c,
       'skill_events',
       validatedParams,
       z.array(SkillEvent),
@@ -1077,8 +1214,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   // System Settings (singleton - only one row exists)
-  async getSystemSettings(): Promise<SystemSettings> {
+  async getSystemSettings(c: AppContext): Promise<SystemSettings> {
     const settings = await selectFromSupabase(
+      c,
       'system_settings',
       { limit: '1' },
       z.array(SystemSettings),
@@ -1088,10 +1226,12 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
   },
 
   async updateSystemSettings(
+    c: AppContext,
     update: SystemSettingsUpdateParams,
   ): Promise<SystemSettings> {
     // Get the singleton settings row first
     const currentSettings = await selectFromSupabase(
+      c,
       'system_settings',
       { limit: '1' },
       z.array(SystemSettings),
@@ -1099,6 +1239,7 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     const settingsId = currentSettings[0].id;
 
     const updatedSettings = await updateInSupabase(
+      c,
       'system_settings',
       settingsId,
       update,
@@ -1109,8 +1250,9 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
 };
 
 export const supabaseCacheStorageConnector: CacheStorageConnector = {
-  getCache: async (key: string) => {
+  getCache: async (c: AppContext, key: string) => {
     const cachedValues = await selectFromSupabase(
+      c,
       'cache',
       { key: `eq.${key}`, expires_at: `gte.${new Date().toISOString()}` },
       z.array(CachedValue),
@@ -1122,22 +1264,25 @@ export const supabaseCacheStorageConnector: CacheStorageConnector = {
 
     return cachedValues[0].value;
   },
-  setCache: async (key: string, value: string) => {
+  setCache: async (c: AppContext, key: string, value: string) => {
     const cachedValue: CachedValue = {
       key,
       value,
       expires_at: new Date().toISOString(),
     };
     // We use upsert to replace the existing value if it exists
-    await insertIntoSupabase('cache', cachedValue, null, true);
+    await insertIntoSupabase(c, 'cache', cachedValue, null, true);
   },
-  deleteCache: async (key: string) => {
-    await deleteFromSupabase('cache', { key: `eq.${key}` });
+  deleteCache: async (c: AppContext, key: string) => {
+    await deleteFromSupabase(c, 'cache', { key: `eq.${key}` });
   },
 };
 
 export const supabaseLogsStorageConnector: LogsStorageConnector = {
-  getLogs: async (queryParams: LogsQueryParams): Promise<Log[]> => {
+  getLogs: async (
+    c: AppContext,
+    queryParams: LogsQueryParams,
+  ): Promise<Log[]> => {
     const postgRESTQuery: Record<string, string> = {
       order: 'start_time.desc',
     };
@@ -1202,6 +1347,7 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
 
     // Use the logs_with_eval_scores view to include computed evaluation scores
     const logs = await selectFromSupabase(
+      c,
       'logs_with_eval_scores',
       postgRESTQuery,
       z.array(Log),
@@ -1210,8 +1356,12 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     return logs;
   },
 
-  createLog: async (createParams: LogCreateParams): Promise<Log> => {
+  createLog: async (
+    c: AppContext,
+    createParams: LogCreateParams,
+  ): Promise<Log> => {
     const insertedLog = await insertIntoSupabase(
+      c,
       'logs',
       createParams,
       z.array(Log),
@@ -1219,7 +1369,7 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     return insertedLog[0];
   },
 
-  deleteLog: async (id: string) => {
-    await deleteFromSupabase('logs', { id: `eq.${id}` });
+  deleteLog: async (c: AppContext, id: string) => {
+    await deleteFromSupabase(c, 'logs', { id: `eq.${id}` });
   },
 };

@@ -510,7 +510,7 @@ describe('Skills API Status Codes', () => {
         name: string;
       }> = [];
       mockUserDataStorageConnector.createSkillOptimizationArms.mockImplementation(
-        (params: Array<{ cluster_id: string; name: string }>) => {
+        (_c: unknown, params: Array<{ cluster_id: string; name: string }>) => {
           const arms = params.map((p, idx) => ({
             id: `arm-${createdArms.length + idx}`,
             cluster_id: p.cluster_id,
@@ -583,7 +583,7 @@ describe('Skills API Status Codes', () => {
         name: string;
       }> = [];
       mockUserDataStorageConnector.createSkillOptimizationArms.mockImplementation(
-        (params: Array<{ cluster_id: string; name: string }>) => {
+        (_c: unknown, params: Array<{ cluster_id: string; name: string }>) => {
           const arms = params.map((p, idx) => ({
             id: `new-arm-${createdArms.length + idx}`,
             cluster_id: p.cluster_id,
@@ -639,7 +639,7 @@ describe('Skills API Status Codes', () => {
         name: string;
       }> = [];
       mockUserDataStorageConnector.createSkillOptimizationArms.mockImplementation(
-        (params: Array<{ cluster_id: string; name: string }>) => {
+        (_c: unknown, params: Array<{ cluster_id: string; name: string }>) => {
           const arms = params.map((p, idx) => ({
             id: `arm-${createdArms.length + idx}`,
             cluster_id: p.cluster_id,
@@ -751,7 +751,7 @@ describe('Skills API Status Codes', () => {
       expect(deleteCalls.length).toBe(0);
 
       // Verify arms were updated grouped by cluster
-      const updatedArmIds = updateCalls.map((call) => call[0]);
+      const updatedArmIds = updateCalls.map((call) => call[1]);
       const cluster1Updates = updatedArmIds.filter((id: string) =>
         id.startsWith('arm-c1'),
       );

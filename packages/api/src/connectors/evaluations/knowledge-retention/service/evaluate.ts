@@ -1,6 +1,7 @@
 import type { KnowledgeRetentionEvaluationParameters } from '@api/connectors/evaluations/knowledge-retention/types';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import { formatMessagesForExtraction } from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/reactive-agents/requests';
@@ -20,6 +21,7 @@ import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceReactiveAgentsRequestData } from '@shared/utils/ra-request-data';
 
 export async function evaluateLog(
+  c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
@@ -28,11 +30,13 @@ export async function evaluateLog(
 
   // Resolve model configuration from evaluation.model_id or system settings
   const modelConfig = await resolveEvaluationModelConfig(
+    c,
     evaluation,
     storageConnector,
   );
 
   const llmJudge = createLLMJudge(
+    c,
     {
       temperature: params.temperature,
       max_tokens: params.max_tokens,

@@ -1,51 +1,68 @@
-import { BEARER_TOKEN, JWT_SECRET } from '@api/constants';
+import {
+  getAccessPassword,
+  getAuthJwtSecret,
+  getBearerToken,
+} from '@api/constants';
 import type { AppEnv } from '@api/types/hono';
+import { AUTH_COOKIE_NAME } from '@api/utils/auth-cookie';
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Factory } from 'hono/factory';
 import { jwt } from 'hono/jwt';
 
 /**
- * Authenticated middleware for API requests that blocks requests to the API
- * without a valid authorization header.
+ * Authenticated middleware for API requests.
  *
- * Native Hono middleware to check if the user is authenticated.
+ * Blocks unauthenticated requests when either ACCESS_PASSWORD or BEARER_TOKEN is configured.
  *
- * If the user is authenticated, the request will be passed to the next middleware
- * If the user is not authenticated, the request will be rejected with a 401 Unauthorized status
+ * Authentication is checked in this order:
+ * 1. JWT cookie (access_token) — set by the login flow when ACCESS_PASSWORD is configured
+ * 2. Bearer token header — for programmatic API access
  *
- * If BEARER_TOKEN is not configured, API requests without JWT authentication will be allowed through.
+ * If neither ACCESS_PASSWORD nor BEARER_TOKEN is configured, all requests are allowed through.
+ * Auth endpoints (/v1/reactive-agents/auth/*) are always exempt.
  */
 export const authenticatedMiddleware = (
   factory: Factory<AppEnv>,
 ): MiddlewareHandler =>
   factory.createMiddleware(async (c, next) => {
-    if (c.req.path.startsWith('/v1/reactive-agents/auth')) {
-      return next();
-    }
-
-    const accessTokenCookie = getCookie(c, 'access_token');
-
-    if (accessTokenCookie) {
-      return jwt({ cookie: 'access_token', secret: JWT_SECRET })(c, next);
-    }
-
-    // If BEARER_TOKEN is not configured, allow requests through without authentication
-    if (!BEARER_TOKEN) {
-      return next();
-    }
-
-    const bearerHeaderString = c.req.header('authorization');
-
-    if (!bearerHeaderString) {
-      return c.text('Unauthorized', 401);
-    }
-
-    const bearerToken = bearerHeaderString.split(' ')[1];
-
-    if (bearerToken === BEARER_TOKEN) {
+    // Allow access to auth endpoints so that we can login or verify authorization
+    if (c.req.path.startsWith('/v1/reactive-agents/auth/')) {
       await next();
-    } else {
-      return c.text('Unauthorized', 401);
+      return;
     }
+
+    const jwtSecret = getAuthJwtSecret(c);
+    const bearerToken = getBearerToken(c);
+    const accessPassword = getAccessPassword(c);
+
+    // If neither ACCESS_PASSWORD nor BEARER_TOKEN is configured, skip auth
+    if (!accessPassword && !bearerToken) {
+      await next();
+      return;
+    }
+
+    // Check JWT cookie first (set by login flow)
+    const accessTokenCookie = getCookie(c, AUTH_COOKIE_NAME);
+    if (accessTokenCookie) {
+      await jwt({ cookie: AUTH_COOKIE_NAME, secret: jwtSecret })(c, next);
+      return;
+    }
+
+    // Check Bearer token header (for programmatic access)
+    const bearerHeaderString = c.req.header('authorization');
+    if (bearerHeaderString) {
+      const parts = bearerHeaderString.split(' ');
+      if (
+        parts.length === 2 &&
+        parts[0].toLowerCase() === 'bearer' &&
+        bearerToken &&
+        parts[1] === bearerToken
+      ) {
+        await next();
+        return;
+      }
+    }
+
+    c.res = c.text('Unauthorized', 401);
   });

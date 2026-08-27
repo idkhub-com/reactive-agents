@@ -1,6 +1,9 @@
 import { createLLMJudge } from '@api/evaluations/llm-judge';
+import { createMockContext } from '@api/test-utils/mock-context';
 import { AIProvider } from '@shared/types/constants';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockContext = createMockContext();
 
 // Mock OpenAI client
 const mockParse = vi.fn();
@@ -26,10 +29,14 @@ vi.mock('openai', () => {
 });
 
 // Mock the constants
-vi.mock('@api/constants', () => ({
-  API_URL: 'http://localhost:8787',
-  BEARER_TOKEN: 'reactive-agents',
-}));
+vi.mock('@api/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@api/constants')>();
+  return {
+    ...actual,
+    getApiUrl: () => 'http://localhost:8787',
+    getBearerToken: () => 'reactive-agents',
+  };
+});
 
 // Model config with API key for tests
 const mockModelConfig = {
@@ -44,7 +51,7 @@ describe('LLM Judge', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    llmJudge = createLLMJudge({}, mockModelConfig);
+    llmJudge = createLLMJudge(mockContext, {}, mockModelConfig);
   });
 
   afterEach(() => {
@@ -59,7 +66,7 @@ describe('LLM Judge', () => {
   });
 
   it('should create LLM judge with custom config', () => {
-    const customJudge = createLLMJudge({
+    const customJudge = createLLMJudge(mockContext, {
       model: 'gpt-4',
       temperature: 0.5,
       max_tokens: 2000,
@@ -126,7 +133,7 @@ describe('LLM Judge', () => {
     const { createLLMJudge: createLLMJudgeWithNoKey } = await import(
       '@api/evaluations/llm-judge'
     );
-    const judgeWithNoKey = createLLMJudgeWithNoKey();
+    const judgeWithNoKey = createLLMJudgeWithNoKey(mockContext);
 
     const result = await judgeWithNoKey.evaluate({
       text: 'This is a test evaluation.',

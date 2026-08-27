@@ -1,7 +1,10 @@
+import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import { getSkill } from '@api/utils/reactive-agents/skills';
 import type { Skill } from '@shared/types/data/skill';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockContext = createMockContext();
 
 describe('getSkill', () => {
   let mockConnector: UserDataStorageConnector;
@@ -143,6 +146,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
 
       const result = await getSkill(
+        mockContext,
         mockConnector,
         testAgentId,
         testAgentName,
@@ -150,7 +154,7 @@ describe('getSkill', () => {
       );
 
       expect(result).toEqual(existingSkill);
-      expect(mockConnector.getSkills).toHaveBeenCalledWith({
+      expect(mockConnector.getSkills).toHaveBeenCalledWith(mockContext, {
         name: 'existing-skill',
         agent_id: testAgentId,
       });
@@ -204,6 +208,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue(skills);
 
       const result = await getSkill(
+        mockContext,
         mockConnector,
         testAgentId,
         testAgentName,
@@ -220,6 +225,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
 
       const result = await getSkill(
+        mockContext,
         mockConnector,
         testAgentId,
         testAgentName,
@@ -227,7 +233,7 @@ describe('getSkill', () => {
       );
 
       expect(result).toBeNull();
-      expect(mockConnector.getSkills).toHaveBeenCalledWith({
+      expect(mockConnector.getSkills).toHaveBeenCalledWith(mockContext, {
         name: 'new-skill',
         agent_id: testAgentId,
       });
@@ -238,6 +244,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
 
       const result = await getSkill(
+        mockContext,
         mockConnector,
         testAgentId,
         testAgentName,
@@ -245,7 +252,7 @@ describe('getSkill', () => {
       );
 
       expect(result).toBeNull();
-      expect(mockConnector.getSkills).toHaveBeenCalledWith({
+      expect(mockConnector.getSkills).toHaveBeenCalledWith(mockContext, {
         name: '',
         agent_id: testAgentId,
       });
@@ -259,7 +266,13 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockRejectedValue(error);
 
       await expect(
-        getSkill(mockConnector, testAgentId, testAgentName, 'test-skill'),
+        getSkill(
+          mockContext,
+          mockConnector,
+          testAgentId,
+          testAgentName,
+          'test-skill',
+        ),
       ).rejects.toThrow('Database connection failed');
     });
   });
@@ -291,6 +304,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([skill]);
 
       const result = await getSkill(
+        mockContext,
         mockConnector,
         testAgentId,
         testAgentName,
@@ -298,7 +312,7 @@ describe('getSkill', () => {
       );
 
       expect(result).toEqual(skill);
-      expect(mockConnector.getSkills).toHaveBeenCalledWith({
+      expect(mockConnector.getSkills).toHaveBeenCalledWith(mockContext, {
         name: specialName,
         agent_id: testAgentId,
       });
@@ -310,6 +324,7 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([]);
 
       const result = await getSkill(
+        mockContext,
         mockConnector,
         testAgentId,
         testAgentName,
@@ -317,7 +332,7 @@ describe('getSkill', () => {
       );
 
       expect(result).toBeNull();
-      expect(mockConnector.getSkills).toHaveBeenCalledWith({
+      expect(mockConnector.getSkills).toHaveBeenCalledWith(mockContext, {
         name: longName,
         agent_id: testAgentId,
       });
@@ -351,8 +366,20 @@ describe('getSkill', () => {
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
 
       const [result1, result2] = await Promise.all([
-        getSkill(mockConnector, testAgentId, testAgentName, skillName),
-        getSkill(mockConnector, testAgentId, testAgentName, skillName),
+        getSkill(
+          mockContext,
+          mockConnector,
+          testAgentId,
+          testAgentName,
+          skillName,
+        ),
+        getSkill(
+          mockContext,
+          mockConnector,
+          testAgentId,
+          testAgentName,
+          skillName,
+        ),
       ]);
 
       expect(result1).toEqual(existingSkill);

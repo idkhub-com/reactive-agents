@@ -12,6 +12,7 @@ import { collectRouteIds } from './route-test-utils';
 const EXPECTED_ROUTE_IDS = [
   '__root__',
   '/',
+  '/login',
   '/_main',
   '/_main/settings',
   '/_main/agents/',

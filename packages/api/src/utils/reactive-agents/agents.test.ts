@@ -1,7 +1,10 @@
+import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import { getAgent } from '@api/utils/reactive-agents/agents';
 import type { Agent } from '@shared/types/data/agent';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockContext = createMockContext();
 
 describe('getAgent', () => {
   let mockConnector: UserDataStorageConnector;
@@ -135,10 +138,14 @@ describe('getAgent', () => {
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);
 
-      const result = await getAgent(mockConnector, 'existing-agent');
+      const result = await getAgent(
+        mockContext,
+        mockConnector,
+        'existing-agent',
+      );
 
       expect(result).toEqual(existingAgent);
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({
+      expect(mockConnector.getAgents).toHaveBeenCalledWith(mockContext, {
         name: 'existing-agent',
       });
       expect(mockConnector.createAgent).not.toHaveBeenCalled();
@@ -166,7 +173,11 @@ describe('getAgent', () => {
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue(agents);
 
-      const result = await getAgent(mockConnector, 'duplicate-agent');
+      const result = await getAgent(
+        mockContext,
+        mockConnector,
+        'duplicate-agent',
+      );
 
       expect(result).toEqual(agents[0]);
       expect(mockConnector.createAgent).not.toHaveBeenCalled();
@@ -187,13 +198,17 @@ describe('getAgent', () => {
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
       vi.mocked(mockConnector.createAgent).mockResolvedValue(newAgent);
 
-      const result = await getAgent(mockConnector, 'reactive-agents');
+      const result = await getAgent(
+        mockContext,
+        mockConnector,
+        'reactive-agents',
+      );
 
       expect(result).toEqual(newAgent);
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({
+      expect(mockConnector.getAgents).toHaveBeenCalledWith(mockContext, {
         name: 'reactive-agents',
       });
-      expect(mockConnector.createAgent).toHaveBeenCalledWith({
+      expect(mockConnector.createAgent).toHaveBeenCalledWith(mockContext, {
         name: 'reactive-agents',
         description: 'The Reactive Agents internal agent',
         metadata: {},
@@ -201,8 +216,10 @@ describe('getAgent', () => {
     });
 
     it('should reject invalid agent names (too short)', async () => {
-      await expect(getAgent(mockConnector, '')).rejects.toThrow();
-      await expect(getAgent(mockConnector, 'ab')).rejects.toThrow();
+      await expect(getAgent(mockContext, mockConnector, '')).rejects.toThrow();
+      await expect(
+        getAgent(mockContext, mockConnector, 'ab'),
+      ).rejects.toThrow();
     });
   });
 
@@ -211,9 +228,9 @@ describe('getAgent', () => {
       const error = new Error('Database connection failed');
       vi.mocked(mockConnector.getAgents).mockRejectedValue(error);
 
-      await expect(getAgent(mockConnector, 'test-agent')).rejects.toThrow(
-        'Database connection failed',
-      );
+      await expect(
+        getAgent(mockContext, mockConnector, 'test-agent'),
+      ).rejects.toThrow('Database connection failed');
     });
   });
 
@@ -231,28 +248,32 @@ describe('getAgent', () => {
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
 
-      const result = await getAgent(mockConnector, specialName);
+      const result = await getAgent(mockContext, mockConnector, specialName);
 
       expect(result).toEqual(agent);
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({
+      expect(mockConnector.getAgents).toHaveBeenCalledWith(mockContext, {
         name: specialName,
       });
     });
 
     it('should reject names with invalid characters', async () => {
       await expect(
-        getAgent(mockConnector, 'agent@domain.com'),
+        getAgent(mockContext, mockConnector, 'agent@domain.com'),
       ).rejects.toThrow();
       await expect(
-        getAgent(mockConnector, 'Agent With Spaces'),
+        getAgent(mockContext, mockConnector, 'Agent With Spaces'),
       ).rejects.toThrow();
-      await expect(getAgent(mockConnector, 'AgentWithCaps')).rejects.toThrow();
+      await expect(
+        getAgent(mockContext, mockConnector, 'AgentWithCaps'),
+      ).rejects.toThrow();
     });
 
     it('should reject agent names that are too long (>100 chars)', async () => {
       const longName = 'a'.repeat(101);
 
-      await expect(getAgent(mockConnector, longName)).rejects.toThrow();
+      await expect(
+        getAgent(mockContext, mockConnector, longName),
+      ).rejects.toThrow();
     });
 
     it('should accept maximum length agent names (100 chars)', async () => {
@@ -268,10 +289,10 @@ describe('getAgent', () => {
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
 
-      const result = await getAgent(mockConnector, maxLengthName);
+      const result = await getAgent(mockContext, mockConnector, maxLengthName);
 
       expect(result).toEqual(agent);
-      expect(mockConnector.getAgents).toHaveBeenCalledWith({
+      expect(mockConnector.getAgents).toHaveBeenCalledWith(mockContext, {
         name: maxLengthName,
       });
     });
@@ -292,8 +313,8 @@ describe('getAgent', () => {
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);
 
       const [result1, result2] = await Promise.all([
-        getAgent(mockConnector, agentName),
-        getAgent(mockConnector, agentName),
+        getAgent(mockContext, mockConnector, agentName),
+        getAgent(mockContext, mockConnector, agentName),
       ]);
 
       expect(result1).toEqual(existingAgent);

@@ -131,6 +131,8 @@ class SSEEventManager {
         timestamp: Date.now(),
       });
     }, 30 * 1000);
+    // Allow process to exit even if interval is active (e.g. in tests)
+    this.pingInterval.unref();
   }
 
   /**

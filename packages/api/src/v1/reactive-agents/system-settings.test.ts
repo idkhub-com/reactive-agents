@@ -107,7 +107,7 @@ describe('System Settings API', () => {
       expect(data).toEqual(updatedSettings);
       expect(
         mockUserDataStorageConnector.updateSystemSettings,
-      ).toHaveBeenCalledWith({
+      ).toHaveBeenCalledWith(expect.anything(), {
         judge_model_id: newJudgeId,
       });
     });

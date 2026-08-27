@@ -75,8 +75,10 @@ export const aiProvidersRouter = new Hono<AppEnv>()
       const userDataStorageConnector = c.get('user_data_storage_connector');
       const queryParams = c.req.valid('query');
 
-      const providers =
-        await userDataStorageConnector.getAIProviderAPIKeys(queryParams);
+      const providers = await userDataStorageConnector.getAIProviderAPIKeys(
+        c,
+        queryParams,
+      );
 
       return c.json(providers);
     } catch (error) {
@@ -92,8 +94,10 @@ export const aiProvidersRouter = new Hono<AppEnv>()
       const userDataStorageConnector = c.get('user_data_storage_connector');
       const providerData = c.req.valid('json');
 
-      const createdProvider =
-        await userDataStorageConnector.createAIProvider(providerData);
+      const createdProvider = await userDataStorageConnector.createAIProvider(
+        c,
+        providerData,
+      );
 
       return c.json(createdProvider, 201);
     } catch (error) {
@@ -115,6 +119,7 @@ export const aiProvidersRouter = new Hono<AppEnv>()
         const updateData = c.req.valid('json');
 
         const updatedProvider = await userDataStorageConnector.updateAIProvider(
+          c,
           id,
           updateData,
         );
@@ -137,7 +142,7 @@ export const aiProvidersRouter = new Hono<AppEnv>()
         const userDataStorageConnector = c.get('user_data_storage_connector');
         const { id } = c.req.valid('param');
 
-        await userDataStorageConnector.deleteAIProvider(id);
+        await userDataStorageConnector.deleteAIProvider(c, id);
 
         return c.json({ success: true }, 200);
       } catch (error) {

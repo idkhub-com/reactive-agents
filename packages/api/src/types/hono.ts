@@ -28,6 +28,19 @@ import type { Hook, HookType } from '@shared/types/middleware/hooks';
 import type { Context, Hono } from 'hono';
 
 export interface AppEnv {
+  Bindings: {
+    ACCESS_PASSWORD?: string;
+    AI_PROVIDER_API_KEY_ENCRYPTION_KEY?: string;
+    API_URL?: string;
+    AUTH_JWT_SECRET?: string;
+    BEARER_TOKEN?: string;
+    NODE_ENV?: string;
+    POSTGREST_SERVICE_ROLE_KEY?: string;
+    POSTGREST_URL?: string;
+    SUPABASE_SECRET_KEY?: string;
+    SUPABASE_URL?: string;
+    WEB_APP_URL?: string;
+  };
   Variables: {
     ra_config: ReactiveAgentsConfig;
     ra_config_pre_processed: ReactiveAgentsConfigPreProcessed;

@@ -2,6 +2,7 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { AppContext } from '@api/types/hono';
 import { info, warn } from '@shared/console-logging';
 import type {
   Log,
@@ -517,6 +518,7 @@ const evaluateLogInternal = (
 };
 
 export function evaluateLog(
+  _c: AppContext,
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   _storageConnector: UserDataStorageConnector,
