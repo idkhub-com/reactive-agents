@@ -171,18 +171,24 @@ Uses **connector pattern** for data access:
 | Backend | Location | Status |
 | --- | --- | --- |
 | Supabase / PostgREST | `packages/api/src/connectors/supabase/` | complete; what the app uses |
-| libSQL | `packages/api/src/connectors/libsql/` | schema, client, migrations, cache |
+| libSQL | `packages/api/src/connectors/libsql/` | complete; not yet selectable |
 
-The libSQL backend is **not yet selectable** — `v1/index.ts` still wires the
-Supabase connectors unconditionally. Its remaining connectors land before the
-selection is added, so a half-implemented backend is never reachable.
+The libSQL backend implements all three interfaces but is **not yet
+selectable** — `v1/index.ts` still wires the Supabase connectors
+unconditionally. Wiring it up is the remaining step.
 
 Its schema (`connectors/libsql/schema.ts`) is a translation of
 `supabase/migrations/`, not a replay: one consolidated migration describing the
 current shape. Notable differences, all deliberate:
 
 - **No stored procedures.** SQLite has none, so the five RPCs the API calls
-  become explicit transactions in the connector.
+  become explicit transactions in `connectors/libsql/user-data.ts`, and
+  `get_evaluation_scores_by_time_bucket` becomes `connectors/libsql/time-bucket.ts`.
+- **NULL stays NULL.** PostgREST serialises a NULL column as JSON `null` and
+  the Zod schemas use `.nullable()`, so row decoding preserves null rather than
+  mapping it to `undefined`.
+- **Updates re-select instead of using `RETURNING`.** SQLite computes RETURNING
+  before AFTER triggers run, so it would return a stale `updated_at`.
 - **Row-level security is dropped.** The Postgres policies grant unrestricted
   access to the service role, which is the only role the API connects as.
 - **`PRAGMA foreign_keys = ON` per connection.** SQLite leaves foreign keys
@@ -366,6 +372,9 @@ The system uses special auto-generated skills in the `super-agents` agent (defin
   - `LIBSQL_URL` - libSQL database. `file:` for an embedded SQLite file,
     `libsql://` or `https://` for a remote one. Only read by the libSQL
     connector, which is not wired up yet.
+  - Note: tests for the libSQL connector use a temp **file** database, not
+    `:memory:` — `client.transaction()` checks out a separate connection, and
+    for an in-memory database that is a separate, empty database.
   - `LIBSQL_AUTH_TOKEN` - Auth token for a remote libSQL database. Not used by `file:` databases.
   - `WEB_APP_URL` - Comma-separated origins allowed to make credentialed cross-origin
     requests. Only needed when the dashboard is hosted separately from the API; the

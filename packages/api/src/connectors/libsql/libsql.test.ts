@@ -67,10 +67,12 @@ describe('libsql migrations', () => {
     const { client } = await freshDatabase();
 
     const applied = await client.execute(
-      'SELECT version FROM schema_migrations',
+      'SELECT version FROM schema_migrations ORDER BY version',
     );
     expect(applied.rows.map((r) => String(r.version))).toEqual([
       '0001_initial_schema',
+      '0002_feedbacks_updated_at',
+      '0003_default_system_settings',
     ]);
   });
 
@@ -116,7 +118,7 @@ describe('libsql migrations', () => {
     const applied = await client.execute(
       'SELECT COUNT(*) AS n FROM schema_migrations',
     );
-    expect(Number(applied.rows[0].n)).toBe(1);
+    expect(Number(applied.rows[0].n)).toBe(3);
   });
 });
 
@@ -191,10 +193,11 @@ describe('libsql schema semantics', () => {
   it('keeps system_settings a singleton', async () => {
     const { client } = await freshDatabase();
 
-    await client.execute({
-      sql: 'INSERT INTO system_settings (id) VALUES (?)',
-      args: ['settings-1'],
-    });
+    // Migration 0003 seeds the one permitted row.
+    const seeded = await client.execute(
+      'SELECT COUNT(*) AS n FROM system_settings',
+    );
+    expect(Number(seeded.rows[0].n)).toBe(1);
 
     await expect(
       client.execute({
@@ -218,8 +221,8 @@ describe('libsql schema semantics', () => {
 
     await expect(
       client.execute({
-        sql: 'INSERT INTO system_settings (id, judge_model_id) VALUES (?, ?)',
-        args: ['settings-1', 'model-embed'],
+        sql: 'UPDATE system_settings SET judge_model_id = ?',
+        args: ['model-embed'],
       }),
     ).rejects.toThrow(/judge_model_id must reference a text model/);
   });
@@ -510,7 +513,7 @@ describe('row mapping', () => {
     expect(fromJson(toJsonColumn({ a: [1, 2] }) as string)).toEqual({
       a: [1, 2],
     });
-    expect(fromJson(null)).toBeUndefined();
+    expect(fromJson(null)).toBeNull();
     expect(fromJson('not json', { fallback: true })).toEqual({
       fallback: true,
     });
@@ -538,7 +541,7 @@ describe('row mapping', () => {
 
     expect(row.id).toBe('x');
     expect(row.total_requests).toBe(9007199254740990);
-    expect(row.trace_id).toBeUndefined();
+    expect(row.trace_id).toBeNull();
     expect(row.metadata).toEqual({ a: 1 });
     expect(row.optimize).toBe(true);
   });
