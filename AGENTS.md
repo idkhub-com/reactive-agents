@@ -260,6 +260,11 @@ Database management:
 - **Run**: `pnpm test:e2e`; browsers install with `pnpm exec playwright install chromium`
 - **What runs**: the built single-process server (`packages/api/dist/server.js`)
   on a throwaway libSQL file, so no Postgres, PostgREST or Docker is involved
+- **Gateway**: `e2e/contract/gateway.spec.ts` drives `/v1/chat/completions`
+  against `scripts/start-stub-provider.mjs`, a stub OpenAI-compatible provider.
+  It covers proxying, streaming, caching and retries, and records what the
+  gateway forwarded so the built request can be asserted. Tests key their
+  traffic by a unique model name, since one stub serves the whole run
 - **Parity**: `e2e/contract/` runs against *both* storage backends —
   `pnpm test:e2e:all` adds a Supabase pass (Postgres + PostgREST via compose,
   either docker or podman). This is the check that the hand-written type
