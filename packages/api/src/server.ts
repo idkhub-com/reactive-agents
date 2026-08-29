@@ -104,7 +104,17 @@ if (libsqlUrl?.startsWith('file:')) {
   }
 }
 
-console.log(`Starting server on port ${port}...`);
+/**
+ * Under `pnpm dev` the port is chosen at runtime and nobody sends requests to
+ * it directly, so naming it here would only invite someone to try. The dev
+ * runner sets this and prints its own summary instead; every other deployment
+ * wants the address it is actually reachable on.
+ */
+const quietBanner = process.env.SA_QUIET_BANNER === 'true';
+
+if (!quietBanner) {
+  console.log(`Starting server on port ${port}...`);
+}
 
 serve({
   /**
@@ -117,9 +127,13 @@ serve({
   port,
 });
 
-console.log(`Server is running on http://0.0.0.0:${port}`);
-console.log(
-  serveDashboard
-    ? `Dashboard served from ${dashboardRoot}`
-    : 'Dashboard not served (API only)',
-);
+if (quietBanner) {
+  console.log('Internal API Server is running');
+} else {
+  console.log(`Server is running on http://0.0.0.0:${port}`);
+  console.log(
+    serveDashboard
+      ? `Dashboard served from ${dashboardRoot}`
+      : 'Dashboard not served (API only)',
+  );
+}

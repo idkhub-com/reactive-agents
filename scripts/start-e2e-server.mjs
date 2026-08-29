@@ -4,10 +4,10 @@
  *
  * This starts the same single Node process the published image runs -- one Hono
  * app serving `/v1` and the dashboard's static build -- rather than the split
- * Vite/wrangler pair behind `pnpm dev`. That split is also why a dev-server
- * suite would not work here: `pnpm dev:api` runs wrangler, and on workerd
- * `@libsql/client` resolves to its HTTP-only build, so the embedded database
- * these tests rely on cannot be opened at all.
+ * Vite/API pair behind `pnpm dev`. That split is also why a dev-server suite
+ * would not work here: under `pnpm dev` it is Vite that answers everything
+ * outside `/v1`, so the static serving, the SPA fallback and the `/v1` 404
+ * boundary these tests cover never execute at all.
  *
  * Storage defaults to a throwaway libSQL file, which is what keeps the suite
  * hermetic: no Postgres, no PostgREST, nothing to orchestrate. Migrations run

@@ -24,7 +24,18 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      // Turborepo 2 filters the environment by default. Without this a
+      // `PORT=... pnpm dev` or `LIBSQL_URL= pnpm dev` is silently ignored and
+      // the task runs with the defaults instead.
+      "passThroughEnv": [
+        "PORT",
+        "LIBSQL_URL",
+        "LIBSQL_AUTH_TOKEN",
+        "ACCESS_PASSWORD",
+        "BEARER_TOKEN",
+        "API_URL"
+      ]
     },
     "clean": {
       "cache": false
