@@ -7,7 +7,6 @@ import { NavUser } from '@web/components/side-bar/nav-user';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarRail,
 } from '@web/components/ui/sidebar';
@@ -34,9 +33,7 @@ export function AppSidebar({
       <SidebarContent>
         <NavMain sections={SideBarData.sections} />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
+      <NavUser />
       <SidebarRail />
     </Sidebar>
   );

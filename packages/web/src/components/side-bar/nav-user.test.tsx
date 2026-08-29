@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NavUser } from '@web/components/side-bar/nav-user';
@@ -5,10 +6,11 @@ import { SidebarProvider } from '@web/providers/side-bar';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Create mock navigate using vi.hoisted
-const { mockNavigate, mockLogout } = vi.hoisted(() => {
+const { mockNavigate, mockLogout, mockGetAuthStatus } = vi.hoisted(() => {
   return {
     mockNavigate: vi.fn(),
     mockLogout: vi.fn(),
+    mockGetAuthStatus: vi.fn(),
   };
 });
 
@@ -28,6 +30,7 @@ vi.mock('@tanstack/react-router', () => ({
 // Mock auth API
 vi.mock('@web/api/v1/super-agents/auth', () => ({
   logout: mockLogout,
+  getAuthStatus: mockGetAuthStatus,
 }));
 
 // Mock window.matchMedia
@@ -46,33 +49,47 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 describe('NavUser', () => {
+  let queryClient: QueryClient;
+
+  function renderNavUser(): void {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SidebarProvider>
+          <NavUser />
+        </SidebarProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  /** The button only exists once the auth status has arrived. */
+  function findLogoutButton(): Promise<HTMLElement> {
+    return screen.findByRole('button', { name: /log out/i });
+  }
+
   beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     vi.clearAllMocks();
+    mockGetAuthStatus.mockResolvedValue({
+      authRequired: true,
+      authenticated: true,
+    });
   });
 
-  it('should render logout button', () => {
-    render(
-      <SidebarProvider>
-        <NavUser />
-      </SidebarProvider>,
-    );
+  it('should render logout button', async () => {
+    renderNavUser();
 
-    const button = screen.getByRole('button', { name: /log out/i });
-    expect(button).toBeInTheDocument();
+    expect(await findLogoutButton()).toBeInTheDocument();
   });
 
   it('should call logout when button is clicked', async () => {
     const user = userEvent.setup();
     mockLogout.mockResolvedValueOnce(true);
 
-    render(
-      <SidebarProvider>
-        <NavUser />
-      </SidebarProvider>,
-    );
+    renderNavUser();
 
-    const button = screen.getByRole('button', { name: /log out/i });
-    await user.click(button);
+    await user.click(await findLogoutButton());
 
     expect(mockLogout).toHaveBeenCalled();
   });
@@ -81,14 +98,9 @@ describe('NavUser', () => {
     const user = userEvent.setup();
     mockLogout.mockResolvedValueOnce(true);
 
-    render(
-      <SidebarProvider>
-        <NavUser />
-      </SidebarProvider>,
-    );
+    renderNavUser();
 
-    const button = screen.getByRole('button', { name: /log out/i });
-    await user.click(button);
+    await user.click(await findLogoutButton());
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' });
@@ -99,17 +111,44 @@ describe('NavUser', () => {
     const user = userEvent.setup();
     mockLogout.mockResolvedValueOnce(false);
 
-    render(
-      <SidebarProvider>
-        <NavUser />
-      </SidebarProvider>,
-    );
+    renderNavUser();
 
-    const button = screen.getByRole('button', { name: /log out/i });
-    await user.click(button);
+    await user.click(await findLogoutButton());
 
     // Wait a bit to ensure no redirect happens
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  // Without ACCESS_PASSWORD there is no session: `/login` would redirect
+  // straight back here, so the button would look like it did nothing.
+  it('renders nothing when the server does not require authentication', async () => {
+    mockGetAuthStatus.mockResolvedValue({
+      authRequired: false,
+      authenticated: true,
+    });
+
+    renderNavUser();
+
+    await waitFor(() => {
+      expect(mockGetAuthStatus).toHaveBeenCalled();
+    });
+    expect(
+      screen.queryByRole('button', { name: /log out/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders nothing while the auth status is unknown', () => {
+    mockGetAuthStatus.mockReturnValue(
+      new Promise(() => {
+        // Never resolves - the status is still in flight
+      }),
+    );
+
+    renderNavUser();
+
+    expect(
+      screen.queryByRole('button', { name: /log out/i }),
+    ).not.toBeInTheDocument();
   });
 });
