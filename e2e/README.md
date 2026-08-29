@@ -8,6 +8,7 @@ are held to the same behaviour.
 ```sh
 pnpm test:e2e          # build, then run against libSQL (no containers needed)
 pnpm test:e2e:all      # the above, plus the contract specs against Supabase
+pnpm test:e2e:visual   # pixel baselines, in the pinned Playwright image
 pnpm test:e2e:ui       # interactive runner (skips the build)
 pnpm test:e2e:report   # open the report from the last run
 ```
@@ -66,6 +67,7 @@ the environment — the storage backend and whether the dashboard needs a login:
 | `contract:supabase` | 3102 | Supabase | the same specs, other connector     |
 | `dashboard`         | 3100 | libSQL   | the dashboard in Chromium           |
 | `auth`              | 3101 | libSQL   | the login flow                      |
+| `visual`            | 3104 | libSQL   | pixel baselines (opt-in)            |
 
 A stub AI provider runs alongside them on port 3103.
 
@@ -134,6 +136,50 @@ Cache behaviour is asserted by **counting provider calls**, not by reading a
 response header — no header distinguishes a hit from a miss, and the call count
 is the behaviour that actually matters. That test is the end-to-end half of the
 fix in #237, and it fails against the pre-fix connector.
+
+## The visual project
+
+`e2e/visual/` compares screenshots against committed baselines, and it is the
+one part of the suite that will not run on a bare machine. It is registered
+only when `E2E_VISUAL` is set, which `pnpm test:e2e:visual` does on its way to
+running the project **inside `mcr.microsoft.com/playwright:v1.62.1-noble`** --
+the same image the `visual` CI job uses.
+
+That container is not incidental. A pixel baseline is only meaningful where the
+renderer is pinned, and two things move it:
+
+- **Fonts.** Fixed already: the dashboard self-hosts Lato and Ubuntu, so
+  rendering no longer depends on a network fetch or on what the host happens to
+  have installed.
+- **Rasterisation.** Not fixable in the repository. FreeType hinting and
+  antialiasing differ between distributions, and Playwright labels all of them
+  `linux` -- so a baseline written on Arch and compared on Ubuntu reuses the
+  same file and reports a diff nobody caused. Hence one image for both sides.
+
+Update baselines with `pnpm test:e2e:visual:update`, and read the diff images
+in `playwright-report/` before committing them. CI uploads that report on
+failure, which is the only practical way to judge a pixel change remotely.
+
+### What makes the pages deterministic
+
+Three things, and all three were necessary -- the suite produced a different
+image on every run until each was dealt with:
+
+- **The sidebar logo never settles.** `AnimatedLogo` runs infinite
+  framer-motion loops on every page. Playwright's `animations: 'disabled'`
+  does *not* stop them: it freezes CSS animations and Web Animations API
+  playback, while these are driven by requestAnimationFrame writing inline
+  styles. `e2e/visual/screenshot.css` hides the element; with that applied,
+  three captures from three separate browser processes are byte-identical.
+- **The project owns its database.** Port 3104 with its own `visual.db`, so
+  the agents another spec happens to be creating never appear in a screenshot.
+- **The fixture agent has a fixed name.** The opposite of the rule everywhere
+  else in this suite: `uniqueAgentName()` would put a different string on
+  screen every run, and no baseline could match. It is safe here only because
+  nothing else writes to that database.
+
+Fonts are waited on explicitly (`document.fonts.ready`) before each capture,
+since they land after first paint and move text.
 
 ## Writing tests
 

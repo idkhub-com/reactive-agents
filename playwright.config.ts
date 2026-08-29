@@ -22,6 +22,21 @@ const LIBSQL_PORT = Number(process.env.E2E_LIBSQL_PORT ?? 3100);
 const AUTH_PORT = Number(process.env.E2E_AUTH_PORT ?? 3101);
 const SUPABASE_PORT = Number(process.env.E2E_SUPABASE_PORT ?? 3102);
 const STUB_PORT = Number(process.env.E2E_STUB_PORT ?? 3103);
+const VISUAL_PORT = Number(process.env.E2E_VISUAL_PORT ?? 3104);
+
+/**
+ * The visual project is opt-in because a pixel baseline is only meaningful
+ * where the rendering environment is pinned. FreeType hinting and antialiasing
+ * differ between distributions, and Playwright labels every one of them
+ * `linux`, so a baseline written on a workstation and compared on a CI runner
+ * would disagree about pixels nobody changed -- while reusing the same file.
+ *
+ * `pnpm test:e2e:visual` sets this and runs the project inside the Playwright
+ * container image, which is also what CI runs it in. Unset, the project is not
+ * registered at all, so `pnpm test:e2e` needs no container runtime and cannot
+ * fail on a rendering difference.
+ */
+const visualEnabled = Boolean(process.env.E2E_VISUAL);
 
 /** Only ever reaches the throwaway server started below. */
 export const AUTH_PASSWORD = 'e2e-access-password';
@@ -46,6 +61,7 @@ if (!postgrestUrl && process.env.TEST_WORKER_INDEX === undefined) {
 const libsqlBaseURL = `http://127.0.0.1:${LIBSQL_PORT}`;
 const authBaseURL = `http://127.0.0.1:${AUTH_PORT}`;
 const supabaseBaseURL = `http://127.0.0.1:${SUPABASE_PORT}`;
+const visualBaseURL = `http://127.0.0.1:${VISUAL_PORT}`;
 
 const server = (port: number, env: Record<string, string>) => ({
   command: 'node scripts/start-e2e-server.mjs',
@@ -77,6 +93,25 @@ export default defineConfig({
     ? [['github'], ['html', { open: 'never' }]]
     : [['list'], ['html', { open: 'never' }]],
   outputDir: './e2e-results',
+
+  /**
+   * Deliberately without Playwright's usual `{platform}` and `{projectName}`
+   * suffixes. Those exist to keep baselines from different environments apart,
+   * and both of ours would say `linux` regardless of which distribution wrote
+   * them -- the suffix would imply a guarantee it cannot make. The container
+   * is what pins the environment here, so the path can stay plain.
+   */
+  snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
+
+  expect: {
+    toHaveScreenshot: {
+      // Freezes CSS animations and Web Animations API playback. It does not
+      // reach the framer-motion sidebar logo, which `screenshot.css` hides --
+      // see the note there.
+      animations: 'disabled',
+      stylePath: './e2e/visual/screenshot.css',
+    },
+  },
 
   use: {
     baseURL: libsqlBaseURL,
@@ -119,6 +154,18 @@ export default defineConfig({
       testDir: './e2e/auth',
       use: { ...devices['Desktop Chrome'], baseURL: authBaseURL },
     },
+    ...(visualEnabled
+      ? [
+          {
+            name: 'visual',
+            testDir: './e2e/visual',
+            // The specs share one seeded agent and screenshot the list it
+            // appears in, so they cannot be interleaved with each other.
+            fullyParallel: false,
+            use: { ...devices['Desktop Chrome'], baseURL: visualBaseURL },
+          },
+        ]
+      : []),
   ],
 
   webServer: [
@@ -144,6 +191,12 @@ export default defineConfig({
       E2E_DB_NAME: 'auth.db',
       E2E_ACCESS_PASSWORD: AUTH_PASSWORD,
     }),
+    // Its own database, so the only agent the dashboard lists is the fixture.
+    // Sharing 3100 would put whatever the contract specs happened to be
+    // creating into the screenshot.
+    ...(visualEnabled
+      ? [server(VISUAL_PORT, { E2E_DB_NAME: 'visual.db' })]
+      : []),
     ...(postgrestUrl
       ? [
           server(SUPABASE_PORT, {

@@ -24,6 +24,8 @@
     "test:e2e": "pnpm build && playwright test",
     "test:e2e:all": "scripts/e2e-postgres.sh up && pnpm build && E2E_POSTGREST_URL=http://127.0.0.1:3001 playwright test",
     "test:e2e:postgres": "scripts/e2e-postgres.sh",
+    "test:e2e:visual": "scripts/e2e-visual.sh",
+    "test:e2e:visual:update": "scripts/e2e-visual.sh --update-snapshots",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "verify:worker": "./scripts/check-worker-runtime.sh",
