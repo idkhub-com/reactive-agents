@@ -41,7 +41,10 @@ const EXPECTED_ROUTE_IDS = [
   '/_main/ai-providers/create',
   '/_main/ai-providers/$id/edit',
   '/_main/ai-providers/$id/add-models',
+  '/_main/models/',
   '/_main/models/add',
+  '/_main/models/create',
+  '/_main/models/$id/edit',
 ];
 
 describe('Route Registry', () => {
