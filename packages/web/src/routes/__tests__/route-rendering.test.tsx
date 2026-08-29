@@ -229,6 +229,11 @@ const ROUTE_TABLE: [string, string, string][] = [
     'page-evaluation-edit',
   ],
   [
+    'clusters index (redirects to the skill dashboard)',
+    '/agents/test-agent/skills/test-skill/clusters',
+    'page-skill-dashboard',
+  ],
+  [
     'cluster configurations',
     '/agents/test-agent/skills/test-skill/clusters/c1/configurations',
     'page-cluster-configurations',

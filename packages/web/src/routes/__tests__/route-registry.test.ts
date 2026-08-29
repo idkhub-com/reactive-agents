@@ -32,6 +32,7 @@ const EXPECTED_ROUTE_IDS = [
   '/_main/agents/$agentName/skills/$skillName/evaluations',
   '/_main/agents/$agentName/skills/$skillName/evaluations/',
   '/_main/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit',
+  '/_main/agents/$agentName/skills/$skillName/clusters/',
   '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId',
   '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations',
   '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations/',

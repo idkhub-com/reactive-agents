@@ -33,6 +33,7 @@ import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport } fro
 import { Route as MainAgentsAgentNameSkillsSkillNameEditRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.edit'
 import { Route as MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs.index'
 import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations.index'
+import { Route as MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.index'
 import { Route as MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs.$logId'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId'
 import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations.$evaluationId.edit'
@@ -221,6 +222,12 @@ const MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute =
       (d) => d.Route,
     ),
   )
+const MainAgentsAgentNameSkillsSkillNameClustersIndexRoute =
+  MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport.update({
+    id: '/clusters/',
+    path: '/clusters/',
+    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
+  } as any)
 const MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute =
   MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport.update({
     id: '/$logId',
@@ -309,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentName/skills/$skillName/': typeof MainAgentsAgentNameSkillsSkillNameIndexRoute
   '/agents/$agentName/skills/$skillName/clusters/$clusterId': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteWithChildren
   '/agents/$agentName/skills/$skillName/logs/$logId': typeof MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute
+  '/agents/$agentName/skills/$skillName/clusters': typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRoute
   '/agents/$agentName/skills/$skillName/evaluations/': typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute
   '/agents/$agentName/skills/$skillName/logs/': typeof MainAgentsAgentNameSkillsSkillNameLogsIndexRoute
   '/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteWithChildren
@@ -336,6 +344,7 @@ export interface FileRoutesByTo {
   '/agents/$agentName/skills/$skillName': typeof MainAgentsAgentNameSkillsSkillNameIndexRoute
   '/agents/$agentName/skills/$skillName/clusters/$clusterId': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteWithChildren
   '/agents/$agentName/skills/$skillName/logs/$logId': typeof MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute
+  '/agents/$agentName/skills/$skillName/clusters': typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRoute
   '/agents/$agentName/skills/$skillName/evaluations': typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute
   '/agents/$agentName/skills/$skillName/logs': typeof MainAgentsAgentNameSkillsSkillNameLogsIndexRoute
   '/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit': typeof MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRoute
@@ -368,6 +377,7 @@ export interface FileRoutesById {
   '/_main/agents/$agentName/skills/$skillName/': typeof MainAgentsAgentNameSkillsSkillNameIndexRoute
   '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteWithChildren
   '/_main/agents/$agentName/skills/$skillName/logs/$logId': typeof MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute
+  '/_main/agents/$agentName/skills/$skillName/clusters/': typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRoute
   '/_main/agents/$agentName/skills/$skillName/evaluations/': typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute
   '/_main/agents/$agentName/skills/$skillName/logs/': typeof MainAgentsAgentNameSkillsSkillNameLogsIndexRoute
   '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteWithChildren
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/agents/$agentName/skills/$skillName/'
     | '/agents/$agentName/skills/$skillName/clusters/$clusterId'
     | '/agents/$agentName/skills/$skillName/logs/$logId'
+    | '/agents/$agentName/skills/$skillName/clusters'
     | '/agents/$agentName/skills/$skillName/evaluations/'
     | '/agents/$agentName/skills/$skillName/logs/'
     | '/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/agents/$agentName/skills/$skillName'
     | '/agents/$agentName/skills/$skillName/clusters/$clusterId'
     | '/agents/$agentName/skills/$skillName/logs/$logId'
+    | '/agents/$agentName/skills/$skillName/clusters'
     | '/agents/$agentName/skills/$skillName/evaluations'
     | '/agents/$agentName/skills/$skillName/logs'
     | '/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit'
@@ -459,6 +471,7 @@ export interface FileRouteTypes {
     | '/_main/agents/$agentName/skills/$skillName/'
     | '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId'
     | '/_main/agents/$agentName/skills/$skillName/logs/$logId'
+    | '/_main/agents/$agentName/skills/$skillName/clusters/'
     | '/_main/agents/$agentName/skills/$skillName/evaluations/'
     | '/_main/agents/$agentName/skills/$skillName/logs/'
     | '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations'
@@ -643,6 +656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsRoute
     }
+    '/_main/agents/$agentName/skills/$skillName/clusters/': {
+      id: '/_main/agents/$agentName/skills/$skillName/clusters/'
+      path: '/clusters'
+      fullPath: '/agents/$agentName/skills/$skillName/clusters'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
+    }
     '/_main/agents/$agentName/skills/$skillName/logs/$logId': {
       id: '/_main/agents/$agentName/skills/$skillName/logs/$logId'
       path: '/$logId'
@@ -765,6 +785,7 @@ interface MainAgentsAgentNameSkillsSkillNameRouteChildren {
   MainAgentsAgentNameSkillsSkillNameSetupRoute: typeof MainAgentsAgentNameSkillsSkillNameSetupRoute
   MainAgentsAgentNameSkillsSkillNameIndexRoute: typeof MainAgentsAgentNameSkillsSkillNameIndexRoute
   MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteWithChildren
+  MainAgentsAgentNameSkillsSkillNameClustersIndexRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRoute
 }
 
 const MainAgentsAgentNameSkillsSkillNameRouteChildren: MainAgentsAgentNameSkillsSkillNameRouteChildren =
@@ -783,6 +804,8 @@ const MainAgentsAgentNameSkillsSkillNameRouteChildren: MainAgentsAgentNameSkills
       MainAgentsAgentNameSkillsSkillNameIndexRoute,
     MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute:
       MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteWithChildren,
+    MainAgentsAgentNameSkillsSkillNameClustersIndexRoute:
+      MainAgentsAgentNameSkillsSkillNameClustersIndexRoute,
   }
 
 const MainAgentsAgentNameSkillsSkillNameRouteWithChildren =
