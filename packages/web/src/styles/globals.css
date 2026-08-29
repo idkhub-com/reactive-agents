@@ -202,6 +202,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-family: var(--font-lato);
+  }
   body {
     @apply bg-background text-foreground;
   }
@@ -217,6 +220,14 @@
 */
 
 :root {
+  /*
+    The families `tailwind.config.ts` names as `font-editor` and `font-logo`,
+    and the one applied to `html` above. Loaded from `@fontsource` in
+    `main.tsx`, so the fallbacks only apply before the files arrive.
+  */
+  --font-lato: "Lato", ui-sans-serif, system-ui, sans-serif;
+  --font-ubuntu: "Ubuntu", ui-sans-serif, system-ui, sans-serif;
+
   --radius: 0.625rem;
   --background: oklch(1 0 0); /* White */
   --foreground: oklch(0.147 0.004 49.25); /* Stone 950 */

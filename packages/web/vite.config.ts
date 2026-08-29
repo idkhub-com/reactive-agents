@@ -86,6 +86,15 @@ export default defineConfig({
   build: {
     // TipTap rich text editor is ~515KB - this is expected for a full-featured editor
     chunkSizeWarningLimit: 520,
+    /**
+     * Never inline a font. `@fontsource` ships a WOFF1 fallback beside every
+     * WOFF2, and the small ones fall under the default 4KB limit -- which put
+     * 20KB of base64 into the render-blocking stylesheet for a format no
+     * browser this app supports has needed since 2016. Emitted as files they
+     * are simply never fetched.
+     */
+    assetsInlineLimit: (filePath: string) =>
+      /\.(woff2?|ttf|otf|eot)$/.test(filePath) ? false : undefined,
     rollupOptions: {
       output: {
         manualChunks: {
