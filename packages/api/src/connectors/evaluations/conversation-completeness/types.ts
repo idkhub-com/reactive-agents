@@ -24,7 +24,7 @@ export const ConversationCompletenessEvaluationAIParameters = z
 // Note: model is configured via evaluation.model_id, not in parameters
 export const ConversationCompletenessEvaluationParameters =
   ConversationCompletenessEvaluationAIParameters.extend({
-    threshold: z.number().min(0).max(1),
+    threshold: z.number().min(0).max(1).default(0.7),
     temperature: z.number().min(0).max(2).default(0.1),
     max_tokens: z.number().int().positive().default(1000),
     include_reason: z.boolean().default(true),

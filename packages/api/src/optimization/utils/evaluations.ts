@@ -92,6 +92,27 @@ Your task description will guide the extraction AI to understand what users are 
   return firstMessage;
 }
 
+/**
+ * Whether the method has any parameter for a model to fill in.
+ *
+ * Most methods declare an empty AI schema: they are configured entirely by
+ * their own defaults, and `task_completion` is the only one that asks for
+ * anything. Sending the model a schema with no properties spends a request to
+ * be told `{}`, and a provider that does not enforce the schema -- a
+ * self-hosted model, most of all -- answers with whatever it thought was
+ * wanted. That reply used to be stored verbatim, and the method's own
+ * parameter schema then rejected it at evaluation time, long after the fact:
+ *
+ *   [REALTIME_EVAL] Failed to evaluate log ... with method tool_correctness:
+ *   Unrecognized key: "task"
+ */
+function hasGeneratableParameters(schema: z.ZodType): boolean {
+  if (schema instanceof z.ZodObject) {
+    return Object.keys(schema.shape).length > 0;
+  }
+  return true;
+}
+
 export async function generateEvaluationCreateParams(
   c: AppContext,
   skill: Skill,
@@ -142,7 +163,7 @@ export async function generateEvaluationCreateParams(
 
   // If the evaluation method doesn't use AI for parameter generation,
   // use default parameters from the parameter schema
-  if (!schema) {
+  if (!schema || !hasGeneratableParameters(schema)) {
     const params: SkillOptimizationEvaluationCreateParams = {
       agent_id: skill.agent_id,
       skill_id: skill.id,
@@ -197,11 +218,24 @@ export async function generateEvaluationCreateParams(
     );
   }
 
+  // The model's answer is checked against the schema it was given rather than
+  // trusted: only a provider that enforces `response_format` guarantees the
+  // shape, and these parameters are read back much later, by the evaluation
+  // that runs on every request. Parsing also fills in the defaults the model
+  // left out, such as `task_completion`'s threshold.
+  const validated = schema.safeParse(structuredOutputResponse);
+
+  if (!validated.success) {
+    throw new Error(
+      `[OPTIMIZER] can't generate evaluations for skill - the ${method} parameters the model returned do not match its schema: ${validated.error.message}`,
+    );
+  }
+
   const params: SkillOptimizationEvaluationCreateParams = {
     agent_id: skill.agent_id,
     skill_id: skill.id,
     evaluation_method: method,
-    params: structuredOutputResponse as unknown as Record<string, unknown>,
+    params: validated.data as Record<string, unknown>,
     weight: 1.0, // Default weight - can be adjusted by user
   };
 

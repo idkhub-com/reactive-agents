@@ -159,7 +159,20 @@ async function callSystemPromptAPI(
     );
   }
 
-  return structuredOutputResponse.system_prompt;
+  // Only a provider that enforces `response_format` guarantees the shape, so
+  // the reply is checked rather than trusted -- otherwise a model that answered
+  // in some other shape stores `undefined` as the arm's system prompt.
+  const validated = StructuredOutputResponse.safeParse(
+    structuredOutputResponse,
+  );
+
+  if (!validated.success) {
+    throw new Error(
+      `[OPTIMIZER] can't generate system prompt - the response does not match the schema: ${validated.error.message}`,
+    );
+  }
+
+  return validated.data.system_prompt;
 }
 
 function getSeederSystemPrompt() {

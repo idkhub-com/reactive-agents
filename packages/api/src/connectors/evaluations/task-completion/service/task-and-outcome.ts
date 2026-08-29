@@ -115,5 +115,19 @@ export async function extractTaskAndOutcome(
     );
   }
 
-  return structuredOutputResponse;
+  // Only a provider that enforces `response_format` guarantees the shape, so
+  // the reply is checked rather than trusted -- a missing outcome would
+  // otherwise reach the judge as `undefined` and be scored as if it were an
+  // answer.
+  const validated = StructuredOutputResponse.safeParse(
+    structuredOutputResponse,
+  );
+
+  if (!validated.success) {
+    throw new Error(
+      `[OPTIMIZER] can't extract task and outcome - the response does not match the schema: ${validated.error.message}`,
+    );
+  }
+
+  return validated.data;
 }
