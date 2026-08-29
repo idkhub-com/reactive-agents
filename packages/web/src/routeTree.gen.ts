@@ -13,13 +13,16 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MainSettingsRouteImport } from './routes/_main/settings'
+import { Route as MainModelsIndexRouteImport } from './routes/_main/models.index'
 import { Route as MainAiProvidersIndexRouteImport } from './routes/_main/ai-providers.index'
 import { Route as MainAgentsIndexRouteImport } from './routes/_main/agents.index'
+import { Route as MainModelsCreateRouteImport } from './routes/_main/models.create'
 import { Route as MainModelsAddRouteImport } from './routes/_main/models.add'
 import { Route as MainAiProvidersCreateRouteImport } from './routes/_main/ai-providers.create'
 import { Route as MainAgentsCreateRouteImport } from './routes/_main/agents.create'
 import { Route as MainAgentsAgentNameRouteImport } from './routes/_main/agents.$agentName'
 import { Route as MainAgentsAgentNameIndexRouteImport } from './routes/_main/agents.$agentName.index'
+import { Route as MainModelsIdEditRouteImport } from './routes/_main/models.$id.edit'
 import { Route as MainAiProvidersIdEditRouteImport } from './routes/_main/ai-providers.$id.edit'
 import { Route as MainAiProvidersIdAddModelsRouteImport } from './routes/_main/ai-providers.$id.add-models'
 import { Route as MainAgentsAgentNameEditRouteImport } from './routes/_main/agents.$agentName.edit'
@@ -62,6 +65,13 @@ const MainSettingsRoute = MainSettingsRouteImport.update({
 } as any).lazy(() =>
   import('./routes/_main/settings.lazy').then((d) => d.Route),
 )
+const MainModelsIndexRoute = MainModelsIndexRouteImport.update({
+  id: '/models/',
+  path: '/models/',
+  getParentRoute: () => MainRoute,
+} as any).lazy(() =>
+  import('./routes/_main/models.index.lazy').then((d) => d.Route),
+)
 const MainAiProvidersIndexRoute = MainAiProvidersIndexRouteImport.update({
   id: '/ai-providers/',
   path: '/ai-providers/',
@@ -75,6 +85,13 @@ const MainAgentsIndexRoute = MainAgentsIndexRouteImport.update({
   getParentRoute: () => MainRoute,
 } as any).lazy(() =>
   import('./routes/_main/agents.index.lazy').then((d) => d.Route),
+)
+const MainModelsCreateRoute = MainModelsCreateRouteImport.update({
+  id: '/models/create',
+  path: '/models/create',
+  getParentRoute: () => MainRoute,
+} as any).lazy(() =>
+  import('./routes/_main/models.create.lazy').then((d) => d.Route),
 )
 const MainModelsAddRoute = MainModelsAddRouteImport.update({
   id: '/models/add',
@@ -110,6 +127,13 @@ const MainAgentsAgentNameIndexRoute =
   } as any).lazy(() =>
     import('./routes/_main/agents.$agentName.index.lazy').then((d) => d.Route),
   )
+const MainModelsIdEditRoute = MainModelsIdEditRouteImport.update({
+  id: '/models/$id/edit',
+  path: '/models/$id/edit',
+  getParentRoute: () => MainRoute,
+} as any).lazy(() =>
+  import('./routes/_main/models.$id.edit.lazy').then((d) => d.Route),
+)
 const MainAiProvidersIdEditRoute = MainAiProvidersIdEditRouteImport.update({
   id: '/ai-providers/$id/edit',
   path: '/ai-providers/$id/edit',
@@ -300,11 +324,14 @@ export interface FileRoutesByFullPath {
   '/agents/create': typeof MainAgentsCreateRoute
   '/ai-providers/create': typeof MainAiProvidersCreateRoute
   '/models/add': typeof MainModelsAddRoute
+  '/models/create': typeof MainModelsCreateRoute
   '/agents': typeof MainAgentsIndexRoute
   '/ai-providers': typeof MainAiProvidersIndexRoute
+  '/models': typeof MainModelsIndexRoute
   '/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
   '/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
   '/ai-providers/$id/edit': typeof MainAiProvidersIdEditRoute
+  '/models/$id/edit': typeof MainModelsIdEditRoute
   '/agents/$agentName/': typeof MainAgentsAgentNameIndexRoute
   '/agents/$agentName/skills/$skillName': typeof MainAgentsAgentNameSkillsSkillNameRouteWithChildren
   '/agents/$agentName/skills/create': typeof MainAgentsAgentNameSkillsCreateRoute
@@ -331,11 +358,14 @@ export interface FileRoutesByTo {
   '/agents/create': typeof MainAgentsCreateRoute
   '/ai-providers/create': typeof MainAiProvidersCreateRoute
   '/models/add': typeof MainModelsAddRoute
+  '/models/create': typeof MainModelsCreateRoute
   '/agents': typeof MainAgentsIndexRoute
   '/ai-providers': typeof MainAiProvidersIndexRoute
+  '/models': typeof MainModelsIndexRoute
   '/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
   '/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
   '/ai-providers/$id/edit': typeof MainAiProvidersIdEditRoute
+  '/models/$id/edit': typeof MainModelsIdEditRoute
   '/agents/$agentName': typeof MainAgentsAgentNameIndexRoute
   '/agents/$agentName/skills/create': typeof MainAgentsAgentNameSkillsCreateRoute
   '/agents/$agentName/skills/$skillName/edit': typeof MainAgentsAgentNameSkillsSkillNameEditRoute
@@ -361,11 +391,14 @@ export interface FileRoutesById {
   '/_main/agents/create': typeof MainAgentsCreateRoute
   '/_main/ai-providers/create': typeof MainAiProvidersCreateRoute
   '/_main/models/add': typeof MainModelsAddRoute
+  '/_main/models/create': typeof MainModelsCreateRoute
   '/_main/agents/': typeof MainAgentsIndexRoute
   '/_main/ai-providers/': typeof MainAiProvidersIndexRoute
+  '/_main/models/': typeof MainModelsIndexRoute
   '/_main/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
   '/_main/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
   '/_main/ai-providers/$id/edit': typeof MainAiProvidersIdEditRoute
+  '/_main/models/$id/edit': typeof MainModelsIdEditRoute
   '/_main/agents/$agentName/': typeof MainAgentsAgentNameIndexRoute
   '/_main/agents/$agentName/skills/$skillName': typeof MainAgentsAgentNameSkillsSkillNameRouteWithChildren
   '/_main/agents/$agentName/skills/create': typeof MainAgentsAgentNameSkillsCreateRoute
@@ -395,11 +428,14 @@ export interface FileRouteTypes {
     | '/agents/create'
     | '/ai-providers/create'
     | '/models/add'
+    | '/models/create'
     | '/agents'
     | '/ai-providers'
+    | '/models'
     | '/agents/$agentName/edit'
     | '/ai-providers/$id/add-models'
     | '/ai-providers/$id/edit'
+    | '/models/$id/edit'
     | '/agents/$agentName/'
     | '/agents/$agentName/skills/$skillName'
     | '/agents/$agentName/skills/create'
@@ -426,11 +462,14 @@ export interface FileRouteTypes {
     | '/agents/create'
     | '/ai-providers/create'
     | '/models/add'
+    | '/models/create'
     | '/agents'
     | '/ai-providers'
+    | '/models'
     | '/agents/$agentName/edit'
     | '/ai-providers/$id/add-models'
     | '/ai-providers/$id/edit'
+    | '/models/$id/edit'
     | '/agents/$agentName'
     | '/agents/$agentName/skills/create'
     | '/agents/$agentName/skills/$skillName/edit'
@@ -455,11 +494,14 @@ export interface FileRouteTypes {
     | '/_main/agents/create'
     | '/_main/ai-providers/create'
     | '/_main/models/add'
+    | '/_main/models/create'
     | '/_main/agents/'
     | '/_main/ai-providers/'
+    | '/_main/models/'
     | '/_main/agents/$agentName/edit'
     | '/_main/ai-providers/$id/add-models'
     | '/_main/ai-providers/$id/edit'
+    | '/_main/models/$id/edit'
     | '/_main/agents/$agentName/'
     | '/_main/agents/$agentName/skills/$skillName'
     | '/_main/agents/$agentName/skills/create'
@@ -516,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainSettingsRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/models/': {
+      id: '/_main/models/'
+      path: '/models'
+      fullPath: '/models'
+      preLoaderRoute: typeof MainModelsIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/ai-providers/': {
       id: '/_main/ai-providers/'
       path: '/ai-providers'
@@ -528,6 +577,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof MainAgentsIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/models/create': {
+      id: '/_main/models/create'
+      path: '/models/create'
+      fullPath: '/models/create'
+      preLoaderRoute: typeof MainModelsCreateRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/models/add': {
@@ -564,6 +620,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$agentName/'
       preLoaderRoute: typeof MainAgentsAgentNameIndexRouteImport
       parentRoute: typeof MainAgentsAgentNameRoute
+    }
+    '/_main/models/$id/edit': {
+      id: '/_main/models/$id/edit'
+      path: '/models/$id/edit'
+      fullPath: '/models/$id/edit'
+      preLoaderRoute: typeof MainModelsIdEditRouteImport
+      parentRoute: typeof MainRoute
     }
     '/_main/ai-providers/$id/edit': {
       id: '/_main/ai-providers/$id/edit'
@@ -837,10 +900,13 @@ interface MainRouteChildren {
   MainAgentsCreateRoute: typeof MainAgentsCreateRoute
   MainAiProvidersCreateRoute: typeof MainAiProvidersCreateRoute
   MainModelsAddRoute: typeof MainModelsAddRoute
+  MainModelsCreateRoute: typeof MainModelsCreateRoute
   MainAgentsIndexRoute: typeof MainAgentsIndexRoute
   MainAiProvidersIndexRoute: typeof MainAiProvidersIndexRoute
+  MainModelsIndexRoute: typeof MainModelsIndexRoute
   MainAiProvidersIdAddModelsRoute: typeof MainAiProvidersIdAddModelsRoute
   MainAiProvidersIdEditRoute: typeof MainAiProvidersIdEditRoute
+  MainModelsIdEditRoute: typeof MainModelsIdEditRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
@@ -849,10 +915,13 @@ const MainRouteChildren: MainRouteChildren = {
   MainAgentsCreateRoute: MainAgentsCreateRoute,
   MainAiProvidersCreateRoute: MainAiProvidersCreateRoute,
   MainModelsAddRoute: MainModelsAddRoute,
+  MainModelsCreateRoute: MainModelsCreateRoute,
   MainAgentsIndexRoute: MainAgentsIndexRoute,
   MainAiProvidersIndexRoute: MainAiProvidersIndexRoute,
+  MainModelsIndexRoute: MainModelsIndexRoute,
   MainAiProvidersIdAddModelsRoute: MainAiProvidersIdAddModelsRoute,
   MainAiProvidersIdEditRoute: MainAiProvidersIdEditRoute,
+  MainModelsIdEditRoute: MainModelsIdEditRoute,
 }
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
