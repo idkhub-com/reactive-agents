@@ -241,6 +241,72 @@ jobs:
         if: always()
         run: scripts/e2e-postgres.sh down
 
+  # Pixel baselines for the dashboard. Kept apart from the `e2e` job because it
+  # is the one thing in the suite that cannot run on a bare runner: a pixel
+  # comparison only means something when the renderer is pinned, and FreeType
+  # hinting differs between distributions. `scripts/e2e-visual.sh` runs the
+  # project in this same image on a workstation, which is what lets a baseline
+  # written there be compared here at all.
+  #
+  # The tag tracks the @playwright/test version in package.json, and in
+  # scripts/e2e-visual.sh -- a browser build difference moves rendering just as
+  # a font difference does.
+  visual:
+    name: Visual Regression
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 10.10.0
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # The suite drives the built single-process server, not a dev server.
+      - name: Build
+        run: pnpm build
+
+      # Playwright is invoked directly rather than through
+      # `pnpm test:e2e:visual`, which exists to put a workstation *into* this
+      # image. We are already in it.
+      - name: Compare the dashboard against its baselines
+        run: pnpm exec playwright test --project=visual
+        env:
+          E2E_VISUAL: "1"
+
+      # The report carries the expected/actual/diff triplet for every failure,
+      # which is the only practical way to judge a pixel change from CI.
+      - name: Upload the report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-visual
+          path: |
+            playwright-report/
+            e2e-results/
+          retention-days: 7
+
   # Publishes the browsable HTML coverage report to GitHub Pages, and writes a
   # shields.io "endpoint" JSON beside it so the README badge reads the current
   # line-% straight from Pages -- no Gist, no PAT, no third-party service.

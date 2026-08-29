@@ -1,0 +1,25 @@
+/*
+ * Injected by Playwright immediately before every screenshot.
+ *
+ * `AnimatedLogo` runs infinite framer-motion loops in the sidebar header -- a
+ * panning gradient, drifting orbs, pulsing rings -- and it is on every page.
+ * Playwright's `animations: 'disabled'` does not reach them: it freezes CSS
+ * animations and the Web Animations API, while these are driven through
+ * requestAnimationFrame writing inline styles. Three captures of the logo
+ * alone, seconds apart, produce three different images.
+ *
+ * Hiding it keeps the space it occupies -- so the rest of the layout is
+ * unchanged -- while removing the only non-deterministic pixels on the page.
+ * With this applied, three captures from three separate browser processes are
+ * byte-identical.
+ *
+ * The descendant selector and `!important` are both load-bearing. `visibility`
+ * is inherited, but the logo's two text spans set `visibility: visible`
+ * inline to cross-fade between "SA" and "Super Agents", and a descendant that
+ * re-declares it is not hidden by its parent. An author `!important` outranks
+ * a normal inline declaration, which is what puts them out.
+ */
+.font-logo,
+.font-logo * {
+  visibility: hidden !important;
+}
