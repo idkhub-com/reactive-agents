@@ -87,6 +87,18 @@ export const stubFail = async (
   });
 };
 
+/**
+ * Make structured-output replies for this model come back inside a markdown
+ * fence -- what a provider does when `response_format` reached it as prompt
+ * text rather than as an enforced schema.
+ */
+export const stubFence = async (
+  request: APIRequestContext,
+  model: string,
+): Promise<void> => {
+  await request.post(`${STUB_URL}/__control/fence`, { data: { model } });
+};
+
 export const stubReset = async (
   request: APIRequestContext,
   model: string,

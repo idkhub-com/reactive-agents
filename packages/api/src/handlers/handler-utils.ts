@@ -222,6 +222,16 @@ export async function tryPost(
       ...overrideParams,
     } as SuperAgentsRequestBody;
 
+    // Anthropic has no `response_format`, so the gateway emulates it with the
+    // `__json_output` tool (see ai-providers/anthropic/chat-complete.ts). Every
+    // other provider has to put the JSON in the message itself, and telling one
+    // to call a tool it was never given is how answers end up narrated or
+    // wrapped in a ```json fence.
+    const jsonOutputInstruction =
+      saTarget.configuration.ai_provider === AIProvider.ANTHROPIC
+        ? 'Use the __json_output tool to provide your response.'
+        : 'Respond with the JSON object alone: no markdown code fences, no commentary, no other text.';
+
     // Helper to generate JSON schema instructions for response_format
     const getJsonSchemaInstructions = (
       responseFormat: ChatCompletionRequestBody['response_format'],
@@ -232,10 +242,10 @@ export async function tryPost(
         const schema =
           responseFormat.json_schema?.schema ?? responseFormat.json_schema;
         if (schema && typeof schema === 'object') {
-          return `\n\nIMPORTANT: You must output your response as a JSON object that strictly conforms to the following schema:\n\n${JSON.stringify(schema, null, 2)}\n\nEnsure every required field is present with the correct type and format. Use the __json_output tool to provide your response.`;
+          return `\n\nIMPORTANT: You must output your response as a JSON object that strictly conforms to the following schema:\n\n${JSON.stringify(schema, null, 2)}\n\nEnsure every required field is present with the correct type and format. ${jsonOutputInstruction}`;
         }
       } else if (responseFormat.type === 'json_object') {
-        return '\n\nIMPORTANT: You must output your response as a valid JSON object. Use the __json_output tool to provide your response.';
+        return `\n\nIMPORTANT: You must output your response as a valid JSON object. ${jsonOutputInstruction}`;
       }
 
       return '';

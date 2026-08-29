@@ -23,6 +23,7 @@
  *   POST /api/embeddings        ditto, for embeddings
  *   GET  /__control/requests?model=NAME   what the gateway sent for that model
  *   POST /__control/fail        {model, times, status} -- inject failures
+ *   POST /__control/fence       {model} -- wrap structured output in a fence
  *   POST /__control/reset       {model} -- forget everything for that model
  *
  * Configured with E2E_STUB_PORT (default 3103).
@@ -35,6 +36,12 @@ const port = Number(process.env.E2E_STUB_PORT ?? 3103);
 const received = new Map();
 /** model name -> queued failures, shifted one per request. */
 const failures = new Map();
+/**
+ * Models whose structured output comes back inside a markdown fence, the way a
+ * provider answers when it only saw `response_format` as a prompt instruction
+ * rather than enforcing it.
+ */
+const fenced = new Set();
 
 const recordFor = (model) => {
   if (!received.has(model)) {
@@ -223,10 +230,18 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (url.pathname === '/__control/fence') {
+    const { model } = JSON.parse((await readBody(request)) || '{}');
+    fenced.add(model);
+    sendJson(response, 200, { ok: true });
+    return;
+  }
+
   if (url.pathname === '/__control/reset') {
     const { model } = JSON.parse((await readBody(request)) || '{}');
     received.delete(model);
     failures.delete(model);
+    fenced.delete(model);
     sendJson(response, 200, { ok: true });
     return;
   }
@@ -262,8 +277,11 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === '/v1/chat/completions') {
     const schema = requestedSchema(body);
+    const structured = schema ? JSON.stringify(instanceOf(schema, schema)) : '';
     const text = schema
-      ? JSON.stringify(instanceOf(schema, schema))
+      ? fenced.has(model)
+        ? `Here is the JSON you asked for:\n\n\`\`\`json\n${structured}\n\`\`\``
+        : structured
       : replyText(body);
     if (body?.stream) {
       streamCompletion(response, body, text);

@@ -2,6 +2,7 @@ import {
   getStreamModeSplitPattern,
   type SplitPatternType,
 } from '@api/utils/object';
+import { unwrapJsonResponseContent } from '@api/utils/structured-output';
 import { error, warn } from '@shared/console-logging';
 import type {
   JSONToStreamGeneratorTransformFunction,
@@ -341,6 +342,16 @@ export async function handleNonStreamingMode(
       aiProviderResponse.headers,
       strictOpenAiCompliance,
       saRequestData,
+    );
+  }
+
+  // A provider that only saw `response_format` as a prompt instruction may have
+  // answered with the JSON inside a markdown fence. Unwrap it before validation
+  // so the caller gets content it can parse.
+  if (transformedBodyJson && !(transformedBodyJson instanceof Blob)) {
+    transformedBodyJson = unwrapJsonResponseContent(
+      saRequestData,
+      transformedBodyJson,
     );
   }
 
