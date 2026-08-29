@@ -1,3 +1,4 @@
+import { isAPIKeyRequiredForProvider } from '@api/ai-providers';
 import { getApiUrl } from '@api/constants';
 import {
   evaluationCriteria,
@@ -115,7 +116,8 @@ const EvaluationResultSchema = z.object({
 export interface LLMJudgeModelConfig {
   model: string;
   provider: AIProvider;
-  apiKey: string;
+  /** The provider's API key, where it needs one. */
+  apiKey?: string;
   /** The provider's configured base URL, where it has one. */
   customHost?: string;
 }
@@ -201,7 +203,9 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
    * Core evaluation method using OpenAI library
    */
   async function evaluate(input: EvaluationInput): Promise<LLMJudgeResult> {
-    if (!apiKey || apiKey.trim() === '') {
+    // Self-hosted providers such as Ollama are called without a key, so only
+    // the providers that need one are held to it.
+    if (apiKey.trim() === '' && isAPIKeyRequiredForProvider(provider)) {
       warn('[LLM_JUDGE] API key not configured for evaluation model');
       return getFallbackResult('no_api_key', undefined, {
         retryCount: 0,
@@ -217,7 +221,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           cache: {
             mode: CacheMode.SIMPLE,
           },
-          api_key: apiKey,
+          ...(apiKey ? { api_key: apiKey } : {}),
           ...(customHost ? { custom_host: customHost } : {}),
         },
       ],

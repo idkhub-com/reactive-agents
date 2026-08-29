@@ -66,7 +66,12 @@ export async function extractTaskAndOutcome(
       {
         provider: modelConfig.provider,
         model: modelConfig.model,
-        api_key: modelConfig.apiKey,
+        ...(modelConfig.apiKey ? { api_key: modelConfig.apiKey } : {}),
+        // Same reason as the other internal skills: without this a self-hosted
+        // provider is sent to its vendor default.
+        ...(modelConfig.customHost
+          ? { custom_host: modelConfig.customHost }
+          : {}),
       },
     ],
     agent_name: 'super-agents',

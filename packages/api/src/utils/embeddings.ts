@@ -1,3 +1,4 @@
+import { isAPIKeyRequiredForProvider } from '@api/ai-providers';
 import { getApiUrl, getBearerToken } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
@@ -223,7 +224,12 @@ export async function generateEmbeddingForRequest(
   }
   const providerConfig = providers[0];
 
-  if (!providerConfig.api_key) {
+  // Self-hosted providers such as Ollama are configured without a key, so only
+  // the providers that need one are held to it.
+  if (
+    !providerConfig.api_key &&
+    isAPIKeyRequiredForProvider(providerConfig.ai_provider)
+  ) {
     warn(
       `[EMBEDDING] No API key configured for provider: ${embeddingConfig.model.ai_provider_id}`,
     );
@@ -247,7 +253,9 @@ export async function generateEmbeddingForRequest(
         {
           provider: providerConfig.ai_provider,
           model: embeddingConfig.model.model_name,
-          api_key: providerConfig.api_key,
+          ...(providerConfig.api_key
+            ? { api_key: providerConfig.api_key }
+            : {}),
           // Same reason as the other internal skills: without this a
           // self-hosted embedding provider is sent to its vendor default.
           ...(providerConfig.custom_fields?.custom_host

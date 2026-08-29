@@ -149,6 +149,35 @@ describe('LLM Judge', () => {
     });
   });
 
+  it('should evaluate against a provider that needs no API key', async () => {
+    const ollamaJudge = createLLMJudge(
+      mockContext,
+      {},
+      {
+        model: 'qwen3.8b27b',
+        provider: AIProvider.OLLAMA,
+        customHost: 'http://localhost:11434',
+      },
+    );
+
+    mockParse.mockResolvedValueOnce({
+      choices: [{ message: { parsed: { score: 0.9, reasoning: 'Good' } } }],
+    });
+
+    const result = await ollamaJudge.evaluate({
+      text: 'This is a test evaluation.',
+    });
+
+    expect(result.score).toBe(0.9);
+    expect(result.metadata).toBeUndefined();
+
+    const config = JSON.parse(
+      vi.mocked(mockWithOptions).mock.calls[0][0].defaultHeaders['sa-config'],
+    );
+    expect(config.targets[0]).not.toHaveProperty('api_key');
+    expect(config.targets[0].custom_host).toBe('http://localhost:11434');
+  });
+
   it('should handle API errors gracefully', async () => {
     mockParse.mockRejectedValue(
       new Error('OpenAI API error: 500 Internal Server Error - API Error'),

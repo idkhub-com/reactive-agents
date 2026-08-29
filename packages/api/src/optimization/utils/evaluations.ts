@@ -128,7 +128,7 @@ export async function generateEvaluationCreateParams(
       {
         provider: modelConfig.provider,
         model: modelConfig.model,
-        api_key: modelConfig.apiKey,
+        ...(modelConfig.apiKey ? { api_key: modelConfig.apiKey } : {}),
         ...(modelConfig.customHost
           ? { custom_host: modelConfig.customHost }
           : {}),
