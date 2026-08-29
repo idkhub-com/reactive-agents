@@ -53,13 +53,19 @@ pnpm check:fix  # Auto-fix linting and formatting issues
 pnpm install
 
 # Database
+#
+# `pnpm dev` needs neither of these: it uses an embedded SQLite database at
+# `.local-data/dev.db`, created on the first request. Supabase is only needed
+# to develop against that backend.
 supabase start  # Start local Supabase database
 supabase stop   # Stop local database
 
 # Development server (runs both web and API via Turborepo)
-pnpm dev        # Start all dev servers in parallel
-pnpm dev:web    # Start only web dev server (Vite on port 3000)
-pnpm dev:api    # Start only API dev server (Hono on port 8787)
+pnpm dev             # Start all dev servers in parallel
+pnpm dev:web         # Start only web dev server (Vite on port 3000)
+pnpm dev:api         # Start only API dev server (Node + SQLite, free port)
+pnpm dev:api:worker  # The same API on workerd; no `file:` database there
+LIBSQL_URL= pnpm dev # Develop against Supabase instead of SQLite
 
 # Testing
 pnpm test                      # Run all tests (excludes in-depth integration tests)
@@ -93,7 +99,8 @@ pnpm lint       # Run linter
 pnpm format     # Check formatting
 pnpm format:fix # Auto-fix formatting
 
-# API testing (all requests go through port 3000, proxied to API)
+# API testing. Always port 3000 -- Vite proxies /v1 on to the API, whose own
+# port is chosen at runtime and is not an address to send requests to.
 curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer super-agents"
 ```
 
@@ -114,9 +121,18 @@ curl "http://localhost:3000/v1/endpoint" -H "Authorization: Bearer super-agents"
 
 #### The API runs on two runtimes
 
-`pnpm dev:api` runs `wrangler dev`, so **workerd is the development runtime**,
-while the Docker image runs the same code on Node through `src/server.ts`.
-Anything reachable from `src/index.ts` has to work on both. In practice:
+`pnpm dev:api` runs the Node entrypoint (`src/server.ts`), which is also what
+the Docker image runs; `src/index.ts` is the Cloudflare Workers entrypoint, and
+anything reachable from it has to work on both.
+
+Development runs on Node because a Worker has no filesystem: on workerd
+`@libsql/client` resolves to its HTTP-only build, so an embedded `file:`
+database cannot be opened there at all. A Workers deployment needs a remote
+libSQL (Turso) or Supabase instead.
+
+**So day-to-day development no longer exercises workerd.** Run
+`pnpm dev:api:worker` before merging anything that touches the Workers path.
+In practice:
 
 - **No module-scope I/O, timers, or randomness.** Workers reject these outright
   — `utils/sse-event-manager.ts` starts its ping interval on first use for this
@@ -126,17 +142,22 @@ Anything reachable from `src/index.ts` has to work on both. In practice:
   or a `workerd` export condition), use it.
 - **`node:` builtins are the quiet case.** Wrangler's unenv layer substitutes a
   stub, so the import resolves and the Worker boots — it throws only when the
-  stub is called. Neither CI check catches this; review does.
+  stub is called. Neither CI check catches this, and since development moved to
+  Node, neither does `pnpm dev`; review does.
 
 `pnpm verify:worker` bundles and boots the Worker, and runs in CI.
 
 ### Request Flow
 ```
-Development:  Browser (:3000) → Vite proxy → API (:8787)
+Development:  Browser (:3000) → Vite proxy → API (a free port)
 Production:   Browser (:3000) → Hono (:3000)
 ```
 
-In development, Vite proxies `/v1/*` requests to the API server on port 8787.
+In development the browser only ever talks to Vite, which proxies `/v1/*` on to
+the API. The API's port is not fixed: it takes whatever the operating system
+has free and publishes it to `.local-data/api-port`, which Vite reads per
+request. Nothing has to be configured, and no other project on the machine can
+collide with it. `PORT` pins it if you need a stable address.
 
 In production there is no proxy: a single Hono process serves both. Because the
 API carries a `/v1` base path, `/v1/*` reaches the API routes and every other

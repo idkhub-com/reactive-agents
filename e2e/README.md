@@ -51,9 +51,10 @@ under `.e2e-data/`. Migrations run on the first request, so deleting the file
 is a full reset, and that half of the suite needs no Postgres, no PostgREST and
 no container runtime at all. Only the Supabase parity pass does.
 
-It has to be the built server rather than `pnpm dev`: `pnpm dev:api` runs
-wrangler, and on workerd `@libsql/client` resolves to its HTTP-only build, so
-an embedded database cannot be opened there at all.
+It has to be the built server rather than `pnpm dev`, which is a Vite/API
+pair: Vite serves the dashboard and proxies `/v1` away, so the static serving,
+the SPA fallback and the `/v1` 404 boundary above never execute there. They
+exist only in `server.ts`.
 
 Three servers run, because two things are fixed per process and decided from
 the environment — the storage backend and whether the dashboard needs a login:

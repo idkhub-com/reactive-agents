@@ -36,33 +36,62 @@ Other directories:
 
 ## Setup
 
-1. Install the [Supabase CLI](https://supabase.com/docs/guides/cli)
-2. Start the local services:
-   ```sh
-   supabase start
-   ```
-3. Install dependencies:
+1. Install dependencies:
    ```sh
    pnpm install
    ```
-4. Run the development server:
+2. Run the development server:
    ```sh
    pnpm dev
    ```
 
-To run without Supabase (and without Docker), build once and start the same
-single process the published image runs, backed by an embedded libSQL file:
+That is the whole setup. The dashboard is on `http://localhost:3000` and the
+API runs behind it on Node, against an embedded SQLite database at
+`.local-data/dev.db` created on the first request — no Supabase, no Docker,
+nothing to install beyond the workspace itself. Deleting that file resets the
+database.
+
+Send API requests to port 3000 as well — Vite proxies `/v1` on to the API:
+
+```sh
+curl http://localhost:3000/v1/models -H "Authorization: Bearer super-agents"
+```
+
+The API's own port is chosen at runtime, since only Vite talks to it; it is
+printed at startup and published to `.local-data/api-port` for the proxy, but
+it is not an address to send requests to. Set `PORT` to pin it.
+
+To develop against **Supabase** instead, install the
+[Supabase CLI](https://supabase.com/docs/guides/cli), run `supabase start`, and
+start with an empty `LIBSQL_URL`, which selects the other backend:
+
+```sh
+LIBSQL_URL= pnpm dev
+```
+
+To run the API on **workerd**, the way a Cloudflare Workers deployment does:
+
+```sh
+pnpm dev:api:worker
+```
+
+That is worth doing before merging anything on the Workers path, because
+`pnpm dev` no longer covers it. It uses Supabase by default; put a
+`LIBSQL_URL` in `packages/api/.dev.vars` to point it at a remote libSQL
+instead. A `file:` URL cannot be used here — a Worker has no filesystem, so
+`@libsql/client` resolves to its HTTP-only build and rejects the scheme.
+
+To run the **production shape** — one process serving both the API and the
+built dashboard, as the published image does:
 
 ```sh
 pnpm build
-LIBSQL_URL="file:$PWD/.data/dev.db" DASHBOARD_ROOT=./packages/web/dist \
-  node packages/api/dist/server.js
+PORT=3000 LIBSQL_URL="file:$PWD/.local-data/dev.db" \
+  DASHBOARD_ROOT=./packages/web/dist node packages/api/dist/server.js
 ```
 
-The dashboard and the API are then both on `http://localhost:3000`. Note that
-this is a build-and-run loop, not hot reload — `pnpm dev` remains the way to
-iterate. It is also the only way to exercise a `file:` database locally, since
-`pnpm dev:api` runs on workerd, where `@libsql/client` is HTTP-only.
+Both halves are then on `http://localhost:3000`. This is a build-and-run loop,
+not hot reload; `pnpm dev` remains the way to iterate.
 
 ## Development Commands
 
@@ -73,7 +102,8 @@ pnpm build:web      # Build only web package
 pnpm build:api      # Build only API package
 pnpm dev            # Start all dev servers in parallel
 pnpm dev:web        # Start only web dev server (Vite on port 3000)
-pnpm dev:api        # Start only API dev server (Hono on port 8787)
+pnpm dev:api        # Start only API dev server (Node + SQLite, free port)
+pnpm dev:api:worker # The same API on workerd (needs a non-file: database)
 pnpm start          # Serve production build
 ```
 
@@ -102,6 +132,9 @@ The end-to-end suite (`e2e/`) runs the built app against an embedded libSQL
 database, so it needs no Supabase and no Docker — see `e2e/README.md`.
 
 **Database:**
+
+`pnpm dev` needs none of these; they are for developing against Supabase.
+
 ```sh
 supabase start      # Start local Supabase
 supabase stop       # Stop local Supabase

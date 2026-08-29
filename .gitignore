@@ -66,3 +66,4 @@ docker-compose.override.yml
 /playwright-report
 /.e2e-data
 **/test-results
+/.local-data/

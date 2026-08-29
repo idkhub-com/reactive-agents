@@ -3,7 +3,7 @@
 # Builds the all-in-one image and checks that the container serves both halves.
 #
 # The API and the dashboard share one process now, and that static-serving path
-# runs in neither `pnpm dev` (wrangler for the API, vite for the dashboard) nor
+# runs in neither `pnpm dev` (a Node API and vite for the dashboard) nor
 # the unit tests. The built image is the only place it executes, so without this
 # a break in it would first appear in a published release.
 #

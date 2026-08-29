@@ -2,10 +2,10 @@
 #
 # Verifies that the Cloudflare Workers build of the API still works.
 #
-# `pnpm dev:api` runs `wrangler dev`, so workerd is the runtime every developer
-# uses day to day -- but nothing built or booted it outside a developer's
-# machine. These two checks cover the failure modes that gap allows, and they
-# catch different things:
+# `pnpm dev:api` runs the API on Node, so workerd is no longer exercised by
+# day-to-day development -- this is the only check that runs it automatically.
+# These two checks cover the failure modes that gap allows, and they catch
+# different things:
 #
 #   1. `wrangler deploy --dry-run` fails on imports that cannot be bundled.
 #      A driver package with native bindings (`@libsql/client` rather than

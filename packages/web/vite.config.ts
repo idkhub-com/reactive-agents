@@ -1,15 +1,82 @@
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import viteReact from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin, type ProxyOptions } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
+import { readApiPort, waitForApiPort } from '../../scripts/dev-api-port.mjs';
+
+/** Stands in for the API's address until the first request resolves it. */
+const PLACEHOLDER_TARGET = 'http://127.0.0.1:1';
+
+/**
+ * Says where to send API requests, immediately after Vite's own URL block.
+ *
+ * It belongs here rather than with the API for two reasons: this is the origin
+ * in question, and Vite is the only side that knows which port it actually
+ * took -- 3000 may already be in use, in which case it quietly moves to 3001
+ * and any address the API printed would be wrong.
+ */
+const apiEntrypointNotice = (): Plugin => ({
+  name: 'super-agents:api-entrypoint-notice',
+  apply: 'serve',
+  configureServer(server) {
+    const printUrls = server.printUrls.bind(server);
+    server.printUrls = () => {
+      printUrls();
+      const address = server.httpServer?.address();
+      const port =
+        typeof address === 'object' && address !== null
+          ? address.port
+          : server.config.server.port;
+      console.log(
+        `  \u001b[32m\u279c\u001b[0m  \u001b[1mAPI\u001b[0m:      send requests here, e.g. http://localhost:${port}/v1/models`,
+      );
+    };
+  },
+});
+
+/**
+ * The proxy's own options object, captured in `configure` below so that the
+ * target can be pointed at the API's runtime port.
+ */
+let liveProxyOptions: ProxyOptions | undefined;
 
 export default defineConfig({
   server: {
     port: 3000,
     proxy: {
       '/v1': {
-        target: 'http://localhost:8787',
         changeOrigin: true,
+        /**
+         * A placeholder, replaced per request below. The API takes whatever
+         * port the operating system has free rather than claiming a fixed one,
+         * so there is nothing correct to write here; this value only survives
+         * if the API never starts, and then it fails loudly instead of
+         * reaching something unrelated.
+         */
+        target: PLACEHOLDER_TARGET,
+        /**
+         * `configure` is the only hook handed the options object the proxy
+         * actually reads its target from. The one `bypass` receives is a
+         * shallow copy Vite makes when it builds its proxy table, so mutating
+         * that has no effect -- the request still goes to the placeholder.
+         */
+        configure: (_proxy, options) => {
+          liveProxyOptions = options;
+        },
+        /**
+         * Resolved per request rather than once at startup, so Vite need not
+         * wait for the API and an API restarting on a different port is
+         * followed rather than proxied into a void.
+         */
+        bypass: async () => {
+          if (!liveProxyOptions) {
+            return;
+          }
+          const port = readApiPort() ?? (await waitForApiPort());
+          if (port !== undefined) {
+            liveProxyOptions.target = `http://127.0.0.1:${port}`;
+          }
+        },
       },
     },
   },
@@ -93,6 +160,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    apiEntrypointNotice(),
     tsConfigPaths({
       root: '../..',
       projects: [
