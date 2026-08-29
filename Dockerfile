@@ -27,6 +27,11 @@ COPY tsconfig.base.json tsconfig.json ./
 COPY packages/api ./packages/api
 COPY packages/web ./packages/web
 COPY packages/shared ./packages/shared
+# `vite.config.ts` imports scripts/dev-api-port.mjs, and Vite loads its config
+# for `vite build` as well as for the dev server, so the file has to resolve
+# here even though nothing in the image ever runs it. It stays in this stage --
+# the runner below copies only the two dist directories.
+COPY scripts ./scripts
 
 ENV NODE_ENV=production
 
