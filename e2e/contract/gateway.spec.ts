@@ -6,6 +6,7 @@ import {
   parseSSE,
   saConfig,
   stubFail,
+  stubFence,
   stubRequests,
   stubReset,
   uniqueModelName,
@@ -87,6 +88,59 @@ test.describe('gateway', () => {
       expect(forwarded.messages).toEqual([
         { role: 'user', content: 'what was forwarded?' },
       ]);
+    } finally {
+      await stubReset(request, model);
+      await deleteAgent(request, agent.id);
+    }
+  });
+
+  test('unwraps structured output the provider wrapped in a markdown fence', async ({
+    request,
+  }) => {
+    /**
+     * Providers that do not enforce `response_format` see it as prompt text and
+     * routinely answer with the JSON inside a ```json fence. A client that
+     * asked for `json_schema` runs `JSON.parse` on the content -- the OpenAI
+     * SDK's `.parse()` does exactly that -- so the gateway has to hand back
+     * content that parses. The internal skills are such a client: evaluation
+     * generation, judging and prompt seeding all break at once without this.
+     */
+    const agent = await withSkill(request, 'gwjson');
+    const model = uniqueModelName('fenced');
+
+    try {
+      await stubFence(request, model);
+
+      const response = await request.post(CHAT_COMPLETIONS_PATH, {
+        headers: {
+          'sa-config': saConfig(agent.name, 'gateway_skill', { model }),
+        },
+        data: {
+          ...chatBody('give me the parameters'),
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'params',
+              strict: true,
+              schema: {
+                type: 'object',
+                properties: { task: { type: 'string' } },
+                required: ['task'],
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+      });
+
+      expect(response.status()).toBe(200);
+      const body = (await response.json()) as {
+        choices: { message: { content: string } }[];
+      };
+
+      const { content } = body.choices[0].message;
+      expect(content.startsWith('```')).toBe(false);
+      expect(JSON.parse(content)).toEqual({ task: 'stub: task' });
     } finally {
       await stubReset(request, model);
       await deleteAgent(request, agent.id);
