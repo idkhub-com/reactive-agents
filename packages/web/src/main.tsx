@@ -9,6 +9,19 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { routeTree } from './routeTree.gen';
 
+// Self-hosted so the dashboard renders correctly with no network access and
+// makes no third-party request. Only the weights the app asks for are here:
+// Lato 300/400/700/900 for body text (`font-medium` and `font-semibold` have
+// no Lato cut, and match to 400 and 700 respectively), and Ubuntu 400/700 for
+// the logo, whose text is `font-bold`.
+import '@fontsource/lato/300.css';
+import '@fontsource/lato/400.css';
+import '@fontsource/lato/700.css';
+import '@fontsource/lato/900.css';
+// Latin only: the logo is the only thing set in Ubuntu, and it reads
+// "Super Agents".
+import '@fontsource/ubuntu/latin-400.css';
+import '@fontsource/ubuntu/latin-700.css';
 import '@web/styles/globals.css';
 import '@web/styles/editor.css';
 
