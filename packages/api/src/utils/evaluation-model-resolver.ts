@@ -1,3 +1,4 @@
+import { isAPIKeyRequiredForProvider } from '@api/ai-providers';
 import type { LLMJudgeModelConfig } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
@@ -11,7 +12,11 @@ import type { Model, SkillOptimizationEvaluation } from '@shared/types/data';
 export interface ResolvedModelConfig {
   model: string;
   provider: AIProvider;
-  apiKey: string;
+  /**
+   * The provider's API key, where it has one. Self-hosted providers such as
+   * Ollama are configured without a key and are called without one.
+   */
+  apiKey?: string;
   /**
    * The provider's configured base URL, where it has one.
    *
@@ -67,8 +72,11 @@ async function resolveModelById(
   }
   const providerConfig = providers[0];
 
-  // Ensure we have an API key
-  if (!providerConfig.api_key) {
+  // Ensure we have an API key, for the providers that need one
+  if (
+    !providerConfig.api_key &&
+    isAPIKeyRequiredForProvider(providerConfig.ai_provider)
+  ) {
     warn(
       `[${logPrefix}] No API key configured for provider: ${model.ai_provider_id}`,
     );
@@ -78,7 +86,7 @@ async function resolveModelById(
   return {
     model: model.model_name,
     provider: providerConfig.ai_provider as AIProvider,
-    apiKey: providerConfig.api_key,
+    apiKey: providerConfig.api_key ?? undefined,
     customHost: providerConfig.custom_fields?.custom_host as string | undefined,
   };
 }

@@ -237,6 +237,37 @@ describe('Evaluation Model Resolver', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should resolve a keyless provider that needs no API key', async () => {
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue(
+        mockSystemSettings,
+      );
+      vi.mocked(mockConnector.getModels).mockResolvedValue([
+        { ...mockModel, model_name: 'qwen3.8b27b' },
+      ]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        {
+          ...mockProvider,
+          ai_provider: 'ollama',
+          name: 'Ollama',
+          api_key: null,
+          custom_fields: { custom_host: 'http://localhost:11434' },
+        },
+      ]);
+
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'evaluation_generation',
+        mockConnector,
+      );
+
+      expect(result).toEqual({
+        model: 'qwen3.8b27b',
+        provider: 'ollama',
+        apiKey: undefined,
+        customHost: 'http://localhost:11434',
+      });
+    });
   });
 
   describe('resolveEvaluationModelConfig', () => {

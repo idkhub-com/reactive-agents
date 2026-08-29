@@ -87,3 +87,17 @@ export const providerConfigs: {
   [AIProvider.XAI]: xaiConfig,
   [AIProvider.ZHIPU]: undefined,
 };
+
+/**
+ * Whether a provider needs an API key before it can be called.
+ *
+ * Self-hosted providers carry no key -- Ollama sets `isAPIKeyRequired: false`
+ * -- so treating a missing key as a misconfiguration would make every internal
+ * skill call refuse to run against them. Providers we have no config for are
+ * assumed to need one, matching what `/v1/super-agents/ai-providers/schemas`
+ * reports to the dashboard.
+ */
+export function isAPIKeyRequiredForProvider(provider: string): boolean {
+  const config = providerConfigs[provider as AIProvider];
+  return config?.api.isAPIKeyRequired ?? true;
+}
