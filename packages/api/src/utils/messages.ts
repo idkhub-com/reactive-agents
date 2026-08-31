@@ -18,13 +18,6 @@ export function formatMessagesForExtraction(
       const role = message.role;
       let content = '';
 
-      if (
-        role === ChatCompletionMessageRole.TOOL ||
-        role === ChatCompletionMessageRole.FUNCTION
-      ) {
-        return `Tool Call ${message.tool_call_id} Output: ${content}`;
-      }
-
       if (typeof message.content === 'string') {
         content += message.content;
       } else if (Array.isArray(message.content)) {
@@ -39,6 +32,16 @@ export function formatMessagesForExtraction(
           .join(' ');
       } else if (message.content) {
         content += String(message.content);
+      }
+
+      // The tool's output is the message's content. This used to render
+      // before content was computed, so every tool output read as empty --
+      // and the judges scored conversations as if the agent got nothing back.
+      if (
+        role === ChatCompletionMessageRole.TOOL ||
+        role === ChatCompletionMessageRole.FUNCTION
+      ) {
+        return `Tool Call ${message.tool_call_id} Output: ${content}`;
       }
 
       if (message.tool_calls && message.tool_calls.length > 0) {

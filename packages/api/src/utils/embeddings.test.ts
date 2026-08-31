@@ -197,7 +197,9 @@ describe('Embeddings Utility', () => {
       ];
 
       const result = formatMessagesForEmbedding(messages);
-      expect(result).toContain('Tool Call call_123 Output');
+      // The output itself must be there: asserting only the prefix let the
+      // formatter render every tool output as empty for months.
+      expect(result).toContain('Tool Call call_123 Output: Weather result');
     });
   });
 });
