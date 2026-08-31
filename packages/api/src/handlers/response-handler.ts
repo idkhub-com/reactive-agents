@@ -79,9 +79,20 @@ export async function responseHandler(
       streamFunctionName
     ] as ResponseTransformFunction | undefined;
   } else if (responseTransformerFunctionName) {
-    responseTransformFunction = responseTransformFunctions?.[
-      responseTransformerFunctionName
-    ] as ResponseTransformFunction | undefined;
+    // A streaming request whose provider call *failed* also lands here: the
+    // function name still carries its `stream_` prefix, but the body is one
+    // plain JSON error, not a stream. The chunk transform registered under
+    // the prefixed name takes strings and would crash on the parsed body,
+    // hiding the provider's error -- so use the non-stream transform.
+    const nonStreamFunctionName = responseTransformerFunctionName.replace(
+      /^stream_/,
+      '',
+    ) as FunctionName;
+    responseTransformFunction = (responseTransformFunctions?.[
+      nonStreamFunctionName
+    ] ?? responseTransformFunctions?.[responseTransformerFunctionName]) as
+      | ResponseTransformFunction
+      | undefined;
   }
 
   const isCacheHit =

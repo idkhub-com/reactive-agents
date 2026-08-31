@@ -355,6 +355,30 @@ export async function handleNonStreamingMode(
     );
   }
 
+  // A provider error is transformed above, so its message is in the standard
+  // shape, but it is not validated against the function's response schema --
+  // an error body never matches it, and the point is to hand the caller the
+  // provider's message on the provider's status code.
+  if (!aiProviderResponse.ok) {
+    return {
+      response: new Response(
+        transformedBodyJson && !(transformedBodyJson instanceof Blob)
+          ? JSON.stringify(transformedBodyJson)
+          : originalResponseBodyText,
+        {
+          status: aiProviderResponse.status,
+          statusText: aiProviderResponse.statusText,
+          headers: new Headers(
+            cleanResponseHeaders(aiProviderResponse.headers),
+          ),
+        },
+      ),
+      saResponseBody: null,
+      originalBodyJson:
+        transformedBodyJson instanceof Blob ? null : transformedBodyJson,
+    };
+  }
+
   // Make sure that the response body is in the expected format.
   let saResponseBody: SuperAgentsResponseBody | null = null;
   if (transformedBodyJson) {
