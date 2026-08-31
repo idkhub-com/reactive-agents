@@ -317,3 +317,179 @@ describe('Conversation Completeness - evaluateLog', () => {
     expect(result.score).toBe(0.5);
   });
 });
+
+/**
+ * The judge must see the agent's tool calls and their outputs. The history
+ * formatter used to render every tool output as the empty string, so the
+ * judge reasoned "all tool outputs returned empty" about healthy runs and
+ * scored agentic conversations near zero.
+ */
+describe('Conversation Completeness - agentic logs', () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockFetch = vi.fn();
+    global.fetch = mockFetch;
+    vi.clearAllMocks();
+    mockParse.mockResolvedValue({
+      choices: [
+        { message: { parsed: { score: 1, reasoning: 'complete enough' } } },
+      ],
+    });
+  });
+
+  const agenticLog = (base: Log): Log => ({
+    ...base,
+    ai_provider_request_log: {
+      ...base.ai_provider_request_log,
+      request_body: {
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: 'You maintain the blog codebase.' },
+          { role: 'user', content: 'review the code changes' },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              {
+                id: 'call_a',
+                type: 'function',
+                function: {
+                  name: 'bash',
+                  arguments: '{"command":"git status"}',
+                },
+              },
+            ],
+          },
+          {
+            role: 'tool',
+            tool_call_id: 'call_a',
+            content: 'On branch main\nChanges not staged: projects.json',
+          },
+        ],
+      },
+      response_body: {
+        id: 'chatcmpl-9',
+        object: 'chat.completion',
+        created: 1677652288,
+        model: 'gpt-4',
+        choices: [
+          {
+            index: 0,
+            finish_reason: 'tool_calls',
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_b',
+                  type: 'function',
+                  function: {
+                    name: 'bash',
+                    arguments: '{"command":"git diff --staged"}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  it('shows the judge the tool calls and their outputs', async () => {
+    const evaluation = {
+      id: 'eval-9',
+      agent_id: 'agent-9',
+      skill_id: 'skill-9',
+      evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
+      params: { temperature: 0.1, max_tokens: 1000 },
+      weight: 1,
+      model_id: null,
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z',
+    } as SkillOptimizationEvaluation;
+    const base: Log = {
+      id: 'log-9',
+      agent_id: 'agent-9',
+      skill_id: 'skill-9',
+      cluster_id: null,
+      method: HttpMethod.POST,
+      endpoint: '/v1/chat/completions',
+      function_name: FunctionName.CHAT_COMPLETE,
+      status: 200,
+      start_time: 1677652288000,
+      first_token_time: null,
+      end_time: 1677652289000,
+      duration: 1000,
+      base_sa_config: {},
+      ai_provider: AIProvider.OPENAI,
+      model: 'gpt-4',
+      hook_logs: [],
+      cache_status: CacheStatus.MISS,
+      embedding: null,
+      trace_id: null,
+      parent_span_id: null,
+      span_id: null,
+      span_name: null,
+      app_id: null,
+      external_user_id: null,
+      external_user_human_name: null,
+      original_system_prompt: null,
+      user_metadata: null,
+      metadata: {},
+      ai_provider_request_log: {
+        provider: AIProvider.OPENAI,
+        function_name: FunctionName.CHAT_COMPLETE,
+        method: HttpMethod.POST,
+        request_url: 'https://api.openai.com/v1/chat/completions',
+        request_body: { model: 'gpt-4', messages: [] },
+        response_body: {},
+        raw_request_body: '{}',
+        raw_response_body: '{}',
+        status: 200,
+        cache_mode: CacheMode.DISABLED,
+        cache_status: CacheStatus.MISS,
+      },
+    };
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            output: [
+              {
+                type: 'message',
+                content: [
+                  {
+                    type: 'output_text',
+                    text: JSON.stringify({ score: 1, reasoning: 'complete' }),
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      json: () => Promise.resolve({}),
+    });
+
+    const result = await evaluateLog(
+      createMockContext(),
+      evaluation,
+      agenticLog(base),
+      createMockStorageConnector(),
+    );
+
+    expect(result.extra_data?.error).toBeUndefined();
+    // Whichever transport carried the judge call, it saw the real
+    // conversation: the tool's output and the tool-call response.
+    const judgeSaw = JSON.stringify([
+      mockFetch.mock.calls,
+      mockParse.mock.calls,
+    ]);
+    expect(judgeSaw).toContain('Tool Call call_a Output: On branch main');
+    expect(judgeSaw).toContain('Assistant Tool Calls');
+    expect(judgeSaw).toContain('git diff --staged');
+  });
+});

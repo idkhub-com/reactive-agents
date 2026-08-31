@@ -1,4 +1,5 @@
 import { evaluateLog } from '@api/connectors/evaluations/task-completion/service/evaluate';
+import { extractTaskAndOutcome } from '@api/connectors/evaluations/task-completion/service/task-and-outcome';
 import { createMockContext } from '@api/test-utils/mock-context';
 import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
@@ -325,5 +326,180 @@ describe('Task Completion - evaluateLog', () => {
 
     expect(result.method).toBe(EvaluationMethodName.TASK_COMPLETION);
     expect(result.score).toBe(0.0);
+  });
+});
+
+/**
+ * What the extraction stage is shown for an agentic log. Two bugs hid the
+ * agent's work from the judges here: the response's tool calls were dropped
+ * by extractOutputFromResponseBody (a tool-call turn read as no output at
+ * all), and the history formatter rendered every tool output as empty. Both
+ * made task_completion score healthy agentic turns 0.
+ */
+describe('Task Completion - agentic logs', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            output: [
+              {
+                type: 'message',
+                content: [
+                  {
+                    type: 'output_text',
+                    text: JSON.stringify({ score: 1, reasoning: 'fine' }),
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+    });
+    vi.clearAllMocks();
+    vi.mocked(extractTaskAndOutcome).mockResolvedValue({
+      task: 'review the code changes',
+      outcome: 'began inspecting the repository',
+    });
+  });
+
+  const agenticLog = (base: Log): Log => ({
+    ...base,
+    ai_provider_request_log: {
+      ...base.ai_provider_request_log,
+      request_body: {
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: 'You maintain the blog codebase.' },
+          { role: 'user', content: 'review the code changes' },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              {
+                id: 'call_a',
+                type: 'function',
+                function: {
+                  name: 'bash',
+                  arguments: '{"command":"git status"}',
+                },
+              },
+            ],
+          },
+          {
+            role: 'tool',
+            tool_call_id: 'call_a',
+            content: 'On branch main\nChanges not staged: projects.json',
+          },
+        ],
+      },
+      response_body: {
+        id: 'chatcmpl-9',
+        object: 'chat.completion',
+        created: 1677652288,
+        model: 'gpt-4',
+        choices: [
+          {
+            index: 0,
+            finish_reason: 'tool_calls',
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_b',
+                  type: 'function',
+                  function: {
+                    name: 'bash',
+                    arguments: '{"command":"git diff --staged"}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  it('shows the extraction the tool outputs and the tool-call response', async () => {
+    const evaluation = {
+      id: 'eval-9',
+      agent_id: 'agent-9',
+      skill_id: 'skill-9',
+      evaluation_method: EvaluationMethodName.TASK_COMPLETION,
+      params: {
+        temperature: 0.1,
+        max_tokens: 1000,
+        strict_mode: false,
+        task: 'review the code changes',
+      },
+      weight: 1,
+      model_id: null,
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z',
+    } as SkillOptimizationEvaluation;
+    const base: Log = {
+      id: 'log-9',
+      agent_id: 'agent-9',
+      skill_id: 'skill-9',
+      cluster_id: null,
+      method: HttpMethod.POST,
+      endpoint: '/v1/chat/completions',
+      function_name: FunctionName.CHAT_COMPLETE,
+      status: 200,
+      start_time: 1677652288000,
+      first_token_time: null,
+      end_time: 1677652289000,
+      duration: 1000,
+      base_sa_config: {},
+      ai_provider: AIProvider.OPENAI,
+      model: 'gpt-4',
+      hook_logs: [],
+      cache_status: CacheStatus.MISS,
+      embedding: null,
+      trace_id: null,
+      parent_span_id: null,
+      span_id: null,
+      span_name: null,
+      app_id: null,
+      external_user_id: null,
+      external_user_human_name: null,
+      original_system_prompt: null,
+      user_metadata: null,
+      metadata: {},
+      ai_provider_request_log: {
+        provider: AIProvider.OPENAI,
+        function_name: FunctionName.CHAT_COMPLETE,
+        method: HttpMethod.POST,
+        request_url: 'https://api.openai.com/v1/chat/completions',
+        request_body: { model: 'gpt-4', messages: [] },
+        response_body: {},
+        raw_request_body: '{}',
+        raw_response_body: '{}',
+        status: 200,
+        cache_mode: CacheMode.DISABLED,
+        cache_status: CacheStatus.MISS,
+      },
+    };
+
+    const result = await evaluateLog(
+      createMockContext(),
+      evaluation,
+      agenticLog(base),
+      createMockStorageConnector(),
+    );
+
+    expect(result.extra_data?.error).toBeUndefined();
+    expect(extractTaskAndOutcome).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(extractTaskAndOutcome).mock.calls[0];
+    const input = call[2] as string;
+    const output = call[3] as string;
+    // The conversation carries the tool's actual output, not an empty line.
+    expect(input).toContain('Tool Call call_a Output: On branch main');
+    // The tool-call response is the turn's output, not "nothing".
+    expect(output).toContain('Assistant Tool Calls');
+    expect(output).toContain('git diff --staged');
   });
 });
