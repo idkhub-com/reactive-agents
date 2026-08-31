@@ -1,7 +1,10 @@
 /// <reference types="vite/client" />
 
 import { createRouter, RouterProvider } from '@tanstack/react-router';
-import { getAuthStatus } from '@web/api/v1/super-agents/auth';
+import {
+  getAuthStatus,
+  ServerUnavailableError,
+} from '@web/api/v1/super-agents/auth';
 import { Toaster } from '@web/components/ui/toaster';
 import { SidebarProvider } from '@web/providers/side-bar';
 import { ThemeProvider } from '@web/providers/theme';
@@ -48,14 +51,47 @@ declare module '@tanstack/react-router' {
   }
 }
 
+/**
+ * The server is up but refusing to serve, and said why. Shown in place of
+ * the app: sending the visitor to `/login` would hide the reason behind a
+ * password prompt, or a redirect loop where there is no password.
+ */
+function renderUnavailable(rootElement: HTMLElement, reason: string) {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <main className="flex h-screen items-center justify-center p-8">
+        <div className="max-w-2xl space-y-3">
+          <h1 className="text-xl font-semibold">
+            The server is not ready to serve the dashboard
+          </h1>
+          <p className="text-muted-foreground">{reason}</p>
+          <p className="text-sm text-muted-foreground">
+            Reload once that is done.
+          </p>
+        </div>
+      </main>
+    </StrictMode>,
+  );
+}
+
 async function mount() {
-  const allowed = await checkAuthBeforeMount();
+  const rootElement = document.getElementById('root');
+
+  let allowed: boolean;
+  try {
+    allowed = await checkAuthBeforeMount();
+  } catch (e) {
+    if (e instanceof ServerUnavailableError && rootElement) {
+      renderUnavailable(rootElement, e.message);
+      return;
+    }
+    throw e;
+  }
   if (!allowed) {
     window.location.replace('/login');
     return;
   }
 
-  const rootElement = document.getElementById('root');
   if (rootElement) {
     createRoot(rootElement).render(
       <StrictMode>

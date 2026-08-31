@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock all dependencies
 vi.mock('@api/ai-providers', () => ({
@@ -219,6 +219,91 @@ describe('tryPost Error Handling', () => {
       responseSchema: z.object({}), // Mock response schema for tests
       stream: false,
     } as unknown as SuperAgentsRequestData;
+  });
+
+  describe("the caller's request body", () => {
+    /**
+     * `tryPost` builds the provider-bound body from a shallow spread of the
+     * caller's request, so anything spliced into `messages` used to land in
+     * `sa_request_data` as well -- and the logs middleware reads the caller's
+     * system prompt from there after the handler returns.
+     */
+    afterEach(() => {
+      vi.mocked(transformToProviderRequest).mockReset();
+    });
+
+    const reachTheTransform = () => {
+      (providerConfigs as Record<string, AIProviderConfig | undefined>)[
+        AIProvider.OPENAI
+      ] = {
+        api: {
+          getBaseURL: vi.fn().mockResolvedValue('https://api.openai.com'),
+          getEndpoint: vi.fn().mockReturnValue('/v1/chat/completions'),
+          headers: vi.fn().mockResolvedValue({}),
+        },
+      } as unknown as AIProviderConfig;
+      vi.mocked(inputHookHandler).mockResolvedValue({
+        errorResponse: undefined,
+        transformedSuperAgentsBody: undefined,
+      });
+      // Past the system prompt handling; nothing later matters here.
+      vi.mocked(transformToProviderRequest).mockImplementation(() => {
+        throw new Error('stop here');
+      });
+    };
+
+    it('is left alone when the arm prompt replaces the system message', async () => {
+      reachTheTransform();
+      mockSuperAgentsRequestData.requestBody = {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: ChatCompletionMessageRole.SYSTEM,
+            content: 'From the caller',
+          },
+          { role: ChatCompletionMessageRole.USER, content: 'Hello' },
+        ],
+      } as never;
+      mockSuperAgentsTarget.configuration.system_prompt = 'From the arm';
+      const before = structuredClone(mockSuperAgentsRequestData.requestBody);
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      expect(mockSuperAgentsRequestData.requestBody).toEqual(before);
+    });
+
+    it('is left alone when JSON instructions are appended to the system message', async () => {
+      reachTheTransform();
+      mockSuperAgentsRequestData.requestBody = {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: ChatCompletionMessageRole.SYSTEM,
+            content: 'From the caller',
+          },
+          { role: ChatCompletionMessageRole.USER, content: 'Hello' },
+        ],
+        response_format: { type: 'json_object' },
+      } as never;
+      mockSuperAgentsTarget.configuration.system_prompt = null;
+      const before = structuredClone(mockSuperAgentsRequestData.requestBody);
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      expect(mockSuperAgentsRequestData.requestBody).toEqual(before);
+    });
   });
 
   describe('Error scenarios', () => {

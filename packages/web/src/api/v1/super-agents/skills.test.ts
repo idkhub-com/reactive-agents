@@ -101,6 +101,8 @@ describe('Skills API functions', () => {
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   };
 
   beforeEach(() => {
@@ -126,6 +128,8 @@ describe('Skills API functions', () => {
         reflection_min_requests_per_arm: 0,
         exploration_temperature: 1.0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       };
 
       const result = await createSkill(params);
@@ -154,6 +158,8 @@ describe('Skills API functions', () => {
           reflection_min_requests_per_arm: 0,
           exploration_temperature: 1.0,
           allowed_template_variables: ['datetime'],
+          auto_created: false,
+          seed_system_prompt: null,
         }),
       ).rejects.toThrow('Failed to create skill');
     });

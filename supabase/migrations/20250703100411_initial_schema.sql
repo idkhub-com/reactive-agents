@@ -6,6 +6,11 @@ CREATE TABLE if not exists agents (
   name TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
+  -- Requests that name only the agent (`/v1/agents/:agent_name/...`) are
+  -- routed to the closest skill; these decide when one becomes a new skill.
+  auto_create_skills BOOLEAN NOT NULL DEFAULT TRUE,
+  skill_match_threshold FLOAT NOT NULL DEFAULT 0.8,
+  max_auto_created_skills INTEGER NOT NULL DEFAULT 10,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -36,6 +41,10 @@ CREATE TABLE if not exists skills (
   exploration_temperature FLOAT NOT NULL DEFAULT 1.0,
   total_requests BIGINT NOT NULL DEFAULT 0,
   allowed_template_variables TEXT[] NOT NULL DEFAULT '{}',
+  -- Set by the gateway when it creates the skill for a request: the caller's
+  -- system prompt seeds the first arms, so the skill starts as a pass-through.
+  auto_created BOOLEAN NOT NULL DEFAULT FALSE,
+  seed_system_prompt TEXT,
   last_clustering_at TIMESTAMPTZ,
   last_clustering_log_start_time BIGINT,
   evaluations_regenerated_at TIMESTAMPTZ,
@@ -175,6 +184,10 @@ CREATE TABLE IF NOT EXISTS logs (
   hook_logs JSONB NOT NULL,
   metadata JSONB NOT NULL,
   embedding FLOAT[] DEFAULT NULL,
+  -- The system prompt (or Responses `instructions`) the caller sent, as
+  -- received. ai_provider_request_log holds the body that reached the
+  -- provider, in which an optimized skill has substituted its own prompt.
+  original_system_prompt TEXT,
   -- Cache info
   cache_status cache_status_enum NOT NULL,
   -- Tracing info
@@ -330,6 +343,25 @@ CREATE TABLE IF NOT EXISTS skill_models (
 
 CREATE INDEX idx_skill_models_skill_id ON skill_models(skill_id);
 CREATE INDEX idx_skill_models_model_id ON skill_models(model_id);
+
+-- ================================================
+-- Agent Models Bridge Table
+-- ================================================
+-- The models a skill the gateway creates for the agent starts with.
+CREATE TABLE IF NOT EXISTS agent_models (
+  agent_id UUID NOT NULL,
+  model_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (agent_id, model_id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_agent_models_agent_id ON agent_models(agent_id);
+CREATE INDEX idx_agent_models_model_id ON agent_models(model_id);
+
+ALTER TABLE agent_models ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_full_access" ON agent_models FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE skill_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON skill_models FOR ALL TO service_role USING (true) WITH CHECK (true);

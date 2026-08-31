@@ -55,6 +55,8 @@ const mockSkills: Skill[] = [
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   },
   {
     id: '2',
@@ -75,6 +77,8 @@ const mockSkills: Skill[] = [
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   },
 ];
 

@@ -173,10 +173,30 @@ Key API endpoints:
 
 The gateway endpoints (`/v1/chat/completions`, `/v1/completions`, `/v1/responses`,
 `/v1/embeddings`) are also mounted under
-`/v1/agents/:agent_name/skills/:skill_name/...`. That form names the agent and
-skill in the path instead of in the `sa-config` header, which makes the header
-optional. `commonVariablesMiddleware` merges the path names into the config (the
-path wins over the header) and route matching is done against the canonical path.
+`/v1/agents/:agent_name/skills/:skill_name/...` and `/v1/agents/:agent_name/...`.
+The first names the agent and skill in the path instead of in the `sa-config`
+header, which makes the header optional. The second names only the agent and
+leaves the skill to `routeRequestToSkill` (`utils/super-agents/skill-routing.ts`):
+it embeds the request's intent (system prompt and tool names, see
+`@shared/utils/request-intent`) and picks the skill whose `skill_routing`
+centroid is closest, seeding a centroid from the skill's description the first
+time it meets one. When the agent has `auto_create_skills` on (the default), a
+request below the agent's `skill_match_threshold` -- or any request to an agent
+without skills -- becomes a new skill through `createSkillForRequest`
+(`utils/super-agents/skill-creation.ts`): named by the `describe-skill` internal
+skill, given the agent's default models (`agent_models`), and seeded with the
+caller's system prompt (`skills.seed_system_prompt`), which `handleGenerateArms`
+uses verbatim so the skill starts as a pass-through. `max_auto_created_skills`
+caps this per agent. Creating happens under the agent's `skill_creation_leases`
+row (`withSkillCreationLease`), after a second look at the skills, so
+concurrent first requests produce one skill rather than one each. Intent
+embeddings are cached per process (`utils/super-agents/intent-embeddings.ts`)
+and a centroid absorbs each distinct intent once; requests that *name* their
+skill teach the router too (`learnSkillIntent`, after the response, at most
+once a minute per skill), which is how skills that were always named get
+centroids that reflect their traffic. `commonVariablesMiddleware` merges the
+path names into the config (the path wins over the header) and route matching
+is done against the canonical path.
 
 **Hono Syntax**: Always use chained method syntax for proper type inference:
 ```typescript
@@ -243,9 +263,17 @@ current shape. Notable differences, all deliberate:
   owns the conversions and the mapping table is documented in `schema.ts`.
 
 Database management:
-- Postgres migrations: `supabase/migrations/` (immutable once merged — CI
-  verifies existing files are unchanged; add a new file instead)
-- libSQL migrations: append to `libsqlMigrations` in `connectors/libsql/schema.ts`
+- Postgres migrations: `supabase/migrations/`
+- libSQL migrations: `libsqlMigrations` in `connectors/libsql/schema.ts`
+- The app has no deployments to migrate yet, so schema changes are made to
+  the existing migrations in place, on both backends, rather than appended
+  as new ones. That will change once there are users.
+- Because of that, a local database can be older than the migration that
+  created it. libSQL records a fingerprint of each applied migration's
+  statements (`connectors/libsql/migrate.ts`) and refuses a database whose
+  applied migration has changed, with a `StaleMigrationError` on the first
+  request that says what to do: delete `.local-data/dev.db` and let the next
+  request recreate it. For Supabase, `supabase db reset`.
 - Seed data: `supabase/seed.sql`
 - Start/stop: `supabase start|stop`
 
@@ -391,7 +419,14 @@ Set `SERVE_DASHBOARD=false` to run the all-in-one image as a gateway only.
 
 ## Agent Validation & Readiness
 
-- **Agent Requirements**: All agents must have at least one skill configured to be considered "ready"
+- **Agent Requirements**: An agent that creates skills automatically
+  (`auto_create_skills`, the default) is "ready" when it has default models,
+  skills or not -- its first request creates its first skill, and skills
+  created without default models cannot serve. Adding default models later
+  equips the automatic skills created without them (`adoptDefaultModels`),
+  and generates the evaluations they are missing -- creation generates them
+  in the background, which fails when system settings have no models yet.
+  An agent that keeps its skills is ready when it has at least one
 - **Skill Requirements**: All skills must meet the following to be considered "ready":
   - At least one model must be configured
   - If optimization is enabled, at least one evaluation must be configured
@@ -426,6 +461,8 @@ System prompts evolve through two distinct phases:
 1. **Early Regeneration (after 5 skill requests)**:
    - Triggered once per skill when `evaluations_regenerated_at` is undefined
    - Regenerates evaluations with real examples from the first 5 requests
+   - An auto-created skill with *no* evaluations (creation's background
+     generation can fail) gets them created here from scratch instead
    - Generates new system prompts for ALL arms
    - Resets all cluster `total_steps` to 0
 
@@ -444,6 +481,7 @@ The system uses special auto-generated skills in the `super-agents` agent (defin
 - `judge`: Evaluation scoring
 - `extract-task-and-outcome`: Task/outcome extraction
 - `embedding`: Text embedding generation
+- `describe-skill`: Name and description for a skill the gateway creates
 
 ## Development Workflow
 

@@ -6,20 +6,31 @@ export interface AgentValidationResult {
 }
 
 /**
- * Validates whether an agent is ready for use.
- * An agent is considered ready if it has at least one skill configured.
+ * Whether an agent can serve whatever is sent to it.
  *
- * @param _agent - The agent to validate (reserved for future validation rules)
- * @param skillsCount - The number of skills configured for this agent
- * @returns Validation result with readiness status and missing requirements
+ * An agent that creates skills automatically needs default models, whether
+ * or not it has skills yet: the skills the gateway creates take them, and a
+ * skill created without any cannot serve a request. An agent that keeps its
+ * skills as they are needs at least one.
+ *
+ * @param agent - The agent to validate
+ * @param skillsCount - How many skills the agent has
+ * @param defaultModelsCount - How many default models the agent has
  */
 export function validateAgent(
-  _agent: Agent,
+  agent: Agent,
   skillsCount: number,
+  defaultModelsCount = 0,
 ): AgentValidationResult {
   const missingRequirements: string[] = [];
 
-  if (skillsCount === 0) {
+  if (agent.auto_create_skills) {
+    if (defaultModelsCount === 0) {
+      missingRequirements.push(
+        'Add default models: the skills this agent creates from requests take them, and cannot serve requests without them',
+      );
+    }
+  } else if (skillsCount === 0) {
     missingRequirements.push('At least one skill must be configured');
   }
 
@@ -29,12 +40,11 @@ export function validateAgent(
   };
 }
 
-/**
- * Checks if an agent is ready based on skills count.
- *
- * @param skillsCount - The number of skills configured for the agent
- * @returns True if the agent has at least one skill
- */
-export function isAgentReady(skillsCount: number): boolean {
-  return skillsCount > 0;
+/** `validateAgent`, as a yes or no. */
+export function isAgentReady(
+  agent: Agent,
+  skillsCount: number,
+  defaultModelsCount = 0,
+): boolean {
+  return validateAgent(agent, skillsCount, defaultModelsCount).isReady;
 }

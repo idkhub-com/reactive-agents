@@ -207,6 +207,22 @@ const streamCompletion = (response, body, text) => {
   response.end();
 };
 
+/**
+ * A text can pin its own embedding by carrying `vec(1,0,0,0,0,0,0,0)`, which is
+ * how the routing specs make two skills distinguishable. Anything else embeds
+ * to a constant, which is all the optimizer specs need.
+ */
+function stubEmbedding(text) {
+  const pinned = /vec\(([-\d., ]+)\)/.exec(String(text ?? ''));
+  if (pinned) {
+    const values = pinned[1].split(',').map(Number);
+    if (values.length === 8 && values.every(Number.isFinite)) {
+      return values;
+    }
+  }
+  return Array.from({ length: 8 }, () => 0.1);
+}
+
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, `http://127.0.0.1:${port}`);
 
@@ -269,9 +285,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (url.pathname === '/api/embeddings') {
-    sendJson(response, 200, {
-      embedding: Array.from({ length: 8 }, () => 0.1),
-    });
+    sendJson(response, 200, { embedding: stubEmbedding(body?.prompt) });
     return;
   }
 

@@ -94,6 +94,9 @@ describe('url-utils', () => {
         metadata: {},
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
       {
         id: 'agent-2',
@@ -102,6 +105,9 @@ describe('url-utils', () => {
         metadata: {},
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
       {
         id: 'agent-3',
@@ -110,6 +116,9 @@ describe('url-utils', () => {
         metadata: {},
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
     ];
 
@@ -154,6 +163,9 @@ describe('url-utils', () => {
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
       const result = getAgentByName(agentsWithSpecialChars, 'Agent & Helper');
@@ -189,6 +201,8 @@ describe('url-utils', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: [],
+        auto_created: false,
+        seed_system_prompt: null,
       },
       {
         id: 'skill-2',
@@ -209,6 +223,8 @@ describe('url-utils', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: [],
+        auto_created: false,
+        seed_system_prompt: null,
       },
     ];
 
@@ -390,6 +406,9 @@ describe('url-utils', () => {
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
       const result = getAgentByName(mockAgents, '');
@@ -405,6 +424,9 @@ describe('url-utils', () => {
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
       const result = getAgentByName(mockAgents, 'Agente Español 日本語');
@@ -420,6 +442,9 @@ describe('url-utils', () => {
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
       // URL-encoded 'Test Agent'
@@ -436,6 +461,9 @@ describe('url-utils', () => {
           metadata: {},
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
       const result = getAgentByName(mockAgents, 'test agent');

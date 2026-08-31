@@ -17,6 +17,7 @@ import {
   shouldTriggerRealtimeEvaluation,
 } from '@api/utils/realtime-evaluations';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
+import type { SkillRoutingDecision } from '@api/utils/super-agents/skill-routing';
 import { error, warn } from '@shared/console-logging';
 import type { FunctionName } from '@shared/types/api/request';
 import {
@@ -38,6 +39,7 @@ import type {
 } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
+import { extractSystemPrompt } from '@shared/utils/system-prompt';
 import { stripAgentSkillPath } from '@shared/utils/url';
 import type { MiddlewareHandler } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
@@ -45,6 +47,30 @@ import type { Factory } from 'hono/factory';
 
 let logId = 0;
 const MAX_RESPONSE_LENGTH = 100000;
+
+/**
+ * Bounds the stored response body, replacing an oversized one with a
+ * truncation note carrying its head. Measured on the response body *alone*:
+ * the rest of the row -- a large request body, the embedding's floats -- must
+ * not cost the response its shape, because the realtime evaluations parse
+ * `response_body`, and a replaced one fails every evaluation that reads it.
+ */
+export function truncateOversizedResponseBody(
+  aiProviderLog: AIProviderRequestLog,
+): void {
+  const responseBodyString = JSON.stringify(aiProviderLog.response_body);
+  if (
+    typeof responseBodyString === 'string' &&
+    responseBodyString.length > MAX_RESPONSE_LENGTH
+  ) {
+    const truncated: LogResponseBodyError = {
+      message:
+        'The response was too large to be processed. It has been truncated.',
+      response: `${responseBodyString.substring(0, MAX_RESPONSE_LENGTH)}...`,
+    };
+    aiProviderLog.response_body = truncated;
+  }
+}
 
 // Map to store all connected log clients
 const logsClients: Map<string, LogsClient> = new Map();
@@ -361,6 +387,7 @@ interface ProcessLogsParams {
   firstTokenTime?: number;
   aiProviderLog: AIProviderRequestLog;
   embedding: number[] | null;
+  originalSystemPrompt: string | null;
   hookLogs: HookLog[];
   logsStorageConnector: LogsStorageConnector;
   userDataStorageConnector: UserDataStorageConnector;
@@ -368,6 +395,7 @@ interface ProcessLogsParams {
     Record<EvaluationMethodName, EvaluationMethodConnector>
   >;
   pulledArm?: SkillOptimizationArm;
+  skillRouting?: SkillRoutingDecision;
 }
 
 async function processLogs({
@@ -384,11 +412,13 @@ async function processLogs({
   firstTokenTime,
   aiProviderLog,
   embedding,
+  originalSystemPrompt,
   hookLogs,
   logsStorageConnector,
   userDataStorageConnector,
   evaluationConnectorsMap,
   pulledArm,
+  skillRouting,
 }: ProcessLogsParams): Promise<{
   evaluationResults: SkillOptimizationEvaluationResult[];
   logId: string | null;
@@ -415,11 +445,13 @@ async function processLogs({
     status: status,
     method: method,
     model: (aiProviderLog.request_body.model as string | undefined) || '',
-    metadata: {},
+    // How the skill was chosen, when the caller named only the agent.
+    metadata: skillRouting ? { skill_routing: skillRouting } : {},
     hook_logs: hookLogs,
     function_name: functionName,
     ai_provider_request_log: aiProviderLog,
     embedding: embedding ?? undefined,
+    original_system_prompt: originalSystemPrompt ?? undefined,
     endpoint: url.pathname,
     base_sa_config: baseSuperAgentsConfig,
     ai_provider: aiProviderLog.provider,
@@ -434,16 +466,7 @@ async function processLogs({
     user_metadata: undefined,
   };
 
-  const responseString = JSON.stringify(createParams);
-
-  if (responseString.length > MAX_RESPONSE_LENGTH) {
-    const error: LogResponseBodyError = {
-      message:
-        'The response was too large to be processed. It has been truncated.',
-      response: `${responseString.substring(0, MAX_RESPONSE_LENGTH)}...`,
-    };
-    createParams.ai_provider_request_log.response_body = error;
-  }
+  truncateOversizedResponseBody(createParams.ai_provider_request_log);
 
   await broadcastLog(JSON.stringify(createParams));
 
@@ -619,6 +642,11 @@ export const logsMiddleware = (
     c.set('addLogsClient', addLogsClient);
     c.set('removeLogsClient', removeLogsClient);
 
+    // Read the caller's system prompt before the handler runs. The body that
+    // reaches the provider carries the pulled arm's prompt instead, and that is
+    // the one `ai_provider_request_log` records.
+    const originalSystemPrompt = extractSystemPrompt(c.get('sa_request_data'));
+
     const startTime = Date.now();
 
     await next();
@@ -733,11 +761,13 @@ export const logsMiddleware = (
         firstTokenTime: c.get('first_token_time'),
         aiProviderLog,
         embedding: c.get('embedding'),
+        originalSystemPrompt,
         hookLogs,
         logsStorageConnector: c.get('logs_storage_connector'),
         userDataStorageConnector: c.get('user_data_storage_connector'),
         evaluationConnectorsMap: c.get('evaluation_connectors_map'),
         pulledArm,
+        skillRouting: c.get('skill_routing'),
       };
 
       await processLogsAndOptimizeSkill(processLogsParams);

@@ -30,6 +30,8 @@ export enum SkillEventType {
   CLUSTERS_UPDATED = 'clusters_updated',
   /** Initial context generation after reaching 5 logs */
   CONTEXT_GENERATED = 'context_generated',
+  /** The gateway created the skill for a request that named only the agent. */
+  AUTO_CREATED = 'auto_created',
 }
 
 /**

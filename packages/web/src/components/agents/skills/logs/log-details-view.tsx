@@ -4,7 +4,9 @@ import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
+import { extractSystemPrompt } from '@shared/utils/system-prompt';
 import { CompletionViewer } from '@web/components/agents/skills/logs/components/completion-viewer';
+import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
 import { MessagesView } from '@web/components/agents/skills/logs/components/messages-view';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
@@ -23,6 +25,10 @@ import { useLogs } from '@web/providers/logs';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@web/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@web/providers/skills';
+import {
+  describeSkillRouting,
+  readSkillRouting,
+} from '@web/utils/skill-routing';
 import { format } from 'date-fns';
 import {
   AlertTriangle,
@@ -105,6 +111,12 @@ export function LogDetailsView(): ReactElement {
     return cluster?.name ?? null;
   }, [selectedLog?.cluster_id, clusters]);
 
+  // How the gateway picked the skill, when the caller named only the agent
+  const skillRouting = useMemo(() => {
+    const decision = readSkillRouting(selectedLog?.metadata);
+    return decision ? describeSkillRouting(decision) : null;
+  }, [selectedLog?.metadata]);
+
   // Extract temperature from request body
   const temperature = useMemo(() => {
     if (!selectedLog) return null;
@@ -141,6 +153,14 @@ export function LogDetailsView(): ReactElement {
     return null;
   }, [selectedLog]);
 
+  // The prompt the client sent. Only worth a panel of its own when it differs
+  // from what reached the provider; otherwise it is the system message below.
+  const originalSystemPrompt = useMemo(() => {
+    const original = selectedLog?.original_system_prompt;
+    if (!original || !saRequestData) return null;
+    return original === extractSystemPrompt(saRequestData) ? null : original;
+  }, [selectedLog?.original_system_prompt, saRequestData]);
+
   // Use the weighted average score from the database view (logs_with_eval_scores)
   // This ensures consistency with the list view and handles orphaned evaluation runs correctly
   const averageScore = useMemo(() => {
@@ -173,15 +193,23 @@ export function LogDetailsView(): ReactElement {
 
   useEffect(() => {
     if (selectedLog) {
-      const saRequestData = produceSuperAgentsRequestData(
-        selectedLog.ai_provider_request_log.method,
-        selectedLog.ai_provider_request_log.request_url,
-        {},
-        selectedLog.ai_provider_request_log.request_body,
-        selectedLog.ai_provider_request_log.response_body,
-      );
+      // A log recorded against a route or body shape this build no longer
+      // knows how to parse should cost us this one view, not the whole
+      // dashboard -- the error boundary above wraps every provider.
+      try {
+        const saRequestData = produceSuperAgentsRequestData(
+          selectedLog.ai_provider_request_log.method,
+          selectedLog.ai_provider_request_log.request_url,
+          {},
+          selectedLog.ai_provider_request_log.request_body,
+          selectedLog.ai_provider_request_log.response_body,
+        );
 
-      setSuperAgentsRequestData(saRequestData);
+        setSuperAgentsRequestData(saRequestData);
+      } catch (error) {
+        console.error('Failed to parse the log request data:', error);
+        setSuperAgentsRequestData(null);
+      }
     }
   }, [selectedLog]);
 
@@ -266,6 +294,27 @@ export function LogDetailsView(): ReactElement {
                     <Badge variant="outline" className="font-mono text-xs">
                       {clusterName}
                     </Badge>
+                  </div>
+                </>
+              )}
+              {skillRouting && (
+                <>
+                  <Separator orientation="vertical" />
+                  <div
+                    className="flex items-center gap-1"
+                    title={skillRouting.title}
+                  >
+                    <span className="text-xs font-light text-muted-foreground">
+                      Routed:
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {skillRouting.label}
+                    </Badge>
+                    {skillRouting.detail && (
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {skillRouting.detail}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -458,6 +507,32 @@ export function LogDetailsView(): ReactElement {
               <LogMap logs={[selectedLog]} />
             </div>*/}
             <div className="inset-0 flex flex-col flex-1 w-full p-4 gap-4 overflow-hidden overflow-y-auto">
+              {selectedLog && originalSystemPrompt && (
+                <GenericViewer
+                  path={`${selectedLog.id}-original-system-prompt`}
+                  language={'text'}
+                  defaultValue={originalSystemPrompt}
+                  readOnly={true}
+                  onSave={async (): Promise<void> => {
+                    //pass
+                  }}
+                  onSelect={(): void => {
+                    //pass
+                  }}
+                >
+                  <div className="flex flex-row items-center gap-2">
+                    <div className="text-sm font-normal">
+                      Original system prompt
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="text-xs text-muted-foreground"
+                    >
+                      as sent by the client
+                    </Badge>
+                  </div>
+                </GenericViewer>
+              )}
               {selectedLog && saRequestData && (
                 <MessagesView
                   logId={selectedLog.id}

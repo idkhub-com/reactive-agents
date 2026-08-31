@@ -103,17 +103,21 @@ export function produceSuperAgentsRequestData(
       requestBody = requestSchemaSafeParseResult.data as SuperAgentsRequestBody;
 
       let responseBody: SuperAgentsResponseBody | undefined;
+      let unvalidatedResponseBody: SuperAgentsResponseBody | undefined;
       if (rawResponseBody) {
         const responseSchemaSafeParseResult =
           config.responseSchema.safeParse(rawResponseBody);
         if (!responseSchemaSafeParseResult.success) {
           // For logs, the response may have been modified during accumulation
-          // Use the raw response without validation instead of throwing
+          // Use the raw response without validation instead of throwing.
+          // It is kept out of the parse below, which validates `responseBody`
+          // against the same schema and would reject the very bodies this
+          // branch exists to tolerate.
           console.warn(
             `Response body validation failed for ${functionName}, using raw response:`,
             responseSchemaSafeParseResult.error,
           );
-          responseBody = rawResponseBody as SuperAgentsResponseBody;
+          unvalidatedResponseBody = rawResponseBody as SuperAgentsResponseBody;
         } else {
           responseBody =
             responseSchemaSafeParseResult.data as SuperAgentsResponseBody;
@@ -136,6 +140,13 @@ export function produceSuperAgentsRequestData(
       const saRequestData = SuperAgentsRequestData.parse(
         rawSuperAgentsRequestData,
       );
+
+      if (unvalidatedResponseBody) {
+        return {
+          ...saRequestData,
+          responseBody: unvalidatedResponseBody,
+        } as SuperAgentsRequestData;
+      }
 
       return saRequestData;
     }

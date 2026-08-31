@@ -1,26 +1,28 @@
 import type { Agent } from '@shared/types/data';
-import { isAgentReady } from '@shared/utils/agent-validation';
+import { validateAgent } from '@shared/utils/agent-validation';
 import { useQuery } from '@tanstack/react-query';
+import { getAgentModels } from '@web/api/v1/super-agents/agents';
 import { getSkills } from '@web/api/v1/super-agents/skills';
 
 export interface UseAgentValidationResult {
   isReady: boolean;
   skillsCount: number;
+  defaultModelsCount: number;
   isLoading: boolean;
   missingRequirements: string[];
 }
 
 /**
- * Hook to check if an agent is ready (has at least one skill).
- * Fetches the skills count for the agent and returns validation status.
+ * Hook to check whether an agent can serve requests: it has a skill, or the
+ * gateway can create one for it (see `validateAgent`).
  *
  * @param agent - The agent to validate
- * @returns Validation result with readiness status, skills count, and loading state
+ * @returns Validation result with readiness status, counts, and loading state
  */
 export function useAgentValidation(
   agent: Agent | null | undefined,
 ): UseAgentValidationResult {
-  const { data: skills = [], isLoading } = useQuery({
+  const { data: skills = [], isLoading: isLoadingSkills } = useQuery({
     queryKey: ['agent-validation', agent?.id],
     queryFn: async () => {
       if (!agent) return [];
@@ -30,18 +32,28 @@ export function useAgentValidation(
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
 
-  const skillsCount = skills.length;
-  const ready = isAgentReady(skillsCount);
-  const missingRequirements: string[] = [];
+  // Only decisive for an agent without skills that creates them.
+  const { data: defaultModels = [], isLoading: isLoadingModels } = useQuery({
+    queryKey: ['models', 'agent', agent?.id],
+    queryFn: async () => {
+      if (!agent) return [];
+      return await getAgentModels(agent.id);
+    },
+    enabled: !!agent && agent.auto_create_skills,
+    staleTime: 30 * 1000,
+  });
 
-  if (!ready) {
-    missingRequirements.push('At least one skill must be configured');
-  }
+  const skillsCount = skills.length;
+  const defaultModelsCount = defaultModels.length;
+  const { isReady, missingRequirements } = agent
+    ? validateAgent(agent, skillsCount, defaultModelsCount)
+    : { isReady: false, missingRequirements: [] };
 
   return {
-    isReady: ready,
+    isReady,
     skillsCount,
-    isLoading,
+    defaultModelsCount,
+    isLoading: isLoadingSkills || isLoadingModels,
     missingRequirements,
   };
 }

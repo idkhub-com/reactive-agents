@@ -4,7 +4,9 @@
  * This is a translation of `supabase/migrations/`, not a replay of it. Those
  * four migrations describe how the Postgres schema arrived at its current
  * shape; a new backend only needs the shape itself, so this is one consolidated
- * migration. Future changes append a new entry rather than editing this one.
+ * migration. While the app has no deployments to migrate, schema changes are
+ * folded into the existing entries in place -- here and in
+ * `supabase/migrations/` alike -- rather than appended.
  *
  * Statements are listed individually rather than as one blob because the
  * migration runner submits them through `client.batch(..., 'write')`, which is
@@ -55,6 +57,9 @@ const initialSchema: LibsqlMigration = {
       name TEXT NOT NULL UNIQUE,
       description TEXT NOT NULL,
       metadata TEXT NOT NULL DEFAULT '{}',
+      auto_create_skills INTEGER NOT NULL DEFAULT 1 CHECK (auto_create_skills IN (0, 1)),
+      skill_match_threshold REAL NOT NULL DEFAULT 0.8,
+      max_auto_created_skills INTEGER NOT NULL DEFAULT 10,
       created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
       updated_at TEXT NOT NULL DEFAULT (${NOW_ISO})
     )`,
@@ -109,6 +114,8 @@ const initialSchema: LibsqlMigration = {
       exploration_temperature REAL NOT NULL DEFAULT 1.0,
       total_requests INTEGER NOT NULL DEFAULT 0,
       allowed_template_variables TEXT NOT NULL DEFAULT '[]',
+      auto_created INTEGER NOT NULL DEFAULT 0 CHECK (auto_created IN (0, 1)),
+      seed_system_prompt TEXT,
       last_clustering_at TEXT,
       last_clustering_log_start_time INTEGER,
       evaluations_regenerated_at TEXT,
@@ -149,7 +156,41 @@ const initialSchema: LibsqlMigration = {
     `CREATE INDEX IF NOT EXISTS idx_skill_optimization_clusters_embedding_model_id ON skill_optimization_clusters(embedding_model_id)`,
     `CREATE INDEX IF NOT EXISTS idx_clusters_reflection_lock ON skill_optimization_clusters(reflection_lock_acquired_at)
       WHERE reflection_lock_acquired_at IS NOT NULL`,
+
+    // ----------------------------------------------------------- skill_routing
+    // Where an agent's requests go when the caller names only the agent: one
+    // row per skill, a running mean of the intent embeddings it has served.
+    // The FK to models cascades because a centroid from one embedding model
+    // means nothing under another; the row is re-seeded on the next request.
+    `CREATE TABLE IF NOT EXISTS skill_routing (
+      skill_id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      centroid TEXT NOT NULL,
+      embedding_model_id TEXT NOT NULL,
+      sample_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
+      FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+      FOREIGN KEY (embedding_model_id) REFERENCES models(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_skill_routing_agent_id ON skill_routing(agent_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_skill_routing_embedding_model_id ON skill_routing(embedding_model_id)`,
+    updatedAtTrigger('skill_routing'),
     updatedAtTrigger('skill_optimization_clusters'),
+
+    // -------------------------------------------------- skill_creation_leases
+    // Serialises the skills the gateway creates for one agent: the request
+    // creating one holds the lease and looks at the skills again first, so
+    // concurrent first requests do not each create a skill. NULL while free;
+    // a lease past its time counts as free, in case its holder died. `holder`
+    // is a token the claimant coins, so it releases only its own lease.
+    `CREATE TABLE IF NOT EXISTS skill_creation_leases (
+      agent_id TEXT PRIMARY KEY,
+      holder TEXT,
+      lease_until TEXT,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+    )`,
 
     // ---------------------------------------------------------------- tools
     `CREATE TABLE IF NOT EXISTS tools (
@@ -191,6 +232,7 @@ const initialSchema: LibsqlMigration = {
       hook_logs TEXT NOT NULL,
       metadata TEXT NOT NULL,
       embedding TEXT DEFAULT NULL,
+      original_system_prompt TEXT,
       cache_status TEXT NOT NULL CHECK (
         cache_status IN ('HIT', 'SEMANTIC_HIT', 'MISS', 'SEMANTIC_MISS', 'REFRESH', 'DISABLED')
       ),
@@ -266,6 +308,19 @@ const initialSchema: LibsqlMigration = {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_skill_models_skill_id ON skill_models(skill_id)`,
     `CREATE INDEX IF NOT EXISTS idx_skill_models_model_id ON skill_models(model_id)`,
+
+    // --------------------------------------------------------- agent_models
+    // The models a skill the gateway creates for the agent starts with.
+    `CREATE TABLE IF NOT EXISTS agent_models (
+      agent_id TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
+      PRIMARY KEY (agent_id, model_id),
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+      FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_agent_models_agent_id ON agent_models(agent_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_agent_models_model_id ON agent_models(model_id)`,
 
     // ----------------------------------------------- skill_optimization_arms
     `CREATE TABLE IF NOT EXISTS skill_optimization_arms (
@@ -461,6 +516,8 @@ const initialSchema: LibsqlMigration = {
         SELECT 1 FROM skill_optimization_evaluations WHERE model_id = NEW.id
       ) OR EXISTS (
         SELECT 1 FROM skill_optimization_clusters WHERE embedding_model_id = NEW.id
+      ) OR EXISTS (
+        SELECT 1 FROM skill_routing WHERE embedding_model_id = NEW.id
       ) THEN RAISE(ABORT, 'cannot change model_type while the model is referenced') END;
     END`,
 

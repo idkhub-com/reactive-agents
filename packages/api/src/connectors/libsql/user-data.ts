@@ -43,6 +43,10 @@ import {
   SkillOptimizationEvaluation as SkillOptimizationEvaluationSchema,
   type SkillOptimizationEvaluationUpdateParams,
   type SkillQueryParams,
+  type SkillRouting,
+  type SkillRoutingQueryParams,
+  SkillRouting as SkillRoutingSchema,
+  type SkillRoutingUpsertParams,
   Skill as SkillSchema,
   type SkillUpdateParams,
   type SystemSettings,
@@ -216,14 +220,16 @@ export const libsqlUserDataStorageConnector: UserDataStorageConnector = {
     c: AppContext,
     agent: AgentCreateParams,
   ): Promise<Agent> => {
+    const { metadata, ...rest } = agent as AgentCreateParams &
+      Record<string, unknown>;
+
     const rows = await insertInto(
       getLibsqlClient(c),
       'agents',
       {
+        ...asColumns(rest),
         id: uuidv4(),
-        name: agent.name,
-        description: agent.description,
-        metadata: toJsonColumn(agent.metadata ?? {}),
+        metadata: toJsonColumn(metadata ?? {}),
       },
       z.array(AgentSchema),
     );
@@ -235,16 +241,18 @@ export const libsqlUserDataStorageConnector: UserDataStorageConnector = {
     id: string,
     update: AgentUpdateParams,
   ): Promise<Agent> => {
+    const { description, metadata, ...rest } = update as AgentUpdateParams &
+      Record<string, unknown>;
+
     const rows = await updateIn(
       getLibsqlClient(c),
       'agents',
       { id },
       {
-        description: update.description ?? undefined,
-        metadata:
-          update.metadata === undefined
-            ? undefined
-            : toJsonColumn(update.metadata),
+        ...asColumns(rest),
+        // Nullable in the params but NOT NULL in the table: null means "leave it".
+        description: description ?? undefined,
+        metadata: metadata === undefined ? undefined : toJsonColumn(metadata),
       },
       z.array(AgentSchema),
     );
@@ -630,6 +638,53 @@ export const libsqlUserDataStorageConnector: UserDataStorageConnector = {
     );
   },
 
+  // ---------------------------------------------------------- Agent models
+  getAgentModels: async (c: AppContext, agentId: string): Promise<Model[]> => {
+    const result = await getLibsqlClient(c).execute({
+      sql: `SELECT m.* FROM agent_models am
+            JOIN models m ON m.id = am.model_id
+            WHERE am.agent_id = ?`,
+      args: [agentId],
+    });
+    return parseRows('models', result.rows, z.array(ModelSchema));
+  },
+
+  addModelsToAgent: async (
+    c: AppContext,
+    agentId: string,
+    modelIds: string[],
+  ): Promise<void> => {
+    if (modelIds.length === 0) {
+      return;
+    }
+
+    await getLibsqlClient(c).batch(
+      modelIds.map((modelId) => ({
+        sql: 'INSERT OR IGNORE INTO agent_models (agent_id, model_id) VALUES (?, ?)',
+        args: [agentId, modelId],
+      })),
+      'write',
+    );
+  },
+
+  removeModelsFromAgent: async (
+    c: AppContext,
+    agentId: string,
+    modelIds: string[],
+  ): Promise<void> => {
+    if (modelIds.length === 0) {
+      return;
+    }
+
+    await getLibsqlClient(c).batch(
+      modelIds.map((modelId) => ({
+        sql: 'DELETE FROM agent_models WHERE agent_id = ? AND model_id = ?',
+        args: [agentId, modelId],
+      })),
+      'write',
+    );
+  },
+
   // ------------------------------------------ Skill Optimization Clusters
   getSkillOptimizationClusters: async (
     c: AppContext,
@@ -706,7 +761,91 @@ export const libsqlUserDataStorageConnector: UserDataStorageConnector = {
     await deleteFrom(getLibsqlClient(c), 'skill_optimization_clusters', { id });
   },
 
+  // -------------------------------------------------------- Skill routing
+  getSkillRoutings: async (
+    c: AppContext,
+    queryParams: SkillRoutingQueryParams,
+  ): Promise<SkillRouting[]> =>
+    selectFrom(
+      getLibsqlClient(c),
+      'skill_routing',
+      { agent_id: queryParams.agent_id, skill_id: queryParams.skill_id },
+      z.array(SkillRoutingSchema),
+    ),
+
+  upsertSkillRouting: async (
+    c: AppContext,
+    params: SkillRoutingUpsertParams,
+  ): Promise<SkillRouting> => {
+    const client = getLibsqlClient(c);
+    // ON CONFLICT rather than read-then-write: two requests can seed the same
+    // skill at once, and the later mean simply wins. `updated_at` is left to
+    // the trigger, which fires for the DO UPDATE branch as well.
+    await client.execute({
+      sql: `INSERT INTO skill_routing
+              (skill_id, agent_id, centroid, embedding_model_id, sample_count)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(skill_id) DO UPDATE SET
+              agent_id = excluded.agent_id,
+              centroid = excluded.centroid,
+              embedding_model_id = excluded.embedding_model_id,
+              sample_count = excluded.sample_count`,
+      args: [
+        params.skill_id,
+        params.agent_id,
+        toJsonColumn(params.centroid),
+        params.embedding_model_id,
+        params.sample_count,
+      ],
+    });
+    const rows = await selectFrom(
+      client,
+      'skill_routing',
+      { skill_id: params.skill_id },
+      z.array(SkillRoutingSchema),
+    );
+    return rows[0];
+  },
+
   /** Replaces the `increment_cluster_counters` RPC. */
+  claimSkillCreationLease: async (
+    c: AppContext,
+    agentId: string,
+    holder: string,
+    now: string,
+    until: string,
+  ): Promise<boolean> => {
+    const client = getLibsqlClient(c);
+    // Make sure the row exists, then take it only while nobody holds it. The
+    // conditional UPDATE is what makes this a lock: two claimants racing both
+    // issue it, SQLite serialises them, and only the one that still finds the
+    // lease free changes a row.
+    await client.execute({
+      sql: `INSERT OR IGNORE INTO skill_creation_leases (agent_id, holder, lease_until)
+            VALUES (?, NULL, NULL)`,
+      args: [agentId],
+    });
+    const result = await client.execute({
+      sql: `UPDATE skill_creation_leases SET holder = ?, lease_until = ?
+            WHERE agent_id = ?
+              AND (lease_until IS NULL OR lease_until < ?)`,
+      args: [holder, until, agentId, now],
+    });
+    return result.rowsAffected === 1;
+  },
+
+  releaseSkillCreationLease: async (
+    c: AppContext,
+    agentId: string,
+    holder: string,
+  ): Promise<void> => {
+    await getLibsqlClient(c).execute({
+      sql: `UPDATE skill_creation_leases SET holder = NULL, lease_until = NULL
+            WHERE agent_id = ? AND holder = ?`,
+      args: [agentId, holder],
+    });
+  },
+
   incrementClusterCounters: async (
     c: AppContext,
     clusterId: string,

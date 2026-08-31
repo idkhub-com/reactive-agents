@@ -187,26 +187,42 @@ export function extractOutputFromResponseBody(
 ): string {
   if ('choices' in responseBody) {
     if ('message' in responseBody.choices[0]) {
-      const content = responseBody.choices[0].message.content;
+      const message = responseBody.choices[0].message;
+      const content = message.content;
+      let contentString = '';
       if (Array.isArray(content)) {
-        let contentString = '';
         for (const chunk of content) {
           contentString += chunk.text;
         }
-        return contentString;
       } else if (typeof content === 'string') {
-        return content;
-      } else if (content === null) {
-        // Handle null content - fallback to text field if available
+        contentString = content;
+      } else if (content === null || content === undefined) {
+        // No content -- fall back to a text field if the shape carries one.
         if ('text' in responseBody.choices[0]) {
           const text = responseBody.choices[0].text;
-          return typeof text === 'string' ? text : '';
+          contentString = typeof text === 'string' ? text : '';
         }
-        // If no text field, return empty string
-        return '';
       } else {
         throw new Error('Unexpected content type');
       }
+
+      // A turn that calls tools carries its action there, often with no
+      // content at all. Dropping the calls starves whatever reads the
+      // output -- the evaluations most of all: the judge is told the agent
+      // produced nothing and scores the turn 0.
+      const toolCalls = message.tool_calls ?? [];
+      if (toolCalls.length > 0) {
+        const tools = toolCalls
+          .map(
+            (toolCall) =>
+              `Tool Call Name: ${toolCall.function?.name ?? 'unknown'}\nTool Call Arguments: ${toolCall.function?.arguments ?? ''}`,
+          )
+          .join('\n');
+        const calls = `Assistant Tool Calls:\n${tools}`;
+        return contentString.trim() ? `${contentString}\n\n${calls}` : calls;
+      }
+
+      return contentString;
     } else if ('text' in responseBody.choices[0]) {
       const text = responseBody.choices[0].text;
       return typeof text === 'string' ? text : '';

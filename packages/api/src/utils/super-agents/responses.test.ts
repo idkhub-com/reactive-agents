@@ -2,11 +2,15 @@ import { HttpError } from '@api/errors/http';
 import { responseHandler } from '@api/handlers/response-handler';
 import type { AppContext } from '@api/types/hono';
 import { HttpMethod } from '@api/types/http';
-import { createResponse } from '@api/utils/super-agents/responses';
+import {
+  createResponse,
+  extractOutputFromResponseBody,
+} from '@api/utils/super-agents/responses';
 import {
   type ChatCompletionRequestData,
   FunctionName,
 } from '@shared/types/api/request';
+import type { SuperAgentsResponseBody } from '@shared/types/api/response/body';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import type { AIProvider } from '@shared/types/constants';
 import { CacheMode, type CacheStatus } from '@shared/types/middleware/cache';
@@ -301,5 +305,67 @@ describe('createResponse', () => {
       // The cache key should be available in the options but not directly used in the log
       expect(mockOptions.cacheKey).toBe('test-cache-key');
     });
+  });
+});
+
+describe('extractOutputFromResponseBody', () => {
+  const chatBodyWith = (message: Record<string, unknown>) =>
+    ({
+      id: 'chatcmpl-1',
+      object: 'chat.completion',
+      created: 1,
+      model: 'test-model',
+      choices: [{ index: 0, finish_reason: 'stop', message }],
+    }) as unknown as SuperAgentsResponseBody;
+
+  it('returns plain content unchanged', () => {
+    const output = extractOutputFromResponseBody(
+      chatBodyWith({ role: 'assistant', content: 'All done.' }),
+    );
+
+    expect(output).toBe('All done.');
+  });
+
+  it('renders the tool calls of a turn with no content', () => {
+    // An agentic turn: the action is the tool call, `content` is null. The
+    // judge used to be told the agent produced nothing, and scored it 0.
+    const output = extractOutputFromResponseBody(
+      chatBodyWith({
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: { name: 'bash', arguments: '{"command":"git status"}' },
+          },
+        ],
+      }),
+    );
+
+    expect(output).toBe(
+      'Assistant Tool Calls:\n' +
+        'Tool Call Name: bash\n' +
+        'Tool Call Arguments: {"command":"git status"}',
+    );
+  });
+
+  it('keeps content and tool calls together when a turn has both', () => {
+    const output = extractOutputFromResponseBody(
+      chatBodyWith({
+        role: 'assistant',
+        content: 'Checking the working tree first.',
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: { name: 'bash', arguments: '{"command":"git diff"}' },
+          },
+        ],
+      }),
+    );
+
+    expect(output).toContain('Checking the working tree first.');
+    expect(output).toContain('Tool Call Name: bash');
   });
 });

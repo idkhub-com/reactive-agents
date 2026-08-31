@@ -122,6 +122,7 @@ describe('Task Completion - evaluateLog', () => {
       app_id: null,
       external_user_id: null,
       external_user_human_name: null,
+      original_system_prompt: null,
       user_metadata: null,
       metadata: {},
       ai_provider_request_log: {
@@ -255,6 +256,7 @@ describe('Task Completion - evaluateLog', () => {
       app_id: null,
       external_user_id: null,
       external_user_human_name: null,
+      original_system_prompt: null,
       user_metadata: null,
       metadata: {},
       ai_provider_request_log: {

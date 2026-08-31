@@ -160,6 +160,9 @@ const mockAgents: Agent[] = [
     metadata: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   },
   {
     id: '2',
@@ -168,6 +171,9 @@ const mockAgents: Agent[] = [
     metadata: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   },
 ];
 
@@ -191,6 +197,8 @@ const mockSkills: Skill[] = [
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   },
   {
     id: '2',
@@ -211,6 +219,8 @@ const mockSkills: Skill[] = [
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   },
 ];
 

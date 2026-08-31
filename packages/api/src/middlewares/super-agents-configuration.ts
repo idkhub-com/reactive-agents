@@ -273,6 +273,22 @@ async function validateTargetConfiguration(
         cluster_id: optimalCluster.id,
       });
 
+      // A skill without models has no arms; say so instead of crashing on
+      // the empty list below. The usual way here is a skill the gateway
+      // created for an agent that had no default models to give it.
+      if (arms.length === 0) {
+        const models = await userDataStorageConnector.getSkillModels(
+          c,
+          skill.id,
+        );
+        const agent = c.get('agent');
+        const error =
+          skill.auto_created && models.length === 0
+            ? `Skill ${skill.name} was created automatically, but agent ${agent?.name ?? skill.agent_id} had no default models to give it. Add default models to the agent -- its automatic skills take them -- or attach a model to the skill, and try again.`
+            : `Skill ${skill.name} has no configurations to serve an optimized request. Attach a model to the skill, or default models to its agent, and try again.`;
+        return c.json({ error }, 422);
+      }
+
       const optimalArm = await getOptimalArm(
         c,
         arms,
@@ -492,6 +508,9 @@ export const saConfigurationInjectorMiddleware = createMiddleware(
 
         const saConfig: SuperAgentsConfig = {
           ...saConfigPreProcessed,
+          // Filled in by `agentAndSkillMiddleware` when the caller named only
+          // the agent; the skill on the context is the one it resolved.
+          skill_name: saConfigPreProcessed.skill_name ?? c.get('skill').name,
           targets: saTargets,
         };
 

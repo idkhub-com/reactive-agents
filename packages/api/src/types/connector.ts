@@ -67,6 +67,11 @@ import type {
   SkillOptimizationEvaluationRunQueryParams,
 } from '@shared/types/data/skill-optimization-evaluation-run';
 import type {
+  SkillRouting,
+  SkillRoutingQueryParams,
+  SkillRoutingUpsertParams,
+} from '@shared/types/data/skill-routing';
+import type {
   SystemSettings,
   SystemSettingsUpdateParams,
 } from '@shared/types/data/system-settings';
@@ -204,6 +209,52 @@ export interface UserDataStorageConnector {
     c: AppContext,
     skillId: string,
     modelIds: string[],
+  ): Promise<void> | void;
+
+  // Agent-Model Relationships: the models a skill the gateway creates for the
+  // agent starts with.
+  getAgentModels(c: AppContext, agentId: string): Promise<Model[]> | Model[];
+  addModelsToAgent(
+    c: AppContext,
+    agentId: string,
+    modelIds: string[],
+  ): Promise<void> | void;
+  removeModelsFromAgent(
+    c: AppContext,
+    agentId: string,
+    modelIds: string[],
+  ): Promise<void> | void;
+
+  // Skill Routing: where an agent's requests go when the caller names only
+  // the agent. One row per skill, written by the router itself.
+  getSkillRoutings(
+    c: AppContext,
+    queryParams: SkillRoutingQueryParams,
+  ): Promise<SkillRouting[]> | SkillRouting[];
+  upsertSkillRouting(
+    c: AppContext,
+    params: SkillRoutingUpsertParams,
+  ): Promise<SkillRouting> | SkillRouting;
+
+  // Skill creation lease: held by the request creating a skill for the agent,
+  // so concurrent requests do not each create one.
+  /**
+   * Claims the agent's lease for `holder` -- a token the caller coins for this
+   * claim -- until `until`, if it is free or has expired at `now` (both ISO
+   * timestamps). Answers whether it was claimed.
+   */
+  claimSkillCreationLease(
+    c: AppContext,
+    agentId: string,
+    holder: string,
+    now: string,
+    until: string,
+  ): Promise<boolean> | boolean;
+  /** Releases the lease, if `holder` still holds it. */
+  releaseSkillCreationLease(
+    c: AppContext,
+    agentId: string,
+    holder: string,
   ): Promise<void> | void;
 
   // Skill Optimization Cluster

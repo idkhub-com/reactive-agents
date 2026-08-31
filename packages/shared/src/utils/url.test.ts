@@ -288,12 +288,29 @@ describe('URL Utilities', () => {
       ).toBe('%zz');
     });
 
+    it('should read only the agent name out of an agent-scoped path', () => {
+      expect(
+        parseAgentSkillPath('/v1/agents/my-agent/chat/completions'),
+      ).toEqual({
+        agent_name: 'my-agent',
+        skill_name: null,
+        pathname: '/v1/chat/completions',
+      });
+    });
+
+    it('should not mistake a bare skills segment for a skill', () => {
+      // No skill name after `skills`: the rest is an (unknown) endpoint.
+      expect(parseAgentSkillPath('/v1/agents/my-agent/skills')).toEqual({
+        agent_name: 'my-agent',
+        skill_name: null,
+        pathname: '/v1/skills',
+      });
+    });
+
     it('should return null for paths that are not scoped', () => {
       expect(parseAgentSkillPath('/v1/chat/completions')).toBeNull();
       expect(parseAgentSkillPath('/v1/super-agents/agents')).toBeNull();
-      expect(
-        parseAgentSkillPath('/v1/agents/my-agent/chat/completions'),
-      ).toBeNull();
+      expect(parseAgentSkillPath('/v1/agents')).toBeNull();
       expect(
         parseAgentSkillPath('/agents/my-agent/skills/my-skill'),
       ).toBeNull();

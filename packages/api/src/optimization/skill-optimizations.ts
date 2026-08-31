@@ -11,11 +11,28 @@ import type {
   UserDataStorageConnector,
 } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
+import type { Skill } from '@shared/types/data/skill';
 import type {
   SkillOptimizationArmCreateParams,
   SkillOptimizationArmParams,
 } from '@shared/types/data/skill-optimization-arm';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
+
+/**
+ * The prompt a skill's arms start from. A skill the gateway created for a
+ * request keeps that request's own system prompt, so it begins as a
+ * pass-through; any other skill has one written from its description.
+ */
+async function seedSystemPrompt(
+  c: AppContext,
+  skill: Skill,
+  connector: UserDataStorageConnector,
+): Promise<string> {
+  return (
+    skill.seed_system_prompt ??
+    (await generateSeedSystemPromptForSkill(c, skill, connector))
+  );
+}
 
 export async function handleGenerateArms(
   c: AppContext,
@@ -182,22 +199,15 @@ export async function handleGenerateArms(
         skill.description,
         examples,
         userStorageConnector,
+        undefined,
+        undefined,
+        skill.seed_system_prompt,
       );
     } else {
-      // Fallback to no-context generation
-      systemPrompt = await generateSeedSystemPromptForSkill(
-        c,
-        skill,
-        userStorageConnector,
-      );
+      systemPrompt = await seedSystemPrompt(c, skill, userStorageConnector);
     }
   } else {
-    // Use no-context generation for initial setup
-    systemPrompt = await generateSeedSystemPromptForSkill(
-      c,
-      skill,
-      userStorageConnector,
-    );
+    systemPrompt = await seedSystemPrompt(c, skill, userStorageConnector);
   }
 
   // Build a map of existing arms by cluster_id -> list of arms (not just IDs)

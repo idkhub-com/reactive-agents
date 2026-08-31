@@ -4,6 +4,7 @@ import {
   type AgentCreateParams,
   type AgentQueryParams,
   type AgentUpdateParams,
+  Model,
   SkillOptimizationEvaluationRun,
 } from '@shared/types/data';
 import { API_URL } from '@web/constants';
@@ -128,4 +129,51 @@ export async function getAgentEvaluationScoresByTimeBucket(
   return z.z
     .array(EvaluationScoresByTimeBucketResult)
     .parse(await response.json());
+}
+
+/** The agent's default models: what a skill the gateway creates for it starts with. */
+export async function getAgentModels(agentId: string): Promise<Model[]> {
+  const response = await client.v1['super-agents'].agents[
+    ':agentId'
+  ].models.$get({ param: { agentId } });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch models for agent');
+  }
+
+  return Model.array().parse(await response.json());
+}
+
+export async function addModelsToAgent(
+  agentId: string,
+  modelIds: string[],
+): Promise<void> {
+  const response = await client.v1['super-agents'].agents[
+    ':agentId'
+  ].models.$post({
+    param: { agentId },
+    json: { modelIds },
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to add models to agent');
+  }
+}
+
+export async function removeModelsFromAgent(
+  agentId: string,
+  modelIds: string[],
+): Promise<void> {
+  const response = await client.v1['super-agents'].agents[
+    ':agentId'
+  ].models.$delete({
+    param: { agentId },
+    query: { ids: modelIds.join(',') },
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { error?: string };
+    throw new Error(data.error || 'Failed to remove models from agent');
+  }
 }

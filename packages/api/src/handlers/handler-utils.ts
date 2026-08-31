@@ -277,9 +277,12 @@ export async function tryPost(
       switch (saRequestData.functionName) {
         case FunctionName.CHAT_COMPLETE:
         case FunctionName.STREAM_CHAT_COMPLETE: {
-          const messages = (
-            overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
-          ).messages;
+          // Copied: the body is a shallow spread of the caller's request, and
+          // the caller's messages are still read after the handler returns.
+          const messages = [
+            ...(overriddenSuperAgentsRequestBody as ChatCompletionRequestBody)
+              .messages,
+          ];
 
           // Find existing system message or add new one at the beginning
           const systemMessageIndex = messages.findIndex(
@@ -318,7 +321,7 @@ export async function tryPost(
               },
             ];
           } else {
-            input = inputPreview;
+            input = [...inputPreview];
           }
 
           // Find existing system message or add new one at the beginning
@@ -356,9 +359,11 @@ export async function tryPost(
       const jsonInstructions = getJsonSchemaInstructions(responseFormat);
 
       if (jsonInstructions) {
-        const messages = (
-          overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
-        ).messages;
+        // Copied for the same reason as above.
+        const messages = [
+          ...(overriddenSuperAgentsRequestBody as ChatCompletionRequestBody)
+            .messages,
+        ];
 
         // Find existing system message
         const systemMessageIndex = messages.findIndex(
@@ -368,8 +373,10 @@ export async function tryPost(
         if (systemMessageIndex >= 0) {
           // Augment existing system message
           const existingContent = messages[systemMessageIndex].content || '';
-          messages[systemMessageIndex].content =
-            existingContent + jsonInstructions;
+          messages[systemMessageIndex] = {
+            ...messages[systemMessageIndex],
+            content: existingContent + jsonInstructions,
+          };
         } else {
           // Create new system message with just the JSON instructions
           messages.unshift({

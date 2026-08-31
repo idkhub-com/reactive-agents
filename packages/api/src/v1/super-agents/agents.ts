@@ -1,6 +1,7 @@
 import type { AppEnv } from '@api/types/hono';
 import { parseDatabaseError } from '@api/utils/database-error';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
+import { adoptDefaultModels } from '@api/utils/super-agents/skill-creation';
 import { zValidator } from '@hono/zod-validator';
 import {
   AgentCreateParams,
@@ -100,6 +101,108 @@ export const agentsRouter = new Hono<AppEnv>()
         return c.json(skills, 200);
       } catch (error) {
         console.error('Error fetching skills:', error);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
+      }
+    },
+  )
+  // The agent's default models: what a skill the gateway creates for it
+  // starts with. Same shape as the skill's own model routes.
+  .get(
+    '/:agentId/models',
+    zValidator('param', z.object({ agentId: z.uuid() })),
+    async (c) => {
+      try {
+        const { agentId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const models = await connector.getAgentModels(c, agentId);
+
+        return c.json(models, 200);
+      } catch (error) {
+        console.error('Error fetching agent models:', error);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
+      }
+    },
+  )
+  .post(
+    '/:agentId/models',
+    zValidator('param', z.object({ agentId: z.uuid() })),
+    zValidator('json', z.object({ modelIds: z.array(z.uuid()) })),
+    async (c) => {
+      try {
+        const { agentId } = c.req.valid('param');
+        const { modelIds } = c.req.valid('json');
+        const connector = c.get('user_data_storage_connector');
+
+        const agents = await connector.getAgents(c, { id: agentId });
+        if (agents.length === 0) {
+          return c.json({ error: 'Agent not found' }, 404);
+        }
+
+        await connector.addModelsToAgent(c, agentId, modelIds);
+        // The skills the gateway created while the agent had no defaults
+        // have been waiting for exactly these.
+        await adoptDefaultModels(c, connector, agents[0], modelIds);
+
+        return c.json({ success: true }, 201);
+      } catch (error) {
+        console.error('Error adding models to agent:', error);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
+      }
+    },
+  )
+  .delete(
+    '/:agentId/models',
+    zValidator('param', z.object({ agentId: z.uuid() })),
+    zValidator(
+      'query',
+      z.object({
+        ids: z
+          .string()
+          .or(z.array(z.string()))
+          .transform((val) =>
+            typeof val === 'string'
+              ? val.split(',').map((id) => id.trim())
+              : val,
+          ),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { agentId } = c.req.valid('param');
+        const { ids } = c.req.valid('query');
+        const connector = c.get('user_data_storage_connector');
+
+        await connector.removeModelsFromAgent(c, agentId, ids);
+
+        return c.json({ success: true }, 200);
+      } catch (error) {
+        console.error('Error removing models from agent:', error);
+        const errorInfo = parseDatabaseError(error);
+        return c.json({ error: errorInfo.message }, errorInfo.statusCode);
+      }
+    },
+  )
+  // Where the agent's requests go when the caller names only the agent: one
+  // row per skill the router has met. Read-only; the router writes them.
+  .get(
+    '/:agentId/skill-routings',
+    zValidator('param', z.object({ agentId: z.uuid() })),
+    async (c) => {
+      try {
+        const { agentId } = c.req.valid('param');
+        const connector = c.get('user_data_storage_connector');
+
+        const routings = await connector.getSkillRoutings(c, {
+          agent_id: agentId,
+        });
+
+        return c.json(routings, 200);
+      } catch (error) {
+        console.error('Error fetching agent skill routings:', error);
         const errorInfo = parseDatabaseError(error);
         return c.json({ error: errorInfo.message }, errorInfo.statusCode);
       }

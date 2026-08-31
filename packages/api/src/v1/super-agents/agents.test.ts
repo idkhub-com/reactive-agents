@@ -1,8 +1,13 @@
 import type { AppEnv } from '@api/types/hono';
+import { adoptDefaultModels } from '@api/utils/super-agents/skill-creation';
 import { agentsRouter } from '@api/v1/super-agents/agents';
 import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@api/utils/super-agents/skill-creation', () => ({
+  adoptDefaultModels: vi.fn().mockResolvedValue([]),
+}));
 
 // Create a mock UserDataStorageConnector with all required methods
 const mockUserDataStorageConnector = {
@@ -37,6 +42,13 @@ const mockUserDataStorageConnector = {
   createSkillOptimizationClusters: vi.fn(),
   updateSkillOptimizationCluster: vi.fn(),
   deleteSkillOptimizationCluster: vi.fn(),
+  getSkillRoutings: vi.fn(),
+  getAgentModels: vi.fn(),
+  addModelsToAgent: vi.fn(),
+  removeModelsFromAgent: vi.fn(),
+  upsertSkillRouting: vi.fn(),
+  claimSkillCreationLease: vi.fn(),
+  releaseSkillCreationLease: vi.fn(),
   incrementClusterCounters: vi.fn(),
   // Skill Optimization Arm methods
   getSkillOptimizationArms: vi.fn(),
@@ -238,6 +250,139 @@ describe('Agents API Status Codes', () => {
 
       expect(res.status).toBe(400);
       expect(mockUserDataStorageConnector.deleteAgent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('/:agentId/skill-routings', () => {
+    const agentId = '123e4567-e89b-12d3-a456-426614174000';
+
+    it('should list the routing rows of the agent skills', async () => {
+      const row = { skill_id: 'skill-1', agent_id: agentId, sample_count: 3 };
+      mockUserDataStorageConnector.getSkillRoutings.mockResolvedValue([row]);
+
+      const res = await app.request(`/${agentId}/skill-routings`);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([row]);
+      expect(
+        mockUserDataStorageConnector.getSkillRoutings,
+      ).toHaveBeenCalledWith(expect.anything(), { agent_id: agentId });
+    });
+
+    it('should reject an invalid agent id', async () => {
+      const res = await app.request('/not-a-uuid/skill-routings');
+
+      expect(res.status).toBe(400);
+      expect(
+        mockUserDataStorageConnector.getSkillRoutings,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 when listing fails', async () => {
+      mockUserDataStorageConnector.getSkillRoutings.mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      const res = await app.request(`/${agentId}/skill-routings`);
+
+      expect(res.status).toBe(500);
+    });
+  });
+
+  describe('/:agentId/models', () => {
+    const agentId = '123e4567-e89b-12d3-a456-426614174000';
+    const modelId = '123e4567-e89b-12d3-a456-426614174001';
+
+    it('should list the agent default models', async () => {
+      const model = { id: modelId, model_name: 'gpt-5' };
+      mockUserDataStorageConnector.getAgentModels.mockResolvedValue([model]);
+
+      const res = await app.request(`/${agentId}/models`);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([model]);
+      expect(mockUserDataStorageConnector.getAgentModels).toHaveBeenCalledWith(
+        expect.anything(),
+        agentId,
+      );
+    });
+
+    it('should return 500 when listing fails', async () => {
+      mockUserDataStorageConnector.getAgentModels.mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      const res = await app.request(`/${agentId}/models`);
+
+      expect(res.status).toBe(500);
+    });
+
+    it('should add models to an existing agent', async () => {
+      mockUserDataStorageConnector.getAgents.mockResolvedValue([
+        { id: agentId },
+      ]);
+      mockUserDataStorageConnector.addModelsToAgent.mockResolvedValue(
+        undefined,
+      );
+
+      const res = await app.request(`/${agentId}/models`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ modelIds: [modelId] }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(
+        mockUserDataStorageConnector.addModelsToAgent,
+      ).toHaveBeenCalledWith(expect.anything(), agentId, [modelId]);
+      // The automatic skills created while the agent had no defaults get them.
+      expect(adoptDefaultModels).toHaveBeenCalledWith(
+        expect.anything(),
+        mockUserDataStorageConnector,
+        { id: agentId },
+        [modelId],
+      );
+    });
+
+    it('should return 404 when adding models to an unknown agent', async () => {
+      mockUserDataStorageConnector.getAgents.mockResolvedValue([]);
+
+      const res = await app.request(`/${agentId}/models`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ modelIds: [modelId] }),
+      });
+
+      expect(res.status).toBe(404);
+      expect(
+        mockUserDataStorageConnector.addModelsToAgent,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 for a malformed model list', async () => {
+      const res = await app.request(`/${agentId}/models`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ modelIds: ['not-a-uuid'] }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should remove the models named in the query', async () => {
+      mockUserDataStorageConnector.removeModelsFromAgent.mockResolvedValue(
+        undefined,
+      );
+
+      const res = await app.request(
+        `/${agentId}/models?ids=${modelId},${agentId}`,
+        { method: 'DELETE' },
+      );
+
+      expect(res.status).toBe(200);
+      expect(
+        mockUserDataStorageConnector.removeModelsFromAgent,
+      ).toHaveBeenCalledWith(expect.anything(), agentId, [modelId, agentId]);
     });
   });
 

@@ -1,4 +1,5 @@
 import { BaseArmsParams } from '@api/optimization/base-arms';
+import { generateSeedSystemPromptForSkill } from '@api/optimization/utils/system-prompt';
 import type { AppEnv } from '@api/types/hono';
 import { skillsRouter } from '@api/v1/super-agents/skills';
 import { Hono } from 'hono';
@@ -51,6 +52,13 @@ const mockUserDataStorageConnector = {
   createSkillOptimizationClusters: vi.fn(),
   updateSkillOptimizationCluster: vi.fn(),
   deleteSkillOptimizationCluster: vi.fn(),
+  getSkillRoutings: vi.fn(),
+  getAgentModels: vi.fn(),
+  addModelsToAgent: vi.fn(),
+  removeModelsFromAgent: vi.fn(),
+  upsertSkillRouting: vi.fn(),
+  claimSkillCreationLease: vi.fn(),
+  releaseSkillCreationLease: vi.fn(),
   incrementClusterCounters: vi.fn(),
   // Skill Optimization Arm methods
   getSkillOptimizationArms: vi.fn(),
@@ -493,6 +501,43 @@ describe('Skills API Status Codes', () => {
       mockUserDataStorageConnector.getSkillOptimizationEvaluations.mockResolvedValue(
         [],
       );
+    });
+
+    it('should seed every arm with the skill seed prompt instead of asking a model', async () => {
+      // A skill the gateway created keeps its caller's prompt; on day one the
+      // arms are that prompt verbatim, with no model call to write one.
+      mockUserDataStorageConnector.getSkills.mockResolvedValue([
+        { ...mockSkill, seed_system_prompt: 'You are the caller.' },
+      ]);
+      mockUserDataStorageConnector.getSkillOptimizationArms.mockResolvedValue(
+        [],
+      );
+      mockUserDataStorageConnector.getSkillModels.mockResolvedValue([
+        mockModel1,
+      ]);
+      const created: Array<{ params: { system_prompt: string } }> = [];
+      mockUserDataStorageConnector.createSkillOptimizationArms.mockImplementation(
+        (_c: unknown, params: Array<{ params: { system_prompt: string } }>) => {
+          created.push(...params);
+          return Promise.resolve(
+            params.map((p, i) => ({ ...p, id: `arm-${i}` })),
+          );
+        },
+      );
+      vi.mocked(generateSeedSystemPromptForSkill).mockClear();
+
+      const res = await app.request(`/${skillId}/models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelIds: [model1Id] }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(created.length).toBeGreaterThan(0);
+      for (const arm of created) {
+        expect(arm.params.system_prompt).toBe('You are the caller.');
+      }
+      expect(generateSeedSystemPromptForSkill).not.toHaveBeenCalled();
     });
 
     it('should create equal number of arms per cluster when adding a model', async () => {

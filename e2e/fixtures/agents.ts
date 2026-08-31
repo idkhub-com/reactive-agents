@@ -22,6 +22,9 @@ export interface Agent {
   name: string;
   description: string;
   metadata: Record<string, unknown>;
+  auto_create_skills: boolean;
+  skill_match_threshold: number;
+  max_auto_created_skills: number;
   created_at: string;
   updated_at: string;
 }
@@ -30,9 +33,10 @@ export const createAgent = async (
   request: APIRequestContext,
   name: string,
   description: string = SAMPLE_DESCRIPTION,
+  overrides: Record<string, unknown> = {},
 ): Promise<Agent> => {
   const response = await request.post(AGENTS_PATH, {
-    data: { name, description },
+    data: { name, description, ...overrides },
   });
 
   if (response.status() !== 201) {
@@ -57,4 +61,47 @@ export const deleteAgent = async (
   } catch {
     // Ignored: the test's own result is what matters.
   }
+};
+
+/** The agent's default models: what a skill the gateway creates for it starts with. */
+export const addModelsToAgent = async (
+  request: APIRequestContext,
+  agentId: string,
+  modelIds: string[],
+): Promise<void> => {
+  const response = await request.post(`${AGENTS_PATH}/${agentId}/models`, {
+    data: { modelIds },
+  });
+  if (response.status() !== 201) {
+    throw new Error(
+      `POST ${AGENTS_PATH}/${agentId}/models -> ${response.status()} ${await response.text()}`,
+    );
+  }
+};
+
+/** A skill's routing row: how the router sees the skill. */
+export interface SkillRouting {
+  skill_id: string;
+  agent_id: string;
+  centroid: number[];
+  embedding_model_id: string;
+  sample_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** The routing rows of the agent's skills, one per skill the router has met. */
+export const getSkillRoutings = async (
+  request: APIRequestContext,
+  agentId: string,
+): Promise<SkillRouting[]> => {
+  const response = await request.get(
+    `${AGENTS_PATH}/${agentId}/skill-routings`,
+  );
+  if (response.status() !== 200) {
+    throw new Error(
+      `GET ${AGENTS_PATH}/${agentId}/skill-routings -> ${response.status()} ${await response.text()}`,
+    );
+  }
+  return response.json() as Promise<SkillRouting[]>;
 };

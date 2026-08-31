@@ -20,6 +20,8 @@ export * from './skill-optimization-cluster';
 export * from './skill-optimization-evaluation';
 // Skill Optimization Evaluation Run types
 export * from './skill-optimization-evaluation-run';
+// Skill Routing types
+export * from './skill-routing';
 // System Settings types
 export * from './system-settings';
 // Tool types

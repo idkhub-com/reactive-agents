@@ -47,10 +47,26 @@ const post = async <T>(
  * `scope` separates one caller's stub traffic from another's: the model name is
  * how the stub buckets requests, and one stub process serves every project.
  */
-export const setUpOptimizedSkill = async (
+export interface StubModels {
+  providerId: string;
+  textId: string;
+  embeddingId: string;
+  textModel: string;
+  embeddingModel: string;
+}
+
+/**
+ * A provider pointed at the stub, a text and an embedding model on it, and the
+ * four system-settings slots the internal skills resolve through.
+ *
+ * `scope` separates one caller's stub traffic from another's: the model name is
+ * how the stub buckets requests, and one stub process serves every project.
+ * System settings are a single global row, so callers run serially.
+ */
+export const setUpStubModels = async (
   request: APIRequestContext,
   scope: string,
-): Promise<OptimizedSkill> => {
+): Promise<StubModels> => {
   const textModel = uniqueModelName(`${scope}-text`);
   const embeddingModel = uniqueModelName(`${scope}-embed`);
 
@@ -76,7 +92,6 @@ export const setUpOptimizedSkill = async (
     embedding_dimensions: 8,
   });
 
-  // System settings are a single global row, so these tests run serially.
   const settings = await request.patch(SETTINGS_PATH, {
     data: {
       judge_model_id: text.id,
@@ -89,6 +104,24 @@ export const setUpOptimizedSkill = async (
     throw new Error(`PATCH ${SETTINGS_PATH} -> ${settings.status()}`);
   }
 
+  return {
+    providerId: provider.id,
+    textId: text.id,
+    embeddingId: embedding.id,
+    textModel,
+    embeddingModel,
+  };
+};
+
+export const setUpOptimizedSkill = async (
+  request: APIRequestContext,
+  scope: string,
+): Promise<OptimizedSkill> => {
+  const { textId, textModel, embeddingModel } = await setUpStubModels(
+    request,
+    scope,
+  );
+
   const agent = await createAgent(request, uniqueAgentName(scope));
   const skill = await createSkill(request, agent.id, 'optimized_skill', {
     optimize: true,
@@ -99,7 +132,7 @@ export const setUpOptimizedSkill = async (
   await post(
     request,
     `${SKILLS_PATH}/${skill.id}/models`,
-    { modelIds: [text.id] },
+    { modelIds: [textId] },
     201,
   );
 

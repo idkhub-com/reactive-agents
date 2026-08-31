@@ -8,7 +8,7 @@ import {
   ensureForeignKeys,
   resetLibsqlClients,
 } from './client';
-import { migrateLibsql } from './migrate';
+import { fingerprintOf, migrateLibsql, StaleMigrationError } from './migrate';
 import {
   buildInsert,
   buildUpdate,
@@ -18,6 +18,7 @@ import {
   toBoolColumn,
   toJsonColumn,
 } from './rows';
+import { libsqlMigrations } from './schema';
 
 /**
  * Each case gets its own in-memory database. `createClient` returns a fresh one
@@ -89,6 +90,8 @@ describe('libsql migrations', () => {
       'agents',
       'skills',
       'skill_optimization_clusters',
+      'skill_routing',
+      'skill_creation_leases',
       'tools',
       'logs',
       'feedbacks',
@@ -97,6 +100,7 @@ describe('libsql migrations', () => {
       'ai_providers',
       'models',
       'skill_models',
+      'agent_models',
       'skill_optimization_arms',
       'skill_optimization_evaluations',
       'skill_optimization_arm_stats',
@@ -120,6 +124,82 @@ describe('libsql migrations', () => {
       'SELECT COUNT(*) AS n FROM schema_migrations',
     );
     expect(Number(applied.rows[0].n)).toBe(3);
+  });
+
+  describe('fingerprints', () => {
+    const migration = {
+      version: '0001_things',
+      statements: ['CREATE TABLE IF NOT EXISTS things (id TEXT PRIMARY KEY)'],
+    };
+    const changed = {
+      version: '0001_things',
+      statements: [
+        'CREATE TABLE IF NOT EXISTS things (id TEXT PRIMARY KEY, name TEXT)',
+      ],
+    };
+
+    it('records a fingerprint of each migration it applies', async () => {
+      const { client } = await freshDatabase();
+
+      const rows = await client.execute(
+        'SELECT version, fingerprint FROM schema_migrations ORDER BY version',
+      );
+      expect(rows.rows).toHaveLength(3);
+      for (const row of rows.rows) {
+        expect(String(row.fingerprint)).toMatch(/^[0-9a-f]{64}$/);
+      }
+      expect(rows.rows[0].fingerprint).toBe(
+        await fingerprintOf(libsqlMigrations[0]),
+      );
+    });
+
+    it('refuses a database whose applied migration has since changed', async () => {
+      resetLibsqlClients();
+      const client = createLibsqlClient(':memory:');
+      await migrateLibsql(client, [migration]);
+
+      const error = await migrateLibsql(client, [changed]).catch((e) => e);
+
+      expect(error).toBeInstanceOf(StaleMigrationError);
+      expect(error.version).toBe('0001_things');
+      expect(error.message).toContain('has changed since');
+      expect(error.message).toContain('.local-data/dev.db');
+      // The unchanged migration is still fine.
+      await expect(migrateLibsql(client, [migration])).resolves.toEqual([]);
+    });
+
+    it('refuses a database migrated before fingerprints were recorded', async () => {
+      resetLibsqlClients();
+      const client = createLibsqlClient(':memory:');
+      // The tracking table as it was, with a migration applied under it.
+      await client.execute(`CREATE TABLE schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      )`);
+      await client.execute(migration.statements[0]);
+      await client.execute(
+        "INSERT INTO schema_migrations (version) VALUES ('0001_things')",
+      );
+
+      const error = await migrateLibsql(client, [migration]).catch((e) => e);
+
+      expect(error).toBeInstanceOf(StaleMigrationError);
+      expect(error.message).toContain('before migrations were fingerprinted');
+      // The column is there now, so a fresh migration on it is recorded.
+      await client.execute('DELETE FROM schema_migrations');
+      await expect(migrateLibsql(client, [migration])).resolves.toEqual([
+        '0001_things',
+      ]);
+    });
+
+    it('ignores formatting-free changes: the fingerprint is of the statements', async () => {
+      expect(await fingerprintOf(migration)).toBe(
+        await fingerprintOf({ ...migration, version: 'renamed' }),
+      );
+      expect(await fingerprintOf(migration)).not.toBe(
+        await fingerprintOf(changed),
+      );
+    });
   });
 });
 

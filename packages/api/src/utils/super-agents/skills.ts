@@ -31,6 +31,8 @@ export async function getSkill(
           reflection_min_requests_per_arm: 0,
           exploration_temperature: 1.0,
           allowed_template_variables: [],
+          auto_created: false,
+          seed_system_prompt: null,
         });
         return newSkill;
       } catch (_error) {

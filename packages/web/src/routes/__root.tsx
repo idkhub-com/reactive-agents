@@ -4,7 +4,10 @@ import {
   Outlet,
   redirect,
 } from '@tanstack/react-router';
-import { getAuthStatus } from '@web/api/v1/super-agents/auth';
+import {
+  getAuthStatus,
+  ServerUnavailableError,
+} from '@web/api/v1/super-agents/auth';
 import { Suspense } from 'react';
 
 async function checkAuth({
@@ -28,14 +31,32 @@ async function checkAuth({
     }
   } catch (e) {
     if (isRedirect(e)) throw e;
+    // The server said why it cannot serve; the error view shows that.
+    if (e instanceof ServerUnavailableError) throw e;
     // Network error — default to login for security
     throw redirect({ to: '/login' });
   }
 }
 
+function UnavailableComponent({ error }: { error: Error }) {
+  return (
+    <main className="flex h-screen items-center justify-center p-8">
+      <div className="max-w-2xl space-y-3">
+        <h1 className="text-xl font-semibold">
+          {error instanceof ServerUnavailableError
+            ? 'The server is not ready to serve the dashboard'
+            : 'Something went wrong'}
+        </h1>
+        <p className="text-muted-foreground">{error.message}</p>
+      </div>
+    </main>
+  );
+}
+
 export const Route = createRootRoute({
   beforeLoad: checkAuth,
   component: RootComponent,
+  errorComponent: UnavailableComponent,
 });
 
 function RootComponent() {

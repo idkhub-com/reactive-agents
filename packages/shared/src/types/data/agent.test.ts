@@ -509,6 +509,9 @@ describe('Agent Data Transforms and Validation', () => {
         metadata: { model: 'gpt-4' },
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       const result = Agent.parse(validAgent);
@@ -521,6 +524,9 @@ describe('Agent Data Transforms and Validation', () => {
         name: 'test-agent',
         description: 'A test agent with sufficient description length',
         metadata: {},
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
         created_at: '2023-01-01T00:00:00.000+00:00',
         updated_at: '2023-01-02T12:30:45.123-05:00',
       };
@@ -573,6 +579,9 @@ describe('Agent Data Transforms and Validation', () => {
         name: '',
         description: '',
         metadata: {},
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -599,6 +608,9 @@ describe('Agent Data Transforms and Validation', () => {
         name: 'test-agent',
         description: 'A test agent with sufficient description length',
         metadata: complexMetadata,
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -606,5 +618,55 @@ describe('Agent Data Transforms and Validation', () => {
       const result = Agent.parse(validAgent);
       expect(result.metadata).toEqual(complexMetadata);
     });
+  });
+});
+
+describe('automatic skill settings', () => {
+  const minimal = { name: 'helper', description: 'x'.repeat(30) };
+
+  it('default to creating skills, a 0.8 threshold and a cap of 10', () => {
+    expect(AgentCreateParams.parse(minimal)).toMatchObject({
+      auto_create_skills: true,
+      skill_match_threshold: 0.8,
+      max_auto_created_skills: 10,
+    });
+  });
+
+  it('keep the threshold between 0 and 1 and the cap a whole, non-negative number', () => {
+    expect(() =>
+      AgentCreateParams.parse({ ...minimal, skill_match_threshold: 1.5 }),
+    ).toThrow();
+    expect(() =>
+      AgentCreateParams.parse({ ...minimal, max_auto_created_skills: -1 }),
+    ).toThrow();
+    expect(() =>
+      AgentCreateParams.parse({ ...minimal, max_auto_created_skills: 2.5 }),
+    ).toThrow();
+    expect(
+      AgentCreateParams.parse({ ...minimal, skill_match_threshold: 0 })
+        .skill_match_threshold,
+    ).toBe(0);
+  });
+
+  it('can be updated on their own', () => {
+    expect(AgentUpdateParams.parse({ auto_create_skills: false })).toEqual({
+      auto_create_skills: false,
+    });
+    expect(AgentUpdateParams.parse({ max_auto_created_skills: 0 })).toEqual({
+      max_auto_created_skills: 0,
+    });
+  });
+
+  it('are required on a stored agent', () => {
+    expect(() =>
+      Agent.parse({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'helper',
+        description: 'x'.repeat(30),
+        metadata: {},
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      }),
+    ).toThrow();
   });
 });

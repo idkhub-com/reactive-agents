@@ -75,6 +75,9 @@ const mockAgents: Agent[] = [
     metadata: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   },
   {
     id: '2',
@@ -83,6 +86,9 @@ const mockAgents: Agent[] = [
     metadata: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   },
 ];
 
@@ -149,6 +155,9 @@ function TestComponent(): React.ReactElement {
               name: 'New Agent',
               description: 'New Description',
               metadata: {},
+              auto_create_skills: true,
+              skill_match_threshold: 0.8,
+              max_auto_created_skills: 10,
             });
           } catch (error) {
             console.error('Create failed:', error);
@@ -231,6 +240,9 @@ describe('AgentsProvider', () => {
       metadata: {},
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      auto_create_skills: true,
+      skill_match_threshold: 0.8,
+      max_auto_created_skills: 10,
     });
     vi.mocked(getAgents).mockResolvedValue(mockAgents);
     vi.mocked(updateAgent).mockResolvedValue({
@@ -289,11 +301,13 @@ describe('AgentsProvider', () => {
     });
 
     await waitFor(() => {
-      expect(createAgent).toHaveBeenCalledWith({
-        name: 'New Agent',
-        description: 'New Description',
-        metadata: {},
-      });
+      expect(createAgent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'New Agent',
+          description: 'New Description',
+          metadata: {},
+        }),
+      );
     });
   });
 

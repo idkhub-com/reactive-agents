@@ -182,6 +182,8 @@ export function CreateSkillView(): React.ReactElement {
         reflection_min_requests_per_arm: data.reflection_min_requests_per_arm,
         exploration_temperature: data.exploration_temperature,
         allowed_template_variables: data.allowed_template_variables,
+        auto_created: false,
+        seed_system_prompt: null,
       };
 
       const newSkill = await createSkill(skillParams);

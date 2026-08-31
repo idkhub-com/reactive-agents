@@ -53,6 +53,7 @@ export const SideBarData: SideBarDataSchema = {
 };
 
 export const eventColors: Record<SkillEventType, string> = {
+  [SkillEventType.AUTO_CREATED]: 'rgba(168, 85, 247, 0.6)', // purple
   [SkillEventType.MODEL_ADDED]: 'rgba(34, 197, 94, 0.6)', // green
   [SkillEventType.MODEL_REMOVED]: 'rgba(239, 68, 68, 0.6)', // red
   [SkillEventType.EVALUATION_ADDED]: 'rgba(34, 197, 94, 0.6)', // green
@@ -69,6 +70,7 @@ export const eventColors: Record<SkillEventType, string> = {
 };
 
 export const eventLabels: Record<SkillEventType, string> = {
+  [SkillEventType.AUTO_CREATED]: 'Skill Created',
   [SkillEventType.MODEL_ADDED]: 'Model Added',
   [SkillEventType.MODEL_REMOVED]: 'Model Removed',
   [SkillEventType.EVALUATION_ADDED]: 'Eval Added',

@@ -41,6 +41,13 @@ import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
 const EVENT_TYPE_CONFIG = {
+  [SkillEventType.AUTO_CREATED]: {
+    label: 'Skill Created',
+    icon: PlusIcon,
+    color:
+      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+  },
   [SkillEventType.MODEL_ADDED]: {
     label: 'Model Added',
     icon: PlusIcon,

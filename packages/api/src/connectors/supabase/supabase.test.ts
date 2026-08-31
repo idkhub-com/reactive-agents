@@ -455,3 +455,98 @@ describe('supabaseUserDataStorageConnector - Tool Operations', () => {
     });
   });
 });
+
+describe('supabaseUserDataStorageConnector - skill creation lease', () => {
+  const agentId = '123e4567-e89b-12d3-a456-426614174000';
+  const holder = 'holder-token';
+  const now = '2026-08-29T10:00:00.000Z';
+  const until = '2026-08-29T10:00:45.000Z';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const claimWith = (holderAfter: string | null) => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch
+      .mockResolvedValueOnce({ ok: true } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => [] } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ holder: holderAfter }],
+      } as Response);
+    return supabaseUserDataStorageConnector.claimSkillCreationLease(
+      mockContext,
+      agentId,
+      holder,
+      now,
+      until,
+    );
+  };
+
+  it('claims with an insert-if-missing, a conditional patch and a read-back', async () => {
+    expect(await claimWith(holder)).toBe(true);
+
+    const mockFetch = vi.mocked(fetch);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+
+    const [insertUrl, insertInit] = mockFetch.mock.calls[0] as [
+      URL,
+      RequestInit,
+    ];
+    expect(insertUrl.href).toBe(
+      'https://test.supabase.co/rest/v1/skill_creation_leases',
+    );
+    expect(insertInit.method).toBe('POST');
+    expect((insertInit.headers as Record<string, string>).Prefer).toBe(
+      'resolution=ignore-duplicates',
+    );
+    expect(JSON.parse(insertInit.body as string)).toEqual({
+      agent_id: agentId,
+      holder: null,
+      lease_until: null,
+    });
+
+    const [patchUrl, patchInit] = mockFetch.mock.calls[1] as [URL, RequestInit];
+    expect(patchInit.method).toBe('PATCH');
+    expect(patchUrl.searchParams.get('agent_id')).toBe(`eq.${agentId}`);
+    expect(patchUrl.searchParams.get('or')).toBe(
+      `(lease_until.is.null,lease_until.lt.${now})`,
+    );
+    expect(JSON.parse(patchInit.body as string)).toEqual({
+      holder,
+      lease_until: until,
+    });
+
+    const [readUrl] = mockFetch.mock.calls[2] as [URL, RequestInit];
+    expect(readUrl.searchParams.get('agent_id')).toBe(`eq.${agentId}`);
+    expect(readUrl.searchParams.get('select')).toBe('holder');
+  });
+
+  it('is not claimed when another holder has the lease', async () => {
+    expect(await claimWith('someone-else')).toBe(false);
+  });
+
+  it('releases only the lease it holds', async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as Response);
+
+    await supabaseUserDataStorageConnector.releaseSkillCreationLease(
+      mockContext,
+      agentId,
+      holder,
+    );
+
+    const [url, init] = mockFetch.mock.calls[0] as [URL, RequestInit];
+    expect(init.method).toBe('PATCH');
+    expect(url.searchParams.get('agent_id')).toBe(`eq.${agentId}`);
+    expect(url.searchParams.get('holder')).toBe(`eq.${holder}`);
+    expect(JSON.parse(init.body as string)).toEqual({
+      holder: null,
+      lease_until: null,
+    });
+  });
+});

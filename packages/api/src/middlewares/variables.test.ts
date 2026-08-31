@@ -26,6 +26,13 @@ const app = new Hono<AppEnv>()
       url: c.get('sa_request_data').url,
     }),
   )
+  .post('/agents/:agent_name/chat/completions', (c) =>
+    c.json({
+      config: c.get('sa_config_pre_processed'),
+      function_name: c.get('sa_request_data').functionName,
+      url: c.get('sa_request_data').url,
+    }),
+  )
   .post('/chat/completions', (c) =>
     c.json({
       config: c.get('sa_config_pre_processed'),
@@ -104,6 +111,30 @@ describe('commonVariablesMiddleware', () => {
       ]);
     });
 
+    it('should leave the skill to the gateway when the path names only the agent', async () => {
+      const response = await post('/v1/agents/captain_code/chat/completions');
+
+      expect(response.status).toBe(200);
+      const body = await readBody(response);
+      expect(body.config.agent_name).toBe('captain_code');
+      expect(body.config.skill_name).toBeUndefined();
+      expect(new URL(body.url).pathname).toBe('/v1/chat/completions');
+    });
+
+    it('should honour a skill named in the header on an agent-only path', async () => {
+      const response = await post('/v1/agents/captain_code/chat/completions', {
+        'sa-config': JSON.stringify({
+          agent_name: 'other_agent',
+          skill_name: 'programming',
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const body = await readBody(response);
+      expect(body.config.agent_name).toBe('captain_code');
+      expect(body.config.skill_name).toBe('programming');
+    });
+
     it('should resolve the request data against the canonical route', async () => {
       const response = await post(
         '/v1/agents/captain_code/skills/programming/chat/completions',
@@ -129,21 +160,20 @@ describe('commonVariablesMiddleware', () => {
       });
     });
 
-    it('should point at the scoped form when the skill segment is missing', async () => {
-      const response = await post('/v1/agents/captain_code/chat/completions');
+    it('should point at both scoped forms for an unknown agent endpoint', async () => {
+      const response = await post('/v1/agents/captain_code/nope');
 
       expect(response.status).toBe(404);
       expect(await response.json()).toEqual({
-        error:
-          'No API route matches POST /v1/agents/captain_code/chat/completions',
-        hint: 'Expected /v1/agents/{agent_name}/skills/{skill_name}/{endpoint}',
+        error: 'No API route matches POST /v1/agents/captain_code/nope',
+        hint: 'Expected /v1/agents/{agent_name}/{endpoint} or /v1/agents/{agent_name}/skills/{skill_name}/{endpoint}',
       });
     });
 
     it('should answer 404 before asking for the sa-config header', async () => {
       // Without the route check this would report a missing config instead of a
       // mistyped URL.
-      const response = await post('/v1/agents/captain_code/chat/completions', {
+      const response = await post('/v1/agents/captain_code/nope', {
         'sa-config': JSON.stringify({
           agent_name: 'captain_code',
           skill_name: 'programming',
@@ -183,6 +213,17 @@ describe('commonVariablesMiddleware', () => {
   });
 
   describe('agent and skill in the header', () => {
+    it('should accept a header that names only the agent', async () => {
+      const response = await post('/v1/chat/completions', {
+        'sa-config': JSON.stringify({ agent_name: 'captain_code' }),
+      });
+
+      expect(response.status).toBe(200);
+      const body = await readBody(response);
+      expect(body.config.agent_name).toBe('captain_code');
+      expect(body.config.skill_name).toBeUndefined();
+    });
+
     it('should read the names from the sa-config header', async () => {
       const response = await post('/v1/chat/completions', {
         'sa-config': JSON.stringify({
@@ -206,9 +247,9 @@ describe('commonVariablesMiddleware', () => {
       });
     });
 
-    it('should reject a header that is missing the skill name', async () => {
+    it('should reject a header that is missing the agent name', async () => {
       const response = await post('/v1/chat/completions', {
-        'sa-config': JSON.stringify({ agent_name: 'captain_code' }),
+        'sa-config': JSON.stringify({ skill_name: 'programming' }),
       });
 
       expect(response.status).toBe(422);

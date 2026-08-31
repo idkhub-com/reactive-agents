@@ -39,6 +39,9 @@ const mockAgents: Agent[] = [
     metadata: {},
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   },
   {
     id: 'agent-2',
@@ -47,6 +50,9 @@ const mockAgents: Agent[] = [
     metadata: {},
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   },
 ];
 
