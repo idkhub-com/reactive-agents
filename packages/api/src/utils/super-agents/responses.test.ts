@@ -5,6 +5,7 @@ import { HttpMethod } from '@api/types/http';
 import {
   createResponse,
   extractOutputFromResponseBody,
+  responseEndsInToolCalls,
 } from '@api/utils/super-agents/responses';
 import {
   type ChatCompletionRequestData,
@@ -367,5 +368,44 @@ describe('extractOutputFromResponseBody', () => {
 
     expect(output).toContain('Checking the working tree first.');
     expect(output).toContain('Tool Call Name: bash');
+  });
+});
+
+describe('responseEndsInToolCalls', () => {
+  const chatWith = (
+    message: Record<string, unknown>,
+    finishReason = 'stop',
+  ): SuperAgentsResponseBody =>
+    ({
+      id: 'chatcmpl-1',
+      object: 'chat.completion',
+      created: 1,
+      model: 'test-model',
+      choices: [{ index: 0, finish_reason: finishReason, message }],
+    }) as unknown as SuperAgentsResponseBody;
+
+  it('detects a turn that hands control to tools', () => {
+    const body = chatWith(
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          {
+            id: 'c1',
+            type: 'function',
+            function: { name: 'bash', arguments: '{}' },
+          },
+        ],
+      },
+      'tool_calls',
+    );
+
+    expect(responseEndsInToolCalls(body)).toBe(true);
+  });
+
+  it('is false for a plain answer', () => {
+    const body = chatWith({ role: 'assistant', content: 'Done.' });
+
+    expect(responseEndsInToolCalls(body)).toBe(false);
   });
 });

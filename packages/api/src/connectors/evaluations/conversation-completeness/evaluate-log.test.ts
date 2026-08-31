@@ -491,5 +491,8 @@ describe('Conversation Completeness - agentic logs', () => {
     expect(judgeSaw).toContain('Tool Call call_a Output: On branch main');
     expect(judgeSaw).toContain('Assistant Tool Calls');
     expect(judgeSaw).toContain('git diff --staged');
+    // And it was told the turn is mid-task, so it grades progress rather
+    // than docking the not-yet-due final answer.
+    expect(judgeSaw).toContain('still in progress');
   });
 });

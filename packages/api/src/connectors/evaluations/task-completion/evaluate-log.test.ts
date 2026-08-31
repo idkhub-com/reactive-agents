@@ -358,6 +358,9 @@ describe('Task Completion - agentic logs', () => {
         ),
     });
     vi.clearAllMocks();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { parsed: { score: 1, reasoning: 'on track' } } }],
+    });
     vi.mocked(extractTaskAndOutcome).mockResolvedValue({
       task: 'review the code changes',
       outcome: 'began inspecting the repository',
@@ -501,5 +504,12 @@ describe('Task Completion - agentic logs', () => {
     // The tool-call response is the turn's output, not "nothing".
     expect(output).toContain('Assistant Tool Calls');
     expect(output).toContain('git diff --staged');
+    // The verdict judge was told the turn is mid-task, so it grades
+    // progress rather than docking the not-yet-due deliverable.
+    const verdictSaw = JSON.stringify([
+      (global.fetch as ReturnType<typeof vi.fn>).mock.calls,
+      mockParse.mock.calls,
+    ]);
+    expect(verdictSaw).toContain('still in progress');
   });
 });

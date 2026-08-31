@@ -182,6 +182,31 @@ export async function createResponse(
   return mappedResponse;
 }
 
+/**
+ * Whether the response is a turn that hands control back to the caller's
+ * tools rather than answering -- the tool results, and the eventual answer,
+ * arrive in later requests. Evaluations use this to grade such turns as
+ * progress on the task instead of as a finished conversation.
+ */
+export function responseEndsInToolCalls(
+  responseBody: SuperAgentsResponseBody,
+): boolean {
+  if ('choices' in responseBody) {
+    const choice = responseBody.choices[0];
+    if (choice && 'message' in choice) {
+      if ((choice.message.tool_calls?.length ?? 0) > 0) {
+        return true;
+      }
+      return 'finish_reason' in choice && choice.finish_reason === 'tool_calls';
+    }
+    return false;
+  }
+  if ('output' in responseBody) {
+    return responseBody.output.some((step) => step.type === 'function');
+  }
+  return false;
+}
+
 export function extractOutputFromResponseBody(
   responseBody: SuperAgentsResponseBody,
 ): string {
