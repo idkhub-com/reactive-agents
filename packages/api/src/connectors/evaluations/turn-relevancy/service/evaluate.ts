@@ -1,7 +1,11 @@
 import { getTurnRelevancyTemplate } from '@api/connectors/evaluations/turn-relevancy/templates/main';
 import { TurnRelevancyEvaluationParameters } from '@api/connectors/evaluations/turn-relevancy/types';
+import { humanVerdictNote } from '@api/evaluations/human-verdict';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
-import type { UserDataStorageConnector } from '@api/types/connector';
+import type {
+  EvaluateLogOptions,
+  UserDataStorageConnector,
+} from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import {
@@ -93,6 +97,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
+  options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params = TurnRelevancyEvaluationParameters.parse(evaluation.params);
 
@@ -121,6 +126,9 @@ export async function evaluateLog(
     conversation_history,
     current_turn,
     assistant_role,
+    human_verdict_note: options?.humanVerdict
+      ? humanVerdictNote(options.humanVerdict)
+      : undefined,
     strict_mode: params.strict_mode || false,
     verbose_mode: params.verbose_mode ?? true,
     include_reason: params.include_reason ?? true,

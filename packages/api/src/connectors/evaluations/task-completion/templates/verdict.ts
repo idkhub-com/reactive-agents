@@ -7,6 +7,8 @@ export function getTaskCompletionVerdictTemplate(data: {
   task: string;
   outcome: string;
   inProgress?: boolean;
+  /** A human's verified verdict on the response, when feedback triggered this run. */
+  humanVerdictNote?: string;
 }): TaskCompletionTemplateConfig {
   // An intermediate agentic turn ends by invoking tools; the task continues
   // in later requests. Judged as a finished task it scores near zero no
@@ -35,7 +37,7 @@ Return your response as a JSON object with this exact structure:
   const userPrompt = `Task: ${data.task}
 
 Outcome: ${data.outcome}
-${data.inProgress ? '\nNote: this turn ended in tool calls, so the task is still in progress. Score how well the work so far serves the task.\n' : ''}
+${data.inProgress ? '\nNote: this turn ended in tool calls, so the task is still in progress. Score how well the work so far serves the task.\n' : ''}${data.humanVerdictNote ? `\n${data.humanVerdictNote}\n` : ''}
 Please evaluate how well the outcome fulfills the task requirements and provide a score between 0.0 and 1.0.`;
 
   return {

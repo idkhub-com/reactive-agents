@@ -417,6 +417,16 @@ export interface HooksConnector {
   executeHook(hook: Hook): Promise<HookResult> | HookResult;
 }
 
+/**
+ * Extra context for one evaluation pass. `humanVerdict` is set when a run
+ * was triggered by thumbs up/down feedback on the log: the LLM judges fold
+ * the verified verdict into their prompts and re-derive what makes the
+ * response good or bad; connectors that compute rather than judge ignore it.
+ */
+export interface EvaluateLogOptions {
+  humanVerdict?: 'good' | 'bad';
+}
+
 export interface EvaluationMethodConnector {
   getDetails: () => EvaluationMethodDetails;
   evaluateLog: (
@@ -424,6 +434,7 @@ export interface EvaluationMethodConnector {
     evaluation: SkillOptimizationEvaluation,
     log: Log,
     storageConnector: UserDataStorageConnector,
+    options?: EvaluateLogOptions,
   ) => Promise<SkillOptimizationEvaluationResult>;
   getParameterSchema: z.ZodType;
   getAIParameterSchema?: z.ZodType; // Optional - not all evaluations need AI for parameter generation

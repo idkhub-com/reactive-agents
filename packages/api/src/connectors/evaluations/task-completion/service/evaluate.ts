@@ -1,8 +1,12 @@
 import { extractTaskAndOutcome } from '@api/connectors/evaluations/task-completion/service/task-and-outcome';
 import getTaskCompletionVerdictTemplate from '@api/connectors/evaluations/task-completion/templates/verdict';
 import { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/task-completion/types';
+import { humanVerdictNote } from '@api/evaluations/human-verdict';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
-import type { UserDataStorageConnector } from '@api/types/connector';
+import type {
+  EvaluateLogOptions,
+  UserDataStorageConnector,
+} from '@api/types/connector';
 import type { LLMJudge } from '@api/types/evaluations/llm-judge';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
@@ -37,13 +41,20 @@ async function generateVerdict(
     task,
     outcome,
     inProgress,
-  }: { task: string; outcome: string; inProgress: boolean },
+    humanVerdict,
+  }: {
+    task: string;
+    outcome: string;
+    inProgress: boolean;
+    humanVerdict?: 'good' | 'bad';
+  },
   llm_judge: LLMJudge,
 ): Promise<{ verdict: number; reason: string }> {
   const verdictTemplate = getTaskCompletionVerdictTemplate({
     task,
     outcome,
     inProgress,
+    humanVerdictNote: humanVerdict ? humanVerdictNote(humanVerdict) : undefined,
   });
   // Explicit prompts: the heuristic re-split of the joined text only kept
   // returning real scores because the template's JSON instruction happened
@@ -114,6 +125,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
+  options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult> {
   const start_time = Date.now();
 
@@ -145,7 +157,7 @@ export async function evaluateLog(
 
     // Step 2: Generate verdict
     const { verdict, reason } = await generateVerdict(
-      { task, outcome, inProgress },
+      { task, outcome, inProgress, humanVerdict: options?.humanVerdict },
       llmJudge,
     );
     const verdict_llm_output = JSON.stringify({ verdict, reason });

@@ -1,4 +1,5 @@
 import type {
+  EvaluateLogOptions,
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
@@ -22,6 +23,7 @@ export async function runEvaluationsForLog(
     Record<EvaluationMethodName, EvaluationMethodConnector>
   >,
   storageConnector: UserDataStorageConnector,
+  options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult[]> {
   if (skillOptimizationEvaluations.length === 0) {
     return [];
@@ -45,6 +47,7 @@ export async function runEvaluationsForLog(
           evaluation,
           log,
           storageConnector,
+          options,
         );
       } catch (err) {
         // Don't throw - we want other evaluations to continue even if one fails

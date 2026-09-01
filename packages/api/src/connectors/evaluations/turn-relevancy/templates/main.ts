@@ -3,6 +3,8 @@ export function getTurnRelevancyTemplate(input: {
   current_turn: string;
   /** The assistant's system prompt: relevance is relative to its job. */
   assistant_role?: string;
+  /** A human's verified verdict on the response, when feedback triggered this run. */
+  human_verdict_note?: string;
   strict_mode?: boolean;
   verbose_mode?: boolean;
   include_reason?: boolean;
@@ -11,6 +13,7 @@ export function getTurnRelevancyTemplate(input: {
     conversation_history,
     current_turn,
     assistant_role,
+    human_verdict_note,
     strict_mode,
     include_reason,
   } = input;
@@ -29,6 +32,9 @@ Return a JSON object with fields:
   }
   lines.push(`Conversation History:\n${conversation_history}`);
   lines.push(`\nCurrent Turn:\n${current_turn}`);
+  if (human_verdict_note) {
+    lines.push(`\n${human_verdict_note}`);
+  }
   lines.push(`\nInstructions:`);
   if (assistant_role) {
     lines.push(

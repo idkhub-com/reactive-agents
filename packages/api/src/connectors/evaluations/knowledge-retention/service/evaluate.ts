@@ -1,6 +1,10 @@
 import type { KnowledgeRetentionEvaluationParameters } from '@api/connectors/evaluations/knowledge-retention/types';
+import { humanVerdictNote } from '@api/evaluations/human-verdict';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
-import type { UserDataStorageConnector } from '@api/types/connector';
+import type {
+  EvaluateLogOptions,
+  UserDataStorageConnector,
+} from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import {
@@ -28,6 +32,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
+  options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params = evaluation.params as KnowledgeRetentionEvaluationParameters;
 
@@ -77,7 +82,12 @@ export async function evaluateLog(
     ? `THE ASSISTANT'S ROLE (its system prompt): ${role} `
     : '';
 
-  const evaluationText = `Analyze the following conversation for knowledge retention quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation, judged against what its role requires it to carry forward. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+  // A feedback-triggered run carries the human's verdict as an anchor.
+  const verdictSection = options?.humanVerdict
+    ? ` ${humanVerdictNote(options.humanVerdict)}`
+    : '';
+
+  const evaluationText = `Analyze the following conversation for knowledge retention quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation, judged against what its role requires it to carry forward. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference.${verdictSection} Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
 
   // Explicit criteria pin the scored judge path. The old `outputFormat:
   // 'json'` call had the judge re-split this text at its first blank line --
