@@ -36,13 +36,13 @@ export function ErrorWarning({
 export interface NoModelsWarningProps {
   /** Optional custom message */
   message?: string;
-  /** Link to create models page */
+  /** Link to the page where models are added */
   createModelLink?: string;
 }
 
 export function NoModelsWarning({
   message = 'You need to add at least one model before you can configure system settings.',
-  createModelLink = '/models/create',
+  createModelLink = '/ai-providers',
 }: NoModelsWarningProps): ReactElement {
   return (
     <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
