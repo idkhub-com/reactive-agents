@@ -177,24 +177,37 @@ The gateway endpoints (`/v1/chat/completions`, `/v1/completions`, `/v1/responses
 The first names the agent and skill in the path instead of in the `sa-config`
 header, which makes the header optional. The second names only the agent and
 leaves the skill to `routeRequestToSkill` (`utils/super-agents/skill-routing.ts`):
-it embeds the request's intent (system prompt and tool names, see
-`@shared/utils/request-intent`) and picks the skill whose `skill_routing`
-centroid is closest, seeding a centroid from the skill's description the first
-time it meets one. When the agent has `auto_create_skills` on (the default), a
-request below the agent's `skill_match_threshold` -- or any request to an agent
-without skills -- becomes a new skill through `createSkillForRequest`
-(`utils/super-agents/skill-creation.ts`): named by the `describe-skill` internal
-skill, given the agent's default models (`agent_models`), and seeded with the
-caller's system prompt (`skills.seed_system_prompt`), which `handleGenerateArms`
-uses verbatim so the skill starts as a pass-through. `max_auto_created_skills`
-caps this per agent. Creating happens under the agent's `skill_creation_leases`
-row (`withSkillCreationLease`), after a second look at the skills, so
-concurrent first requests produce one skill rather than one each. Intent
-embeddings are cached per process (`utils/super-agents/intent-embeddings.ts`)
-and a centroid absorbs each distinct intent once; requests that *name* their
-skill teach the router too (`learnSkillIntent`, after the response, at most
-once a minute per skill), which is how skills that were always named get
-centroids that reflect their traffic. `commonVariablesMiddleware` merges the
+it embeds the request's intent in two halves (see
+`@shared/utils/request-intent`) -- identity (system prompt and tool names,
+what a tool sends unchanged on every request) and conversation (its last few
+messages, which change turn by turn) -- and scores each skill's two
+`skill_routing` centroids as `0.6 * identity + 0.4 * conversation`, weights
+renormalised when a half is missing, seeding a centroid from the skill's
+description the first time it meets one. A system prompt too long to embed
+whole is compacted first by the `compact-intent` internal skill
+(`utils/super-agents/intent-compaction.ts`, cached per distinct prompt,
+truncation as the fallback). When the agent has `auto_create_skills` on (the
+default), a request scoring below the agent's `skill_match_threshold` goes to
+the arbiter -- the `route-or-create` internal skill
+(`utils/super-agents/skill-arbiter.ts`), because embeddings cannot tell a new
+kind of job from familiar work on unfamiliar material: an existing-skill
+verdict routes there and teaches its centroids, no verdict routes to the
+closest skill and creates nothing, and a new-job verdict -- or any request to
+an agent without skills, no arbiter asked -- becomes a new skill through
+`createSkillForRequest` (`utils/super-agents/skill-creation.ts`): named by the
+`describe-skill` internal skill, given the agent's default models
+(`agent_models`), and seeded with the caller's system prompt
+(`skills.seed_system_prompt`), which `handleGenerateArms` uses verbatim so the
+skill starts as a pass-through. `max_auto_created_skills` caps this per agent.
+Creating happens under the agent's `skill_creation_leases` row
+(`withSkillCreationLease`), after a second look at the skills, so concurrent
+first requests produce one skill rather than one each. Intent embeddings are
+cached per process (`utils/super-agents/intent-embeddings.ts`) and a centroid
+absorbs each distinct part once -- identity rarely, conversations nearly every
+request, which is how skills follow their traffic as it evolves; requests that
+*name* their skill teach the router too (`learnSkillIntent`, after the
+response, at most once a minute per skill), which is how skills that were
+always named get centroids that reflect their traffic. `commonVariablesMiddleware` merges the
 path names into the config (the path wins over the header) and route matching
 is done against the canonical path.
 

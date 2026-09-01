@@ -630,21 +630,29 @@ describe('skill routing', () => {
       skill_id: skill.id,
       agent_id: agent.id,
       centroid: [1, 0, 0],
+      conversation_centroid: null,
       embedding_model_id: model.id,
       sample_count: 1,
+      conversation_sample_count: 0,
     });
     expect(seeded.centroid).toEqual([1, 0, 0]);
+    expect(seeded.conversation_centroid).toBeNull();
     expect(seeded.sample_count).toBe(1);
+    expect(seeded.conversation_sample_count).toBe(0);
 
     const advanced = await store.upsertSkillRouting(c, {
       skill_id: skill.id,
       agent_id: agent.id,
       centroid: [0.5, 0.5, 0],
+      conversation_centroid: [0, 1, 0],
       embedding_model_id: model.id,
       sample_count: 2,
+      conversation_sample_count: 1,
     });
     expect(advanced.centroid).toEqual([0.5, 0.5, 0]);
+    expect(advanced.conversation_centroid).toEqual([0, 1, 0]);
     expect(advanced.sample_count).toBe(2);
+    expect(advanced.conversation_sample_count).toBe(1);
     expect(advanced.created_at).toBe(seeded.created_at);
 
     expect(await store.getSkillRoutings(c, { agent_id: agent.id })).toEqual([
@@ -662,8 +670,10 @@ describe('skill routing', () => {
       skill_id: skill.id,
       agent_id: agent.id,
       centroid: [1, 0, 0],
+      conversation_centroid: null,
       embedding_model_id: model.id,
       sample_count: 1,
+      conversation_sample_count: 0,
     });
     await store.deleteSkill(c, skill.id);
 

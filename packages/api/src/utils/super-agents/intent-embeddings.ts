@@ -1,6 +1,12 @@
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { embedText, RequestEmbeddingError } from '@api/utils/embeddings';
+import { compactSystemPrompt } from '@api/utils/super-agents/intent-compaction';
+import {
+  identityText,
+  type RequestIntent,
+  SYSTEM_PROMPT_BUDGET,
+} from '@shared/utils/request-intent';
 
 /** An embedding of a request's intent, with the model that produced it. */
 export interface IntentEmbedding {
@@ -84,6 +90,48 @@ export function embedIntent(
     cache.delete(cache.keys().next().value as string);
   }
   return pending;
+}
+
+/** A request intent embedded part by part: who is calling, and what the
+ * conversation is asking right now. Either can be missing. */
+export interface RequestIntentEmbedding {
+  identity: CachedIntent | null;
+  conversation: CachedIntent | null;
+  modelId: string;
+}
+
+/**
+ * Embeds a request's two-part intent with the given model.
+ *
+ * The identity half repeats verbatim across a tool's requests, so its
+ * embedding is nearly always a cache hit; the conversation half changes
+ * turn by turn and usually costs one embedding call. A system prompt too
+ * long to embed whole is compacted by a model first (cached by the prompt,
+ * so this too happens once per distinct prompt).
+ */
+export async function embedRequestIntent(
+  c: AppContext,
+  connector: UserDataStorageConnector,
+  intent: RequestIntent,
+  modelId: string,
+): Promise<RequestIntentEmbedding> {
+  const compacted =
+    intent.systemPrompt && intent.systemPrompt.length > SYSTEM_PROMPT_BUDGET
+      ? await compactSystemPrompt(c, connector, intent.systemPrompt)
+      : null;
+  const identity = identityText(intent, compacted);
+
+  const [identityEmbedding, conversationEmbedding] = await Promise.all([
+    identity ? embedIntent(c, connector, identity, modelId) : null,
+    intent.conversation
+      ? embedIntent(c, connector, intent.conversation, modelId)
+      : null,
+  ]);
+  return {
+    identity: identityEmbedding,
+    conversation: conversationEmbedding,
+    modelId,
+  };
 }
 
 /** How many intents are held. For tests. */

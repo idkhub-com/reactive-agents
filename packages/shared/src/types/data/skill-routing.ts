@@ -11,15 +11,23 @@ export const SkillRouting = z.object({
   skill_id: z.uuid(),
   agent_id: z.uuid(),
 
-  /** The mean intent embedding of the skill's traffic. */
+  /** The mean identity embedding (system prompt and tools) of the skill's
+   * traffic; for a request with no identity, its whole intent. */
   centroid: z.array(z.number()),
 
-  /** The model the centroid was computed with. A row computed with another
+  /** The mean conversation embedding of the skill's traffic. Null until a
+   * request with a conversation reaches the skill. */
+  conversation_centroid: z.array(z.number()).nullable(),
+
+  /** The model the centroids were computed with. A row computed with another
    * model is meaningless under the current one and gets re-seeded. */
   embedding_model_id: z.uuid(),
 
-  /** How many intents the mean has absorbed, the seed included. */
+  /** How many intents the identity mean has absorbed, the seed included. */
   sample_count: z.int().min(0),
+
+  /** How many conversations the conversation mean has absorbed. */
+  conversation_sample_count: z.int().min(0),
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -39,8 +47,10 @@ export const SkillRoutingUpsertParams = z
     skill_id: z.uuid(),
     agent_id: z.uuid(),
     centroid: z.array(z.number()),
+    conversation_centroid: z.array(z.number()).nullable(),
     embedding_model_id: z.uuid(),
     sample_count: z.int().min(0),
+    conversation_sample_count: z.int().min(0),
   })
   .strict();
 export type SkillRoutingUpsertParams = z.infer<typeof SkillRoutingUpsertParams>;
@@ -50,6 +60,8 @@ export const SkillRoutingMethod = z.enum([
   'embedding',
   'most_used',
   'created',
+  /** The score fell below the threshold and a model chose an existing skill. */
+  'arbitrated',
 ]);
 export type SkillRoutingMethod = z.infer<typeof SkillRoutingMethod>;
 
@@ -57,11 +69,15 @@ export type SkillRoutingMethod = z.infer<typeof SkillRoutingMethod>;
  * on the log as `metadata.skill_routing`. */
 export const SkillRoutingDecision = z.object({
   method: SkillRoutingMethod,
-  /** Cosine similarity to the closest skill's centroid, when one was computed. */
+  /** The combined identity-and-conversation score of the closest skill,
+   * when one was computed. */
   similarity: z.number().nullable(),
   /** The agent's `skill_match_threshold`, when it was consulted. */
   threshold: z.number().nullable(),
   /** How many of the agent's skills were in the running. */
   candidates: z.int().min(0),
+  /** The two halves of the score, when both were computed. */
+  identity_similarity: z.number().nullable().optional(),
+  conversation_similarity: z.number().nullable().optional(),
 });
 export type SkillRoutingDecision = z.infer<typeof SkillRoutingDecision>;

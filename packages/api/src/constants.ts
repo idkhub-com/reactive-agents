@@ -187,4 +187,6 @@ export const SA_SKILLS = [
   'system-prompt-reflection',
   'embedding',
   'describe-skill',
+  'route-or-create',
+  'compact-intent',
 ];

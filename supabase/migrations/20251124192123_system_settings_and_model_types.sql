@@ -236,8 +236,10 @@ CREATE TABLE IF NOT EXISTS skill_routing (
   skill_id UUID PRIMARY KEY REFERENCES skills(id) ON DELETE CASCADE,
   agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   centroid FLOAT[] NOT NULL,
+  conversation_centroid FLOAT[],
   embedding_model_id UUID NOT NULL REFERENCES models(id) ON DELETE CASCADE,
   sample_count INTEGER NOT NULL DEFAULT 0,
+  conversation_sample_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

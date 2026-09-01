@@ -48,7 +48,16 @@ const request = {
     ],
   },
 } as unknown as SuperAgentsRequestData;
-const embedding = { embedding: [1, 0, 0], modelId: 'embed-model' };
+const cached = (embedding: number[]) => ({
+  embedding,
+  modelId: 'embed-model',
+  absorbedBy: new Set<string>(),
+});
+const embedding = {
+  identity: cached([1, 0, 0]),
+  conversation: cached([0, 1, 0]),
+  modelId: 'embed-model',
+};
 
 describe('createSkillForRequest', () => {
   let connector: Record<string, Mock>;
@@ -112,8 +121,10 @@ describe('createSkillForRequest', () => {
       skill_id: 'skill-1',
       agent_id: '123e4567-e89b-12d3-a456-426614174000',
       centroid: [1, 0, 0],
+      conversation_centroid: [0, 1, 0],
       embedding_model_id: 'embed-model',
       sample_count: 1,
+      conversation_sample_count: 1,
     });
     // The agent's default models, and arms built from the seed prompt.
     expect(connector.addModelsToSkill).toHaveBeenCalledWith(c, 'skill-1', [

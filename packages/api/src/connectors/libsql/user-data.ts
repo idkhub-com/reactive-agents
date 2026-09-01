@@ -783,19 +783,26 @@ export const libsqlUserDataStorageConnector: UserDataStorageConnector = {
     // the trigger, which fires for the DO UPDATE branch as well.
     await client.execute({
       sql: `INSERT INTO skill_routing
-              (skill_id, agent_id, centroid, embedding_model_id, sample_count)
-            VALUES (?, ?, ?, ?, ?)
+              (skill_id, agent_id, centroid, conversation_centroid,
+               embedding_model_id, sample_count, conversation_sample_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(skill_id) DO UPDATE SET
               agent_id = excluded.agent_id,
               centroid = excluded.centroid,
+              conversation_centroid = excluded.conversation_centroid,
               embedding_model_id = excluded.embedding_model_id,
-              sample_count = excluded.sample_count`,
+              sample_count = excluded.sample_count,
+              conversation_sample_count = excluded.conversation_sample_count`,
       args: [
         params.skill_id,
         params.agent_id,
         toJsonColumn(params.centroid),
+        params.conversation_centroid === null
+          ? null
+          : toJsonColumn(params.conversation_centroid),
         params.embedding_model_id,
         params.sample_count,
+        params.conversation_sample_count,
       ],
     });
     const rows = await selectFrom(
