@@ -51,7 +51,7 @@ function isRetryableLLMJudgeError(error: unknown): boolean {
  * Parses the judge's JSON, tolerating what self-hosted models actually
  * send: prose around the object, a trailing comma before a brace.
  */
-function parseJudgeJson(content: string): unknown {
+export function parseJudgeJson(content: string): unknown {
   const attempts = [content];
   const first = content.indexOf('{');
   const last = content.lastIndexOf('}');
@@ -184,6 +184,24 @@ export function createLLMJudge(
     userPrompt: string;
     useStructuredOutput: boolean;
   } {
+    // Explicit prompts are used verbatim -- no re-splitting. Only a call
+    // declared as an extraction gets the metadata-only result; a scoring
+    // call gets the score the judge actually answered.
+    if (input.systemPrompt !== undefined && input.userPrompt !== undefined) {
+      return {
+        systemPrompt: input.systemPrompt,
+        userPrompt: input.userPrompt,
+        useStructuredOutput: input.structured === true,
+      };
+    }
+
+    // Explicit criteria mean the criteria-based judge. This must win over
+    // the template heuristics below: they match on phrases and blank lines,
+    // and conversation content can contain both.
+    if (input.evaluationCriteria) {
+      return criteriaBasedPrompt(input);
+    }
+
     // If outputFormat is explicitly specified (always 'json' now), use structured output
     if (input.outputFormat === 'json') {
       const { systemPrompt, userPrompt } = parseTemplatePrompt(input.text);
@@ -201,7 +219,15 @@ export function createLLMJudge(
       }
     }
 
-    // Criteria-based evaluation (generic judge fallback)
+    return criteriaBasedPrompt(input);
+  }
+
+  /** The generic criteria judge: scored output, no template heuristics. */
+  function criteriaBasedPrompt(input: EvaluationInput): {
+    systemPrompt: string;
+    userPrompt: string;
+    useStructuredOutput: boolean;
+  } {
     const criteria =
       input.evaluationCriteria?.criteria || evaluationCriteria.general;
 

@@ -507,6 +507,12 @@ describe('Task Completion - agentic logs', () => {
     const call = vi.mocked(extractTaskAndOutcome).mock.calls[0];
     const input = call[2] as string;
     const output = call[3] as string;
+    // The extraction opens with the assistant's role: without it, the task
+    // is inferred from user messages alone, and a conversation the assistant
+    // was told to transform reads as a request it was supposed to fulfill.
+    expect(input).toContain(
+      'ASSISTANT ROLE (its system prompt):\nYou maintain the blog codebase.',
+    );
     // The conversation carries the tool's actual output, not an empty line.
     expect(input).toContain('Tool Call call_a Output: On branch main');
     // The tool-call response is the turn's output, not "nothing".
@@ -519,5 +525,12 @@ describe('Task Completion - agentic logs', () => {
       mockParse.mock.calls,
     ]);
     expect(verdictSaw).toContain('still in progress');
+    // The verdict template travels as explicit prompts: its JSON instruction
+    // stays in the system message instead of being re-split heuristically.
+    const verdictCall = mockParse.mock.calls[0][0];
+    expect(verdictCall.messages[0].role).toBe('system');
+    expect(verdictCall.messages[0].content).toContain(
+      'Return your response as a JSON object',
+    );
   });
 });

@@ -188,7 +188,7 @@ describe('Turn Relevancy - evaluateLog', () => {
     expect(result.extra_data).toHaveProperty('execution_time');
   });
 
-  it('should handle irrelevant responses', async () => {
+  it('records the score the judge answered, and shows it the role', async () => {
     const mockEvaluation: SkillOptimizationEvaluation = {
       id: 'eval-123',
       agent_id: 'agent-123',
@@ -241,6 +241,7 @@ describe('Turn Relevancy - evaluateLog', () => {
         request_body: {
           model: 'gpt-4',
           messages: [
+            { role: 'system', content: 'You are a geography tutor.' },
             { role: 'user', content: 'What is the capital of France?' },
             { role: 'assistant', content: 'The capital of France is Paris.' },
             { role: 'user', content: 'And what about Germany?' },
@@ -270,28 +271,22 @@ describe('Turn Relevancy - evaluateLog', () => {
       },
     };
 
-    const mockLLMResponse = {
-      output: [
+    // The judge concludes the turn is irrelevant. Under the old
+    // `outputFormat: 'json'` call this came back as a "structured" result
+    // scored a flat 1.0, with the judge's verdict buried in metadata --
+    // every successful turn-relevancy run scored 1.0.
+    mockParse.mockResolvedValueOnce({
+      choices: [
         {
-          type: 'message',
-          content: [
-            {
-              type: 'output_text',
-              text: JSON.stringify({
-                score: 0.0,
-                reasoning:
-                  'The response is completely irrelevant to the conversation',
-              }),
-            },
-          ],
+          message: {
+            content: JSON.stringify({
+              score: 0.0,
+              reasoning:
+                'The response is completely irrelevant to the conversation',
+            }),
+          },
         },
       ],
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(JSON.stringify(mockLLMResponse)),
-      json: () => Promise.resolve(mockLLMResponse),
     });
 
     const mockStorageConnector = createMockStorageConnector();
@@ -303,9 +298,18 @@ describe('Turn Relevancy - evaluateLog', () => {
     );
 
     expect(result.method).toBe(EvaluationMethodName.TURN_RELEVANCY);
-    // The score is 1.0 because the LLM judge successfully evaluated the relevance
-    // Even though the response is irrelevant, the judge still returns a valid score
-    expect(result.score).toBeGreaterThanOrEqual(0);
-    expect(result.score).toBeLessThanOrEqual(1);
+    expect(result.score).toBe(0.0);
+    expect(result.extra_data.reasoning).toBe(
+      'The response is completely irrelevant to the conversation',
+    );
+
+    // And the judge was told what the assistant's job is.
+    const judgeCall = mockParse.mock.calls[0][0];
+    expect(judgeCall.messages[1].content).toContain(
+      'Assistant Role (its system prompt):\nYou are a geography tutor.',
+    );
+    expect(judgeCall.messages[1].content).toContain(
+      "- Judge relevance against the assistant's role",
+    );
   });
 });

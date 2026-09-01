@@ -3,6 +3,42 @@ import {
   ChatCompletionMessageRole,
 } from '@shared/types/api/routes/shared/messages';
 
+/**
+ * The judges read conversations through `formatMessagesForExtraction`, which
+ * drops system messages -- right for embeddings, blinding for judgment: a
+ * title generator's output looks like an ignored code-review request unless
+ * the judge knows what the assistant was told to do. This renders the system
+ * (and developer) messages so a judge can be shown the assistant's role.
+ */
+export function extractSystemPromptFromMessages(
+  messages: ChatCompletionMessage[],
+): string {
+  const MAX_ROLE_LENGTH = 4000;
+  return messages
+    .filter(
+      (message) =>
+        message.role === ChatCompletionMessageRole.SYSTEM ||
+        message.role === ChatCompletionMessageRole.DEVELOPER,
+    )
+    .map((message) => {
+      if (typeof message.content === 'string') {
+        return message.content;
+      }
+      if (Array.isArray(message.content)) {
+        return message.content
+          .map((item) =>
+            typeof item === 'object' && item.text ? item.text : '',
+          )
+          .filter(Boolean)
+          .join(' ');
+      }
+      return message.content ? String(message.content) : '';
+    })
+    .filter((content) => content.trim())
+    .join('\n\n')
+    .slice(0, MAX_ROLE_LENGTH);
+}
+
 export function formatMessagesForExtraction(
   messages: ChatCompletionMessage[],
 ): string {

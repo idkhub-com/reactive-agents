@@ -1,11 +1,11 @@
 import type { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/task-completion/types';
 import { getApiUrl } from '@api/constants';
+import { parseJudgeJson } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import OpenAI from 'openai';
-import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
 import z from 'zod';
 
 const StructuredOutputResponse = z.object({
@@ -81,13 +81,13 @@ export async function extractTaskAndOutcome(
   const systemPrompt = getSystemPrompt(params.task);
   const firstMessage = getFirstMessage(input, output);
 
-  const response: ParsedChatCompletion<StructuredOutputResponse> = await client
+  const response = await client
     .withOptions({
       defaultHeaders: {
         'sa-config': JSON.stringify(saConfig),
       },
     })
-    .chat.completions.parse({
+    .chat.completions.create({
       model: modelConfig.model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -107,13 +107,17 @@ export async function extractTaskAndOutcome(
       },
     });
 
-  const structuredOutputResponse = response.choices[0].message.parsed;
+  // Parsed tolerantly, like the judge's own answers: a self-hosted model
+  // ignores `response_format` often enough that the SDK's strict `.parse()`
+  // kept failing the whole evaluation on a trailing comma.
+  const content = response.choices?.[0]?.message?.content;
 
-  if (!structuredOutputResponse) {
+  if (!content) {
     throw new Error(
       `[OPTIMIZER] can't extract task and outcome - No response found`,
     );
   }
+  const structuredOutputResponse = parseJudgeJson(content);
 
   // Only a provider that enforces `response_format` guarantees the shape, so
   // the reply is checked rather than trusted -- a missing outcome would

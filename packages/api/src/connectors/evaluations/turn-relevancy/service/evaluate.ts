@@ -4,7 +4,10 @@ import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
-import { formatMessagesForExtraction } from '@api/utils/messages';
+import {
+  extractSystemPromptFromMessages,
+  formatMessagesForExtraction,
+} from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/super-agents/requests';
 import { extractOutputFromResponseBody } from '@api/utils/super-agents/responses';
 import type {
@@ -29,10 +32,12 @@ function pickTurnRelevancyData(
 ): {
   conversation_history: string;
   current_turn: string;
+  assistant_role: string;
   instructions?: string;
 } {
   // Extract conversation history using standard utilities if not provided in params
   let conversation_history = params.conversation_history;
+  let assistant_role = '';
   if (!conversation_history) {
     try {
       const saRequestData = produceSuperAgentsRequestData(
@@ -48,6 +53,10 @@ function pickTurnRelevancyData(
           | ResponsesRequestData,
       );
       conversation_history = formatMessagesForExtraction(messages);
+      // Relevance is relative to the assistant's job: a title generator's
+      // one-line answer is exactly on-turn even when the input quotes a
+      // request it does not answer.
+      assistant_role = extractSystemPromptFromMessages(messages);
     } catch {
       // Fallback to metadata if parsing fails
       conversation_history =
@@ -76,7 +85,7 @@ function pickTurnRelevancyData(
 
   const instructions =
     params.instructions || (log.metadata?.instructions as string);
-  return { conversation_history, current_turn, instructions };
+  return { conversation_history, current_turn, assistant_role, instructions };
 }
 
 export async function evaluateLog(
@@ -105,20 +114,26 @@ export async function evaluateLog(
 
   const start_time = Date.now();
 
-  const { conversation_history, current_turn, instructions } =
+  const { conversation_history, current_turn, assistant_role, instructions } =
     pickTurnRelevancyData(log, params);
 
   const tpl = getTurnRelevancyTemplate({
     conversation_history,
     current_turn,
+    assistant_role,
     strict_mode: params.strict_mode || false,
     verbose_mode: params.verbose_mode ?? true,
     include_reason: params.include_reason ?? true,
   });
 
+  // Explicit prompts, and no `outputFormat: 'json'`: that flag made the
+  // judge treat the reply as an extraction and report a flat 1.0 with the
+  // real score buried in metadata -- every successful turn-relevancy run
+  // scored 1.0 regardless of what the judge concluded.
   const judgeResult = await llmJudge.evaluate({
     text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
-    outputFormat: 'json',
+    systemPrompt: tpl.systemPrompt,
+    userPrompt: tpl.userPrompt,
   });
 
   let final_score = judgeResult.score;
