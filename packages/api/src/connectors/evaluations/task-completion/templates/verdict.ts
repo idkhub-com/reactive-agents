@@ -19,7 +19,7 @@ This outcome is an intermediate turn: it ends by invoking tools, and the task is
 
   const systemPrompt = `You are an expert evaluator assessing whether a task was successfully completed.
 
-Your job is to evaluate how well the outcome fulfills the task requirements.${inProgressNote}
+Your job is to evaluate how well the outcome fulfills the task requirements. The outcome describes the assistant's latest turn in a possibly longer interaction: score that turn's contribution, given where the conversation stood when it was produced. Do not re-score earlier turns -- their mistakes, and their work, are evaluated with their own requests.${inProgressNote}
 
 Evaluate based on:
 1. Task Understanding: Was the task properly understood?

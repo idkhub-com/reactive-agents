@@ -15,14 +15,19 @@ const StructuredOutputResponse = z.object({
 
 type StructuredOutputResponse = z.infer<typeof StructuredOutputResponse>;
 
+// The outcome is scoped to the latest response on purpose: every earlier
+// turn of the conversation arrived as its own request, carries its own log,
+// and is scored by its own evaluation run -- often under a different arm.
+// An outcome that narrates the whole conversation re-scores those turns
+// here, crediting (or docking) this turn's arm for work it did not do.
 function getSystemPrompt(task?: string) {
   const systemPrompt = `You are an expert at analyzing AI system interactions to extract task objectives and factual outcomes.
 
-${task ? `The TASK: ${task}\n` : 'Your job is to analyze the provided input, tools used, and output to determine the task. What was the user trying to accomplish?\n'}
+${task ? `The TASK: ${task}\n` : 'Your job is to analyze the conversation to determine the task. What was the user trying to accomplish?\n'}
     
-Your job is to analyze the provided input, tools used, and output to determine the outcome. What actually happened or was produced?
+Your job is to determine the OUTCOME of the assistant's LATEST RESPONSE: what that response did or produced toward the task. The conversation before it is context only -- each earlier turn is evaluated with its own request, so events from earlier turns (mistakes already corrected, work already done, detours already resolved) belong to those turns and must not be folded into this outcome.
 
-Be precise and factual. Focus on the concrete task and measurable outcome.`;
+Be precise and factual. Focus on the concrete task and on what the latest response itself contributes.`;
 
   return systemPrompt;
 }
@@ -30,13 +35,13 @@ Be precise and factual. Focus on the concrete task and measurable outcome.`;
 function getFirstMessage(input: string, output: string) {
   const firstMessage = `Analyze this interaction and extract the task and outcome:
 
-INPUT:
+CONVERSATION (context only -- earlier turns are evaluated separately):
 ${input}
 
-ACTUAL OUTPUT:
+THE ASSISTANT'S LATEST RESPONSE (extract the outcome of this):
 ${output}
 
-Extract the TASK and OUTCOME from this interaction.`;
+Extract the TASK from the conversation and the OUTCOME of the latest response.`;
 
   return firstMessage;
 }

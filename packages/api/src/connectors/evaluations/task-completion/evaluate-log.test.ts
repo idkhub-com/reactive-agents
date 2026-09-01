@@ -532,5 +532,9 @@ describe('Task Completion - agentic logs', () => {
     expect(verdictCall.messages[0].content).toContain(
       'Return your response as a JSON object',
     );
+    // And it scores this turn's contribution, not the turns before it.
+    expect(verdictCall.messages[0].content).toContain(
+      'Do not re-score earlier turns',
+    );
   });
 });
