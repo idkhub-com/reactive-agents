@@ -11,6 +11,7 @@ const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -21,6 +22,7 @@ vi.mock('openai', () => {
       chat: {
         completions: {
           parse: mockParse,
+          create: mockParse,
         },
       },
       withOptions: mockWithOptions,
@@ -89,7 +91,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -161,7 +163,13 @@ describe('LLM Judge', () => {
     );
 
     mockParse.mockResolvedValueOnce({
-      choices: [{ message: { parsed: { score: 0.9, reasoning: 'Good' } } }],
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ score: 0.9, reasoning: 'Good' }),
+          },
+        },
+      ],
     });
 
     const result = await ollamaJudge.evaluate({
@@ -212,7 +220,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: null, // Invalid: null parsed response
+            content: JSON.stringify(null), // Invalid: null parsed response
           },
         },
       ],
@@ -246,6 +254,26 @@ describe('LLM Judge', () => {
     expect(result.metadata?.errorType).toBe('api_error');
   });
 
+  it('tolerates a trailing comma and prose around the judge JSON', async () => {
+    // What a self-hosted judge actually sends: the object is there, but the
+    // strict parser used to throw and the evaluation fell back to 0.5.
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content:
+              'Here is my verdict:\n{\n"score": 0.8,\n"reasoning": "solid",\n}',
+          },
+        },
+      ],
+    });
+
+    const result = await llmJudge.evaluate({ text: 'judge this' });
+
+    expect(result.score).toBe(0.8);
+    expect(result.reasoning).toBe('solid');
+  });
+
   it('should evaluate code text successfully', async () => {
     const mockParsedResponse = {
       score: 0.9,
@@ -256,7 +284,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -284,7 +312,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -325,7 +353,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -356,7 +384,7 @@ describe('LLM Judge', () => {
         choices: [
           {
             message: {
-              parsed: mockParsedResponse,
+              content: JSON.stringify(mockParsedResponse),
             },
           },
         ],
@@ -418,7 +446,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: null,
+            content: JSON.stringify(null),
           },
         },
       ],
@@ -451,7 +479,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: null,
+                content: JSON.stringify(null),
               },
             },
           ],
@@ -497,7 +525,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: mockParsedResponse,
+                content: JSON.stringify(mockParsedResponse),
               },
             },
           ],
@@ -532,7 +560,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: mockParsedResponse,
+                content: JSON.stringify(mockParsedResponse),
               },
             },
           ],
@@ -567,7 +595,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: mockParsedResponse,
+                content: JSON.stringify(mockParsedResponse),
               },
             },
           ],
@@ -638,7 +666,7 @@ describe('LLM Judge', () => {
         choices: [
           {
             message: {
-              parsed: mockParsedResponse,
+              content: JSON.stringify(mockParsedResponse),
             },
           },
         ],

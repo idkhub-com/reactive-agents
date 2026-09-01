@@ -39,10 +39,37 @@ function isRetryableLLMJudgeError(error: unknown): boolean {
       message.includes('temporary') ||
       message.includes('server error') ||
       message.includes('gateway') ||
-      message.includes('service unavailable')
+      message.includes('service unavailable') ||
+      // A judge that answered garbage may answer properly the second time.
+      message.includes('valid json')
     );
   }
   return false;
+}
+
+/**
+ * Parses the judge's JSON, tolerating what self-hosted models actually
+ * send: prose around the object, a trailing comma before a brace.
+ */
+function parseJudgeJson(content: string): unknown {
+  const attempts = [content];
+  const first = content.indexOf('{');
+  const last = content.lastIndexOf('}');
+  if (first !== -1 && last > first) {
+    attempts.push(content.slice(first, last + 1));
+  }
+  for (const attempt of attempts) {
+    for (const candidate of [attempt, attempt.replace(/,\s*([}\]])/g, '$1')]) {
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // Try the next shape.
+      }
+    }
+  }
+  throw new Error(
+    `The judge did not answer valid JSON: ${content.slice(0, 200)}`,
+  );
 }
 
 /**
@@ -240,9 +267,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           },
         });
 
-        let parsed: unknown;
-
-        const response = await clientWithHeaders.chat.completions.parse({
+        const response = await clientWithHeaders.chat.completions.create({
           model: judgeConfig.model,
           messages: [
             { role: 'system', content: prompt.systemPrompt },
@@ -258,8 +283,19 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           },
         });
 
-        parsed = response.choices[0].message.parsed;
-        if (!parsed) {
+        const choice = response.choices?.[0];
+        if (!choice?.message) {
+          throw new Error('No message in the AI provider response');
+        }
+        const content = choice.message.content;
+        if (!content) {
+          throw new Error('No parsed response from AI provider');
+        }
+        // The SDK's `.parse()` throws on anything but strict JSON, and a
+        // self-hosted judge answers with a trailing comma often enough that
+        // evaluations kept dying on it.
+        const parsed = parseJudgeJson(content);
+        if (!parsed || typeof parsed !== 'object') {
           throw new Error('No parsed response from AI provider');
         }
 

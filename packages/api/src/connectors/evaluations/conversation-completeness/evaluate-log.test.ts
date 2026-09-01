@@ -26,6 +26,7 @@ const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -36,6 +37,7 @@ vi.mock('openai', () => {
       chat: {
         completions: {
           parse: mockParse,
+          create: mockParse,
         },
       },
       withOptions: mockWithOptions,
@@ -56,10 +58,10 @@ describe('Conversation Completeness - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 1.0,
               reasoning: 'Evaluation successful',
-            },
+            }),
           },
         },
       ],
@@ -192,10 +194,10 @@ describe('Conversation Completeness - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 0.5,
               reasoning: 'Only addressed Paris, not London',
-            },
+            }),
           },
         },
       ],
@@ -333,7 +335,11 @@ describe('Conversation Completeness - agentic logs', () => {
     vi.clearAllMocks();
     mockParse.mockResolvedValue({
       choices: [
-        { message: { parsed: { score: 1, reasoning: 'complete enough' } } },
+        {
+          message: {
+            content: JSON.stringify({ score: 1, reasoning: 'complete enough' }),
+          },
+        },
       ],
     });
   });

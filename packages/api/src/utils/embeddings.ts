@@ -121,6 +121,15 @@ export function extractMessagesFromRequestData(
   }
 }
 
+/**
+ * Embedding providers stop at a context window -- text-embedding-3-large at
+ * 8192 tokens -- and a conversation carrying tool outputs can be far past
+ * it. The caps keep the text inside the window: routing and clustering care
+ * about what the conversation is, not about every line of a git diff.
+ */
+const MAX_TOOL_OUTPUT_LENGTH = 1000;
+const MAX_EMBEDDING_TEXT_LENGTH = 6000;
+
 export function formatMessagesForEmbedding(
   messages: ChatCompletionMessage[],
 ): string {
@@ -152,14 +161,16 @@ export function formatMessagesForEmbedding(
         content += String(message.content);
       }
 
-      // The tool's output is the message's content. This used to render
-      // before content was computed, so every tool output read as empty --
-      // and the judges scored conversations as if the agent got nothing back.
+      // The tool's output is the message's content, capped: the embedding
+      // needs the topic of the output, not the whole of a git diff.
       if (
         role === ChatCompletionMessageRole.TOOL ||
         role === ChatCompletionMessageRole.FUNCTION
       ) {
-        return `Tool Call ${message.tool_call_id} Output: ${content}`;
+        return `Tool Call ${message.tool_call_id} Output: ${content.slice(
+          0,
+          MAX_TOOL_OUTPUT_LENGTH,
+        )}`;
       }
 
       if (message.tool_calls && message.tool_calls.length > 0) {
@@ -286,7 +297,10 @@ export async function embedText(
       },
       body: JSON.stringify({
         model: embeddingConfig.model.model_name,
-        input: text,
+        // The last guard: whatever built this text, an input past the
+        // model's context window comes back as a 400 and the caller's
+        // request dies with it.
+        input: text.slice(0, MAX_EMBEDDING_TEXT_LENGTH),
         dimensions: embeddingConfig.dimensions,
       }),
     });

@@ -105,6 +105,74 @@ describe('saConfigurationInjectorMiddleware', () => {
     expect(saConfig.skill_name).toBe('named-skill');
   });
 
+  it('serves a request whose embedding failed, from the first cluster', async () => {
+    // The embedding call can fail -- an input past the model's context
+    // window, the provider down. The request cannot be matched to its
+    // cluster, but refusing it with "No configuration_name or provider
+    // defined" helps nobody: any cluster's arm serves it.
+    vi.mocked(generateEmbeddingForRequest).mockRejectedValue(
+      new Error('Embedding API returned 400'),
+    );
+    const preProcessed = SuperAgentsConfigPreProcessed.parse({
+      agent_name: 'helper',
+      skill_name: 'routed-skill',
+    });
+    const getSkillOptimizationArms = vi.fn().mockResolvedValue([
+      {
+        id: 'arm-1',
+        cluster_id: 'cluster-1',
+        params: {
+          system_prompt: 'serve the request',
+          model_id: 'model-1',
+          temperature_min: 0.2,
+          temperature_max: 0.4,
+          top_p_min: 1,
+          top_p_max: 1,
+          frequency_penalty_min: 0,
+          frequency_penalty_max: 0,
+          presence_penalty_min: 0,
+          presence_penalty_max: 0,
+          thinking_min: null,
+          thinking_max: null,
+        },
+      },
+    ]);
+    const c = context(preProcessed, {
+      getSkillOptimizationClusters: vi.fn().mockResolvedValue([
+        { id: 'cluster-1', centroid: [1, 0] },
+        { id: 'cluster-2', centroid: [0, 1] },
+      ]),
+      getSkillOptimizationArms,
+      getSkillOptimizationEvaluations: vi.fn().mockResolvedValue([]),
+      getSkillOptimizationArmStats: vi.fn().mockResolvedValue([]),
+      getModels: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'model-1', model_name: 'qwen-test', ai_provider_id: 'prov-1' },
+        ]),
+      getAIProviderAPIKeyById: vi.fn().mockResolvedValue({
+        ai_provider: 'ollama',
+        api_key: null,
+        custom_fields: {},
+      }),
+    });
+    const next = vi.fn();
+
+    await saConfigurationInjectorMiddleware(c, next);
+
+    expect(next).toHaveBeenCalled();
+    // Matched to the first cluster, since there is nothing to match with.
+    expect(getSkillOptimizationArms).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cluster_id: 'cluster-1' }),
+    );
+    const saConfig = setValue(c, 'sa_config') as SuperAgentsConfig;
+    expect(saConfig.targets[0].configuration.model).toBe('qwen-test');
+    expect(saConfig.targets[0].configuration.system_prompt).toBe(
+      'serve the request',
+    );
+  });
+
   it('answers 422 when the optimized skill has no arms to serve with', async () => {
     // A skill without models has clusters but no arms -- a skill the gateway
     // created for an agent without default models, for instance.

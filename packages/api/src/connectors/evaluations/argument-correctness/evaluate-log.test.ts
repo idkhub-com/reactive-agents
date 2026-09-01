@@ -26,6 +26,7 @@ const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -36,6 +37,7 @@ vi.mock('openai', () => {
       chat: {
         completions: {
           parse: mockParse,
+          create: mockParse,
         },
       },
       withOptions: mockWithOptions,
@@ -56,10 +58,10 @@ describe('Argument Correctness - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 1.0,
               reasoning: 'Evaluation successful',
-            },
+            }),
           },
         },
       ],

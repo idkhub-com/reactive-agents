@@ -27,6 +27,7 @@ const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -37,6 +38,7 @@ vi.mock('openai', () => {
       chat: {
         completions: {
           parse: mockParse,
+          create: mockParse,
         },
       },
       withOptions: mockWithOptions,
@@ -68,10 +70,10 @@ describe('Task Completion - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 1.0,
               reasoning: 'Evaluation successful',
-            },
+            }),
           },
         },
       ],
@@ -204,10 +206,10 @@ describe('Task Completion - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 0.0,
               reasoning: 'Task incomplete',
-            },
+            }),
           },
         },
       ],
@@ -359,7 +361,13 @@ describe('Task Completion - agentic logs', () => {
     });
     vi.clearAllMocks();
     mockParse.mockResolvedValue({
-      choices: [{ message: { parsed: { score: 1, reasoning: 'on track' } } }],
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ score: 1, reasoning: 'on track' }),
+          },
+        },
+      ],
     });
     vi.mocked(extractTaskAndOutcome).mockResolvedValue({
       task: 'review the code changes',

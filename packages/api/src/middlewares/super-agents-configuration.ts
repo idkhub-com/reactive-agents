@@ -204,10 +204,17 @@ async function validateTargetConfiguration(
   let resolvedApiKey: string | undefined;
   let resolvedCustomHost: string | undefined;
 
-  // Apply optimization if specified
-  // Optimizations can only be applied if the embedding is provided
+  // Apply optimization if specified. A conversational request whose
+  // embedding could not be generated (the embedding call failed) is still
+  // served: it cannot be matched to its cluster, but any cluster's arms
+  // beat refusing the request.
+  const functionName = c.get('sa_request_data')?.functionName;
+  const conversational =
+    functionName === FunctionName.CHAT_COMPLETE ||
+    functionName === FunctionName.STREAM_CHAT_COMPLETE ||
+    functionName === FunctionName.CREATE_MODEL_RESPONSE;
   if (
-    embedding &&
+    (embedding || conversational) &&
     saTargetPreProcessed.optimization === OptimizationType.AUTO
   ) {
     try {
@@ -266,7 +273,18 @@ async function validateTargetConfiguration(
         }
       }
 
-      const optimalCluster = getOptimalCluster(embedding, clusters);
+      if (clusters.length === 0) {
+        return c.json(
+          {
+            error: `Skill ${c.get('skill').name} has no optimization clusters; configure an embedding model in system settings and try again.`,
+          },
+          422,
+        );
+      }
+
+      const optimalCluster = embedding
+        ? getOptimalCluster(embedding, clusters)
+        : clusters[0];
 
       const arms = await userDataStorageConnector.getSkillOptimizationArms(c, {
         skill_id: skill.id,
