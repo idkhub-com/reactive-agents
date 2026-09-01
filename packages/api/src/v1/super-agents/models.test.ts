@@ -293,12 +293,72 @@ describe('Models API Status Codes', () => {
   });
 
   describe('DELETE /:id', () => {
+    const modelId = '123e4567-e89b-12d3-a456-426614174000';
+
+    const systemSettings = {
+      id: '9f6e6c1e-1f3e-4a2a-9a5f-2f2b1c9d4e10',
+      system_prompt_reflection_model_id: null,
+      evaluation_generation_model_id: null,
+      embedding_model_id: null,
+      judge_model_id: null,
+      developer_mode: false,
+      created_at: '2023-01-01T00:00:00.000Z',
+      updated_at: '2023-01-01T00:00:00.000Z',
+    };
+
     it('should return 400 for invalid UUID', async () => {
       const res = await client[':id'].$delete({
         param: { id: 'invalid-uuid' },
       });
 
       expect(res.status).toBe(400);
+    });
+
+    it('should return 409 naming the settings that use the model', async () => {
+      mockUserDataStorageConnector.getSystemSettings.mockResolvedValue({
+        ...systemSettings,
+        system_prompt_reflection_model_id: modelId,
+        judge_model_id: modelId,
+      });
+
+      const res = await client[':id'].$delete({ param: { id: modelId } });
+
+      expect(res.status).toBe(409);
+      const data = (await res.json()) as { error: string };
+      expect(data.error).toContain('System Prompt Reflection and Judge model');
+    });
+
+    it('should leave the skills alone when the delete is refused', async () => {
+      mockUserDataStorageConnector.getSystemSettings.mockResolvedValue({
+        ...systemSettings,
+        embedding_model_id: modelId,
+      });
+
+      await client[':id'].$delete({ param: { id: modelId } });
+
+      expect(
+        mockUserDataStorageConnector.getSkillsByModelId,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockUserDataStorageConnector.removeModelsFromSkill,
+      ).not.toHaveBeenCalled();
+      expect(mockUserDataStorageConnector.deleteModel).not.toHaveBeenCalled();
+    });
+
+    it('should delete a model no system setting uses', async () => {
+      mockUserDataStorageConnector.getSystemSettings.mockResolvedValue(
+        systemSettings,
+      );
+      mockUserDataStorageConnector.getSkillsByModelId.mockResolvedValue([]);
+      mockUserDataStorageConnector.deleteModel.mockResolvedValue(undefined);
+
+      const res = await client[':id'].$delete({ param: { id: modelId } });
+
+      expect(res.status).toBe(200);
+      expect(mockUserDataStorageConnector.deleteModel).toHaveBeenCalledWith(
+        expect.anything(),
+        modelId,
+      );
     });
   });
 
