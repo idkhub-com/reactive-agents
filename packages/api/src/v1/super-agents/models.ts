@@ -12,6 +12,29 @@ import { SkillEventType } from '@shared/types/data/skill-event';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
+/**
+ * The system settings that hold a model, labelled as the dashboard labels
+ * them. Both backends declare these columns `ON DELETE RESTRICT`, so a model
+ * sitting in one of them cannot be deleted -- and the database says so with a
+ * bare "FOREIGN KEY constraint failed", which names neither the setting nor
+ * the model. Checking up front also keeps a refused delete from having already
+ * detached the model from every skill that used it.
+ */
+const SYSTEM_SETTINGS_MODEL_SLOTS = [
+  ['system_prompt_reflection_model_id', 'System Prompt Reflection'],
+  ['evaluation_generation_model_id', 'Evaluation Generation'],
+  ['embedding_model_id', 'Embedding'],
+  ['judge_model_id', 'Judge'],
+] as const;
+
+/** "A", "A and B", "A, B and C". */
+function formatList(items: string[]): string {
+  if (items.length < 2) {
+    return items.join('');
+  }
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 export const modelsRouter = new Hono<AppEnv>()
   // GET /v1/super-agents/models
   .get('/', async (c) => {
@@ -106,6 +129,25 @@ export const modelsRouter = new Hono<AppEnv>()
       try {
         const userDataStorageConnector = c.get('user_data_storage_connector');
         const { id } = c.req.valid('param');
+
+        // Before anything below detaches the model from its skills, since none
+        // of that is rolled back when the delete itself is refused.
+        const systemSettings =
+          await userDataStorageConnector.getSystemSettings(c);
+        const settingsUsingModel = SYSTEM_SETTINGS_MODEL_SLOTS.filter(
+          ([column]) => systemSettings?.[column] === id,
+        ).map(([, label]) => label);
+
+        if (settingsUsingModel.length > 0) {
+          return c.json(
+            {
+              error: `Cannot delete this model because System Settings uses it as the ${formatList(
+                settingsUsingModel,
+              )} model. Choose a different one in System Settings first.`,
+            },
+            409,
+          );
+        }
 
         // Find all skills using this model
         const affectedSkills =
