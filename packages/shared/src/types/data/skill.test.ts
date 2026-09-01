@@ -522,6 +522,8 @@ describe('Skill Data Transforms and Validation', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: [],
+        auto_created: false,
+        seed_system_prompt: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -549,6 +551,8 @@ describe('Skill Data Transforms and Validation', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -629,6 +633,8 @@ describe('Skill Data Transforms and Validation', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: [],
+        auto_created: false,
+        seed_system_prompt: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -685,5 +691,58 @@ describe('Skill Data Transforms and Validation', () => {
 
       expect(() => Skill.parse(skillData)).toThrow();
     });
+  });
+});
+
+describe('skills the gateway creates', () => {
+  const minimal = {
+    agent_id: '123e4567-e89b-12d3-a456-426614174000',
+    name: 'concierge',
+    description: 'y'.repeat(30),
+    metadata: {},
+    optimize: true,
+  };
+
+  it('are hand-made unless said otherwise', () => {
+    const parsed = SkillCreateParams.parse(minimal);
+    expect(parsed.auto_created).toBe(false);
+    expect(parsed.seed_system_prompt).toBeUndefined();
+  });
+
+  it('keep the caller prompt they were seeded with', () => {
+    const parsed = SkillCreateParams.parse({
+      ...minimal,
+      auto_created: true,
+      seed_system_prompt: 'You are the concierge.',
+    });
+    expect(parsed.auto_created).toBe(true);
+    expect(parsed.seed_system_prompt).toBe('You are the concierge.');
+  });
+
+  it('can have the seed prompt cleared on its own', () => {
+    expect(SkillUpdateParams.parse({ seed_system_prompt: null })).toEqual({
+      seed_system_prompt: null,
+    });
+  });
+
+  it('carry both fields once stored', () => {
+    expect(() =>
+      Skill.parse({
+        id: '123e4567-e89b-12d3-a456-426614174001',
+        ...minimal,
+        configuration_count: 3,
+        clustering_interval: 15,
+        reflection_min_requests_per_arm: 3,
+        exploration_temperature: 1,
+        last_clustering_at: null,
+        last_clustering_log_start_time: null,
+        evaluations_regenerated_at: null,
+        evaluation_lock_acquired_at: null,
+        total_requests: 0,
+        allowed_template_variables: [],
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      }),
+    ).toThrow();
   });
 });

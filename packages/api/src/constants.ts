@@ -186,4 +186,5 @@ export const SA_SKILLS = [
   'system-prompt-seeding-with-context',
   'system-prompt-reflection',
   'embedding',
+  'describe-skill',
 ];

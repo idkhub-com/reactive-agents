@@ -347,6 +347,15 @@ export function SkillDashboardView(): ReactElement {
               className="h-5 w-5 rounded-sm"
             />
             <span>{selectedSkill.name}</span>
+            {selectedSkill.auto_created && (
+              <Badge
+                variant="outline"
+                className="text-xs"
+                title="Created by the gateway for a request that named only the agent; its first configurations used that request's own system prompt"
+              >
+                auto
+              </Badge>
+            )}
             <SkillStatusIndicator
               skill={selectedSkill}
               variant="badge"

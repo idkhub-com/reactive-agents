@@ -180,6 +180,9 @@ describe('AgentsView', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00Z',
         updated_at: '2023-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
     ]);
     vi.mocked(getSkills).mockResolvedValue([
@@ -202,6 +205,8 @@ describe('AgentsView', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       },
     ]);
 
@@ -256,6 +261,9 @@ describe('AgentsView', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00Z',
         updated_at: '2023-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
     ]);
     vi.mocked(getSkills).mockResolvedValue([
@@ -278,6 +286,8 @@ describe('AgentsView', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       },
     ]);
 
@@ -305,6 +315,9 @@ describe('AgentsView', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00Z',
         updated_at: '2023-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
     ]);
     vi.mocked(getSkills).mockResolvedValue([
@@ -327,6 +340,8 @@ describe('AgentsView', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       },
     ]);
 
@@ -355,6 +370,9 @@ describe('AgentsView', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00Z',
         updated_at: '2023-01-01T00:00:00Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       },
     ]);
     vi.mocked(getSkills).mockResolvedValue([
@@ -377,6 +395,8 @@ describe('AgentsView', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       },
     ]);
 

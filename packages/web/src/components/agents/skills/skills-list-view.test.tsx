@@ -20,6 +20,7 @@ import {
 // Mock API functions and providers
 vi.mock('@web/api/v1/super-agents/agents', () => ({
   getAgents: vi.fn(),
+  getAgentModels: vi.fn().mockResolvedValue([]),
   getAgentEvaluationScoresByTimeBucket: vi.fn().mockResolvedValue([]),
 }));
 
@@ -67,7 +68,7 @@ vi.mock('@web/providers/system-settings', () => ({
     children,
 }));
 
-import { getAgents } from '@web/api/v1/super-agents/agents';
+import { getAgentModels, getAgents } from '@web/api/v1/super-agents/agents';
 import { getSkills } from '@web/api/v1/super-agents/skills';
 import { useLogs } from '@web/providers/logs';
 import { useSkills } from '@web/providers/skills';
@@ -79,6 +80,9 @@ const mockAgent: Agent = {
   metadata: {},
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
+  auto_create_skills: true,
+  skill_match_threshold: 0.8,
+  max_auto_created_skills: 10,
 };
 
 const mockSkills: Skill[] = [
@@ -101,6 +105,8 @@ const mockSkills: Skill[] = [
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   },
   {
     id: 'skill-2',
@@ -121,6 +127,8 @@ const mockSkills: Skill[] = [
     evaluation_lock_acquired_at: null,
     total_requests: 0,
     allowed_template_variables: ['datetime'],
+    auto_created: false,
+    seed_system_prompt: null,
   },
 ];
 
@@ -248,16 +256,84 @@ describe('SkillsListView', () => {
     });
   });
 
-  it('shows empty state when no skills exist', async () => {
-    vi.mocked(useSkills).mockReturnValue(
-      createSkillsCtx({ skills: [], isLoading: false }),
-    );
+  describe('without skills', () => {
+    beforeEach(() => {
+      vi.mocked(useSkills).mockReturnValue(
+        createSkillsCtx({ skills: [], isLoading: false }),
+      );
+    });
+
+    it('asks for default models first when the agent has none', async () => {
+      vi.mocked(getAgentModels).mockResolvedValue([]);
+
+      renderWithProviders(<AgentView />);
+
+      // The verdict waits for the default models to load.
+      await waitFor(() => {
+        expect(
+          screen.getByText('This agent has no default models'),
+        ).toBeInTheDocument();
+      });
+      expect(screen.getByText(/no skills yet/i)).toBeInTheDocument();
+      // Once in the callout at the top, once in the empty state.
+      expect(
+        screen.getAllByRole('button', { name: /add default models/i }),
+      ).toHaveLength(2);
+      expect(
+        screen.getByRole('button', { name: /create a skill by hand/i }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/create your first skill/i)).toBeNull();
+    });
+
+    it('explains that skills come from requests when the agent has default models', async () => {
+      vi.mocked(getAgentModels).mockResolvedValue([{ id: 'model-1' } as never]);
+
+      renderWithProviders(<AgentView />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/no skills yet/i)).toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            /the first request to this agent makes its first skill/i,
+          ),
+        ).toBeInTheDocument();
+      });
+      expect(screen.queryByText('This agent has no default models')).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: /add default models/i }),
+      ).toBeNull();
+    });
+
+    it('asks for a skill when the agent keeps its skills', async () => {
+      vi.mocked(getAgents).mockResolvedValue([
+        { ...mockAgent, auto_create_skills: false },
+      ]);
+
+      renderWithProviders(<AgentView />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: /create your first skill/i }),
+        ).toBeInTheDocument();
+      });
+      expect(screen.queryByText('This agent has no default models')).toBeNull();
+      expect(getAgentModels).not.toHaveBeenCalled();
+    });
+  });
+
+  it('points at the missing default models above the skills', async () => {
+    vi.mocked(getAgentModels).mockResolvedValue([]);
 
     renderWithProviders(<AgentView />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no skills found/i)).toBeInTheDocument();
+      expect(
+        screen.getByText('This agent has no default models'),
+      ).toBeInTheDocument();
     });
+    expect(screen.getByText('Email Response')).toBeInTheDocument();
   });
 
   it('shows message when no agent is selected', async () => {
@@ -372,6 +448,38 @@ describe('SkillsListView', () => {
       expect(chatSkillAvatar?.getAttribute('src')).toContain(
         'data:image/svg+xml',
       );
+    });
+  });
+
+  it('marks the skills the gateway created', async () => {
+    vi.mocked(useSkills).mockReturnValue(
+      createSkillsCtx({
+        skills: [{ ...mockSkills[0], auto_created: true }, mockSkills[1]],
+      }),
+    );
+
+    renderWithProviders(<AgentView />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Email Response')).toBeInTheDocument();
+    });
+    expect(screen.getAllByText('auto')).toHaveLength(1);
+  });
+
+  it('offers the default models dialog from the agent menu', async () => {
+    const { user } = renderWithProviders(<AgentView />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /more options/i }),
+      ).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /more options/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('menuitem', { name: /default models/i }),
+      ).toBeInTheDocument();
     });
   });
 });

@@ -12,14 +12,42 @@ export interface AuthStatus {
   authenticated: boolean;
 }
 
+/**
+ * The server is up but cannot serve anyone, and said why -- a database it
+ * refuses to use, for instance. Not a reason to log in again: the message
+ * is for whoever runs the server, so it is shown instead.
+ */
+export class ServerUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ServerUnavailableError';
+  }
+}
+
+/**
+ * The dashboard's authentication status; null when the server could not be
+ * reached or answered with anything but a status.
+ *
+ * @throws ServerUnavailableError when the server answered 503 with a reason.
+ */
 export async function getAuthStatus(): Promise<AuthStatus | null> {
+  let response: Response;
   try {
-    const response = await client.status.$get();
-    if (!response.ok) return null;
-    return (await response.json()) as AuthStatus;
+    response = await client.status.$get();
   } catch {
     return null;
   }
+  if (response.status === 503) {
+    const reason = await response
+      .json()
+      .then((body) => (body as { error?: unknown }).error)
+      .catch(() => undefined);
+    if (typeof reason === 'string' && reason) {
+      throw new ServerUnavailableError(reason);
+    }
+  }
+  if (!response.ok) return null;
+  return (await response.json()) as AuthStatus;
 }
 
 export async function login(password: string): Promise<boolean> {

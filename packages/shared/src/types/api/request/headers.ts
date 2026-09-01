@@ -345,6 +345,12 @@ export const SuperAgentsConfig = BaseSuperAgentsConfig.extend({
 export type SuperAgentsConfig = z.infer<typeof SuperAgentsConfig>;
 
 export const SuperAgentsConfigPreProcessed = BaseSuperAgentsConfig.extend({
+  /**
+   * Optional here, unlike in the resolved config: a request that names only
+   * the agent is routed to one of its skills by the gateway, which fills this
+   * in before anything downstream reads it.
+   */
+  skill_name: z.string().optional(),
   targets: z.preprocess(
     (val) => val ?? [{ optimization: OptimizationType.AUTO }],
     z.array(SuperAgentsTargetPreProcessed),

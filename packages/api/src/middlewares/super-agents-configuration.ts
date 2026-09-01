@@ -204,10 +204,17 @@ async function validateTargetConfiguration(
   let resolvedApiKey: string | undefined;
   let resolvedCustomHost: string | undefined;
 
-  // Apply optimization if specified
-  // Optimizations can only be applied if the embedding is provided
+  // Apply optimization if specified. A conversational request whose
+  // embedding could not be generated (the embedding call failed) is still
+  // served: it cannot be matched to its cluster, but any cluster's arms
+  // beat refusing the request.
+  const functionName = c.get('sa_request_data')?.functionName;
+  const conversational =
+    functionName === FunctionName.CHAT_COMPLETE ||
+    functionName === FunctionName.STREAM_CHAT_COMPLETE ||
+    functionName === FunctionName.CREATE_MODEL_RESPONSE;
   if (
-    embedding &&
+    (embedding || conversational) &&
     saTargetPreProcessed.optimization === OptimizationType.AUTO
   ) {
     try {
@@ -266,12 +273,39 @@ async function validateTargetConfiguration(
         }
       }
 
-      const optimalCluster = getOptimalCluster(embedding, clusters);
+      if (clusters.length === 0) {
+        return c.json(
+          {
+            error: `Skill ${c.get('skill').name} has no optimization clusters; configure an embedding model in system settings and try again.`,
+          },
+          422,
+        );
+      }
+
+      const optimalCluster = embedding
+        ? getOptimalCluster(embedding, clusters)
+        : clusters[0];
 
       const arms = await userDataStorageConnector.getSkillOptimizationArms(c, {
         skill_id: skill.id,
         cluster_id: optimalCluster.id,
       });
+
+      // A skill without models has no arms; say so instead of crashing on
+      // the empty list below. The usual way here is a skill the gateway
+      // created for an agent that had no default models to give it.
+      if (arms.length === 0) {
+        const models = await userDataStorageConnector.getSkillModels(
+          c,
+          skill.id,
+        );
+        const agent = c.get('agent');
+        const error =
+          skill.auto_created && models.length === 0
+            ? `Skill ${skill.name} was created automatically, but agent ${agent?.name ?? skill.agent_id} had no default models to give it. Add default models to the agent -- its automatic skills take them -- or attach a model to the skill, and try again.`
+            : `Skill ${skill.name} has no configurations to serve an optimized request. Attach a model to the skill, or default models to its agent, and try again.`;
+        return c.json({ error }, 422);
+      }
 
       const optimalArm = await getOptimalArm(
         c,
@@ -492,6 +526,9 @@ export const saConfigurationInjectorMiddleware = createMiddleware(
 
         const saConfig: SuperAgentsConfig = {
           ...saConfigPreProcessed,
+          // Filled in by `agentAndSkillMiddleware` when the caller named only
+          // the agent; the skill on the context is the one it resolved.
+          skill_name: saConfigPreProcessed.skill_name ?? c.get('skill').name,
           targets: saTargets,
         };
 

@@ -90,6 +90,13 @@ describe('getSkill', () => {
       createSkillOptimizationClusters: vi.fn(),
       updateSkillOptimizationCluster: vi.fn(),
       deleteSkillOptimizationCluster: vi.fn(),
+      getSkillRoutings: vi.fn(),
+      getAgentModels: vi.fn(),
+      addModelsToAgent: vi.fn(),
+      removeModelsFromAgent: vi.fn(),
+      upsertSkillRouting: vi.fn(),
+      claimSkillCreationLease: vi.fn(),
+      releaseSkillCreationLease: vi.fn(),
       incrementClusterCounters: vi.fn(),
       // Skill Optimization Arm methods
       getSkillOptimizationArms: vi.fn(),
@@ -141,6 +148,8 @@ describe('getSkill', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);
@@ -182,6 +191,8 @@ describe('getSkill', () => {
           evaluation_lock_acquired_at: null,
           total_requests: 0,
           allowed_template_variables: ['datetime'],
+          auto_created: false,
+          seed_system_prompt: null,
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
@@ -202,6 +213,8 @@ describe('getSkill', () => {
           evaluation_lock_acquired_at: null,
           total_requests: 0,
           allowed_template_variables: ['datetime'],
+          auto_created: false,
+          seed_system_prompt: null,
         },
       ];
 
@@ -299,6 +312,8 @@ describe('getSkill', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([skill]);
@@ -361,6 +376,8 @@ describe('getSkill', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       };
 
       vi.mocked(mockConnector.getSkills).mockResolvedValue([existingSkill]);

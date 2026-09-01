@@ -121,6 +121,15 @@ export function extractMessagesFromRequestData(
   }
 }
 
+/**
+ * Embedding providers stop at a context window -- text-embedding-3-large at
+ * 8192 tokens -- and a conversation carrying tool outputs can be far past
+ * it. The caps keep the text inside the window: routing and clustering care
+ * about what the conversation is, not about every line of a git diff.
+ */
+const MAX_TOOL_OUTPUT_LENGTH = 1000;
+const MAX_EMBEDDING_TEXT_LENGTH = 6000;
+
 export function formatMessagesForEmbedding(
   messages: ChatCompletionMessage[],
 ): string {
@@ -136,13 +145,6 @@ export function formatMessagesForEmbedding(
       const role = message.role;
       let content = '';
 
-      if (
-        role === ChatCompletionMessageRole.TOOL ||
-        role === ChatCompletionMessageRole.FUNCTION
-      ) {
-        return `Tool Call ${message.tool_call_id} Output: ${content}`;
-      }
-
       if (typeof message.content === 'string') {
         content += message.content;
       } else if (Array.isArray(message.content)) {
@@ -157,6 +159,18 @@ export function formatMessagesForEmbedding(
           .join(' ');
       } else if (message.content) {
         content += String(message.content);
+      }
+
+      // The tool's output is the message's content, capped: the embedding
+      // needs the topic of the output, not the whole of a git diff.
+      if (
+        role === ChatCompletionMessageRole.TOOL ||
+        role === ChatCompletionMessageRole.FUNCTION
+      ) {
+        return `Tool Call ${message.tool_call_id} Output: ${content.slice(
+          0,
+          MAX_TOOL_OUTPUT_LENGTH,
+        )}`;
       }
 
       if (message.tool_calls && message.tool_calls.length > 0) {
@@ -194,14 +208,23 @@ export function formatMessagesForEmbedding(
     .join('\n\n\n');
 }
 
-export async function generateEmbeddingForRequest(
+export interface TextEmbedding {
+  embedding: number[];
+  /** The model in system settings that produced it. */
+  modelId: string;
+}
+
+/**
+ * Embeds one text with the embedding model configured in system settings.
+ *
+ * Goes through this server's own `/v1/embeddings` as the internal `embedding`
+ * skill, like every other internal call.
+ */
+export async function embedText(
   c: AppContext,
-  saRequestData:
-    | ChatCompletionRequestData
-    | StreamChatCompletionRequestData
-    | ResponsesRequestData,
   connector: UserDataStorageConnector,
-): Promise<number[]> {
+  text: string,
+): Promise<TextEmbedding> {
   // Resolve embedding model from system settings (includes dimensions)
   const embeddingConfig = await resolveEmbeddingModelConfig(c, connector);
 
@@ -238,16 +261,11 @@ export async function generateEmbeddingForRequest(
     );
   }
 
+  if (!text.trim()) {
+    throw new RequestEmbeddingError('No text to embed');
+  }
+
   try {
-    const messages = extractMessagesFromRequestData(saRequestData);
-    const inputText = formatMessagesForEmbedding(messages);
-
-    if (!inputText.trim()) {
-      throw new RequestEmbeddingError(
-        'No valid text content found in messages',
-      );
-    }
-
     const saConfig = {
       targets: [
         {
@@ -279,7 +297,10 @@ export async function generateEmbeddingForRequest(
       },
       body: JSON.stringify({
         model: embeddingConfig.model.model_name,
-        input: inputText,
+        // The last guard: whatever built this text, an input past the
+        // model's context window comes back as a 400 and the caller's
+        // request dies with it.
+        input: text.slice(0, MAX_EMBEDDING_TEXT_LENGTH),
         dimensions: embeddingConfig.dimensions,
       }),
     });
@@ -301,9 +322,10 @@ export async function generateEmbeddingForRequest(
       );
     }
 
-    const embeddingData = data.data[0];
-
-    return embeddingData.embedding;
+    return {
+      embedding: data.data[0].embedding,
+      modelId: embeddingConfig.modelId,
+    };
   } catch (error) {
     if (error instanceof RequestEmbeddingError) {
       throw error;
@@ -315,4 +337,23 @@ export async function generateEmbeddingForRequest(
     }
     throw new RequestEmbeddingError(`Unknown error generating embedding`);
   }
+}
+
+/** The embedding of a request's conversation, minus its system messages. */
+export async function generateEmbeddingForRequest(
+  c: AppContext,
+  saRequestData:
+    | ChatCompletionRequestData
+    | StreamChatCompletionRequestData
+    | ResponsesRequestData,
+  connector: UserDataStorageConnector,
+): Promise<number[]> {
+  const messages = extractMessagesFromRequestData(saRequestData);
+  const inputText = formatMessagesForEmbedding(messages);
+
+  if (!inputText.trim()) {
+    throw new RequestEmbeddingError('No valid text content found in messages');
+  }
+
+  return (await embedText(c, connector, inputText)).embedding;
 }

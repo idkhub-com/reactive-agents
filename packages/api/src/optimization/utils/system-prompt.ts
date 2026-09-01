@@ -192,18 +192,36 @@ ${description}
   return firstMessage;
 }
 
+/**
+ * A skill the gateway created keeps the prompt its caller sent. Regeneration
+ * should improve on that prompt, not write another from the description.
+ */
+function getSeedPromptSection(seedSystemPrompt?: string | null) {
+  if (!seedSystemPrompt) {
+    return '';
+  }
+
+  return `
+
+The developer's own system prompt for this skill is below. Keep its intent, constraints and output format, and improve on it rather than replacing it:
+
+${seedSystemPrompt}`;
+}
+
 function getSeederWithContextFirstMessage(
   agentDescription: string,
   skillDescription: string,
   examples: string[],
   responseFormat?: unknown,
   allowedTemplateVariables?: string[],
+  seedSystemPrompt?: string | null,
 ) {
   const responseFormatSection = getResponseFormatSection(responseFormat);
   const examplesSection = getExamplesSection(examples);
   const templateVariablesSection = getTemplateVariablesSection(
     allowedTemplateVariables,
   );
+  const seedPromptSection = getSeedPromptSection(seedSystemPrompt);
 
   const firstMessage = `
 I am building an AI agent with the following purpose:
@@ -217,7 +235,7 @@ Skill Description:
 ${skillDescription}
 ${responseFormatSection}
 ${examplesSection}
-${templateVariablesSection}
+${templateVariablesSection}${seedPromptSection}
 
 Generate a comprehensive system prompt that will enable the assistant to perform this skill effectively. The system prompt should be clear, detailed, and actionable.
 
@@ -257,6 +275,7 @@ export async function generateSeedSystemPromptWithContext(
   connector: UserDataStorageConnector,
   responseFormat?: unknown,
   allowedTemplateVariables?: string[],
+  seedSystemPrompt?: string | null,
 ) {
   const { client, saConfig, model } = await createSystemPromptClient(
     c,
@@ -271,6 +290,7 @@ export async function generateSeedSystemPromptWithContext(
     examples,
     responseFormat,
     allowedTemplateVariables,
+    seedSystemPrompt,
   );
 
   return await callSystemPromptAPI(

@@ -33,6 +33,11 @@ const EVENT_TYPE_CONFIG: Record<
   SkillEventType,
   { label: string; icon: typeof PlusIcon; color: string }
 > = {
+  [SkillEventType.AUTO_CREATED]: {
+    label: 'Skill Created',
+    icon: PlusIcon,
+    color: 'bg-purple-100 text-purple-800',
+  },
   [SkillEventType.MODEL_ADDED]: {
     label: 'Model Added',
     icon: PlusIcon,

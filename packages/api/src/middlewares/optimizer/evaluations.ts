@@ -16,6 +16,7 @@ import type {
   SkillOptimizationEvaluationRunCreateParams,
 } from '@shared/types/data';
 import { SkillEventType } from '@shared/types/data/skill-event';
+import type { EvaluationMethodName } from '@shared/types/evaluations';
 
 export async function addSkillOptimizationEvaluationRun(
   c: AppContext,
@@ -194,16 +195,25 @@ export async function checkAndRegenerateEvaluationsEarly(
       userDataStorageConnector,
       responseFormat,
       skill.allowed_template_variables,
+      skill.seed_system_prompt,
     );
 
-    // Get existing evaluations to know which methods to regenerate
+    // Get existing evaluations to know which methods to regenerate. A skill
+    // the gateway created can have none at all: its evaluations are generated
+    // in the background at creation, that can fail -- system settings without
+    // an evaluation model yet, a provider down -- and nothing else retries.
+    // This pass is the retry: an auto-created skill with no evaluations gets
+    // every method the server has, generated from these first real examples.
     const existingEvaluations =
       await userDataStorageConnector.getSkillOptimizationEvaluations(c, {
         skill_id: skill.id,
       });
-    const existingEvaluationMethods = existingEvaluations.map(
-      (e) => e.evaluation_method,
-    );
+    const methodsToGenerate =
+      existingEvaluations.length > 0
+        ? existingEvaluations.map((e) => e.evaluation_method)
+        : skill.auto_created
+          ? (Object.keys(evaluationConnectorsMap) as EvaluationMethodName[])
+          : [];
 
     // Regenerate evaluations with real examples
     const newEvaluationParams = await regenerateEvaluationsWithExamples(
@@ -212,7 +222,7 @@ export async function checkAndRegenerateEvaluationsEarly(
       agentDescription,
       examples,
       evaluationConnectorsMap,
-      existingEvaluationMethods,
+      methodsToGenerate,
       userDataStorageConnector,
     );
 
@@ -232,6 +242,25 @@ export async function checkAndRegenerateEvaluationsEarly(
             weight: newParams.weight,
           },
         );
+      }
+    }
+
+    // The from-scratch case: record what was generated, the way creation
+    // would have.
+    if (existingEvaluations.length === 0 && newEvaluationParams.length > 0) {
+      const createdEvaluations =
+        await userDataStorageConnector.createSkillOptimizationEvaluations(
+          c,
+          newEvaluationParams,
+        );
+      for (const evaluation of createdEvaluations) {
+        await userDataStorageConnector.createSkillEvent(c, {
+          agent_id: skill.agent_id,
+          skill_id: skill.id,
+          cluster_id: null,
+          event_type: SkillEventType.EVALUATION_ADDED,
+          metadata: { evaluation_method: evaluation.evaluation_method },
+        });
       }
     }
 

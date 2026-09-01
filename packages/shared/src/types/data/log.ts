@@ -68,6 +68,10 @@ export const Log = z.object({
   hook_logs: z.array(HookLog),
   metadata: z.record(z.string(), z.unknown()),
   embedding: z.array(z.number()).nullable(),
+  /** The system prompt (or Responses `instructions`) the caller sent, as
+   * received. `ai_provider_request_log` holds the body that reached the
+   * provider, in which an optimized skill has substituted its own prompt. */
+  original_system_prompt: z.string().nullable(),
 
   // Cache info
   cache_status: z.enum(CacheStatus),
@@ -155,6 +159,7 @@ export const LogCreateParams = z.object({
   hook_logs: z.array(HookLog),
   metadata: z.record(z.string(), z.unknown()),
   embedding: z.array(z.number()).optional(),
+  original_system_prompt: z.string().optional(),
 
   // Cache info
   cache_status: z.enum(CacheStatus),

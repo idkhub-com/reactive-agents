@@ -1,11 +1,11 @@
 import type { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/task-completion/types';
 import { getApiUrl } from '@api/constants';
+import { parseJudgeJson } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import OpenAI from 'openai';
-import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
 import z from 'zod';
 
 const StructuredOutputResponse = z.object({
@@ -15,14 +15,19 @@ const StructuredOutputResponse = z.object({
 
 type StructuredOutputResponse = z.infer<typeof StructuredOutputResponse>;
 
+// The outcome is scoped to the latest response on purpose: every earlier
+// turn of the conversation arrived as its own request, carries its own log,
+// and is scored by its own evaluation run -- often under a different arm.
+// An outcome that narrates the whole conversation re-scores those turns
+// here, crediting (or docking) this turn's arm for work it did not do.
 function getSystemPrompt(task?: string) {
   const systemPrompt = `You are an expert at analyzing AI system interactions to extract task objectives and factual outcomes.
 
-${task ? `The TASK: ${task}\n` : 'Your job is to analyze the provided input, tools used, and output to determine the task. What was the user trying to accomplish?\n'}
+${task ? `The TASK: ${task}\n` : 'Your job is to analyze the conversation to determine the task. What was the user trying to accomplish?\n'}
     
-Your job is to analyze the provided input, tools used, and output to determine the outcome. What actually happened or was produced?
+Your job is to determine the OUTCOME of the assistant's LATEST RESPONSE: what that response did or produced toward the task. The conversation before it is context only -- each earlier turn is evaluated with its own request, so events from earlier turns (mistakes already corrected, work already done, detours already resolved) belong to those turns and must not be folded into this outcome.
 
-Be precise and factual. Focus on the concrete task and measurable outcome.`;
+Be precise and factual. Focus on the concrete task and on what the latest response itself contributes.`;
 
   return systemPrompt;
 }
@@ -30,13 +35,13 @@ Be precise and factual. Focus on the concrete task and measurable outcome.`;
 function getFirstMessage(input: string, output: string) {
   const firstMessage = `Analyze this interaction and extract the task and outcome:
 
-INPUT:
+CONVERSATION (context only -- earlier turns are evaluated separately):
 ${input}
 
-ACTUAL OUTPUT:
+THE ASSISTANT'S LATEST RESPONSE (extract the outcome of this):
 ${output}
 
-Extract the TASK and OUTCOME from this interaction.`;
+Extract the TASK from the conversation and the OUTCOME of the latest response.`;
 
   return firstMessage;
 }
@@ -81,13 +86,13 @@ export async function extractTaskAndOutcome(
   const systemPrompt = getSystemPrompt(params.task);
   const firstMessage = getFirstMessage(input, output);
 
-  const response: ParsedChatCompletion<StructuredOutputResponse> = await client
+  const response = await client
     .withOptions({
       defaultHeaders: {
         'sa-config': JSON.stringify(saConfig),
       },
     })
-    .chat.completions.parse({
+    .chat.completions.create({
       model: modelConfig.model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -107,13 +112,17 @@ export async function extractTaskAndOutcome(
       },
     });
 
-  const structuredOutputResponse = response.choices[0].message.parsed;
+  // Parsed tolerantly, like the judge's own answers: a self-hosted model
+  // ignores `response_format` often enough that the SDK's strict `.parse()`
+  // kept failing the whole evaluation on a trailing comma.
+  const content = response.choices?.[0]?.message?.content;
 
-  if (!structuredOutputResponse) {
+  if (!content) {
     throw new Error(
       `[OPTIMIZER] can't extract task and outcome - No response found`,
     );
   }
+  const structuredOutputResponse = parseJudgeJson(content);
 
   // Only a provider that enforces `response_format` guarantees the shape, so
   // the reply is checked rather than trusted -- a missing outcome would

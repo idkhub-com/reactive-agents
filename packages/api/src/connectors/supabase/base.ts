@@ -63,7 +63,11 @@ export const insertIntoSupabase = async <
   table: string,
   data: z.infer<InputSchema>,
   schema: OutputSchema,
-  upsert = false,
+  /**
+   * What to do with a row whose primary key exists: `true` overwrites it,
+   * `'ignore'` leaves it as it is, `false` (the default) fails.
+   */
+  upsert: boolean | 'ignore' = false,
 ): Promise<
   // If schema is not provided, return void
   OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
@@ -76,7 +80,9 @@ export const insertIntoSupabase = async <
 
   const preferArr = [];
 
-  if (upsert) {
+  if (upsert === 'ignore') {
+    preferArr.push('resolution=ignore-duplicates');
+  } else if (upsert) {
     preferArr.push('resolution=merge-duplicates');
   }
 
@@ -137,13 +143,35 @@ export const updateInSupabase = async <
 ): Promise<
   // If schema is not provided, return void
   OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
+> => patchInSupabase(c, table, { id: `eq.${id}` }, data, schema);
+
+/**
+ * PATCH the rows matching `params` (PostgREST filters, e.g. `{ id: 'eq.1' }`)
+ * and return them as updated. With a filter that is part of the condition --
+ * a lease that is still free -- the rows returned say whether anything
+ * changed, which is what makes a conditional update atomic over HTTP.
+ */
+export const patchInSupabase = async <
+  InputSchema extends z.ZodType,
+  OutputSchema extends z.ZodType,
+>(
+  c: AppContext,
+  table: string,
+  params: Record<string, string>,
+  data: z.infer<InputSchema>,
+  schema: OutputSchema | null,
+): Promise<
+  // If schema is not provided, return void
+  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
 > => {
   const postgrestUrl = getPostgrestUrl(c);
   const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
   const supabaseSecretKey = getSupabaseSecretKey(c);
 
   const url = new URL(`${postgrestUrl}/${table}`);
-  url.searchParams.set('id', `eq.${id}`);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',

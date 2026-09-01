@@ -187,6 +187,22 @@ describe('Embeddings Utility', () => {
       expect(result).toContain('call_123');
     });
 
+    it('caps a tool output so the text stays inside the context window', () => {
+      const messages = [
+        {
+          role: ChatCompletionMessageRole.TOOL,
+          tool_call_id: 'call_123',
+          content: `diff ${'x'.repeat(5000)}`,
+        },
+      ];
+
+      const result = formatMessagesForEmbedding(messages);
+      expect(result.startsWith('Tool Call call_123 Output: diff xxx')).toBe(
+        true,
+      );
+      expect(result.length).toBeLessThan(1100);
+    });
+
     it('should format tool response messages', () => {
       const messages = [
         {
@@ -197,7 +213,9 @@ describe('Embeddings Utility', () => {
       ];
 
       const result = formatMessagesForEmbedding(messages);
-      expect(result).toContain('Tool Call call_123 Output');
+      // The output itself must be there: asserting only the prefix let the
+      // formatter render every tool output as empty for months.
+      expect(result).toContain('Tool Call call_123 Output: Weather result');
     });
   });
 });

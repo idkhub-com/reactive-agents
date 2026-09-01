@@ -39,6 +39,13 @@ describe('getAgent', () => {
       createSkillOptimizationClusters: vi.fn(),
       updateSkillOptimizationCluster: vi.fn(),
       deleteSkillOptimizationCluster: vi.fn(),
+      getSkillRoutings: vi.fn(),
+      getAgentModels: vi.fn(),
+      addModelsToAgent: vi.fn(),
+      removeModelsFromAgent: vi.fn(),
+      upsertSkillRouting: vi.fn(),
+      claimSkillCreationLease: vi.fn(),
+      releaseSkillCreationLease: vi.fn(),
       incrementClusterCounters: vi.fn(),
 
       // Feedback methods
@@ -134,6 +141,9 @@ describe('getAgent', () => {
         metadata: { version: '1.0' },
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);
@@ -160,6 +170,9 @@ describe('getAgent', () => {
           metadata: { version: '1.0' },
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
@@ -168,6 +181,9 @@ describe('getAgent', () => {
           metadata: { version: '2.0' },
           created_at: '2023-01-02T00:00:00.000Z',
           updated_at: '2023-01-02T00:00:00.000Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
 
@@ -193,6 +209,9 @@ describe('getAgent', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
@@ -208,6 +227,9 @@ describe('getAgent', () => {
         name: 'super-agents',
         description: 'The Super Agents internal agent',
         metadata: {},
+        auto_create_skills: false,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 0,
       });
     });
 
@@ -240,6 +262,9 @@ describe('getAgent', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
@@ -281,6 +306,9 @@ describe('getAgent', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
@@ -304,6 +332,9 @@ describe('getAgent', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);

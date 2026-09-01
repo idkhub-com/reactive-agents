@@ -26,6 +26,7 @@ const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -36,6 +37,7 @@ vi.mock('openai', () => {
       chat: {
         completions: {
           parse: mockParse,
+          create: mockParse,
         },
       },
       withOptions: mockWithOptions,
@@ -56,10 +58,10 @@ describe('Role Adherence - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 1.0,
               reasoning: 'Evaluation successful',
-            },
+            }),
           },
         },
       ],
@@ -110,6 +112,7 @@ describe('Role Adherence - evaluateLog', () => {
       app_id: null,
       external_user_id: null,
       external_user_human_name: null,
+      original_system_prompt: null,
       user_metadata: null,
       metadata: {},
       ai_provider_request_log: {
@@ -196,10 +199,10 @@ describe('Role Adherence - evaluateLog', () => {
       choices: [
         {
           message: {
-            parsed: {
+            content: JSON.stringify({
               score: 0.0,
               reasoning: 'Poor role adherence',
-            },
+            }),
           },
         },
       ],
@@ -248,6 +251,7 @@ describe('Role Adherence - evaluateLog', () => {
       app_id: null,
       external_user_id: null,
       external_user_human_name: null,
+      original_system_prompt: null,
       user_metadata: null,
       metadata: {},
       ai_provider_request_log: {

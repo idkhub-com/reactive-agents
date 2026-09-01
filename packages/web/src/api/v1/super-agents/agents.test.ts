@@ -9,6 +9,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockGet = vi.fn();
 const mockPatch = vi.fn();
 const mockDelete = vi.fn();
+const mockModelsGet = vi.fn();
+const mockModelsPost = vi.fn();
+const mockModelsDelete = vi.fn();
 
 // Mock the entire agents module to control the client behavior
 vi.mock('@web/api/v1/super-agents/agents', () => {
@@ -54,6 +57,37 @@ vi.mock('@web/api/v1/super-agents/agents', () => {
         throw new Error('Failed to delete agent');
       }
     }),
+    getAgentModels: vi.fn().mockImplementation(async (agentId: string) => {
+      const response = await mockModelsGet({ param: { agentId } });
+      if (!response.ok) {
+        throw new Error('Failed to fetch models for agent');
+      }
+      return response.json();
+    }),
+    addModelsToAgent: vi
+      .fn()
+      .mockImplementation(async (agentId: string, modelIds: string[]) => {
+        const response = await mockModelsPost({
+          param: { agentId },
+          json: { modelIds },
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to add models to agent');
+        }
+      }),
+    removeModelsFromAgent: vi
+      .fn()
+      .mockImplementation(async (agentId: string, modelIds: string[]) => {
+        const response = await mockModelsDelete({
+          param: { agentId },
+          query: { ids: modelIds.join(',') },
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to remove models from agent');
+        }
+      }),
   };
 });
 
@@ -75,6 +109,9 @@ describe('Agents Client API', () => {
           metadata: {},
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         },
       ];
 
@@ -152,6 +189,9 @@ describe('Agents Client API', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-02T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       const mockResponse = {
@@ -197,6 +237,9 @@ describe('Agents Client API', () => {
         metadata: { key: 'value' },
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-02T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       const mockResponse = {
@@ -283,6 +326,56 @@ describe('Agents Client API', () => {
       await expect(agentsAPI.deleteAgent(nonExistentAgentId)).rejects.toThrow(
         'Failed to delete agent',
       );
+    });
+  });
+
+  describe('agent default models', () => {
+    it('lists the models an agent starts new skills with', async () => {
+      const models = [{ id: 'model-1', model_name: 'gpt-5' }];
+      mockModelsGet.mockResolvedValue({
+        ok: true,
+        json: async () => models,
+      });
+
+      await expect(agentsAPI.getAgentModels('agent-1')).resolves.toEqual(
+        models,
+      );
+      expect(mockModelsGet).toHaveBeenCalledWith({
+        param: { agentId: 'agent-1' },
+      });
+    });
+
+    it('adds models by id', async () => {
+      mockModelsPost.mockResolvedValue({ ok: true });
+
+      await agentsAPI.addModelsToAgent('agent-1', ['model-1', 'model-2']);
+
+      expect(mockModelsPost).toHaveBeenCalledWith({
+        param: { agentId: 'agent-1' },
+        json: { modelIds: ['model-1', 'model-2'] },
+      });
+    });
+
+    it('surfaces the server error when adding fails', async () => {
+      mockModelsPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: 'Agent not found' }),
+      });
+
+      await expect(
+        agentsAPI.addModelsToAgent('agent-1', ['model-1']),
+      ).rejects.toThrow('Agent not found');
+    });
+
+    it('removes models through the comma-separated query', async () => {
+      mockModelsDelete.mockResolvedValue({ ok: true });
+
+      await agentsAPI.removeModelsFromAgent('agent-1', ['model-1', 'model-2']);
+
+      expect(mockModelsDelete).toHaveBeenCalledWith({
+        param: { agentId: 'agent-1' },
+        query: { ids: 'model-1,model-2' },
+      });
     });
   });
 });

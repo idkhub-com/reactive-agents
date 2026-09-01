@@ -21,9 +21,10 @@ export const commonVariablesMiddleware = createMiddleware(
     if (c.req.url.includes('/v1/')) {
       // Don't set variables for Super Agents API requests
       if (!c.req.url.includes('/v1/super-agents')) {
-        // The agent and skill can be named in the path
-        // (`/v1/agents/:agent_name/skills/:skill_name/chat/completions`) instead
-        // of in the `sa-config` header. When they are, the header is optional.
+        // The agent, and optionally the skill, can be named in the path
+        // (`/v1/agents/:agent_name/skills/:skill_name/chat/completions` or
+        // `/v1/agents/:agent_name/chat/completions`) instead of in the
+        // `sa-config` header. When they are, the header is optional.
         const { pathname } = new URL(c.req.url);
         const agentSkillScope = parseAgentSkillPath(pathname);
         const method = c.req.method as HttpMethod;
@@ -34,11 +35,13 @@ export const commonVariablesMiddleware = createMiddleware(
           return c.json(
             {
               error: `No API route matches ${method} ${pathname}`,
-              // The scoped form is easy to mistype, so point at it whenever the
-              // path looks like an attempt at it.
-              ...(pathname.startsWith('/v1/agents/') && !agentSkillScope
+              // The scoped forms are easy to mistype, so point at them whenever
+              // the path looks like an attempt at one. A path that already
+              // names a skill got the shape right and only the endpoint wrong.
+              ...(pathname.startsWith('/v1/agents/') &&
+              !agentSkillScope?.skill_name
                 ? {
-                    hint: 'Expected /v1/agents/{agent_name}/skills/{skill_name}/{endpoint}',
+                    hint: 'Expected /v1/agents/{agent_name}/{endpoint} or /v1/agents/{agent_name}/skills/{skill_name}/{endpoint}',
                   }
                 : {}),
             },
@@ -53,12 +56,15 @@ export const commonVariablesMiddleware = createMiddleware(
         const rawConfig = configString ? JSON.parse(configString) : {};
 
         // The path always wins over the header so that a client pointed at a
-        // skill's base URL cannot accidentally target another skill.
+        // skill's base URL cannot accidentally target another skill. A path
+        // that names only the agent leaves a skill from the header in place.
         const config = agentSkillScope
           ? {
               ...rawConfig,
               agent_name: agentSkillScope.agent_name,
-              skill_name: agentSkillScope.skill_name,
+              ...(agentSkillScope.skill_name
+                ? { skill_name: agentSkillScope.skill_name }
+                : {}),
             }
           : rawConfig;
 

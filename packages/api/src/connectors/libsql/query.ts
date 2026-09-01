@@ -17,6 +17,7 @@ const JSON_COLUMNS: Record<string, string[]> = {
   agents: ['metadata'],
   skills: ['metadata', 'allowed_template_variables'],
   skill_optimization_clusters: ['centroid'],
+  skill_routing: ['centroid'],
   tools: ['raw_data'],
   logs: [
     'base_sa_config',
@@ -39,7 +40,8 @@ JSON_COLUMNS.logs_with_eval_scores = JSON_COLUMNS.logs;
 
 /** Columns stored as INTEGER 0/1 that the schemas expect as booleans. */
 const BOOL_COLUMNS: Record<string, string[]> = {
-  skills: ['optimize'],
+  agents: ['auto_create_skills'],
+  skills: ['optimize', 'auto_created'],
   system_settings: ['developer_mode'],
 };
 

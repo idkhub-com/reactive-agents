@@ -156,6 +156,40 @@ describe('produceSuperAgentsRequestData', () => {
 
       consoleWarnSpy.mockRestore();
     });
+
+    it('should keep a response body that does not match the schema at all', () => {
+      const requestBody = {
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: 'Hello' }],
+        stream: true,
+      };
+
+      // A log whose response was truncated for size carries a body that has
+      // none of the fields the chat completion schema expects.
+      const truncatedResponseBody = {
+        message:
+          'The response was too large to be processed. It has been truncated.',
+        response: '{"id":"chatcmpl-123","choices":[...',
+      };
+
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
+
+      const result = produceSuperAgentsRequestData(
+        HttpMethod.POST,
+        `${baseUrl}/v1/chat/completions`,
+        requestHeaders,
+        requestBody,
+        truncatedResponseBody,
+      );
+
+      expect(result.functionName).toBe(FunctionName.STREAM_CHAT_COMPLETE);
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      expect(result.responseBody).toEqual(truncatedResponseBody);
+
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   describe('stream detection', () => {
@@ -414,13 +448,19 @@ describe('produceSuperAgentsRequestData', () => {
       ).toBe(true);
     });
 
-    it('should reject unknown paths', () => {
-      expect(isKnownRoute(HttpMethod.POST, `${baseUrl}/v1/nope`)).toBe(false);
+    it('should accept the agent-only scoped form', () => {
       expect(
         isKnownRoute(
           HttpMethod.POST,
           `${baseUrl}/v1/agents/captain_code/chat/completions`,
         ),
+      ).toBe(true);
+    });
+
+    it('should reject unknown paths', () => {
+      expect(isKnownRoute(HttpMethod.POST, `${baseUrl}/v1/nope`)).toBe(false);
+      expect(
+        isKnownRoute(HttpMethod.POST, `${baseUrl}/v1/agents/captain_code/nope`),
       ).toBe(false);
     });
 

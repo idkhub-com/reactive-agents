@@ -23,6 +23,7 @@ import {
 } from '@web/components/ui/form';
 import { Input } from '@web/components/ui/input';
 import { PageHeader } from '@web/components/ui/page-header';
+import { Switch } from '@web/components/ui/switch';
 import { Textarea } from '@web/components/ui/textarea';
 import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
 import { useAgents } from '@web/providers/agents';
@@ -37,6 +38,15 @@ const EditAgentFormSchema = z
       .string()
       .min(25, 'Description must be at least 25 characters')
       .max(10000, 'Description must be less than 10000 characters'),
+    auto_create_skills: z.boolean(),
+    skill_match_threshold: z
+      .number({ error: 'Enter a number between 0 and 1' })
+      .min(0, 'Must be between 0 and 1')
+      .max(1, 'Must be between 0 and 1'),
+    max_auto_created_skills: z
+      .number({ error: 'Enter a whole number' })
+      .int('Must be a whole number')
+      .min(0, 'Cannot be negative'),
   })
   .strict();
 
@@ -52,6 +62,9 @@ export function EditAgentView(): React.ReactElement {
     resolver: zodResolver(EditAgentFormSchema),
     defaultValues: {
       description: '',
+      auto_create_skills: true,
+      skill_match_threshold: 0.8,
+      max_auto_created_skills: 10,
     },
   });
 
@@ -60,6 +73,9 @@ export function EditAgentView(): React.ReactElement {
     if (selectedAgent) {
       form.reset({
         description: selectedAgent.description || '',
+        auto_create_skills: selectedAgent.auto_create_skills,
+        skill_match_threshold: selectedAgent.skill_match_threshold,
+        max_auto_created_skills: selectedAgent.max_auto_created_skills,
       });
     }
   }, [selectedAgent, form]);
@@ -73,6 +89,9 @@ export function EditAgentView(): React.ReactElement {
     try {
       const updateParams: AgentUpdateParams = {
         description: sanitizeUserInput(data.description),
+        auto_create_skills: data.auto_create_skills,
+        skill_match_threshold: data.skill_match_threshold,
+        max_auto_created_skills: data.max_auto_created_skills,
       };
 
       await updateAgent(selectedAgent.id, updateParams);
@@ -195,6 +214,101 @@ export function EditAgentView(): React.ReactElement {
                     </FormItem>
                   )}
                 />
+
+                {/* Automatic skills: requests that name only the agent */}
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div>
+                    <h3 className="text-base font-medium">Automatic skills</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Requests sent to{' '}
+                      <code className="text-xs">
+                        /v1/agents/{selectedAgent.name}/...
+                      </code>{' '}
+                      are routed to the closest skill. These settings decide
+                      when such a request becomes a new skill instead.
+                    </p>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="auto_create_skills"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between gap-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Create skills automatically</FormLabel>
+                          <FormDescription>
+                            New skills take this agent's default models and
+                            start from the caller's own system prompt.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="skill_match_threshold"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Match threshold</FormLabel>
+                          <FormDescription>
+                            Similarity (0 to 1) below which a request gets a
+                            skill of its own.
+                          </FormDescription>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.05"
+                              min={0}
+                              max={1}
+                              name={field.name}
+                              value={field.value}
+                              onBlur={field.onBlur}
+                              onChange={(e) =>
+                                field.onChange(e.target.valueAsNumber)
+                              }
+                              disabled={isUpdating}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="max_auto_created_skills"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Maximum automatic skills</FormLabel>
+                          <FormDescription>
+                            Past this many, requests go to the closest skill.
+                          </FormDescription>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="1"
+                              min={0}
+                              name={field.name}
+                              value={field.value}
+                              onBlur={field.onBlur}
+                              onChange={(e) =>
+                                field.onChange(e.target.valueAsNumber)
+                              }
+                              disabled={isUpdating}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
                 {/* Form Actions */}
                 <div className="flex items-center gap-3 pt-4 border-t">

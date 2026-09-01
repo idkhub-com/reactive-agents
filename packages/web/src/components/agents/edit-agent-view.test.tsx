@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AgentsProvider } from '@web/providers/agents';
 import { NavigationProvider } from '@web/providers/navigation';
 import { SkillsProvider } from '@web/providers/skills';
@@ -32,6 +32,9 @@ const mockAgent = {
   name: 'Test Agent 1',
   description: 'First test agent description with enough characters',
   metadata: {},
+  auto_create_skills: true,
+  skill_match_threshold: 0.8,
+  max_auto_created_skills: 10,
   created_at: '2023-01-01T10:30:00Z',
   updated_at: '2023-01-01T10:30:00Z',
 };
@@ -483,6 +486,51 @@ describe('EditAgentView', () => {
       // Verify label has matching htmlFor
       const label = screen.getByText('Agent Name');
       expect(label.getAttribute('for')).toBe(inputId);
+    });
+  });
+
+  describe('Automatic skills', () => {
+    it('shows the agent routing settings with their current values', () => {
+      renderEditAgentView();
+
+      expect(screen.getByText('Automatic skills')).toBeInTheDocument();
+      expect(screen.getByRole('switch')).toBeChecked();
+      expect(screen.getByLabelText('Match threshold')).toHaveValue(0.8);
+      expect(screen.getByLabelText('Maximum automatic skills')).toHaveValue(10);
+    });
+
+    it('saves the routing settings alongside the description', async () => {
+      renderEditAgentView();
+
+      fireEvent.click(screen.getByRole('switch'));
+      fireEvent.change(screen.getByLabelText('Maximum automatic skills'), {
+        target: { value: '3' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateAgent).toHaveBeenCalledWith('agent-1', {
+          description: 'First test agent description with enough characters',
+          auto_create_skills: false,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 3,
+        });
+      });
+    });
+
+    it('refuses a threshold outside 0 to 1', async () => {
+      renderEditAgentView();
+
+      const threshold = screen.getByLabelText('Match threshold');
+      fireEvent.change(threshold, { target: { value: '1.5' } });
+      // Submitted directly: jsdom would otherwise stop at the input's own
+      // `max`, which a browser shows as a tooltip rather than as our message.
+      fireEvent.submit(threshold.closest('form') as HTMLFormElement);
+
+      expect(
+        await screen.findByText('Must be between 0 and 1'),
+      ).toBeInTheDocument();
+      expect(mockUpdateAgent).not.toHaveBeenCalled();
     });
   });
 });

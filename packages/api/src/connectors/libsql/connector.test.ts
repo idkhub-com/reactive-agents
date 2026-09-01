@@ -50,6 +50,9 @@ const seedAgent = (c: AppContext) =>
     name: 'test-agent',
     description: 'x'.repeat(30),
     metadata: {},
+    auto_create_skills: true,
+    skill_match_threshold: 0.8,
+    max_auto_created_skills: 10,
   });
 
 const seedSkill = (c: AppContext, agentId: string) =>
@@ -123,6 +126,9 @@ describe('agents, skills and JSON columns', () => {
       name: 'my-agent',
       description: 'd'.repeat(30),
       metadata: { team: 'core', tags: ['a', 'b'] },
+      auto_create_skills: true,
+      skill_match_threshold: 0.8,
+      max_auto_created_skills: 10,
     });
 
     expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
@@ -139,6 +145,9 @@ describe('agents, skills and JSON columns', () => {
         name,
         description: 'd'.repeat(30),
         metadata: {},
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       });
     }
 
@@ -508,6 +517,243 @@ describe('atomic operations', () => {
   });
 });
 
+describe('agent models and routing settings', () => {
+  const seedModel = async (c: AppContext, name: string) => {
+    const provider = await store.createAIProvider(c, {
+      ai_provider: 'openai',
+      name: `provider-${name}`,
+      api_key: null,
+      custom_fields: {},
+    } as Parameters<typeof store.createAIProvider>[1]);
+
+    return store.createModel(c, {
+      ai_provider_id: provider.id,
+      model_name: name,
+    } as Parameters<typeof store.createModel>[1]);
+  };
+
+  it('round-trips the routing settings as booleans and numbers', async () => {
+    const { c } = await freshDatabase();
+
+    const agent = await store.createAgent(c, {
+      name: 'growing',
+      description: 'x'.repeat(30),
+      metadata: {},
+      auto_create_skills: false,
+      skill_match_threshold: 0.65,
+      max_auto_created_skills: 3,
+    });
+    expect(agent.auto_create_skills).toBe(false);
+    expect(agent.skill_match_threshold).toBe(0.65);
+    expect(agent.max_auto_created_skills).toBe(3);
+
+    const updated = await store.updateAgent(c, agent.id, {
+      auto_create_skills: true,
+      max_auto_created_skills: 5,
+    });
+    expect(updated.auto_create_skills).toBe(true);
+    expect(updated.max_auto_created_skills).toBe(5);
+    expect(updated.description).toBe(agent.description);
+  });
+
+  it('keeps the seed prompt and the auto-created flag on a skill', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+
+    const skill = await store.createSkill(c, {
+      agent_id: agent.id,
+      name: 'made-by-the-gateway',
+      description: 'y'.repeat(30),
+      auto_created: true,
+      seed_system_prompt: 'You are terse.',
+    } as Parameters<typeof store.createSkill>[1]);
+    expect(skill.auto_created).toBe(true);
+    expect(skill.seed_system_prompt).toBe('You are terse.');
+
+    const [byHand] = await store.getSkills(c, {
+      id: (await seedSkill(c, agent.id)).id,
+    });
+    expect(byHand.auto_created).toBe(false);
+    expect(byHand.seed_system_prompt).toBeNull();
+  });
+
+  it('joins the agent bridge like the skill one', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const first = await seedModel(c, 'first');
+    const second = await seedModel(c, 'second');
+
+    await store.addModelsToAgent(c, agent.id, [first.id, second.id]);
+    // Idempotent, like the skill bridge.
+    await store.addModelsToAgent(c, agent.id, [first.id]);
+
+    const models = await store.getAgentModels(c, agent.id);
+    expect(models.map((model) => model.model_name).sort()).toEqual([
+      'first',
+      'second',
+    ]);
+
+    await store.removeModelsFromAgent(c, agent.id, [first.id]);
+    expect(
+      (await store.getAgentModels(c, agent.id)).map((m) => m.model_name),
+    ).toEqual(['second']);
+
+    await store.deleteAgent(c, agent.id);
+    expect(await store.getAgentModels(c, agent.id)).toEqual([]);
+  });
+});
+
+describe('skill routing', () => {
+  const seedEmbeddingModel = async (c: AppContext) => {
+    const provider = await store.createAIProvider(c, {
+      ai_provider: 'openai',
+      name: 'provider-embed',
+      api_key: null,
+      custom_fields: {},
+    } as Parameters<typeof store.createAIProvider>[1]);
+
+    return store.createModel(c, {
+      ai_provider_id: provider.id,
+      model_name: 'embed',
+      model_type: 'embed',
+      embedding_dimensions: 3,
+    } as Parameters<typeof store.createModel>[1]);
+  };
+
+  it('upserts on the skill and reads the centroid back as numbers', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+    const model = await seedEmbeddingModel(c);
+
+    const seeded = await store.upsertSkillRouting(c, {
+      skill_id: skill.id,
+      agent_id: agent.id,
+      centroid: [1, 0, 0],
+      embedding_model_id: model.id,
+      sample_count: 1,
+    });
+    expect(seeded.centroid).toEqual([1, 0, 0]);
+    expect(seeded.sample_count).toBe(1);
+
+    const advanced = await store.upsertSkillRouting(c, {
+      skill_id: skill.id,
+      agent_id: agent.id,
+      centroid: [0.5, 0.5, 0],
+      embedding_model_id: model.id,
+      sample_count: 2,
+    });
+    expect(advanced.centroid).toEqual([0.5, 0.5, 0]);
+    expect(advanced.sample_count).toBe(2);
+    expect(advanced.created_at).toBe(seeded.created_at);
+
+    expect(await store.getSkillRoutings(c, { agent_id: agent.id })).toEqual([
+      advanced,
+    ]);
+  });
+
+  it('goes with its skill', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+    const model = await seedEmbeddingModel(c);
+
+    await store.upsertSkillRouting(c, {
+      skill_id: skill.id,
+      agent_id: agent.id,
+      centroid: [1, 0, 0],
+      embedding_model_id: model.id,
+      sample_count: 1,
+    });
+    await store.deleteSkill(c, skill.id);
+
+    expect(await store.getSkillRoutings(c, { agent_id: agent.id })).toEqual([]);
+  });
+});
+
+describe('skill creation lease', () => {
+  const at = (offsetMs: number) =>
+    new Date(Date.parse('2026-08-29T10:00:00.000Z') + offsetMs).toISOString();
+
+  it('is claimed by one of two claimants, then by the next once released', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+
+    expect(
+      await store.claimSkillCreationLease(c, agent.id, 'a', at(0), at(45_000)),
+    ).toBe(true);
+    expect(
+      await store.claimSkillCreationLease(
+        c,
+        agent.id,
+        'b',
+        at(100),
+        at(45_100),
+      ),
+    ).toBe(false);
+
+    await store.releaseSkillCreationLease(c, agent.id, 'a');
+
+    expect(
+      await store.claimSkillCreationLease(
+        c,
+        agent.id,
+        'b',
+        at(200),
+        at(45_200),
+      ),
+    ).toBe(true);
+  });
+
+  it('counts a lease past its time as free', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    await store.claimSkillCreationLease(c, agent.id, 'a', at(0), at(45_000));
+
+    expect(
+      await store.claimSkillCreationLease(
+        c,
+        agent.id,
+        'b',
+        at(45_001),
+        at(90_001),
+      ),
+    ).toBe(true);
+  });
+
+  it('is only released by its holder', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    await store.claimSkillCreationLease(c, agent.id, 'a', at(0), at(45_000));
+
+    // A claimant whose lease expired, releasing late, must not free the new one.
+    await store.releaseSkillCreationLease(c, agent.id, 'stale');
+
+    expect(
+      await store.claimSkillCreationLease(
+        c,
+        agent.id,
+        'b',
+        at(100),
+        at(45_100),
+      ),
+    ).toBe(false);
+  });
+
+  it('goes with its agent', async () => {
+    const { c, client } = await freshDatabase();
+    const agent = await seedAgent(c);
+    await store.claimSkillCreationLease(c, agent.id, 'a', at(0), at(45_000));
+
+    await store.deleteAgent(c, agent.id);
+
+    const rows = await client.execute(
+      'SELECT agent_id FROM skill_creation_leases',
+    );
+    expect(rows.rows).toHaveLength(0);
+  });
+});
+
 describe('logs', () => {
   it('round-trips a log through the eval-scores view', async () => {
     const { c } = await freshDatabase();
@@ -523,6 +769,25 @@ describe('logs', () => {
       agent_name: 'test-agent',
       skill_name: 'test-skill',
     });
+  });
+
+  it('keeps the caller system prompt beside the provider-bound body', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+
+    const created = await logs.createLog(c, {
+      ...logParams(agent.id, skill.id),
+      original_system_prompt: 'You are a terse assistant.',
+    });
+    const bare = await logs.createLog(c, logParams(agent.id, skill.id));
+
+    const [fetched] = await logs.getLogs(c, { id: created.id });
+    expect(fetched.original_system_prompt).toBe('You are a terse assistant.');
+
+    // A log without one must come back as null, not undefined.
+    const [fetchedBare] = await logs.getLogs(c, { id: bare.id });
+    expect(fetchedBare.original_system_prompt).toBeNull();
   });
 
   it('orders newest first and honours the time range', async () => {

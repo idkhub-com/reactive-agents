@@ -6,9 +6,15 @@ import type { UserDataStorageConnector } from '@api/types/connector';
 import type { LLMJudge } from '@api/types/evaluations/llm-judge';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
-import { formatMessagesForExtraction } from '@api/utils/messages';
+import {
+  extractSystemPromptFromMessages,
+  formatMessagesForExtraction,
+} from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/super-agents/requests';
-import { extractOutputFromResponseBody } from '@api/utils/super-agents/responses';
+import {
+  extractOutputFromResponseBody,
+  responseEndsInToolCalls,
+} from '@api/utils/super-agents/responses';
 import type {
   ChatCompletionRequestData,
   ResponsesRequestData,
@@ -27,12 +33,25 @@ import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
  * Generate verdict using universal LLM judge with verdict template
  */
 async function generateVerdict(
-  { task, outcome }: { task: string; outcome: string },
+  {
+    task,
+    outcome,
+    inProgress,
+  }: { task: string; outcome: string; inProgress: boolean },
   llm_judge: LLMJudge,
 ): Promise<{ verdict: number; reason: string }> {
-  const verdictTemplate = getTaskCompletionVerdictTemplate({ task, outcome });
+  const verdictTemplate = getTaskCompletionVerdictTemplate({
+    task,
+    outcome,
+    inProgress,
+  });
+  // Explicit prompts: the heuristic re-split of the joined text only kept
+  // returning real scores because the template's JSON instruction happened
+  // to land in the user half of the split.
   const verdict_result = await llm_judge.evaluate({
     text: `${verdictTemplate.systemPrompt}\n\n${verdictTemplate.userPrompt}`,
+    systemPrompt: verdictTemplate.systemPrompt,
+    userPrompt: verdictTemplate.userPrompt,
   });
 
   return {
@@ -46,7 +65,7 @@ async function getTaskAndOutcome(
   params: TaskCompletionEvaluationParameters,
   log: Log,
   connector: UserDataStorageConnector,
-): Promise<{ task: string; outcome: string }> {
+): Promise<{ task: string; outcome: string; inProgress: boolean }> {
   const saRequestData = produceSuperAgentsRequestData(
     log.ai_provider_request_log.method,
     log.ai_provider_request_log.request_url,
@@ -63,7 +82,15 @@ async function getTaskAndOutcome(
       | StreamChatCompletionRequestData
       | ResponsesRequestData,
   );
-  const input = formatMessagesForExtraction(messages);
+  // The extractor infers the task from the conversation when the evaluation
+  // params carry none -- and without the system prompt, a conversation the
+  // assistant was told to transform (title it, summarize it) reads as a
+  // request the assistant was supposed to fulfill.
+  const role = extractSystemPromptFromMessages(messages);
+  const formatted = formatMessagesForExtraction(messages);
+  const input = role
+    ? `ASSISTANT ROLE (its system prompt):\n${role}\n\nCONVERSATION:\n${formatted}`
+    : formatted;
   const output = extractOutputFromResponseBody(responseBody);
 
   const { task, outcome } = await extractTaskAndOutcome(
@@ -73,7 +100,13 @@ async function getTaskAndOutcome(
     output,
     connector,
   );
-  return { task: params.task || task, outcome };
+  return {
+    task: params.task || task,
+    outcome,
+    // A turn that ends in tool calls is mid-task: the verdict should judge
+    // whether the work is on track, not whether the task is finished.
+    inProgress: responseEndsInToolCalls(responseBody),
+  };
 }
 
 export async function evaluateLog(
@@ -103,7 +136,7 @@ export async function evaluateLog(
       modelConfig ?? undefined,
     );
 
-    const { task, outcome } = await getTaskAndOutcome(
+    const { task, outcome, inProgress } = await getTaskAndOutcome(
       c,
       params,
       log,
@@ -112,7 +145,7 @@ export async function evaluateLog(
 
     // Step 2: Generate verdict
     const { verdict, reason } = await generateVerdict(
-      { task, outcome },
+      { task, outcome, inProgress },
       llmJudge,
     );
     const verdict_llm_output = JSON.stringify({ verdict, reason });

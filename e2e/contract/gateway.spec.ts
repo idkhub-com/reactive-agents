@@ -322,6 +322,34 @@ test.describe('gateway', () => {
     }
   });
 
+  test('surfaces the provider failure on a streaming request', async ({
+    request,
+  }) => {
+    // A failed streaming request used to crash the gateway instead of
+    // answering: the stream chunk transform was handed the provider's JSON
+    // error body and threw ("responseChunk.trim is not a function"), a 500
+    // that buried the provider's message.
+    const agent = await withSkill(request, 'gwstreamfail');
+    const model = uniqueModelName('streamfail');
+
+    try {
+      await stubFail(request, model, 1, 404);
+
+      const response = await request.post(CHAT_COMPLETIONS_PATH, {
+        headers: {
+          'sa-config': saConfig(agent.name, 'gateway_skill', { model }),
+        },
+        data: chatBody('stream me', true),
+      });
+
+      expect(response.status()).toBe(404);
+      expect(await response.text()).toContain('stub: injected failure (404)');
+    } finally {
+      await stubReset(request, model);
+      await deleteAgent(request, agent.id);
+    }
+  });
+
   test('rejects a request naming an agent that does not exist', async ({
     request,
   }) => {

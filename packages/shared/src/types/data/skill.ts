@@ -67,6 +67,15 @@ export const Skill = z.object({
    * Example: ['datetime', 'user_timezone'] */
   allowed_template_variables: z.array(z.string()),
 
+  /** True when the gateway created the skill for a request that named only
+   * the agent. Counts against the agent's `max_auto_created_skills`. */
+  auto_created: z.boolean(),
+
+  /** The caller's system prompt when the gateway created the skill. The
+   * first arms use it verbatim, so the skill starts as a pass-through, and
+   * later regenerations improve on it rather than starting over. */
+  seed_system_prompt: z.string().nullable(),
+
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
@@ -112,6 +121,8 @@ export const SkillCreateParams = z
     reflection_min_requests_per_arm: z.int().min(1).max(1000).default(3),
     exploration_temperature: z.number().min(0.1).max(10.0).default(3.0),
     allowed_template_variables: z.array(z.string()).optional().default([]),
+    auto_created: z.boolean().default(false),
+    seed_system_prompt: z.string().nullable().optional(),
   })
   .strict();
 
@@ -127,6 +138,7 @@ export const SkillUpdateParams = z
     reflection_min_requests_per_arm: z.int().min(1).max(1000).optional(),
     exploration_temperature: z.number().min(0.1).max(10.0).optional(),
     allowed_template_variables: z.array(z.string()).optional(),
+    seed_system_prompt: z.string().nullable().optional(),
     // State management fields (typically updated by system, not user)
     last_clustering_at: z.iso.datetime({ offset: true }).nullable().optional(),
     last_clustering_log_start_time: z.number().nullable().optional(),
@@ -151,6 +163,7 @@ export const SkillUpdateParams = z
         'reflection_min_requests_per_arm',
         'exploration_temperature',
         'allowed_template_variables',
+        'seed_system_prompt',
         'last_clustering_at',
         'last_clustering_log_start_time',
         'evaluations_regenerated_at',
@@ -170,6 +183,7 @@ export const SkillUpdateParams = z
         'clustering_interval',
         'reflection_min_requests_per_arm',
         'exploration_temperature',
+        'seed_system_prompt',
         'last_clustering_at',
         'last_clustering_log_start_time',
         'evaluations_regenerated_at',

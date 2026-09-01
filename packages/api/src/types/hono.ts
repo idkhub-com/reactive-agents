@@ -5,6 +5,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import type { SkillRoutingDecision } from '@api/utils/super-agents/skill-routing';
 import type { SuperAgentsRequestData } from '@shared/types/api/request';
 import type {
   SuperAgentsConfig,
@@ -53,6 +54,8 @@ export interface AppEnv {
     agent: Agent;
     skill: Skill;
     pulled_arm?: SkillOptimizationArm;
+    /** Set when the caller named only the agent and the gateway chose the skill. */
+    skill_routing?: SkillRoutingDecision;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     first_token_time?: number;

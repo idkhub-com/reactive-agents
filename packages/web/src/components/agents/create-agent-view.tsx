@@ -71,6 +71,9 @@ export function CreateAgentView(): React.ReactElement {
         name: data.name,
         description: sanitizeUserInput(data.description),
         metadata: {},
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       const newAgent = await createAgent(agentParams);

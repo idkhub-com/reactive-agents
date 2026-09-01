@@ -21,6 +21,9 @@ const mockAgent = {
   name: 'Test Agent 1',
   description: 'First test agent description',
   metadata: {},
+  auto_create_skills: true,
+  skill_match_threshold: 0.8,
+  max_auto_created_skills: 10,
   created_at: '2023-01-01T10:30:00Z',
   updated_at: '2023-01-01T10:30:00Z',
 };
@@ -33,6 +36,8 @@ const mockSkill = {
   metadata: {},
   optimize: true,
   configuration_count: 15,
+  auto_created: false,
+  seed_system_prompt: null,
   created_at: '2023-01-01T10:30:00Z',
   updated_at: '2023-01-01T10:30:00Z',
   clustering_interval: 15,

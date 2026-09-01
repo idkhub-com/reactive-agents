@@ -3,7 +3,10 @@ import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
-import { formatMessagesForExtraction } from '@api/utils/messages';
+import {
+  extractSystemPromptFromMessages,
+  formatMessagesForExtraction,
+} from '@api/utils/messages';
 import { extractMessagesFromRequestData } from '@api/utils/super-agents/requests';
 import { extractOutputFromResponseBody } from '@api/utils/super-agents/responses';
 import type {
@@ -66,13 +69,32 @@ export async function evaluateLog(
   const input = formatMessagesForExtraction(messages);
   const output = extractOutputFromResponseBody(responseBody);
 
-  // Create evaluation prompt
-  const evaluationText = `Analyze the following conversation for knowledge retention quality. CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+  // The judge is shown the assistant's role: without it a conversation the
+  // assistant was told to transform (title it, summarize it) reads as a
+  // request the assistant failed to remember anything about.
+  const role = extractSystemPromptFromMessages(messages);
+  const roleSection = role
+    ? `THE ASSISTANT'S ROLE (its system prompt): ${role} `
+    : '';
 
-  // Evaluate using LLM judge
+  const evaluationText = `Analyze the following conversation for knowledge retention quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation, judged against what its role requires it to carry forward. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+
+  // Explicit criteria pin the scored judge path. The old `outputFormat:
+  // 'json'` call had the judge re-split this text at its first blank line --
+  // which lives inside the conversation once it has two messages -- and the
+  // "structured" result that came back scored 1.0 no matter what the judge
+  // actually answered.
   const result = await llmJudge.evaluate({
     text: evaluationText,
-    outputFormat: 'json',
+    evaluationCriteria: {
+      criteria: [
+        "Interpret the conversation in light of the assistant's role: its system prompt defines what information matters",
+        'Check for knowledge retention versus knowledge attrition across the conversation',
+        'Check consistency in recalling previously mentioned information',
+        'Assess the ability to maintain context across multiple turns',
+        'For single-turn conversations, assess whether the response preserves the information the role needs going forward',
+      ],
+    },
   });
 
   const execution_time = Date.now() - start_time;

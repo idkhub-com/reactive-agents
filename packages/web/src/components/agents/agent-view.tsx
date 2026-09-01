@@ -10,8 +10,11 @@ import { getSkillEvaluationScoresByTimeBucket } from '@web/api/v1/super-agents/s
 import { AgentPerformanceChart } from '@web/components/agents/agent-performance-chart';
 import { AgentStatusIndicator } from '@web/components/agents/agent-status-indicator';
 import { DeleteAgentDialog } from '@web/components/agents/delete-agent-dialog';
+import { ManageAgentModelsDialog } from '@web/components/agents/manage-agent-models-dialog';
 import { SkillPerformanceChart } from '@web/components/agents/skills/skill-performance-chart';
 import { SkillStatusIndicator } from '@web/components/agents/skills/skill-status-indicator';
+import { Alert, AlertDescription, AlertTitle } from '@web/components/ui/alert';
+import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {
   Card,
@@ -37,6 +40,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@web/components/ui/tooltip';
+import { useAgentValidation } from '@web/hooks/use-agent-validation';
 import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
 import { useAgents } from '@web/providers/agents';
 import { useNavigation } from '@web/providers/navigation';
@@ -44,6 +48,7 @@ import { useSkills } from '@web/providers/skills';
 import {
   BarChart3Icon,
   Clock,
+  CpuIcon,
   Edit,
   MoreVertical,
   PlusIcon,
@@ -124,6 +129,14 @@ export function AgentView(): ReactElement {
   }, [selectedAgent]);
 
   const [isDeleteAgentDialogOpen, setIsDeleteAgentDialogOpen] = useState(false);
+  const [isModelsDialogOpen, setIsModelsDialogOpen] = useState(false);
+  // The one thing an agent that creates its own skills cannot do without.
+  const { defaultModelsCount, isLoading: isLoadingValidation } =
+    useAgentValidation(selectedAgent);
+  const needsDefaultModels =
+    !!selectedAgent?.auto_create_skills &&
+    !isLoadingValidation &&
+    defaultModelsCount === 0;
 
   // Time interval controls for chart (30 buckets fixed)
   type TimeInterval = '1min' | '5min' | '15min' | '1hour' | '6hour' | '24hour';
@@ -353,6 +366,10 @@ export function AgentView(): ReactElement {
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Agent
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsModelsDialogOpen(true)}>
+                <CpuIcon className="h-4 w-4 mr-2" />
+                Default Models
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setIsDeleteAgentDialogOpen(true)}
@@ -366,6 +383,27 @@ export function AgentView(): ReactElement {
         }
       />
       <div className="p-6 space-y-6">
+        {needsDefaultModels && (
+          <Alert>
+            <CpuIcon className="h-4 w-4" />
+            <AlertTitle>This agent has no default models</AlertTitle>
+            <AlertDescription>
+              <p>
+                It creates skills from requests automatically and gives them its
+                default models. Without any, those skills cannot serve requests.
+              </p>
+              <Button
+                size="sm"
+                className="mt-3"
+                onClick={() => setIsModelsDialogOpen(true)}
+              >
+                <CpuIcon className="h-4 w-4 mr-2" />
+                Add default models
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Agent Performance Chart */}
         <Card>
           <CardHeader className="pb-4">
@@ -488,17 +526,36 @@ export function AgentView(): ReactElement {
           </div>
         ) : filteredSkills.length === 0 ? (
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">No skills found</h3>
-            <p className="text-muted-foreground mb-4">
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No skills found' : 'No skills yet'}
+            </h3>
+            <p className="text-muted-foreground mb-4 max-w-xl mx-auto">
               {searchQuery
                 ? 'No skills match your search criteria.'
-                : "This agent doesn't have any skills yet."}
+                : !selectedAgent.auto_create_skills
+                  ? "This agent doesn't have any skills yet."
+                  : needsDefaultModels
+                    ? 'Skills are created from requests automatically and take the default models of the agent. Add those first: without them a created skill cannot serve requests.'
+                    : 'Skills are created from requests automatically: the first request to this agent makes its first skill. You can also create one by hand.'}
             </p>
             {!searchQuery && (
-              <Button onClick={handleCreateSkill}>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Create your first skill
-              </Button>
+              <div className="flex justify-center gap-2">
+                {needsDefaultModels && (
+                  <Button onClick={() => setIsModelsDialogOpen(true)}>
+                    <CpuIcon className="h-4 w-4 mr-2" />
+                    Add default models
+                  </Button>
+                )}
+                <Button
+                  variant={needsDefaultModels ? 'outline' : 'default'}
+                  onClick={handleCreateSkill}
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  {selectedAgent.auto_create_skills
+                    ? 'Create a skill by hand'
+                    : 'Create your first skill'}
+                </Button>
+              </div>
             )}
           </div>
         ) : (
@@ -523,6 +580,15 @@ export function AgentView(): ReactElement {
                         <CardTitle className="text-base truncate leading-normal">
                           {skill.name}
                         </CardTitle>
+                        {skill.auto_created && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs shrink-0"
+                            title="Created by the gateway for a request that named only the agent"
+                          >
+                            auto
+                          </Badge>
+                        )}
                       </div>
                       <SkillStatusIndicator
                         skill={skill}
@@ -567,6 +633,13 @@ export function AgentView(): ReactElement {
         onOpenChange={setIsDeleteAgentDialogOpen}
         onConfirm={handleDeleteAgent}
       />
+      {isModelsDialogOpen && (
+        <ManageAgentModelsDialog
+          agentId={selectedAgent.id}
+          open={isModelsDialogOpen}
+          onOpenChange={setIsModelsDialogOpen}
+        />
+      )}
     </>
   );
 }

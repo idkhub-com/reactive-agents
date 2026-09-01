@@ -150,6 +150,14 @@ BEGIN
     RAISE EXCEPTION 'Cannot change model_type for a model that is referenced in system_settings';
   END IF;
 
+  -- Skill routing centroids only mean something under the model that computed them
+  IF EXISTS (
+    SELECT 1 FROM public.skill_routing
+    WHERE embedding_model_id = NEW.id
+  ) THEN
+    RAISE EXCEPTION 'Cannot change model_type for a model that skill routing centroids were computed with';
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql
@@ -214,3 +222,61 @@ CREATE INDEX IF NOT EXISTS idx_skill_optimization_clusters_embedding_model_id
 ON skill_optimization_clusters(embedding_model_id);
 
 COMMENT ON COLUMN skill_optimization_clusters.embedding_model_id IS 'The embedding model used for computing centroids in this cluster';
+
+-- ============================================================================
+-- PART 6: Skill routing
+-- ============================================================================
+
+-- Where an agent's requests go when the caller names only the agent
+-- (`/v1/agents/:agent_name/chat/completions`). One row per skill: a running
+-- mean of the intent embeddings of the requests it has served, seeded from its
+-- description. The FK to models cascades because a centroid from one embedding
+-- model means nothing under another; the row is re-seeded on the next request.
+CREATE TABLE IF NOT EXISTS skill_routing (
+  skill_id UUID PRIMARY KEY REFERENCES skills(id) ON DELETE CASCADE,
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  centroid FLOAT[] NOT NULL,
+  embedding_model_id UUID NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+  sample_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_skill_routing_updated_at BEFORE UPDATE ON skill_routing
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_skill_routing_agent_id ON skill_routing(agent_id);
+CREATE INDEX IF NOT EXISTS idx_skill_routing_embedding_model_id ON skill_routing(embedding_model_id);
+
+ALTER TABLE skill_routing ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations on skill_routing"
+  ON skill_routing
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+COMMENT ON TABLE skill_routing IS 'Per-skill running mean of request intent embeddings, used to pick a skill when a request names only the agent';
+
+-- Serialises the skills the gateway creates for one agent. A request that
+-- resembles none of the agent's skills takes the lease before creating one and
+-- looks at the skills again once it holds it, so concurrent first requests do
+-- not each create a skill. `lease_until` is NULL while the lease is free, and
+-- a lease past its time counts as free, in case its holder died. `holder` is a
+-- token the claimant coins, which is how it tells that the claim was its own
+-- and how it releases only its own lease.
+CREATE TABLE IF NOT EXISTS skill_creation_leases (
+  agent_id UUID PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
+  holder TEXT,
+  lease_until TIMESTAMPTZ
+);
+
+ALTER TABLE skill_creation_leases ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations on skill_creation_leases"
+  ON skill_creation_leases
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+COMMENT ON TABLE skill_creation_leases IS 'Per-agent lease held by the request creating a skill, so concurrent requests do not each create one';

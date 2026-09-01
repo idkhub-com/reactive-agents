@@ -167,6 +167,19 @@ Super Agents is a self-optimizing AI agent platform that automatically improves 
 
     This works for `/chat/completions`, `/completions`, `/responses` and `/embeddings`. Agent and skill names must be URL-encoded. The `sa-config` header is optional in this form, and is still the place for anything else you want to send (such as `system_prompt_variables`); if it also carries `agent_name` or `skill_name`, the URL wins.
 
+    You can also leave the skill out of the URL:
+
+    ```python
+    client = OpenAI(
+        api_key="",
+        base_url="http://localhost:3000/v1/agents/calendar_event_planner",
+    )
+    ```
+
+    The gateway then routes each request to the agent's best-matching skill: it embeds the request's system prompt and tool names and picks the skill whose recent traffic, seeded from its description, is closest — so a tool that sets its own system prompt lands on the same skill every time. This needs an embedding model in system settings. A `skill_name` in the header is still honoured.
+
+    A request that resembles none of the agent's skills gets a skill of its own — an agent with no skills gets its first one from its first request. The new skill is named and described by the reflection model, takes the agent's **default models** (set them from the agent's menu), and starts out as a pass-through: its first configurations use the caller's own system prompt verbatim, and optimization improves on that prompt rather than replacing it. The agent's edit page has the switch, the similarity threshold below which a request is considered new, and a cap on how many skills the gateway may create.
+
 3. Navigate to the `generate` skill dashboard. When a skill is just created, you will see a "Warming up" message next to the skill name. This is normal and indicates that the skill is warming up. Send 5 requests or so to allow the agent to see the some sample messages, expected response structure, tools, etc. without you having to manually define those. The agent will create the appropriate prompts and evaluations by seeing the sample messages and expected response structure.
 
 4. After a few requests you will see the "Warming up" message disappear. Click on "Manage Evaluations" and double check that the "Task Completion" evaluation is checking for the right qualities. Make adjustments to it if needed. You can also check each log within the skill and see why a specific score was given to it. Setting up evaluations correctly **since the beginning** will allow an agent to find the most optimal configurations faster.

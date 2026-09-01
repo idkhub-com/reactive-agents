@@ -145,6 +145,13 @@ describe('toolMiddleware', () => {
       createSkillOptimizationClusters: vi.fn(),
       updateSkillOptimizationCluster: vi.fn(),
       deleteSkillOptimizationCluster: vi.fn(),
+      getSkillRoutings: vi.fn(),
+      getAgentModels: vi.fn(),
+      addModelsToAgent: vi.fn(),
+      removeModelsFromAgent: vi.fn(),
+      upsertSkillRouting: vi.fn(),
+      claimSkillCreationLease: vi.fn(),
+      releaseSkillCreationLease: vi.fn(),
       incrementClusterCounters: vi.fn(),
       // Skill Optimization Arm methods
       getSkillOptimizationArms: vi.fn(),

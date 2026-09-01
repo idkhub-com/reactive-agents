@@ -13,16 +13,20 @@ export function removeEndingPath(url: string): string {
 }
 
 /**
- * Matches gateway paths that name the agent and skill in the URL, for example
- * `/v1/agents/my-agent/skills/my-skill/chat/completions`.
+ * Matches gateway paths that name the agent, and optionally the skill, in the
+ * URL. `/v1/agents/my-agent/skills/my-skill/chat/completions` goes to that
+ * skill; `/v1/agents/my-agent/chat/completions` leaves the skill to the
+ * gateway to pick.
  */
 const AGENT_SKILL_PATH_PATTERN =
   /^\/v1\/agents\/([^/]+)\/skills\/([^/]+)(\/.*)?$/;
+const AGENT_PATH_PATTERN = /^\/v1\/agents\/([^/]+)(\/.*)?$/;
 
 export interface AgentSkillPathScope {
   agent_name: string;
-  skill_name: string;
-  /** The path with the `/agents/:agent_name/skills/:skill_name` segment removed. */
+  /** Null when the path names only the agent. */
+  skill_name: string | null;
+  /** The path with the `/agents/...` prefix removed. */
   pathname: string;
 }
 
@@ -45,16 +49,24 @@ function decodePathSegment(segment: string): string {
 export function parseAgentSkillPath(
   pathname: string,
 ): AgentSkillPathScope | null {
-  const match = AGENT_SKILL_PATH_PATTERN.exec(pathname);
-  if (!match) {
-    return null;
+  const skillMatch = AGENT_SKILL_PATH_PATTERN.exec(pathname);
+  if (skillMatch) {
+    const [, agentName, skillName, rest] = skillMatch;
+    return {
+      agent_name: decodePathSegment(agentName),
+      skill_name: decodePathSegment(skillName),
+      pathname: `/v1${rest ?? ''}`,
+    };
   }
 
-  const [, agentName, skillName, rest] = match;
-
+  const agentMatch = AGENT_PATH_PATTERN.exec(pathname);
+  if (!agentMatch) {
+    return null;
+  }
+  const [, agentName, rest] = agentMatch;
   return {
     agent_name: decodePathSegment(agentName),
-    skill_name: decodePathSegment(skillName),
+    skill_name: null,
     pathname: `/v1${rest ?? ''}`,
   };
 }
@@ -64,6 +76,7 @@ export function parseAgentSkillPath(
  * matching and logging treat both request styles the same way.
  *
  * `/v1/agents/my-agent/skills/my-skill/chat/completions` -> `/v1/chat/completions`
+ * `/v1/agents/my-agent/chat/completions` -> `/v1/chat/completions`
  */
 export function stripAgentSkillPath(urlString: string): string {
   const url = new URL(urlString);

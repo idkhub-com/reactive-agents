@@ -39,6 +39,8 @@ const factory = createFactory<AppEnv>();
 
 /** Path prefix that scopes a gateway request to an agent and one of its skills. */
 const AGENT_SKILL_BASE_PATH = '/agents/:agent_name/skills/:skill_name';
+/** Path prefix that scopes a gateway request to an agent, leaving the skill to the gateway. */
+const AGENT_BASE_PATH = '/agents/:agent_name';
 
 // Lazy initialization of model capabilities (Cloudflare Workers can't do this at module load time)
 let modelCapabilitiesInitialized = false;
@@ -132,6 +134,12 @@ app.route(`${AGENT_SKILL_BASE_PATH}/chat`, chatRouter);
 app.route(`${AGENT_SKILL_BASE_PATH}/completions`, completionsRouter);
 app.route(`${AGENT_SKILL_BASE_PATH}/responses`, responsesRouter);
 app.route(`${AGENT_SKILL_BASE_PATH}/embeddings`, embeddingsRouter);
+// And to an agent alone, with the skill picked per request by
+// `agentAndSkillMiddleware`.
+app.route(`${AGENT_BASE_PATH}/chat`, chatRouter);
+app.route(`${AGENT_BASE_PATH}/completions`, completionsRouter);
+app.route(`${AGENT_BASE_PATH}/responses`, responsesRouter);
+app.route(`${AGENT_BASE_PATH}/embeddings`, embeddingsRouter);
 const superAgentsRoute = app.route('/super-agents', superAgentsRouter);
 
 export type SuperAgentsRoute = typeof superAgentsRoute;

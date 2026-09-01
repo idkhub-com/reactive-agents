@@ -72,6 +72,11 @@ import {
   type SkillOptimizationEvaluationRunQueryParams,
 } from '@shared/types/data/skill-optimization-evaluation-run';
 import {
+  SkillRouting,
+  type SkillRoutingQueryParams,
+  type SkillRoutingUpsertParams,
+} from '@shared/types/data/skill-routing';
+import {
   SystemSettings,
   type SystemSettingsUpdateParams,
 } from '@shared/types/data/system-settings';
@@ -85,6 +90,7 @@ import { z } from 'zod';
 import {
   deleteFromSupabase,
   insertIntoSupabase,
+  patchInSupabase,
   rpcFunctionWithResponse,
   selectFromSupabase,
   updateInSupabase,
@@ -644,6 +650,47 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     }
   },
 
+  getAgentModels: async (c: AppContext, agentId: string): Promise<Model[]> => {
+    const models = await selectFromSupabase(
+      c,
+      'agent_models',
+      { agent_id: `eq.${agentId}`, select: 'models(*)' },
+      z.array(z.object({ models: Model })),
+    );
+    return models.map((item) => item.models);
+  },
+
+  addModelsToAgent: async (
+    c: AppContext,
+    agentId: string,
+    modelIds: string[],
+  ): Promise<void> => {
+    if (modelIds.length === 0) {
+      return;
+    }
+    await insertIntoSupabase(
+      c,
+      'agent_models',
+      modelIds.map((modelId) => ({ agent_id: agentId, model_id: modelId })),
+      z.array(z.any()),
+      // Re-adding a model an agent already has is not an error.
+      true,
+    );
+  },
+
+  removeModelsFromAgent: async (
+    c: AppContext,
+    agentId: string,
+    modelIds: string[],
+  ): Promise<void> => {
+    for (const modelId of modelIds) {
+      await deleteFromSupabase(c, 'agent_models', {
+        agent_id: `eq.${agentId}`,
+        model_id: `eq.${modelId}`,
+      });
+    }
+  },
+
   // SkillOptimizationCluster
   getSkillOptimizationClusters: async (
     c: AppContext,
@@ -714,6 +761,94 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     await deleteFromSupabase(c, 'skill_optimization_clusters', {
       id: `eq.${id}`,
     });
+  },
+
+  getSkillRoutings: async (
+    c: AppContext,
+    queryParams: SkillRoutingQueryParams,
+  ): Promise<SkillRouting[]> => {
+    const postgRESTParams: Record<string, string> = {};
+    if (queryParams.agent_id) {
+      postgRESTParams.agent_id = `eq.${queryParams.agent_id}`;
+    }
+    if (queryParams.skill_id) {
+      postgRESTParams.skill_id = `eq.${queryParams.skill_id}`;
+    }
+    const routings = await selectFromSupabase(
+      c,
+      'skill_routing',
+      postgRESTParams,
+      z.array(SkillRouting),
+    );
+    return routings;
+  },
+
+  upsertSkillRouting: async (
+    c: AppContext,
+    params: SkillRoutingUpsertParams,
+  ): Promise<SkillRouting> => {
+    // `skill_id` is the primary key, which is what merge-duplicates resolves on.
+    const rows = await insertIntoSupabase(
+      c,
+      'skill_routing',
+      params,
+      z.array(SkillRouting),
+      true,
+    );
+    return rows[0];
+  },
+
+  claimSkillCreationLease: async (
+    c: AppContext,
+    agentId: string,
+    holder: string,
+    now: string,
+    until: string,
+  ): Promise<boolean> => {
+    // Make sure the row exists, then take it only while nobody holds it: a
+    // PATCH filtered on the lease being free changes no row when it is held,
+    // and Postgres serialises two claimants racing for the same row.
+    await insertIntoSupabase(
+      c,
+      'skill_creation_leases',
+      { agent_id: agentId, holder: null, lease_until: null },
+      null,
+      'ignore',
+    );
+    await patchInSupabase(
+      c,
+      'skill_creation_leases',
+      {
+        agent_id: `eq.${agentId}`,
+        or: `(lease_until.is.null,lease_until.lt.${now})`,
+      },
+      { holder, lease_until: until },
+      null,
+    );
+    // PostgREST applies the filter to the representation as well as to the
+    // update, and a lease just taken no longer passes it, so the rows it
+    // returns say nothing. The row itself says who holds the lease.
+    const rows = await selectFromSupabase(
+      c,
+      'skill_creation_leases',
+      { agent_id: `eq.${agentId}`, select: 'holder' },
+      z.array(z.object({ holder: z.string().nullable() })),
+    );
+    return rows[0]?.holder === holder;
+  },
+
+  releaseSkillCreationLease: async (
+    c: AppContext,
+    agentId: string,
+    holder: string,
+  ): Promise<void> => {
+    await patchInSupabase(
+      c,
+      'skill_creation_leases',
+      { agent_id: `eq.${agentId}`, holder: `eq.${holder}` },
+      { holder: null, lease_until: null },
+      null,
+    );
   },
 
   incrementClusterCounters: async (

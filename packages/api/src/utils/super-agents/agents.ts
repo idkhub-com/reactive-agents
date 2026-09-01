@@ -19,6 +19,10 @@ export async function getAgent(
         name: agentName,
         description: 'The Super Agents internal agent',
         metadata: {},
+        // Its skills are the internal ones, named explicitly by every call.
+        auto_create_skills: false,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 0,
       });
       return newAgent;
     }

@@ -11,6 +11,7 @@ const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -21,6 +22,7 @@ vi.mock('openai', () => {
       chat: {
         completions: {
           parse: mockParse,
+          create: mockParse,
         },
       },
       withOptions: mockWithOptions,
@@ -89,7 +91,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -161,7 +163,13 @@ describe('LLM Judge', () => {
     );
 
     mockParse.mockResolvedValueOnce({
-      choices: [{ message: { parsed: { score: 0.9, reasoning: 'Good' } } }],
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ score: 0.9, reasoning: 'Good' }),
+          },
+        },
+      ],
     });
 
     const result = await ollamaJudge.evaluate({
@@ -212,7 +220,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: null, // Invalid: null parsed response
+            content: JSON.stringify(null), // Invalid: null parsed response
           },
         },
       ],
@@ -246,6 +254,26 @@ describe('LLM Judge', () => {
     expect(result.metadata?.errorType).toBe('api_error');
   });
 
+  it('tolerates a trailing comma and prose around the judge JSON', async () => {
+    // What a self-hosted judge actually sends: the object is there, but the
+    // strict parser used to throw and the evaluation fell back to 0.5.
+    mockParse.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content:
+              'Here is my verdict:\n{\n"score": 0.8,\n"reasoning": "solid",\n}',
+          },
+        },
+      ],
+    });
+
+    const result = await llmJudge.evaluate({ text: 'judge this' });
+
+    expect(result.score).toBe(0.8);
+    expect(result.reasoning).toBe('solid');
+  });
+
   it('should evaluate code text successfully', async () => {
     const mockParsedResponse = {
       score: 0.9,
@@ -256,7 +284,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -284,7 +312,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -325,7 +353,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: mockParsedResponse,
+            content: JSON.stringify(mockParsedResponse),
           },
         },
       ],
@@ -356,7 +384,7 @@ describe('LLM Judge', () => {
         choices: [
           {
             message: {
-              parsed: mockParsedResponse,
+              content: JSON.stringify(mockParsedResponse),
             },
           },
         ],
@@ -418,7 +446,7 @@ describe('LLM Judge', () => {
       choices: [
         {
           message: {
-            parsed: null,
+            content: JSON.stringify(null),
           },
         },
       ],
@@ -451,7 +479,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: null,
+                content: JSON.stringify(null),
               },
             },
           ],
@@ -497,7 +525,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: mockParsedResponse,
+                content: JSON.stringify(mockParsedResponse),
               },
             },
           ],
@@ -532,7 +560,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: mockParsedResponse,
+                content: JSON.stringify(mockParsedResponse),
               },
             },
           ],
@@ -567,7 +595,7 @@ describe('LLM Judge', () => {
           choices: [
             {
               message: {
-                parsed: mockParsedResponse,
+                content: JSON.stringify(mockParsedResponse),
               },
             },
           ],
@@ -638,7 +666,7 @@ describe('LLM Judge', () => {
         choices: [
           {
             message: {
-              parsed: mockParsedResponse,
+              content: JSON.stringify(mockParsedResponse),
             },
           },
         ],
@@ -716,6 +744,76 @@ describe('LLM Judge', () => {
 
       // Should not retry null/undefined
       expect(mockParse).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('prompt routing', () => {
+    const judgeAnswer = (payload: unknown) => {
+      mockParse.mockResolvedValueOnce({
+        choices: [{ message: { content: JSON.stringify(payload) } }],
+      });
+    };
+
+    it('uses explicit prompts verbatim and returns the real score', async () => {
+      // The template heuristics split on the first blank line and flip to a
+      // "structured" result whenever the text mentions a JSON object -- which
+      // reported score 1.0 no matter what the judge answered. Explicit
+      // prompts must bypass all of it.
+      judgeAnswer({ score: 0.3, reasoning: 'barely relevant' });
+
+      const systemPrompt =
+        'You are an evaluator.\nReturn your response as a JSON object.';
+      const userPrompt = 'Conversation:\nUser: hi\n\nUser: also this';
+      const result = await llmJudge.evaluate({
+        text: `${systemPrompt}\n\n${userPrompt}`,
+        systemPrompt,
+        userPrompt,
+      });
+
+      expect(result.score).toBe(0.3);
+      expect(result.reasoning).toBe('barely relevant');
+      expect(mockParse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      );
+    });
+
+    it('treats a call as an extraction only when declared structured', async () => {
+      judgeAnswer({ task: 'summarize', outcome: 'a summary' });
+
+      const result = await llmJudge.evaluate({
+        text: '',
+        systemPrompt: 'Extract the task and outcome.',
+        userPrompt: 'INPUT: hello OUTPUT: world',
+        structured: true,
+      });
+
+      expect(result.score).toBe(1.0);
+      expect(result.metadata).toEqual({
+        task: 'summarize',
+        outcome: 'a summary',
+      });
+    });
+
+    it('lets explicit criteria win over the template heuristics', async () => {
+      // Conversation content can contain "You are", "evaluate" and blank
+      // lines; a caller that provided criteria means the scored criteria
+      // judge, never a heuristic re-split of its text.
+      judgeAnswer({ score: 0.2, reasoning: 'mostly unmet' });
+
+      const result = await llmJudge.evaluate({
+        text: 'You are an expert evaluator, they said.\n\nPlease evaluate my conversation for completeness.',
+        evaluationCriteria: { criteria: ['Check every user intention'] },
+      });
+
+      expect(result.score).toBe(0.2);
+      const call = mockParse.mock.calls[0][0];
+      expect(call.messages[0].content).toContain('You are a quality evaluator');
+      expect(call.messages[0].content).toContain('Check every user intention');
     });
   });
 });

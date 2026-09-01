@@ -1,6 +1,8 @@
 import { agentAndSkillMiddleware } from '@api/middlewares/agent-and-skill';
 import type { AppContext } from '@api/types/hono';
 import * as agentsUtils from '@api/utils/super-agents/agents';
+import * as skillRouting from '@api/utils/super-agents/skill-routing';
+import { SkillRoutingError } from '@api/utils/super-agents/skill-routing';
 import * as skillsUtils from '@api/utils/super-agents/skills';
 import {
   StrategyModes,
@@ -14,6 +16,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock the utility functions
 vi.mock('@api/utils/super-agents/agents');
 vi.mock('@api/utils/super-agents/skills');
+// Partially, so `SkillRoutingError` stays the real class for `instanceof`.
+vi.mock('@api/utils/super-agents/skill-routing', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@api/utils/super-agents/skill-routing')
+  >()),
+  routeRequestToSkill: vi.fn(),
+  learnSkillIntent: vi.fn(),
+}));
 
 describe('agentAndSkillMiddleware', () => {
   let mockNext: Next; // Mock connector
@@ -90,6 +100,9 @@ describe('agentAndSkillMiddleware', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       const mockSkill: Skill = {
@@ -111,6 +124,8 @@ describe('agentAndSkillMiddleware', () => {
         evaluation_lock_acquired_at: null,
         total_requests: 0,
         allowed_template_variables: ['datetime'],
+        auto_created: false,
+        seed_system_prompt: null,
       };
 
       vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
@@ -177,6 +192,9 @@ describe('agentAndSkillMiddleware', () => {
           metadata: {},
           created_at: '2023-01-01T00:00:00.000Z',
           updated_at: '2023-01-01T00:00:00.000Z',
+          auto_create_skills: true,
+          skill_match_threshold: 0.8,
+          max_auto_created_skills: 10,
         };
 
         const mockSkill: Skill = {
@@ -198,6 +216,8 @@ describe('agentAndSkillMiddleware', () => {
           evaluation_lock_acquired_at: null,
           total_requests: 0,
           allowed_template_variables: ['datetime'],
+          auto_created: false,
+          seed_system_prompt: null,
         };
 
         vi.mocked(agentsUtils.getAgent).mockResolvedValue(mockAgent);
@@ -296,6 +316,9 @@ describe('agentAndSkillMiddleware', () => {
         metadata: {},
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
+        auto_create_skills: true,
+        skill_match_threshold: 0.8,
+        max_auto_created_skills: 10,
       };
 
       const customMockContext = {
@@ -333,6 +356,198 @@ describe('agentAndSkillMiddleware', () => {
         'custom-agent-123',
         'custom-skill-456',
       );
+    });
+  });
+
+  describe('learning from a request that names its skill', () => {
+    const agent = {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      name: 'test-agent',
+    } as Agent;
+    const skill = {
+      id: '123e4567-e89b-12d3-a456-426614174001',
+      name: 'test-skill',
+    } as Skill;
+    const requestData = { functionName: 'chatComplete' };
+
+    const createNamedContext = (
+      values: Record<string, unknown> = {},
+    ): AppContext => {
+      const c = createMockContext('http://localhost/v1/chat/completions');
+      (c.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (key: string) => {
+          switch (key) {
+            case 'sa_config_pre_processed':
+              return mockSuperAgentsConfig;
+            case 'user_data_storage_connector':
+              return mockConnector;
+            case 'sa_request_data':
+              return requestData;
+            default:
+              return values[key];
+          }
+        },
+      );
+      return c;
+    };
+
+    beforeEach(() => {
+      vi.mocked(agentsUtils.getAgent).mockResolvedValue(agent);
+      vi.mocked(skillsUtils.getSkill).mockResolvedValue(skill);
+      vi.mocked(skillRouting.learnSkillIntent).mockResolvedValue(undefined);
+    });
+
+    it('learns after the request has been answered', async () => {
+      const order: string[] = [];
+      mockNext = vi.fn().mockImplementation(() => {
+        order.push('next');
+        return Promise.resolve();
+      });
+      vi.mocked(skillRouting.learnSkillIntent).mockImplementation(() => {
+        order.push('learn');
+        return Promise.resolve();
+      });
+      const c = createNamedContext();
+
+      await agentAndSkillMiddleware(c, mockNext);
+
+      expect(order).toEqual(['next', 'learn']);
+      expect(skillRouting.learnSkillIntent).toHaveBeenCalledWith(
+        c,
+        mockConnector,
+        agent,
+        skill,
+        requestData,
+      );
+    });
+
+    it('does not fail the request when learning fails', async () => {
+      vi.mocked(skillRouting.learnSkillIntent).mockRejectedValue(
+        new Error('storage'),
+      );
+
+      await expect(
+        agentAndSkillMiddleware(createNamedContext(), mockNext),
+      ).resolves.toBeUndefined();
+      // Rejected after the middleware returned; give it a tick to settle.
+      await new Promise((resolve) => setImmediate(resolve));
+    });
+
+    it('leaves the internal skills alone', async () => {
+      vi.mocked(agentsUtils.getAgent).mockResolvedValue({
+        ...agent,
+        name: 'super-agents',
+      });
+
+      await agentAndSkillMiddleware(createNamedContext(), mockNext);
+
+      expect(skillRouting.learnSkillIntent).not.toHaveBeenCalled();
+    });
+
+    it('does not learn from a request that was routed', async () => {
+      mockSuperAgentsConfig = {
+        ...mockSuperAgentsConfig,
+        skill_name: undefined,
+      } as unknown as SuperAgentsConfig;
+      vi.mocked(skillRouting.routeRequestToSkill).mockResolvedValue({
+        skill,
+        decision: {
+          method: 'only_skill',
+          similarity: null,
+          threshold: null,
+          candidates: 1,
+        },
+      });
+
+      await agentAndSkillMiddleware(createNamedContext(), mockNext);
+
+      expect(skillRouting.learnSkillIntent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('routing when the skill is not named', () => {
+    const agent = {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      name: 'test-agent',
+    } as Agent;
+    const routedSkill = {
+      id: '123e4567-e89b-12d3-a456-426614174001',
+      name: 'routed-skill',
+    } as Skill;
+    const decision = {
+      method: 'only_skill' as const,
+      similarity: null,
+      threshold: null,
+      candidates: 1,
+    };
+
+    const createRoutingContext = (): AppContext => {
+      const c = createMockContext('http://localhost/v1/chat/completions');
+      (c as unknown as { json: unknown }).json = vi
+        .fn()
+        .mockImplementation(
+          (body: unknown, status: number) =>
+            new Response(JSON.stringify(body), { status }),
+        );
+      return c;
+    };
+
+    beforeEach(() => {
+      mockSuperAgentsConfig = {
+        ...mockSuperAgentsConfig,
+        skill_name: undefined,
+      } as unknown as SuperAgentsConfig;
+      vi.mocked(agentsUtils.getAgent).mockResolvedValue(agent);
+    });
+
+    it('should route to a skill and fill its name into the config', async () => {
+      vi.mocked(skillRouting.routeRequestToSkill).mockResolvedValue({
+        skill: routedSkill,
+        decision,
+      });
+      const c = createRoutingContext();
+
+      await agentAndSkillMiddleware(c, mockNext);
+
+      expect(skillsUtils.getSkill).not.toHaveBeenCalled();
+      expect(skillRouting.routeRequestToSkill).toHaveBeenCalledWith(
+        c,
+        mockConnector,
+        agent,
+        undefined,
+      );
+      expect(c.set).toHaveBeenCalledWith('skill', routedSkill);
+      expect(c.set).toHaveBeenCalledWith('skill_routing', decision);
+      expect(c.set).toHaveBeenCalledWith(
+        'sa_config_pre_processed',
+        expect.objectContaining({ skill_name: 'routed-skill' }),
+      );
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should answer with the routing error status', async () => {
+      vi.mocked(skillRouting.routeRequestToSkill).mockRejectedValue(
+        new SkillRoutingError('Agent test-agent has no skills', 404),
+      );
+      const c = createRoutingContext();
+
+      const response = (await agentAndSkillMiddleware(c, mockNext)) as Response;
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({
+        error: 'Agent test-agent has no skills',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should let other routing failures propagate', async () => {
+      vi.mocked(skillRouting.routeRequestToSkill).mockRejectedValue(
+        new Error('database down'),
+      );
+
+      await expect(
+        agentAndSkillMiddleware(createRoutingContext(), mockNext),
+      ).rejects.toThrow('database down');
     });
   });
 });

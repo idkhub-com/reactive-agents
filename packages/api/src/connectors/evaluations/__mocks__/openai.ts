@@ -6,6 +6,7 @@ export const mockWithOptions = vi.fn().mockReturnValue({
   chat: {
     completions: {
       parse: mockParse,
+      create: mockParse,
     },
   },
 });
@@ -18,6 +19,7 @@ export function setupOpenAIMock() {
         chat: {
           completions: {
             parse: mockParse,
+            create: mockParse,
           },
         },
         withOptions: mockWithOptions,
@@ -32,10 +34,10 @@ export function mockSuccessfulEvaluation(score: number, reasoning: string) {
     choices: [
       {
         message: {
-          parsed: {
+          content: JSON.stringify({
             score,
             reasoning,
-          },
+          }),
         },
       },
     ],
