@@ -93,6 +93,10 @@ vi.mock('@web/components/agents/skills/logs/logs-view', () => ({
   LogsView: () => <div data-testid="page-skill-logs" />,
 }));
 
+vi.mock('@web/components/agents/agent-logs-view', () => ({
+  AgentLogsView: () => <div data-testid="page-agent-logs" />,
+}));
+
 vi.mock('@web/components/agents/skills/logs/log-details-view', () => ({
   LogDetailsView: () => <div data-testid="page-skill-log-detail" />,
 }));
@@ -200,6 +204,7 @@ const ROUTE_TABLE: [string, string, string][] = [
   ['create model', '/models/create', 'page-models-create'],
   ['edit model', '/models/m1/edit', 'page-models-edit'],
   ['settings', '/settings', 'page-settings'],
+  ['agent logs', '/agents/test-agent/logs', 'page-agent-logs'],
   ['create skill', '/agents/test-agent/skills/create', 'page-skill-create'],
   [
     'skill dashboard',

@@ -83,6 +83,8 @@ export function NavigationProvider({
     if (pathSegments.length === 2 && agentName) return 'agent-view'; // /agents/[agentName]
     if (pathSegments.length === 3 && agentName && pathSegments[2] === 'edit')
       return 'edit-agent'; // /agents/[agentName]/edit
+    if (pathSegments.length === 3 && agentName && pathSegments[2] === 'logs')
+      return 'agent-logs'; // /agents/[agentName]/logs
     if (pathSegments.length === 3 && agentName && pathSegments[2] === 'skills')
       return 'agent-view'; // /agents/[agentName]/skills
     if (
@@ -263,6 +265,14 @@ export function NavigationProvider({
             isAgentDropdown: true,
           });
         }
+      }
+
+      // The agent-wide logs page sits directly under the agent
+      if (newState.selectedAgentName && currentView === 'agent-logs') {
+        breadcrumbs.push({
+          label: 'Logs',
+          path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/logs`,
+        });
       }
 
       // Add Skills breadcrumb if we're on a skill route

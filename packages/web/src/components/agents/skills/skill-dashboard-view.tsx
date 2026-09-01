@@ -34,6 +34,8 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
+  TableHeader,
   TableRow,
 } from '@web/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@web/components/ui/toggle-group';
@@ -732,6 +734,14 @@ export function SkillDashboardView(): ReactElement {
               ) : (
                 <div className="m-4 border rounded-lg overflow-hidden">
                   <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>Function</TableHead>
+                        <TableHead>Model</TableHead>
+                        <TableHead>Partition</TableHead>
+                        <TableHead className="text-right">Duration</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {recentLogs.slice(0, 5).map((log) => {
                         const cluster = clusterStates.find(
@@ -750,11 +760,9 @@ export function SkillDashboardView(): ReactElement {
                             <TableCell className="text-muted-foreground">
                               {log.model}
                             </TableCell>
-                            {cluster && (
-                              <TableCell className="text-muted-foreground">
-                                {cluster.name}
-                              </TableCell>
-                            )}
+                            <TableCell className="text-muted-foreground">
+                              {cluster?.name ?? '\u2014'}
+                            </TableCell>
                             <TableCell className="text-right text-muted-foreground">
                               {log.duration.toFixed(0)}ms
                             </TableCell>
@@ -796,6 +804,12 @@ export function SkillDashboardView(): ReactElement {
               ) : (
                 <div className="m-4 border rounded-lg overflow-hidden">
                   <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>Event</TableHead>
+                        <TableHead className="text-right">When</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {skillEvents.slice(0, 5).map((event) => {
                         const label =

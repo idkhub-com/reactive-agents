@@ -190,6 +190,8 @@ const createLogsCtx = (
     setAgentId: vi.fn(),
     skillId: null,
     setSkillId: vi.fn(),
+    agentWide: false,
+    setAgentWide: vi.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
     fetchNextPage: vi.fn(),

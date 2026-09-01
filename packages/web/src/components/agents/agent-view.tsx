@@ -8,6 +8,7 @@ import { getAgentEvaluationScoresByTimeBucket } from '@web/api/v1/super-agents/a
 import { getSkillEvents } from '@web/api/v1/super-agents/skill-events';
 import { getSkillEvaluationScoresByTimeBucket } from '@web/api/v1/super-agents/skills';
 import { AgentPerformanceChart } from '@web/components/agents/agent-performance-chart';
+import { AgentRecentLogsCard } from '@web/components/agents/agent-recent-logs-card';
 import { AgentStatusIndicator } from '@web/components/agents/agent-status-indicator';
 import { DeleteAgentDialog } from '@web/components/agents/delete-agent-dialog';
 import { ManageAgentModelsDialog } from '@web/components/agents/manage-agent-models-dialog';
@@ -52,6 +53,7 @@ import {
   Edit,
   MoreVertical,
   PlusIcon,
+  ScrollTextIcon,
   SearchIcon,
   Trash2,
 } from 'lucide-react';
@@ -294,6 +296,14 @@ export function AgentView(): ReactElement {
     }
   };
 
+  const handleViewLogs = () => {
+    if (selectedAgent) {
+      navigate({
+        to: `/agents/${encodeURIComponent(selectedAgent.name)}/logs`,
+      });
+    }
+  };
+
   const handleEditAgent = () => {
     if (selectedAgent) {
       navigate({
@@ -355,31 +365,37 @@ export function AgentView(): ReactElement {
         showBackButton={true}
         onBack={() => navigate({ to: '/agents' })}
         actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" title="More options">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEditAgent}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Agent
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsModelsDialogOpen(true)}>
-                <CpuIcon className="h-4 w-4 mr-2" />
-                Default Models
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setIsDeleteAgentDialogOpen(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Agent
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleViewLogs}>
+              <ScrollTextIcon className="h-4 w-4 mr-2" />
+              Logs
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" title="More options">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleEditAgent}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Agent
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsModelsDialogOpen(true)}>
+                  <CpuIcon className="h-4 w-4 mr-2" />
+                  Default Models
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setIsDeleteAgentDialogOpen(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Agent
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         }
       />
       <div className="p-6 space-y-6">
@@ -496,6 +512,9 @@ export function AgentView(): ReactElement {
             )}
           </CardContent>
         </Card>
+
+        {/* Recent Logs across all skills */}
+        <AgentRecentLogsCard />
 
         <div className="flex justify-between items-center gap-4">
           <div className="relative flex-1">

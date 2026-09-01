@@ -56,7 +56,8 @@ const EvaluationMethodNames: Record<EvaluationMethodName, string> = {
 export function LogDetailsView(): ReactElement {
   const { selectedAgent } = useAgents();
   const { selectedSkill } = useSkills();
-  const { selectedLog, isLoading, setAgentId, setSkillId } = useLogs();
+  const { selectedLog, isLoading, setAgentId, setSkillId, setAgentWide } =
+    useLogs();
   const { clusters } = useSkillOptimizationClusters();
   const {
     evaluationRuns,
@@ -79,13 +80,21 @@ export function LogDetailsView(): ReactElement {
     if (selectedAgent && selectedSkill) {
       setAgentId(selectedAgent.id);
       setSkillId(selectedSkill.id);
+      setAgentWide(false);
       setEvalSkillId(selectedSkill.id);
     } else {
       setAgentId(null);
       setSkillId(null);
       setEvalSkillId(null);
     }
-  }, [selectedAgent, selectedSkill, setAgentId, setSkillId, setEvalSkillId]);
+  }, [
+    selectedAgent,
+    selectedSkill,
+    setAgentId,
+    setSkillId,
+    setAgentWide,
+    setEvalSkillId,
+  ]);
 
   // Set log ID for evaluation runs provider
   useEffect(() => {

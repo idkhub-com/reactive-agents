@@ -25,6 +25,7 @@ import { Route as MainAgentsAgentNameIndexRouteImport } from './routes/_main/age
 import { Route as MainModelsIdEditRouteImport } from './routes/_main/models.$id.edit'
 import { Route as MainAiProvidersIdEditRouteImport } from './routes/_main/ai-providers.$id.edit'
 import { Route as MainAiProvidersIdAddModelsRouteImport } from './routes/_main/ai-providers.$id.add-models'
+import { Route as MainAgentsAgentNameLogsRouteImport } from './routes/_main/agents.$agentName.logs'
 import { Route as MainAgentsAgentNameEditRouteImport } from './routes/_main/agents.$agentName.edit'
 import { Route as MainAgentsAgentNameSkillsCreateRouteImport } from './routes/_main/agents.$agentName.skills.create'
 import { Route as MainAgentsAgentNameSkillsSkillNameRouteImport } from './routes/_main/agents.$agentName.skills.$skillName'
@@ -151,6 +152,13 @@ const MainAiProvidersIdAddModelsRoute =
       (d) => d.Route,
     ),
   )
+const MainAgentsAgentNameLogsRoute = MainAgentsAgentNameLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => MainAgentsAgentNameRoute,
+} as any).lazy(() =>
+  import('./routes/_main/agents.$agentName.logs.lazy').then((d) => d.Route),
+)
 const MainAgentsAgentNameEditRoute = MainAgentsAgentNameEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -329,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/ai-providers': typeof MainAiProvidersIndexRoute
   '/models': typeof MainModelsIndexRoute
   '/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
+  '/agents/$agentName/logs': typeof MainAgentsAgentNameLogsRoute
   '/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
   '/ai-providers/$id/edit': typeof MainAiProvidersIdEditRoute
   '/models/$id/edit': typeof MainModelsIdEditRoute
@@ -363,6 +372,7 @@ export interface FileRoutesByTo {
   '/ai-providers': typeof MainAiProvidersIndexRoute
   '/models': typeof MainModelsIndexRoute
   '/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
+  '/agents/$agentName/logs': typeof MainAgentsAgentNameLogsRoute
   '/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
   '/ai-providers/$id/edit': typeof MainAiProvidersIdEditRoute
   '/models/$id/edit': typeof MainModelsIdEditRoute
@@ -396,6 +406,7 @@ export interface FileRoutesById {
   '/_main/ai-providers/': typeof MainAiProvidersIndexRoute
   '/_main/models/': typeof MainModelsIndexRoute
   '/_main/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
+  '/_main/agents/$agentName/logs': typeof MainAgentsAgentNameLogsRoute
   '/_main/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
   '/_main/ai-providers/$id/edit': typeof MainAiProvidersIdEditRoute
   '/_main/models/$id/edit': typeof MainModelsIdEditRoute
@@ -433,6 +444,7 @@ export interface FileRouteTypes {
     | '/ai-providers'
     | '/models'
     | '/agents/$agentName/edit'
+    | '/agents/$agentName/logs'
     | '/ai-providers/$id/add-models'
     | '/ai-providers/$id/edit'
     | '/models/$id/edit'
@@ -467,6 +479,7 @@ export interface FileRouteTypes {
     | '/ai-providers'
     | '/models'
     | '/agents/$agentName/edit'
+    | '/agents/$agentName/logs'
     | '/ai-providers/$id/add-models'
     | '/ai-providers/$id/edit'
     | '/models/$id/edit'
@@ -499,6 +512,7 @@ export interface FileRouteTypes {
     | '/_main/ai-providers/'
     | '/_main/models/'
     | '/_main/agents/$agentName/edit'
+    | '/_main/agents/$agentName/logs'
     | '/_main/ai-providers/$id/add-models'
     | '/_main/ai-providers/$id/edit'
     | '/_main/models/$id/edit'
@@ -641,6 +655,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ai-providers/$id/add-models'
       preLoaderRoute: typeof MainAiProvidersIdAddModelsRouteImport
       parentRoute: typeof MainRoute
+    }
+    '/_main/agents/$agentName/logs': {
+      id: '/_main/agents/$agentName/logs'
+      path: '/logs'
+      fullPath: '/agents/$agentName/logs'
+      preLoaderRoute: typeof MainAgentsAgentNameLogsRouteImport
+      parentRoute: typeof MainAgentsAgentNameRoute
     }
     '/_main/agents/$agentName/edit': {
       id: '/_main/agents/$agentName/edit'
@@ -878,6 +899,7 @@ const MainAgentsAgentNameSkillsSkillNameRouteWithChildren =
 
 interface MainAgentsAgentNameRouteChildren {
   MainAgentsAgentNameEditRoute: typeof MainAgentsAgentNameEditRoute
+  MainAgentsAgentNameLogsRoute: typeof MainAgentsAgentNameLogsRoute
   MainAgentsAgentNameIndexRoute: typeof MainAgentsAgentNameIndexRoute
   MainAgentsAgentNameSkillsSkillNameRoute: typeof MainAgentsAgentNameSkillsSkillNameRouteWithChildren
   MainAgentsAgentNameSkillsCreateRoute: typeof MainAgentsAgentNameSkillsCreateRoute
@@ -885,6 +907,7 @@ interface MainAgentsAgentNameRouteChildren {
 
 const MainAgentsAgentNameRouteChildren: MainAgentsAgentNameRouteChildren = {
   MainAgentsAgentNameEditRoute: MainAgentsAgentNameEditRoute,
+  MainAgentsAgentNameLogsRoute: MainAgentsAgentNameLogsRoute,
   MainAgentsAgentNameIndexRoute: MainAgentsAgentNameIndexRoute,
   MainAgentsAgentNameSkillsSkillNameRoute:
     MainAgentsAgentNameSkillsSkillNameRouteWithChildren,

@@ -112,3 +112,29 @@ test.describe('agents dashboard', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('agent-wide logs page', () => {
+  // The page renders only in the built bundle: it is a lazy route, so this
+  // is what proves routeTree generation picked it up and the SPA fallback
+  // serves it.
+  test('serves the logs of a whole agent at /agents/:name/logs', async ({
+    page,
+    request,
+  }) => {
+    const name = uniqueAgentName('agent-logs-page');
+    const agent = await createAgent(request, name);
+
+    try {
+      await page.goto(`/agents/${name}/logs`);
+
+      await expect(
+        page.getByText(`Request logs across all skills for ${name}`),
+      ).toBeVisible();
+      // A fresh agent has no logs; the empty state proves the agent-wide
+      // query ran (rather than waiting forever on a skill id).
+      await expect(page.getByText('No logs found')).toBeVisible();
+    } finally {
+      await deleteAgent(request, agent.id);
+    }
+  });
+});
