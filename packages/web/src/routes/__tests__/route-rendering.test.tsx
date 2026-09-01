@@ -59,16 +59,6 @@ vi.mock('@web/components/models/add-models-view', () => ({
   AddModelsView: () => <div data-testid="page-models-add" />,
 }));
 
-vi.mock('@web/components/models/models-list', () => ({
-  ModelsListView: () => <div data-testid="page-models-list" />,
-}));
-
-vi.mock('@web/components/models/model-form', () => ({
-  ModelForm: ({ modelId }: { modelId?: string }) => (
-    <div data-testid={modelId ? 'page-models-edit' : 'page-models-create'} />
-  ),
-}));
-
 vi.mock('@web/components/settings/system-settings-view', () => ({
   SystemSettingsView: () => <div data-testid="page-settings" />,
 }));
@@ -199,10 +189,6 @@ const ROUTE_TABLE: [string, string, string][] = [
   ['create ai provider', '/ai-providers/create', 'page-ai-providers-create'],
   ['edit ai provider', '/ai-providers/p1/edit', 'page-ai-providers-edit'],
   ['add models to provider', '/ai-providers/p1/add-models', 'page-models-add'],
-  ['add models (generic)', '/models/add?providerId=p1', 'page-models-add'],
-  ['models list', '/models', 'page-models-list'],
-  ['create model', '/models/create', 'page-models-create'],
-  ['edit model', '/models/m1/edit', 'page-models-edit'],
   ['settings', '/settings', 'page-settings'],
   ['agent logs', '/agents/test-agent/logs', 'page-agent-logs'],
   ['create skill', '/agents/test-agent/skills/create', 'page-skill-create'],

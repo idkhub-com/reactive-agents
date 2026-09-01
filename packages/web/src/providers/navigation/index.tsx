@@ -390,11 +390,6 @@ export function NavigationProvider({
           label: 'AI Providers',
           path: '/ai-providers',
         });
-      } else if (pathname.startsWith('/models')) {
-        breadcrumbs.push({
-          label: 'Models',
-          path: '/models',
-        });
       }
 
       newState.breadcrumbs = breadcrumbs;

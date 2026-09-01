@@ -352,10 +352,14 @@ export function APIKeyForm({ apiKey, mode }: APIKeyFormProps): ReactElement {
                       <FormLabel>Name</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="e.g., Production Key, Development Key"
+                          placeholder="e.g., OpenAI Production, Local Ollama"
                           {...field}
                         />
                       </FormControl>
+                      <FormDescription>
+                        What to call this provider in the dashboard. Useful when
+                        you configure the same provider more than once.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
