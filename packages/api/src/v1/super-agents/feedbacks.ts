@@ -1,5 +1,6 @@
 import type { AppEnv } from '@api/types/hono';
 import { parseDatabaseError } from '@api/utils/database-error';
+import { scheduleFeedbackReevaluation } from '@api/utils/super-agents/feedback-reevaluation';
 import { zValidator } from '@hono/zod-validator';
 import {
   FeedbackCreateParams,
@@ -31,6 +32,12 @@ export const feedbacksRouter = new Hono<AppEnv>()
       const newFeedback = await c
         .get('user_data_storage_connector')
         .createFeedback(c, feedbackData);
+
+      // The special part of this evaluation: a verified verdict re-runs the
+      // log's evaluations with the judges told a human called it good or
+      // bad, so they re-derive why. Runs behind the response.
+      scheduleFeedbackReevaluation(c, newFeedback);
+
       return c.json(newFeedback, 201);
     } catch (error) {
       console.error('Error creating feedback:', error);

@@ -8,6 +8,7 @@ import { extractSystemPrompt } from '@shared/utils/system-prompt';
 import { CompletionViewer } from '@web/components/agents/skills/logs/components/completion-viewer';
 import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
 import { MessagesView } from '@web/components/agents/skills/logs/components/messages-view';
+import { LogFeedback } from '@web/components/agents/skills/logs/log-feedback';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {
@@ -276,6 +277,7 @@ export function LogDetailsView(): ReactElement {
         description={formatTimestamp(selectedLog.start_time)}
         showBackButton
         onBack={handleBack}
+        actions={<LogFeedback logId={selectedLog.id} />}
       />
       <div className="flex-1 overflow-hidden p-6">
         {/* Log Detail Card */}

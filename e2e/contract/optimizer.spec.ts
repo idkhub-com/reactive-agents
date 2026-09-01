@@ -29,6 +29,7 @@ import {
   getSkillEvaluations,
   getSkillModels,
   getSkills,
+  SKILLS_PATH,
   type Skill,
 } from '../fixtures/skills';
 
@@ -656,5 +657,108 @@ test.describe('skill creation', () => {
         return decisions.sort();
       })
       .toEqual(['created', 'embedding', 'embedding', 'embedding', 'embedding']);
+  });
+});
+
+/**
+ * Thumbs up/down on a log is the one evaluation with a human in it: posting
+ * feedback re-runs the log's evaluations with the verdict folded into the
+ * judges' prompts and replaces the stored run. The loop only executes end to
+ * end here -- the POST, the background re-run through the internal judge
+ * skill, the run replacement in storage -- and the run replacement is a
+ * storage behaviour that has to hold on both backends. It lives in this file
+ * because it writes the same global system settings row as the rest.
+ */
+test.describe('feedback re-evaluation', () => {
+  let configured: OptimizedSkill;
+
+  test.beforeAll(async ({ request }) => {
+    configured = await setUpOptimizedSkill(request, 'feedback');
+
+    // Give the skill a judge-backed evaluation to re-run.
+    const created = await request.post(
+      `${SKILLS_PATH}/${configured.skillId}/evaluations`,
+      { data: { methods: ['conversation_completeness'] } },
+    );
+    expect(created.ok()).toBe(true);
+  });
+
+  test('a thumbs down re-judges the log with the verdict as context', async ({
+    request,
+  }) => {
+    const userMessage = 'summarize the release notes for me';
+    const response = await request.post(CHAT_COMPLETIONS_PATH, {
+      headers: {
+        'sa-config': optimizedConfig(
+          configured.agentName,
+          configured.skillName,
+        ),
+      },
+      data: chatBody(userMessage),
+    });
+    expect(response.status()).toBe(200);
+
+    // The log and its realtime evaluation run are written in the background.
+    let logId = '';
+    await expect
+      .poll(async () => {
+        const logs = await getLogs(request, configured.skillId);
+        const logged = logs.find((log) =>
+          log.ai_provider_request_log.request_body.messages?.some(
+            (message) => message.content === userMessage,
+          ),
+        );
+        logId = logged?.id ?? '';
+        return logId;
+      })
+      .not.toBe('');
+
+    const runsForLog = async (): Promise<{ id: string }[]> => {
+      const runs = await request.get(
+        `${SKILLS_PATH}/${configured.skillId}/evaluation-runs`,
+        { params: { log_id: logId } },
+      );
+      return (await runs.json()) as { id: string }[];
+    };
+
+    let originalRunId = '';
+    await expect
+      .poll(
+        async () => {
+          const runs = await runsForLog();
+          originalRunId = runs[0]?.id ?? '';
+          return runs.length;
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(1);
+
+    // The human presses thumbs down.
+    const feedback = await request.post('/v1/super-agents/feedbacks', {
+      data: { log_id: logId, score: 0 },
+    });
+    expect(feedback.status()).toBe(201);
+
+    // The verdict-informed run replaces the original -- still exactly one.
+    await expect
+      .poll(
+        async () => {
+          const runs = await runsForLog();
+          return runs.length === 1 && runs[0].id !== originalRunId
+            ? 'replaced'
+            : 'waiting';
+        },
+        { timeout: 30_000 },
+      )
+      .toBe('replaced');
+
+    // And the judge really was told: the re-run's request to the provider
+    // carries the verdict note.
+    const forwarded = await stubRequests(request, configured.textModel);
+    const verdictCalls = forwarded.filter((body) =>
+      JSON.stringify(body).includes('manually reviewed this exact response'),
+    );
+    expect(verdictCalls.length).toBeGreaterThan(0);
+    expect(JSON.stringify(verdictCalls)).toContain('BAD output');
   });
 });

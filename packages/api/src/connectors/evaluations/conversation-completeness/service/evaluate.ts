@@ -2,11 +2,15 @@ import type {
   ConversationCompletenessEvaluationParameters,
   ConversationCompletenessResult,
 } from '@api/connectors/evaluations/conversation-completeness/types';
+import { humanVerdictNote } from '@api/evaluations/human-verdict';
 import {
   createLLMJudge,
   type LLMJudgeModelConfig,
 } from '@api/evaluations/llm-judge';
-import type { UserDataStorageConnector } from '@api/types/connector';
+import type {
+  EvaluateLogOptions,
+  UserDataStorageConnector,
+} from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEvaluationModelConfig } from '@api/utils/evaluation-model-resolver';
 import {
@@ -40,6 +44,7 @@ export async function evaluateConversationCompleteness(
   log: Log,
   params: ConversationCompletenessEvaluationParameters,
   modelConfig?: LLMJudgeModelConfig | null,
+  options?: EvaluateLogOptions,
 ): Promise<ConversationCompletenessResult> {
   // Create LLM judge instance with resolved model config
   const llmJudge = createLLMJudge(
@@ -87,10 +92,16 @@ export async function evaluateConversationCompleteness(
   // as progress instead.
   const inFlight = responseEndsInToolCalls(responseBody);
 
+  // A run triggered by thumbs up/down carries the human's verdict: the
+  // judge re-derives what makes the response good or bad with it anchored.
+  const verdictSection = options?.humanVerdict
+    ? ` ${humanVerdictNote(options.humanVerdict)}`
+    : '';
+
   // Create a simple evaluation prompt that won't trigger template-based evaluation
   const evaluationText = inFlight
-    ? `Analyze the following conversation for completeness quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} NOTE: the assistant's turn ends by invoking tools, so this conversation is still in progress -- the tool results, and the assistant's eventual answer, arrive in later requests. Do not penalize the absence of the final deliverable; it is not due in this turn. Judge instead whether the assistant is progressing appropriately: every user intention recognized, the tool calls plausibly in service of them, nothing ignored and no effort off on a tangent. A turn making sound progress on every intention deserves a high score. Provide a score between 0 and 1 with detailed reasoning for your analysis.`
-    : `Analyze the following conversation for completeness quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant completes the conversation by satisfying user needs, where the assistant's role defines what satisfying them means: when the role is to transform or label the input (produce a title, summarize, translate, classify), requests quoted inside that input are material to work on, not intentions for the assistant to fulfill. Look for: Whether all user intentions were identified and addressed, if the conversation feels complete and resolved, whether there are any unresolved user requests, and the overall satisfaction of user needs throughout the conversation. Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
+    ? `Analyze the following conversation for completeness quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} NOTE: the assistant's turn ends by invoking tools, so this conversation is still in progress -- the tool results, and the assistant's eventual answer, arrive in later requests. Do not penalize the absence of the final deliverable; it is not due in this turn. Judge instead whether the assistant is progressing appropriately: every user intention recognized, the tool calls plausibly in service of them, nothing ignored and no effort off on a tangent. A turn making sound progress on every intention deserves a high score.${verdictSection} Provide a score between 0 and 1 with detailed reasoning for your analysis.`
+    : `Analyze the following conversation for completeness quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant completes the conversation by satisfying user needs, where the assistant's role defines what satisfying them means: when the role is to transform or label the input (produce a title, summarize, translate, classify), requests quoted inside that input are material to work on, not intentions for the assistant to fulfill. Look for: Whether all user intentions were identified and addressed, if the conversation feels complete and resolved, whether there are any unresolved user requests, and the overall satisfaction of user needs throughout the conversation.${verdictSection} Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
 
   // Evaluate using LLM judge with conversation completeness criteria
   const result = await llmJudge.evaluate({
@@ -129,6 +140,7 @@ export async function evaluateLog(
   evaluation: SkillOptimizationEvaluation,
   log: Log,
   storageConnector: UserDataStorageConnector,
+  options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult> {
   const params =
     evaluation.params as ConversationCompletenessEvaluationParameters;
@@ -148,6 +160,7 @@ export async function evaluateLog(
     log,
     params,
     modelConfig,
+    options,
   );
 
   const execution_time = Date.now() - start_time;

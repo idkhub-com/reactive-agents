@@ -1,4 +1,5 @@
 import type { AppEnv } from '@api/types/hono';
+import { scheduleFeedbackReevaluation } from '@api/utils/super-agents/feedback-reevaluation';
 import { feedbacksRouter } from '@api/v1/super-agents/feedbacks';
 import type { Feedback } from '@shared/types/data/feedback';
 import { Hono } from 'hono';
@@ -136,6 +137,12 @@ const mockDeleteFeedback =
   >;
 
 // Mock uuid
+// Feedback is the thumbs up/down evaluation: creating it schedules a re-run
+// of the log's evaluations with the human verdict as judge context.
+vi.mock('@api/utils/super-agents/feedback-reevaluation', () => ({
+  scheduleFeedbackReevaluation: vi.fn(),
+}));
+
 vi.mock('uuid', () => ({
   v4: (): string => '123e4567-e89b-12d3-a456-426614174000',
 }));
@@ -290,6 +297,32 @@ describe('Feedback API', () => {
           created_at: expect.any(String),
           updated_at: expect.any(String),
         }),
+      );
+    });
+
+    it('schedules the re-evaluation with the created feedback', async () => {
+      const createdFeedback: Feedback = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        log_id: '123e4567-e89b-12d3-a456-426614174002',
+        score: 0,
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z',
+      };
+      mockCreateFeedback.mockResolvedValue(createdFeedback);
+
+      const res = await app.request('/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          log_id: '123e4567-e89b-12d3-a456-426614174002',
+          score: 0,
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(scheduleFeedbackReevaluation).toHaveBeenCalledWith(
+        expect.anything(),
+        createdFeedback,
       );
     });
 

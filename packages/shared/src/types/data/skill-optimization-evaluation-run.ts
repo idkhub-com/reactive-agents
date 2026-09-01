@@ -76,7 +76,9 @@ export const SkillOptimizationEvaluationRunCreateParams = z
   .object({
     agent_id: z.uuid(),
     skill_id: z.uuid(),
-    cluster_id: z.uuid(),
+    // Nullable like the column: a feedback-triggered re-evaluation copies the
+    // log's cluster, and a log served without optimization has none.
+    cluster_id: z.uuid().nullable(),
     log_id: z.uuid(),
     results: z.array(SkillOptimizationEvaluationResult),
   })

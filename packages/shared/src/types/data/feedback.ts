@@ -7,7 +7,9 @@ export const Feedback = z
     id: z.uuid(),
     log_id: z.uuid(),
     score: z.number().min(0).max(1),
-    feedback: z.string().optional(),
+    // Nullable like the column: thumbs up/down comes with no text, and both
+    // backends answer NULL for it.
+    feedback: z.string().nullable().optional(),
     created_at: z.iso.datetime({ offset: true }),
     updated_at: z.iso.datetime({ offset: true }),
   })
