@@ -1,6 +1,9 @@
 import {
+  awaitingRealNaming,
   describeSkillForRequest,
+  HEURISTIC_DESCRIPTION_PREFIX,
   heuristicSkillNaming,
+  repairSkillNaming,
   slugifySkillName,
   uniqueSkillName,
 } from '@api/optimization/utils/describe-skill';
@@ -8,7 +11,8 @@ import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { AIProvider } from '@shared/types/constants';
-import type { Agent } from '@shared/types/data';
+import type { Agent, Skill } from '@shared/types/data';
+import { SkillEventType } from '@shared/types/data/skill-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockParse = vi.fn();
@@ -27,6 +31,8 @@ vi.mock('@api/constants', async (importOriginal) => ({
 vi.mock('@api/utils/evaluation-model-resolver', () => ({
   resolveSystemSettingsModel: vi.fn(),
 }));
+
+vi.mock('@api/utils/sse-event-manager', () => ({ emitSSEEvent: vi.fn() }));
 
 describe('slugifySkillName', () => {
   it('produces a name the skill schema accepts', () => {
@@ -198,5 +204,184 @@ describe('describeSkillForRequest', () => {
     );
 
     expect(naming.name).toBe(heuristicSkillNaming(intent).name);
+  });
+});
+
+describe('repairSkillNaming', () => {
+  const c = createMockContext();
+
+  /** A skill that was created while system settings had no models. */
+  const brokenSkill = (overrides: Partial<Skill> = {}): Skill =>
+    ({
+      id: 'skill-1',
+      agent_id: 'agent-1',
+      name: 'you-are-a-restaurant-concierge',
+      auto_created: true,
+      description: `${HEURISTIC_DESCRIPTION_PREFIX} You are a restaurant concierge.`,
+      seed_system_prompt: 'You are a restaurant concierge.',
+      ...overrides,
+    }) as Skill;
+
+  const repairConnector = (siblings: string[] = ['translate']) =>
+    ({
+      getSkills: vi
+        .fn()
+        .mockResolvedValue(
+          [...siblings, 'you-are-a-restaurant-concierge'].map((name) => ({
+            name,
+          })),
+        ),
+      updateSkill: vi.fn().mockResolvedValue(undefined),
+      createSkillEvent: vi.fn().mockResolvedValue(undefined),
+    }) as unknown as UserDataStorageConnector;
+
+  const modelSays = (parsed: unknown) =>
+    mockParse.mockResolvedValue({ choices: [{ message: { parsed } }] });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValue({
+      model: 'gpt-5-mini',
+      provider: AIProvider.OPENAI,
+      apiKey: 'sk-test',
+    });
+  });
+
+  it('renames a skill stuck with its fallback naming', async () => {
+    const connector = repairConnector();
+    modelSays({
+      name: 'restaurant-concierge',
+      description: 'Books tables and answers questions about the restaurant.',
+    });
+
+    const naming = await repairSkillNaming(
+      c,
+      connector,
+      brokenSkill(),
+      'Helps guests of the restaurant.',
+      'User: a table for two\n\nAssistant: Booked.',
+    );
+
+    expect(naming).toEqual({
+      name: 'restaurant-concierge',
+      description: 'Books tables and answers questions about the restaurant.',
+    });
+    expect(connector.updateSkill).toHaveBeenCalledWith(c, 'skill-1', {
+      name: 'restaurant-concierge',
+      description: 'Books tables and answers questions about the restaurant.',
+    });
+    expect(connector.createSkillEvent).toHaveBeenCalledWith(
+      c,
+      expect.objectContaining({
+        skill_id: 'skill-1',
+        event_type: SkillEventType.DESCRIPTION_UPDATED,
+        metadata: expect.objectContaining({
+          previous_name: 'you-are-a-restaurant-concierge',
+        }),
+      }),
+    );
+    // The describer saw the seed prompt and the real example.
+    const request = mockParse.mock.calls[0][0] as {
+      messages: { content: string }[];
+    };
+    expect(request.messages[1].content).toContain(
+      'You are a restaurant concierge.',
+    );
+    expect(request.messages[1].content).toContain('a table for two');
+  });
+
+  it('suffixes a name a sibling already has', async () => {
+    const connector = repairConnector(['restaurant-concierge']);
+    modelSays({
+      name: 'restaurant-concierge',
+      description: 'Books tables and answers questions about the restaurant.',
+    });
+
+    const naming = await repairSkillNaming(
+      c,
+      connector,
+      brokenSkill(),
+      'Helps guests of the restaurant.',
+    );
+
+    expect(naming?.name).toBe('restaurant-concierge-2');
+  });
+
+  it('keeps the fallback when the describer falls back again', async () => {
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValue(null);
+    const connector = repairConnector();
+
+    const naming = await repairSkillNaming(
+      c,
+      connector,
+      brokenSkill(),
+      'Helps guests of the restaurant.',
+    );
+
+    expect(naming).toBeNull();
+    expect(connector.updateSkill).not.toHaveBeenCalled();
+  });
+
+  it('leaves a skill with real naming alone', async () => {
+    const connector = repairConnector();
+
+    const naming = await repairSkillNaming(
+      c,
+      connector,
+      brokenSkill({ description: 'Books tables for restaurant guests.' }),
+      'Helps guests of the restaurant.',
+    );
+
+    expect(naming).toBeNull();
+    expect(mockParse).not.toHaveBeenCalled();
+    expect(vi.mocked(connector.getSkills)).not.toHaveBeenCalled();
+  });
+
+  it('leaves a skill with no seed prompt alone', async () => {
+    const connector = repairConnector();
+
+    expect(
+      await repairSkillNaming(
+        c,
+        connector,
+        brokenSkill({ seed_system_prompt: null }),
+        'Helps guests of the restaurant.',
+      ),
+    ).toBeNull();
+    expect(mockParse).not.toHaveBeenCalled();
+  });
+
+  it('answers null when the rename cannot be written', async () => {
+    const connector = repairConnector();
+    vi.mocked(connector.updateSkill).mockRejectedValue(new Error('storage'));
+    modelSays({
+      name: 'restaurant-concierge',
+      description: 'Books tables and answers questions about the restaurant.',
+    });
+
+    await expect(
+      repairSkillNaming(
+        c,
+        connector,
+        brokenSkill(),
+        'Helps guests of the restaurant.',
+      ),
+    ).resolves.toBeNull();
+  });
+});
+
+describe('awaitingRealNaming', () => {
+  it('flags only auto-created skills still carrying the fallback', () => {
+    const description = `${HEURISTIC_DESCRIPTION_PREFIX} You translate.`;
+    expect(awaitingRealNaming({ auto_created: true, description })).toBe(true);
+    expect(awaitingRealNaming({ auto_created: false, description })).toBe(
+      false,
+    );
+    expect(
+      awaitingRealNaming({
+        auto_created: true,
+        description: 'Translates whatever the user sends.',
+      }),
+    ).toBe(false);
   });
 });

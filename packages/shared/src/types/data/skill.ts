@@ -130,6 +130,15 @@ export type SkillCreateParams = z.infer<typeof SkillCreateParams>;
 
 export const SkillUpdateParams = z
   .object({
+    name: z
+      .string()
+      .min(3)
+      .max(100)
+      .regex(/^[a-z0-9_-]+$/, {
+        message:
+          'Name must only contain lowercase letters, numbers, underscores, and hyphens',
+      })
+      .optional(),
     description: z.string().min(25).max(10000).optional(),
     metadata: SkillMetadata.optional(),
     optimize: z.boolean().optional(),
@@ -155,6 +164,7 @@ export const SkillUpdateParams = z
   .refine(
     (data) => {
       const updateFields = [
+        'name',
         'description',
         'metadata',
         'optimize',

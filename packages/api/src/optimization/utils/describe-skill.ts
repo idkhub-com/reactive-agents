@@ -2,8 +2,10 @@ import { getApiUrl } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
-import { warn } from '@shared/console-logging';
-import type { Agent } from '@shared/types/data';
+import { emitSSEEvent } from '@api/utils/sse-event-manager';
+import { info, warn } from '@shared/console-logging';
+import type { Agent, Skill } from '@shared/types/data';
+import { SkillEventType } from '@shared/types/data/skill-event';
 import OpenAI from 'openai';
 import { z } from 'zod';
 
@@ -69,15 +71,33 @@ export function heuristicSkillNaming(intent: string): SkillNaming {
       .find(Boolean) ?? '';
   const name = slugifySkillName(firstLine.split(/\s+/).slice(0, 5).join(' '));
   const description =
-    `Created by the gateway for requests whose instructions begin: ${intent.slice(0, 500)}`.slice(
+    `${HEURISTIC_DESCRIPTION_PREFIX} ${intent.slice(0, 500)}`.slice(
       0,
       DESCRIPTION_MAX_LENGTH,
     );
   return { name, description };
 }
 
+/**
+ * How every heuristic description begins -- and, still standing on a skill,
+ * the sign that `describeSkillForRequest` could not be asked when the skill
+ * was created and the skill is waiting for a real name.
+ */
+export const HEURISTIC_DESCRIPTION_PREFIX =
+  'Created by the gateway for requests whose instructions begin:';
+
+/** Whether a skill still carries the naming creation fell back to. */
+export function awaitingRealNaming(
+  skill: Pick<Skill, 'auto_created' | 'description'>,
+): boolean {
+  return (
+    skill.auto_created &&
+    skill.description.startsWith(HEURISTIC_DESCRIPTION_PREFIX)
+  );
+}
+
 function describerUserMessage(
-  agent: Agent,
+  agent: Pick<Agent, 'description'>,
   intent: string,
   takenNames: string[],
 ): string {
@@ -106,7 +126,7 @@ ${intent}${taken}`;
 export async function describeSkillForRequest(
   c: AppContext,
   connector: UserDataStorageConnector,
-  agent: Agent,
+  agent: Pick<Agent, 'description'>,
   intent: string,
   takenNames: string[],
 ): Promise<SkillNaming> {
@@ -198,5 +218,91 @@ export async function describeSkillForRequest(
       e,
     );
     return fallback;
+  }
+}
+
+/** Enough of an example conversation to show the describer the job. */
+const REPAIR_EXAMPLE_MAX_LENGTH = 1000;
+
+/**
+ * Gives a skill stuck with its heuristic fallback naming the real name it
+ * missed at creation.
+ *
+ * A skill created before system settings had models -- mid-setup, most
+ * often -- could not ask `describe-skill` and kept the fallback: its
+ * prompt's first words as the name, the "created by the gateway"
+ * boilerplate as the description. Nothing else ever revisits naming, so the
+ * early-regeneration pass calls this as its repair moment, the same way it
+ * retries missing evaluations. Asks the describer again with the seed
+ * prompt and a real example, and only keeps an answer that is not the
+ * fallback -- one shot, since the pass runs once per skill. Nothing here
+ * can fail the pass; a repair that goes wrong answers null and the skill
+ * keeps the naming it has.
+ */
+export async function repairSkillNaming(
+  c: AppContext,
+  connector: UserDataStorageConnector,
+  skill: Skill,
+  agentDescription: string,
+  example?: string,
+): Promise<SkillNaming | null> {
+  if (!awaitingRealNaming(skill) || !skill.seed_system_prompt) {
+    return null;
+  }
+  try {
+    const intent = [
+      skill.seed_system_prompt,
+      example?.slice(0, REPAIR_EXAMPLE_MAX_LENGTH),
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    const siblings = await connector.getSkills(c, {
+      agent_id: skill.agent_id,
+    });
+    const takenNames = siblings
+      .map((sibling) => sibling.name)
+      .filter((name) => name !== skill.name);
+
+    const naming = await describeSkillForRequest(
+      c,
+      connector,
+      { description: agentDescription },
+      intent,
+      takenNames,
+    );
+    if (naming.description.startsWith(HEURISTIC_DESCRIPTION_PREFIX)) {
+      // The describer fell back again; the naming we have says as much.
+      return null;
+    }
+
+    const name = uniqueSkillName(naming.name, takenNames);
+    await connector.updateSkill(c, skill.id, {
+      name,
+      description: naming.description,
+    });
+    await connector.createSkillEvent(c, {
+      agent_id: skill.agent_id,
+      skill_id: skill.id,
+      cluster_id: null,
+      event_type: SkillEventType.DESCRIPTION_UPDATED,
+      metadata: {
+        reason: 'heuristic_naming_repaired',
+        previous_name: skill.name,
+      },
+    });
+    emitSSEEvent('skill:updated', {
+      skillId: skill.id,
+      agentId: skill.agent_id,
+    });
+    info(
+      `[SKILL_CREATION] Renamed skill ${skill.name} to ${name}, repairing its fallback naming`,
+    );
+    return { name, description: naming.description };
+  } catch (e) {
+    warn(
+      `[SKILL_CREATION] Could not repair the naming of skill ${skill.name}:`,
+      e,
+    );
+    return null;
   }
 }
