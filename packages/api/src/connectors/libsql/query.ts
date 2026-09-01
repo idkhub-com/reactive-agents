@@ -17,7 +17,7 @@ const JSON_COLUMNS: Record<string, string[]> = {
   agents: ['metadata'],
   skills: ['metadata', 'allowed_template_variables'],
   skill_optimization_clusters: ['centroid'],
-  skill_routing: ['centroid'],
+  skill_routing: ['centroid', 'conversation_centroid'],
   tools: ['raw_data'],
   logs: [
     'base_sa_config',

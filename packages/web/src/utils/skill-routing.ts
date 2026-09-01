@@ -16,15 +16,18 @@ const METHOD_LABELS: Record<SkillRoutingMethod, string> = {
   embedding: 'closest skill',
   most_used: 'most used (fallback)',
   created: 'new skill',
+  arbitrated: 'arbitrated',
 };
 
 const METHOD_TITLES: Record<SkillRoutingMethod, string> = {
   only_skill: 'The agent had one skill, so no choice was needed',
   embedding:
-    "The skill whose recent traffic is closest to this request's system prompt and tools",
+    "The skill whose recent traffic is closest to this request's system prompt, tools and conversation",
   most_used:
     'The request could not be embedded, so the most used skill served it',
   created: 'No skill was close enough, so this request became a new one',
+  arbitrated:
+    'No skill was close enough, so a model judged which skill the request belongs to',
 };
 
 export interface SkillRoutingDescription {

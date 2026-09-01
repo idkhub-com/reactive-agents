@@ -12,7 +12,7 @@ import type { AppContext } from '@api/types/hono';
 import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolver';
 import { getInitialClusterCentroids } from '@api/utils/math';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
-import type { IntentEmbedding } from '@api/utils/super-agents/intent-embeddings';
+import type { RequestIntentEmbedding } from '@api/utils/super-agents/intent-embeddings';
 import { error, info, warn } from '@shared/console-logging';
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type { Agent, Skill } from '@shared/types/data';
@@ -124,7 +124,7 @@ export async function createSkillForRequest(
   agent: Agent,
   saRequestData: SuperAgentsRequestData,
   intent: string,
-  intentEmbedding: IntentEmbedding | null,
+  intentEmbedding: RequestIntentEmbedding | null,
   existingSkills: Skill[],
 ): Promise<Skill> {
   const takenNames = existingSkills.map((skill) => skill.name);
@@ -170,13 +170,17 @@ export async function createSkillForRequest(
 
   await createInitialClusters(c, connector, skill);
 
-  if (intentEmbedding) {
+  const primaryIntent =
+    intentEmbedding?.identity ?? intentEmbedding?.conversation ?? null;
+  if (intentEmbedding && primaryIntent) {
     await connector.upsertSkillRouting(c, {
       skill_id: skill.id,
       agent_id: agent.id,
-      centroid: intentEmbedding.embedding,
+      centroid: primaryIntent.embedding,
+      conversation_centroid: intentEmbedding.conversation?.embedding ?? null,
       embedding_model_id: intentEmbedding.modelId,
       sample_count: 1,
+      conversation_sample_count: intentEmbedding.conversation ? 1 : 0,
     });
   }
 

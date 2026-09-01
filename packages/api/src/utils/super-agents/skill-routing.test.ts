@@ -3,6 +3,7 @@ import type { AppContext } from '@api/types/hono';
 import { embedText, RequestEmbeddingError } from '@api/utils/embeddings';
 import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolver';
 import { clearIntentEmbeddings } from '@api/utils/super-agents/intent-embeddings';
+import { arbitrateSkillForRequest } from '@api/utils/super-agents/skill-arbiter';
 import { createSkillForRequest } from '@api/utils/super-agents/skill-creation';
 import {
   advanceCentroid,
@@ -26,6 +27,9 @@ vi.mock('@api/utils/evaluation-model-resolver', () => ({
 }));
 vi.mock('@api/utils/super-agents/skill-creation', () => ({
   createSkillForRequest: vi.fn(),
+}));
+vi.mock('@api/utils/super-agents/skill-arbiter', () => ({
+  arbitrateSkillForRequest: vi.fn(),
 }));
 
 const c = {} as AppContext;
@@ -56,13 +60,16 @@ const skill = (
     auto_created,
   }) as Skill;
 
-const chat = (systemPrompt?: string): SuperAgentsRequestData =>
+const chat = (
+  systemPrompt?: string,
+  userMessage = 'hi',
+): SuperAgentsRequestData =>
   ({
     functionName: FunctionName.CHAT_COMPLETE,
     requestBody: {
       messages: [
         ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-        { role: 'user', content: 'hi' },
+        { role: 'user', content: userMessage },
       ],
     },
   }) as unknown as SuperAgentsRequestData;
@@ -82,8 +89,10 @@ const routing = (
   skill_id: skillId,
   agent_id: manual.id,
   centroid,
+  conversation_centroid: null,
   embedding_model_id: MODEL_ID,
   sample_count: 1,
+  conversation_sample_count: 0,
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
   ...overrides,
@@ -150,6 +159,7 @@ describe('routeRequestToSkill', () => {
       modelId: MODEL_ID,
     }));
     vi.mocked(createSkillForRequest).mockResolvedValue(created);
+    vi.mocked(arbitrateSkillForRequest).mockResolvedValue({ kind: 'new' });
   });
 
   describe('an agent that keeps its skills', () => {
@@ -176,6 +186,8 @@ describe('routeRequestToSkill', () => {
         similarity: null,
         threshold: null,
         candidates: 1,
+        identity_similarity: null,
+        conversation_similarity: null,
       });
       expect(resolveEmbeddingModelConfig).not.toHaveBeenCalled();
       expect(embedText).not.toHaveBeenCalled();
@@ -205,6 +217,9 @@ describe('routeRequestToSkill', () => {
       expect(result.decision.method).toBe('embedding');
       expect(result.decision.candidates).toBe(2);
       expect(result.decision.similarity).toBeCloseTo(1, 3);
+      expect(result.decision.identity_similarity).toBeCloseTo(1, 3);
+      // Nothing had met a conversation yet, so identity alone decided.
+      expect(result.decision.conversation_similarity).toBeNull();
       // The threshold is not consulted when nothing would be created.
       expect(result.decision.threshold).toBeNull();
 
@@ -215,8 +230,10 @@ describe('routeRequestToSkill', () => {
         expect.objectContaining({
           skill_id: 's1',
           centroid: [1, 0, 0.01],
+          conversation_centroid: null,
           embedding_model_id: MODEL_ID,
           sample_count: 1,
+          conversation_sample_count: 0,
         }),
       );
       expect(connector.upsertSkillRouting).toHaveBeenCalledWith(
@@ -227,9 +244,16 @@ describe('routeRequestToSkill', () => {
           sample_count: 1,
         }),
       );
+      // The absorb takes the identity into the main centroid and starts the
+      // conversation centroid from the conversation.
       expect(connector.upsertSkillRouting).toHaveBeenLastCalledWith(
         c,
-        expect.objectContaining({ skill_id: 's1', sample_count: 2 }),
+        expect.objectContaining({
+          skill_id: 's1',
+          sample_count: 2,
+          conversation_centroid: [0, 0, 0.01],
+          conversation_sample_count: 1,
+        }),
       );
     });
 
@@ -245,6 +269,34 @@ describe('routeRequestToSkill', () => {
       );
 
       expect(result.skill.id).toBe('s2');
+    });
+
+    it('weighs the conversation against its own centroid', async () => {
+      // Two skills that look identical by identity; only their conversation
+      // history separates them, and the request's conversation decides.
+      connector.getSkills.mockResolvedValue([
+        skill('s1', 'translate'),
+        skill('s2', 'translate-formal'),
+      ]);
+      connector.getSkillRoutings.mockResolvedValue([
+        routing('s1', [1, 0, 0.01], {
+          conversation_centroid: [1, 0, 0.01],
+          conversation_sample_count: 3,
+        }),
+        routing('s2', [1, 0, 0.01], {
+          conversation_centroid: [0, 1, 0.01],
+          conversation_sample_count: 3,
+        }),
+      ]);
+
+      const result = await route(
+        manual,
+        chat('You translate text.', 'make this sql formal'),
+      );
+
+      expect(result.skill.id).toBe('s2');
+      expect(result.decision.identity_similarity).toBeCloseTo(1, 3);
+      expect(result.decision.conversation_similarity).toBeCloseTo(1, 3);
     });
 
     it('takes an intent in once, and embeds it once', async () => {
@@ -277,15 +329,20 @@ describe('routeRequestToSkill', () => {
       const result = await route(manual, chat('You translate text.'));
 
       expect(result.skill.id).toBe('s1');
-      // The sql seed and the request itself; translate was already known.
+      // The sql seed, then the request's two halves; translate was known.
       const embedded = vi.mocked(embedText).mock.calls.map((call) => call[2]);
       expect(embedded).toEqual([
         'sql: sql does sql things',
         'You translate text.',
+        'User: hi',
       ]);
       expect(connector.upsertSkillRouting).toHaveBeenLastCalledWith(
         c,
-        expect.objectContaining({ skill_id: 's1', sample_count: 6 }),
+        expect.objectContaining({
+          skill_id: 's1',
+          sample_count: 6,
+          conversation_sample_count: 1,
+        }),
       );
     });
 
@@ -321,7 +378,7 @@ describe('routeRequestToSkill', () => {
   });
 
   describe('an agent that creates skills', () => {
-    it('creates the first skill from the first request', async () => {
+    it('creates the first skill from the first request, without arbitration', async () => {
       connector.getSkills.mockResolvedValue([]);
       const saRequestData = chat('You translate text.');
 
@@ -333,14 +390,21 @@ describe('routeRequestToSkill', () => {
         similarity: null,
         threshold: 0.8,
         candidates: 0,
+        identity_similarity: null,
+        conversation_similarity: null,
       });
+      expect(arbitrateSkillForRequest).not.toHaveBeenCalled();
       expect(createSkillForRequest).toHaveBeenCalledWith(
         c,
         connector,
         growing,
         saRequestData,
-        'You translate text.',
-        expect.objectContaining({ embedding: [1, 0, 0.01], modelId: MODEL_ID }),
+        'You translate text.\n\nUser: hi',
+        expect.objectContaining({
+          modelId: MODEL_ID,
+          identity: expect.objectContaining({ embedding: [1, 0, 0.01] }),
+          conversation: expect.objectContaining({ embedding: [0, 0, 0.01] }),
+        }),
         [],
       );
       // Under the agent's lease, which is given back afterwards.
@@ -398,7 +462,7 @@ describe('routeRequestToSkill', () => {
         connector,
         growing,
         expect.anything(),
-        'You translate text.',
+        'You translate text.\n\nUser: hi',
         null,
         [],
       );
@@ -446,23 +510,33 @@ describe('routeRequestToSkill', () => {
       expect(result.decision.method).toBe('only_skill');
     });
 
-    it('gives a request unlike any skill a skill of its own', async () => {
+    it('creates a skill for a request the arbiter calls a new job', async () => {
       const translate = skill('s1', 'translate');
       const sql = skill('s2', 'sql');
       connector.getSkills.mockResolvedValue([translate, sql]);
+      const saRequestData = chat('Draw a picture of a cat.');
 
-      const result = await route(growing, chat('Draw a picture of a cat.'));
+      const result = await route(growing, saRequestData);
 
       expect(result.skill).toBe(created);
       expect(result.decision.method).toBe('created');
       expect(result.decision.similarity).toBeLessThan(0.8);
+      expect(arbitrateSkillForRequest).toHaveBeenCalledWith(
+        c,
+        connector,
+        growing,
+        [translate, sql],
+        expect.objectContaining({ systemPrompt: 'Draw a picture of a cat.' }),
+      );
       expect(createSkillForRequest).toHaveBeenCalledWith(
         c,
         connector,
         growing,
         expect.anything(),
-        'Draw a picture of a cat.',
-        expect.objectContaining({ embedding: [0, 0, 0.01], modelId: MODEL_ID }),
+        'Draw a picture of a cat.\n\nUser: hi',
+        expect.objectContaining({
+          identity: expect.objectContaining({ embedding: [0, 0, 0.01] }),
+        }),
         [translate, sql],
       );
       // The existing centroids are left alone; the new skill seeds its own.
@@ -470,7 +544,56 @@ describe('routeRequestToSkill', () => {
       // The second look, under the lease, found the same skills and reused
       // every embedding.
       expect(connector.getSkills).toHaveBeenCalledTimes(2);
-      expect(embedText).toHaveBeenCalledTimes(3);
+      expect(embedText).toHaveBeenCalledTimes(4);
+    });
+
+    it('routes to the skill the arbiter chooses, and teaches its centroids', async () => {
+      const translate = skill('s1', 'translate');
+      const sql = skill('s2', 'sql');
+      connector.getSkills.mockResolvedValue([translate, sql]);
+      vi.mocked(arbitrateSkillForRequest).mockResolvedValue({
+        kind: 'existing',
+        skill: sql,
+      });
+
+      const result = await route(growing, chat('Draw a picture of a cat.'));
+
+      expect(result.skill).toBe(sql);
+      expect(result.decision.method).toBe('arbitrated');
+      expect(result.decision.similarity).toBeLessThan(0.8);
+      expect(result.decision.threshold).toBe(0.8);
+      expect(createSkillForRequest).not.toHaveBeenCalled();
+      // The verdict teaches the router: the next such request routes by
+      // embedding alone.
+      expect(connector.upsertSkillRouting).toHaveBeenLastCalledWith(
+        c,
+        expect.objectContaining({
+          skill_id: 's2',
+          sample_count: 2,
+          conversation_centroid: [0, 0, 0.01],
+          conversation_sample_count: 1,
+        }),
+      );
+    });
+
+    it('routes to the closest skill when the arbiter cannot be asked', async () => {
+      const translate = skill('s1', 'translate');
+      const sql = skill('s2', 'sql');
+      connector.getSkills.mockResolvedValue([translate, sql]);
+      vi.mocked(arbitrateSkillForRequest).mockResolvedValue({
+        kind: 'unavailable',
+      });
+
+      const result = await route(
+        growing,
+        chat('Translate a picture of a cat.'),
+      );
+
+      expect(result.skill.id).toBe('s1');
+      expect(result.decision.method).toBe('embedding');
+      expect(createSkillForRequest).not.toHaveBeenCalled();
+      // Unconfirmed, so nothing is absorbed: only the two seeds were written.
+      expect(connector.upsertSkillRouting).toHaveBeenCalledTimes(2);
     });
 
     it('routes to the closest skill once the agent is at its cap', async () => {
@@ -481,6 +604,7 @@ describe('routeRequestToSkill', () => {
       const result = await route(capped, chat('Draw a picture of a cat.'));
 
       expect(createSkillForRequest).not.toHaveBeenCalled();
+      expect(arbitrateSkillForRequest).not.toHaveBeenCalled();
       expect(result.decision.method).toBe('embedding');
       expect(['s1', 's2']).toContain(result.skill.id);
     });
@@ -525,21 +649,27 @@ describe('learnSkillIntent', () => {
     }));
   });
 
-  it('starts a skill with no centroid from the request itself', async () => {
+  it('starts a skill with no centroids from the request itself', async () => {
     await learn();
 
     expect(connector.upsertSkillRouting).toHaveBeenCalledWith(c, {
       skill_id: 's1',
       agent_id: manual.id,
       centroid: [1, 0, 0.01],
+      conversation_centroid: [0, 0, 0.01],
       embedding_model_id: MODEL_ID,
       sample_count: 1,
+      conversation_sample_count: 1,
     });
   });
 
-  it('moves an existing centroid towards the request', async () => {
+  it('moves existing centroids towards the request', async () => {
     connector.getSkillRoutings.mockResolvedValue([
-      routing('s1', [0, 1, 0.01], { sample_count: 1 }),
+      routing('s1', [0, 1, 0.01], {
+        sample_count: 1,
+        conversation_centroid: [1, 0, 0.01],
+        conversation_sample_count: 1,
+      }),
     ]);
 
     await learn();
@@ -553,6 +683,8 @@ describe('learnSkillIntent', () => {
         skill_id: 's1',
         centroid: [0.5, 0.5, 0.01],
         sample_count: 2,
+        conversation_centroid: [0.5, 0, 0.01],
+        conversation_sample_count: 2,
       }),
     );
   });
@@ -575,7 +707,7 @@ describe('learnSkillIntent', () => {
     resetSkillLearning();
     await learn();
 
-    expect(embedText).toHaveBeenCalledTimes(1);
+    expect(embedText).toHaveBeenCalledTimes(2);
     expect(connector.upsertSkillRouting).toHaveBeenCalledTimes(1);
   });
 
@@ -584,15 +716,15 @@ describe('learnSkillIntent', () => {
     try {
       await learn();
       await learn(chat('Write the sql.'));
-      expect(embedText).toHaveBeenCalledTimes(1);
+      expect(embedText).toHaveBeenCalledTimes(2);
 
       vi.advanceTimersByTime(60_000);
       await learn(chat('Write the sql.'));
-      expect(embedText).toHaveBeenCalledTimes(2);
+      expect(embedText).toHaveBeenCalledTimes(3);
 
       // Another skill has its own clock.
       await learn(chat('Write the sql.'), skill('s2', 'sql'));
-      expect(embedText).toHaveBeenCalledTimes(2);
+      expect(embedText).toHaveBeenCalledTimes(3);
       expect(connector.upsertSkillRouting).toHaveBeenLastCalledWith(
         c,
         expect.objectContaining({ skill_id: 's2' }),

@@ -1,9 +1,11 @@
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { embedText, RequestEmbeddingError } from '@api/utils/embeddings';
+import { compactSystemPrompt } from '@api/utils/super-agents/intent-compaction';
 import {
   clearIntentEmbeddings,
   embedIntent,
+  embedRequestIntent,
   intentEmbeddingCount,
 } from '@api/utils/super-agents/intent-embeddings';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +13,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@api/utils/embeddings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@api/utils/embeddings')>()),
   embedText: vi.fn(),
+}));
+vi.mock('@api/utils/super-agents/intent-compaction', () => ({
+  compactSystemPrompt: vi.fn(),
 }));
 
 const c = {} as AppContext;
@@ -112,5 +117,77 @@ describe('embedIntent', () => {
     expect(embedText).toHaveBeenCalledTimes(257);
     await embedIntent(c, connector, 'intent 1', MODEL);
     expect(embedText).toHaveBeenCalledTimes(258);
+  });
+});
+
+describe('embedRequestIntent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearIntentEmbeddings();
+    vi.mocked(embedText).mockImplementation(async (_c, _connector, text) => ({
+      embedding: [text.length, 0],
+      modelId: MODEL,
+    }));
+  });
+
+  it('embeds the two halves separately and shares the cache', async () => {
+    const intent = {
+      systemPrompt: 'You translate.',
+      tools: 'Tools: lookup',
+      conversation: 'User: hola',
+    };
+
+    const first = await embedRequestIntent(c, connector, intent, MODEL);
+    expect(first.identity?.embedding).toEqual([
+      'You translate.\n\nTools: lookup'.length,
+      0,
+    ]);
+    expect(first.conversation?.embedding).toEqual(['User: hola'.length, 0]);
+    expect(embedText).toHaveBeenCalledTimes(2);
+
+    // The same tool with a new conversation costs one embedding, not two.
+    const second = await embedRequestIntent(
+      c,
+      connector,
+      { ...intent, conversation: 'User: adios' },
+      MODEL,
+    );
+    expect(second.identity).toBe(first.identity);
+    expect(embedText).toHaveBeenCalledTimes(3);
+    expect(compactSystemPrompt).not.toHaveBeenCalled();
+  });
+
+  it('compacts a system prompt over the embedding budget', async () => {
+    vi.mocked(compactSystemPrompt).mockResolvedValue('a long tool, compacted');
+    const intent = {
+      systemPrompt: 'x'.repeat(5000),
+      tools: null,
+      conversation: null,
+    };
+
+    const embedded = await embedRequestIntent(c, connector, intent, MODEL);
+
+    expect(compactSystemPrompt).toHaveBeenCalledWith(
+      c,
+      connector,
+      intent.systemPrompt,
+    );
+    expect(embedded.identity?.embedding).toEqual([
+      'a long tool, compacted'.length,
+      0,
+    ]);
+    expect(embedded.conversation).toBeNull();
+  });
+
+  it('carries a conversation-only intent', async () => {
+    const embedded = await embedRequestIntent(
+      c,
+      connector,
+      { systemPrompt: null, tools: null, conversation: 'User: hi' },
+      MODEL,
+    );
+
+    expect(embedded.identity).toBeNull();
+    expect(embedded.conversation?.embedding).toEqual(['User: hi'.length, 0]);
   });
 });

@@ -3,9 +3,56 @@ import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import { extractSystemPrompt } from '@shared/utils/system-prompt';
 
-/** Enough of a prompt to identify the job; embedding models have input limits. */
-const MAX_INTENT_LENGTH = 6000;
-const MAX_USER_MESSAGE_LENGTH = 1000;
+/**
+ * How much of a system prompt one embedding takes verbatim; `embedText`
+ * bounds its input to 6000 characters. A prompt over this budget is worth
+ * compacting with a model before embedding rather than cutting at the
+ * boundary (see `@api/utils/super-agents/intent-compaction`), which is why
+ * the budget is exported.
+ */
+export const SYSTEM_PROMPT_BUDGET = 4000;
+const CONVERSATION_MESSAGES = 6;
+const MESSAGE_BUDGET = 800;
+const CONVERSATION_BUDGET = 4800;
+
+/**
+ * What a request is asking for, in parts with different lifetimes.
+ *
+ * `systemPrompt` and `tools` are who is calling: a tool sends the same ones
+ * on every request. `conversation` is what is being asked right now: the
+ * last few messages, which change turn by turn. Routing embeds identity and
+ * conversation separately and weighs them, so a skill can follow a
+ * conversation as it evolves without one tool's varied questions tearing an
+ * agent's skills apart.
+ */
+export interface RequestIntent {
+  /** The caller's system prompt, uncut; consumers budget or compact it. */
+  systemPrompt: string | null;
+  /** The names of the tools on offer, as a `Tools: ...` line. */
+  tools: string | null;
+  conversation: string | null;
+}
+
+/**
+ * The identity half of the intent as one text: the system prompt -- the
+ * given compacted form, or the raw prompt cut to its budget -- and the tool
+ * names. Null for a request with neither.
+ */
+export function identityText(
+  intent: RequestIntent,
+  compactedPrompt?: string | null,
+): string | null {
+  const prompt =
+    compactedPrompt ?? intent.systemPrompt?.slice(0, SYSTEM_PROMPT_BUDGET);
+  return [prompt, intent.tools].filter(Boolean).join('\n\n') || null;
+}
+
+/** The intent as one text, for prompts that describe the request to a model. */
+export function intentText(intent: RequestIntent): string {
+  return [identityText(intent), intent.conversation]
+    .filter(Boolean)
+    .join('\n\n');
+}
 
 function toolName(tool: unknown): string | null {
   if (typeof tool !== 'object' || tool === null) {
@@ -49,78 +96,114 @@ function messageText(content: unknown): string {
   return '';
 }
 
-function firstUserMessage(
+interface IntentMessage {
+  role?: unknown;
+  content?: unknown;
+  tool_calls?: unknown;
+}
+
+/** One conversation message as a line of the intent, or null for no text. */
+function renderMessage(message: IntentMessage): string | null {
+  const { role, content } = message;
+  if (typeof role !== 'string') {
+    return null;
+  }
+  if (role === ChatCompletionMessageRole.TOOL) {
+    const text = messageText(content).slice(0, MESSAGE_BUDGET);
+    return text ? `Tool output: ${text}` : null;
+  }
+
+  const parts: string[] = [];
+  if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+    const calls = message.tool_calls
+      .map((call) => {
+        const record = call as {
+          type?: unknown;
+          function?: { name?: unknown; arguments?: unknown };
+        };
+        const name =
+          typeof record.function?.name === 'string'
+            ? record.function.name
+            : typeof record.type === 'string'
+              ? record.type
+              : 'tool';
+        const args =
+          typeof record.function?.arguments === 'string'
+            ? record.function.arguments.slice(0, 120)
+            : '';
+        return `${name}(${args})`;
+      })
+      .join(', ');
+    parts.push(`Assistant tool calls: ${calls}`);
+  }
+  const text = messageText(content).slice(0, MESSAGE_BUDGET);
+  if (text) {
+    const label = role.charAt(0).toUpperCase() + role.slice(1);
+    parts.push(`${label}: ${text}`);
+  }
+  return parts.length > 0 ? parts.join('\n') : null;
+}
+
+function conversationMessages(
   saRequestData: SuperAgentsRequestData,
-): string | null {
-  let messages: unknown[];
+): IntentMessage[] {
   switch (saRequestData.functionName) {
     case FunctionName.CHAT_COMPLETE:
     case FunctionName.STREAM_CHAT_COMPLETE:
-      messages = saRequestData.requestBody.messages;
-      break;
+      return saRequestData.requestBody.messages as IntentMessage[];
     case FunctionName.CREATE_MODEL_RESPONSE: {
       const { input } = saRequestData.requestBody;
       if (typeof input === 'string') {
-        return input || null;
+        return input
+          ? [{ role: ChatCompletionMessageRole.USER, content: input }]
+          : [];
       }
-      messages = input;
-      break;
+      return input as IntentMessage[];
     }
     default:
-      return null;
+      return [];
   }
-
-  for (const message of messages) {
-    if (typeof message !== 'object' || message === null) {
-      continue;
-    }
-    const { role, content } = message as { role?: unknown; content?: unknown };
-    if (role !== ChatCompletionMessageRole.USER) {
-      continue;
-    }
-    const text = messageText(content);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
 }
 
 /**
- * A short description of what a request is asking for, used to route it to a
- * skill.
+ * What a request is asking for, used to route it to a skill.
  *
- * The system prompt is the strongest signal -- a tool sends the same one on
- * every request, whatever the user says -- so it comes first, followed by the
- * names of the tools on offer. Only a request with neither falls back to its
- * first user message. Returns `null` when there is nothing to go on, which
+ * The system prompt is the strongest sign of who is calling -- a tool sends
+ * the same one on every request -- joined by the names of the tools on
+ * offer. The conversation part is the last few non-system messages, so the
+ * intent follows the conversation as it evolves rather than freezing at its
+ * first message. Returns `null` when there is nothing to go on, which
  * includes every endpoint that has no messages.
  */
 export function describeRequestIntent(
   saRequestData: SuperAgentsRequestData,
-): string | null {
-  const parts: string[] = [];
+): RequestIntent | null {
+  const systemPrompt = extractSystemPrompt(saRequestData) || null;
 
-  const systemPrompt = extractSystemPrompt(saRequestData);
-  if (systemPrompt) {
-    parts.push(systemPrompt);
-  }
-
-  const tools = (saRequestData.requestBody as { tools?: unknown }).tools;
-  if (Array.isArray(tools)) {
-    const names = tools.map(toolName).filter((name) => name !== null);
+  let tools: string | null = null;
+  const rawTools = (saRequestData.requestBody as { tools?: unknown }).tools;
+  if (Array.isArray(rawTools)) {
+    const names = rawTools.map(toolName).filter((name) => name !== null);
     if (names.length > 0) {
-      parts.push(`Tools: ${names.join(', ')}`);
+      tools = `Tools: ${names.join(', ')}`;
     }
   }
 
-  if (parts.length === 0) {
-    const first = firstUserMessage(saRequestData);
-    if (first) {
-      parts.push(first.slice(0, MAX_USER_MESSAGE_LENGTH));
-    }
-  }
+  const conversation =
+    conversationMessages(saRequestData)
+      .filter(
+        (message) =>
+          message.role !== ChatCompletionMessageRole.SYSTEM &&
+          message.role !== ChatCompletionMessageRole.DEVELOPER,
+      )
+      .slice(-CONVERSATION_MESSAGES)
+      .map(renderMessage)
+      .filter((line): line is string => line !== null)
+      .join('\n\n')
+      .slice(0, CONVERSATION_BUDGET) || null;
 
-  const intent = parts.join('\n\n').slice(0, MAX_INTENT_LENGTH);
-  return intent || null;
+  if (!systemPrompt && !tools && !conversation) {
+    return null;
+  }
+  return { systemPrompt, tools, conversation };
 }

@@ -538,6 +538,13 @@ test.describe('skill creation', () => {
     expect(skills).toHaveLength(2);
     expect(new Set(skills.map((skill) => skill.name)).size).toBe(2);
     expect(skills.every((skill) => skill.auto_created)).toBe(true);
+
+    // The arbiter was asked before anything was created: its call went
+    // through the reflection model in system settings, which is the stub.
+    const forwarded = await stubRequests(request, stub.textModel);
+    expect(JSON.stringify(forwarded)).toContain(
+      'You route requests for an AI gateway agent',
+    );
   });
 
   test('stops creating at the agent cap and routes to the closest skill', async ({

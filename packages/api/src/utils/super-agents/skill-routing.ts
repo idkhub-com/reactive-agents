@@ -4,9 +4,11 @@ import { RequestEmbeddingError } from '@api/utils/embeddings';
 import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolver';
 import { cosineSimilarity } from '@api/utils/math';
 import {
-  type CachedIntent,
   embedIntent,
+  embedRequestIntent,
+  type RequestIntentEmbedding,
 } from '@api/utils/super-agents/intent-embeddings';
+import { arbitrateSkillForRequest } from '@api/utils/super-agents/skill-arbiter';
 import { createSkillForRequest } from '@api/utils/super-agents/skill-creation';
 import { withSkillCreationLease } from '@api/utils/super-agents/skill-creation-lease';
 import { warn } from '@shared/console-logging';
@@ -18,13 +20,30 @@ import type {
   SkillRoutingDecision,
   SkillRoutingMethod,
 } from '@shared/types/data';
-import { describeRequestIntent } from '@shared/utils/request-intent';
+import {
+  describeRequestIntent,
+  intentText,
+  type RequestIntent,
+} from '@shared/utils/request-intent';
 
 /**
  * Past this many samples the mean moves at a fixed rate instead of settling,
  * so a skill keeps following the traffic it actually gets.
  */
 const MAX_CENTROID_SAMPLES = 100;
+
+/**
+ * How the two halves of an intent weigh against each other. Identity -- the
+ * system prompt and tools -- is the surer signal of which skill a request
+ * belongs to; the conversation half lets a request that asks for genuinely
+ * different work fall below the threshold even through a familiar tool.
+ * Calibrated on real traffic: at 0.6/0.4 a new kind of ask lands just below
+ * a 0.8 threshold while ordinary requests stay comfortably above it. When a
+ * request or a skill is missing one half, the weights renormalise over what
+ * is there.
+ */
+const IDENTITY_WEIGHT = 0.6;
+const CONVERSATION_WEIGHT = 0.4;
 
 /** What a request with no system prompt, tools or message is filed under. */
 const DEFAULT_INTENT = 'General requests that carry no instructions or tools';
@@ -81,12 +100,62 @@ function mostUsed(skills: Skill[]): Skill {
   );
 }
 
+/** How well an intent matches one skill's centroids. */
+interface SkillScore {
+  /** The weighted mean of the available halves. */
+  score: number;
+  identity: number | null;
+  conversation: number | null;
+}
+
 /**
- * Moves a skill's centroid towards an intent -- or starts it from the intent,
- * when the skill has no centroid under this model -- once per intent: a tool
- * sends the same prompt with every request, and taking it in again would
- * move nothing. Not worth failing a request over; the next one recomputes
- * from whatever is stored.
+ * Scores an intent against a skill's centroids: the identity half against
+ * the main centroid, the conversation half against the conversation
+ * centroid, weights renormalised over the halves both sides have. A skill
+ * that has not met a conversation yet is scored on identity alone; a request
+ * with no identity compares its conversation against the main centroid, which
+ * is what such requests' intents were absorbed into.
+ */
+export function scoreIntent(
+  intent: RequestIntentEmbedding,
+  routing: SkillRouting,
+): SkillScore | null {
+  let weight = 0;
+  let sum = 0;
+  let identity: number | null = null;
+  let conversation: number | null = null;
+
+  if (intent.identity) {
+    identity = cosineSimilarity(intent.identity.embedding, routing.centroid);
+    sum += IDENTITY_WEIGHT * identity;
+    weight += IDENTITY_WEIGHT;
+  }
+  if (intent.conversation) {
+    const centroid =
+      routing.conversation_centroid ??
+      (intent.identity ? null : routing.centroid);
+    if (centroid) {
+      conversation = cosineSimilarity(intent.conversation.embedding, centroid);
+      sum += CONVERSATION_WEIGHT * conversation;
+      weight += CONVERSATION_WEIGHT;
+    }
+  }
+  if (weight === 0) {
+    return null;
+  }
+  return { score: sum / weight, identity, conversation };
+}
+
+/** The absorb-once key for a conversation embedding, per skill. */
+const conversationKey = (skillId: string): string => `conversation:${skillId}`;
+
+/**
+ * Moves a skill's centroids towards an intent -- or starts them from the
+ * intent, when the skill has no routing row under this model -- once per
+ * part: a tool sends the same identity with every request, and taking it in
+ * again would move nothing, while conversations are new almost every time.
+ * Not worth failing a request over; the next one recomputes from whatever
+ * is stored.
  */
 export async function absorbIntent(
   c: AppContext,
@@ -94,29 +163,75 @@ export async function absorbIntent(
   agentId: string,
   skillId: string,
   routing: SkillRouting | undefined,
-  intent: CachedIntent,
+  intent: RequestIntentEmbedding,
 ): Promise<void> {
-  if (intent.absorbedBy.has(skillId)) {
+  const { conversation } = intent;
+  // A request with no identity files its conversation under the main
+  // centroid too; that is also what it is compared against.
+  const primary = intent.identity ?? conversation;
+  if (!primary) {
     return;
   }
+
+  const advancePrimary = !routing || !primary.absorbedBy.has(skillId);
+  const advanceConversation =
+    conversation !== null &&
+    (!routing || !conversation.absorbedBy.has(conversationKey(skillId)));
+  if (!advancePrimary && !advanceConversation) {
+    return;
+  }
+
   try {
+    const centroid = !routing
+      ? primary.embedding
+      : advancePrimary
+        ? advanceCentroid(
+            routing.centroid,
+            primary.embedding,
+            routing.sample_count,
+          )
+        : routing.centroid;
+    const sampleCount = !routing
+      ? 1
+      : advancePrimary
+        ? routing.sample_count + 1
+        : routing.sample_count;
+
+    const stored = routing?.conversation_centroid ?? null;
+    const conversationCentroid =
+      !advanceConversation || conversation === null
+        ? stored
+        : stored
+          ? advanceCentroid(
+              stored,
+              conversation.embedding,
+              routing?.conversation_sample_count ?? 0,
+            )
+          : conversation.embedding;
+    const conversationSampleCount = !advanceConversation
+      ? (routing?.conversation_sample_count ?? 0)
+      : stored
+        ? (routing?.conversation_sample_count ?? 0) + 1
+        : 1;
+
     await connector.upsertSkillRouting(c, {
       skill_id: skillId,
       agent_id: agentId,
-      centroid: routing
-        ? advanceCentroid(
-            routing.centroid,
-            intent.embedding,
-            routing.sample_count,
-          )
-        : intent.embedding,
+      centroid,
+      conversation_centroid: conversationCentroid,
       embedding_model_id: intent.modelId,
-      sample_count: routing ? routing.sample_count + 1 : 1,
+      sample_count: sampleCount,
+      conversation_sample_count: conversationSampleCount,
     });
-    intent.absorbedBy.add(skillId);
+    if (advancePrimary) {
+      primary.absorbedBy.add(skillId);
+    }
+    if (advanceConversation && conversation !== null) {
+      conversation.absorbedBy.add(conversationKey(skillId));
+    }
   } catch (e) {
     warn(
-      `[SKILL_ROUTING] Could not update the centroid of skill ${skillId}:`,
+      `[SKILL_ROUTING] Could not update the centroids of skill ${skillId}:`,
       e,
     );
   }
@@ -126,14 +241,19 @@ export async function absorbIntent(
 async function tryEmbedIntent(
   c: AppContext,
   connector: UserDataStorageConnector,
-  intentText: string,
-): Promise<CachedIntent | null> {
+  intent: RequestIntent,
+): Promise<RequestIntentEmbedding | null> {
   try {
     const embeddingConfig = await resolveEmbeddingModelConfig(c, connector);
     if (!embeddingConfig) {
       return null;
     }
-    return await embedIntent(c, connector, intentText, embeddingConfig.modelId);
+    return await embedRequestIntent(
+      c,
+      connector,
+      intent,
+      embeddingConfig.modelId,
+    );
   } catch (e) {
     if (e instanceof RequestEmbeddingError) {
       warn(`[SKILL_ROUTING] Could not embed the request: ${e.message}`);
@@ -149,8 +269,12 @@ type RoutingPass =
   | {
       kind: 'create';
       skills: Skill[];
-      intent: CachedIntent | null;
+      intent: RequestIntentEmbedding | null;
       similarity: number | null;
+      identitySimilarity: number | null;
+      conversationSimilarity: number | null;
+      /** The closest skill anyway, for routing conservatively. */
+      best: Skill | null;
     };
 
 /**
@@ -161,7 +285,7 @@ async function routeOnce(
   c: AppContext,
   connector: UserDataStorageConnector,
   agent: Agent,
-  intentText: string | null,
+  requestIntent: RequestIntent | null,
 ): Promise<RoutingPass> {
   const skills = await connector.getSkills(c, { agent_id: agent.id });
   const autoCreate = agent.auto_create_skills;
@@ -171,13 +295,15 @@ async function routeOnce(
 
   const decide = (
     method: SkillRoutingMethod,
-    similarity: number | null = null,
+    score: SkillScore | null = null,
     threshold: number | null = null,
   ): SkillRoutingDecision => ({
     method,
-    similarity,
+    similarity: score?.score ?? null,
     threshold,
     candidates: skills.length,
+    identity_similarity: score?.identity ?? null,
+    conversation_similarity: score?.conversation ?? null,
   });
   const routed = (
     skill: Skill,
@@ -192,9 +318,18 @@ async function routeOnce(
       ? onlySkill()
       : routed(mostUsed(skills), decide('most_used'));
   const create = (
-    intent: CachedIntent | null,
-    similarity: number | null,
-  ): RoutingPass => ({ kind: 'create', skills, intent, similarity });
+    intent: RequestIntentEmbedding | null,
+    score: SkillScore | null,
+    best: Skill | null,
+  ): RoutingPass => ({
+    kind: 'create',
+    skills,
+    intent,
+    similarity: score?.score ?? null,
+    identitySimilarity: score?.identity ?? null,
+    conversationSimilarity: score?.conversation ?? null,
+    best,
+  });
 
   if (skills.length === 0) {
     if (!autoCreate || !underCap) {
@@ -205,7 +340,8 @@ async function routeOnce(
     }
     // Nothing to compare against: the first request gets the first skill.
     return create(
-      intentText ? await tryEmbedIntent(c, connector, intentText) : null,
+      requestIntent ? await tryEmbedIntent(c, connector, requestIntent) : null,
+      null,
       null,
     );
   }
@@ -213,7 +349,7 @@ async function routeOnce(
   if (skills.length === 1 && !autoCreate) {
     return onlySkill();
   }
-  if (!intentText) {
+  if (!requestIntent) {
     return fallback();
   }
 
@@ -253,45 +389,50 @@ async function routeOnce(
             skill_id: skill.id,
             agent_id: agent.id,
             centroid: seed.embedding,
+            conversation_centroid: null,
             embedding_model_id: embeddingConfig.modelId,
             sample_count: 1,
+            conversation_sample_count: 0,
           });
           bySkill.set(skill.id, routing);
         }),
     );
 
-    const intent = await embedIntent(
+    const intent = await embedRequestIntent(
       c,
       connector,
-      intentText,
+      requestIntent,
       embeddingConfig.modelId,
     );
 
     let best: {
       skill: Skill;
       routing: SkillRouting;
-      similarity: number;
+      score: SkillScore;
     } | null = null;
     for (const skill of skills) {
       const routing = bySkill.get(skill.id);
       if (!routing) {
         continue;
       }
-      const similarity = cosineSimilarity(intent.embedding, routing.centroid);
-      if (!best || similarity > best.similarity) {
-        best = { skill, routing, similarity };
+      const score = scoreIntent(intent, routing);
+      if (!score) {
+        continue;
+      }
+      if (!best || score.score > best.score.score) {
+        best = { skill, routing, score };
       }
     }
     if (!best) {
       throw new RequestEmbeddingError('No skill has a routing centroid');
     }
 
-    if (autoCreate && best.similarity < agent.skill_match_threshold) {
+    if (autoCreate && best.score.score < agent.skill_match_threshold) {
       if (underCap) {
-        return create(intent, best.similarity);
+        return create(intent, best.score, best.skill);
       }
       warn(
-        `[SKILL_ROUTING] Agent ${agent.name} is at its cap of ${agent.max_auto_created_skills} auto-created skills; routing to ${best.skill.name} at similarity ${best.similarity.toFixed(2)}`,
+        `[SKILL_ROUTING] Agent ${agent.name} is at its cap of ${agent.max_auto_created_skills} auto-created skills; routing to ${best.skill.name} at similarity ${best.score.score.toFixed(2)}`,
       );
     }
 
@@ -309,7 +450,7 @@ async function routeOnce(
       best.skill,
       decide(
         'embedding',
-        best.similarity,
+        best.score,
         autoCreate ? agent.skill_match_threshold : null,
       ),
     );
@@ -327,20 +468,26 @@ async function routeOnce(
 /**
  * Picks the skill for a request that named only the agent.
  *
- * The request's intent (its system prompt and tool names, see
- * `describeRequestIntent`) is embedded and compared with each skill's
- * centroid; a skill the router has not met yet is seeded from its description
- * first. The winner's centroid then absorbs the request, so skills follow
- * their traffic.
+ * The request's intent -- who is calling (system prompt and tools) and what
+ * the conversation is asking right now (its last few messages), see
+ * `describeRequestIntent` -- is embedded part by part and compared with each
+ * skill's centroids; a skill the router has not met yet is seeded from its
+ * description first. The winner's centroids then absorb the request, so
+ * skills follow their traffic as it evolves, turn by turn.
  *
  * When the agent creates skills automatically, a request that resembles none
- * of them -- similarity below the agent's threshold -- becomes a skill of its
- * own, up to the agent's cap; an agent without skills gets its first one from
- * its first request. Creating happens under the agent's lease, after a second
- * look at its skills: concurrent first requests would otherwise each create
- * one, and the request that held the lease before may have created exactly
- * the skill this one needs. With creation off, one skill needs no deciding
- * and an agent without skills is refused.
+ * of them -- combined score below the agent's threshold -- goes to the
+ * arbiter: measured on real traffic, embeddings cannot tell a new kind of
+ * job from familiar work on unfamiliar material, so a model makes that call
+ * (`arbitrateSkillForRequest`). An existing-skill verdict routes there and
+ * teaches the centroids; a new-job verdict creates a skill, up to the
+ * agent's cap; no verdict routes to the closest skill and creates nothing.
+ * An agent without skills gets its first one from its first request without
+ * asking. Creating happens under the agent's lease, after a second look at
+ * its skills: concurrent first requests would otherwise each create one, and
+ * the request that held the lease before may have created exactly the skill
+ * this one needs. With creation off, one skill needs no deciding and an
+ * agent without skills is refused.
  *
  * When the intent cannot be embedded -- no text, or the embedding provider
  * failing -- the most used skill serves the request rather than failing it,
@@ -352,33 +499,76 @@ export async function routeRequestToSkill(
   agent: Agent,
   saRequestData: SuperAgentsRequestData,
 ): Promise<SkillRoutingResult> {
-  const intentText = describeRequestIntent(saRequestData);
-  const first = await routeOnce(c, connector, agent, intentText);
+  const requestIntent = describeRequestIntent(saRequestData);
+  const first = await routeOnce(c, connector, agent, requestIntent);
   if (first.kind === 'routed') {
     return first.result;
   }
 
   return withSkillCreationLease(c, connector, agent, async () => {
-    const again = await routeOnce(c, connector, agent, intentText);
+    const again = await routeOnce(c, connector, agent, requestIntent);
     if (again.kind === 'routed') {
       return again.result;
     }
+
+    const decision = (method: SkillRoutingMethod): SkillRoutingDecision => ({
+      method,
+      similarity: again.similarity,
+      threshold: agent.skill_match_threshold,
+      candidates: again.skills.length,
+      identity_similarity: again.identitySimilarity,
+      conversation_similarity: again.conversationSimilarity,
+    });
+
+    // An agent with skills gets the arbiter's judgment before a new one is
+    // made; an agent without any gets its first skill straight away.
+    if (again.skills.length > 0 && requestIntent) {
+      const verdict = await arbitrateSkillForRequest(
+        c,
+        connector,
+        agent,
+        again.skills,
+        requestIntent,
+      );
+      if (verdict.kind === 'existing') {
+        // Teach the router, so the next such request needs no arbiter.
+        if (again.intent) {
+          const [routing] = await connector.getSkillRoutings(c, {
+            skill_id: verdict.skill.id,
+          });
+          await absorbIntent(
+            c,
+            connector,
+            agent.id,
+            verdict.skill.id,
+            routing?.embedding_model_id === again.intent.modelId
+              ? routing
+              : undefined,
+            again.intent,
+          );
+        }
+        return { skill: verdict.skill, decision: decision('arbitrated') };
+      }
+      if (verdict.kind === 'unavailable') {
+        // The conservative side: the closest skill, and nothing created.
+        return {
+          skill: again.best ?? mostUsed(again.skills),
+          decision: decision('embedding'),
+        };
+      }
+    }
+
     return {
       skill: await createSkillForRequest(
         c,
         connector,
         agent,
         saRequestData,
-        intentText ?? DEFAULT_INTENT,
+        requestIntent ? intentText(requestIntent) : DEFAULT_INTENT,
         again.intent,
         again.skills,
       ),
-      decision: {
-        method: 'created',
-        similarity: again.similarity,
-        threshold: agent.skill_match_threshold,
-        candidates: again.skills.length,
-      },
+      decision: decision('created'),
     };
   });
 }
@@ -396,8 +586,8 @@ const lastLearnedAt = new Map<string, number>();
  * only the agent.
  *
  * Meant to run once the response is on its way. An intent the skill has
- * already taken in costs nothing; a new one costs an embedding, at most once
- * per `LEARN_INTERVAL_MS` per skill. Nothing here can fail the request.
+ * already taken in costs nothing; a new one costs its embeddings, at most
+ * once per `LEARN_INTERVAL_MS` per skill. Nothing here can fail the request.
  */
 export async function learnSkillIntent(
   c: AppContext,
@@ -406,8 +596,8 @@ export async function learnSkillIntent(
   skill: Skill,
   saRequestData: SuperAgentsRequestData,
 ): Promise<void> {
-  const intentText = describeRequestIntent(saRequestData);
-  if (!intentText) {
+  const requestIntent = describeRequestIntent(saRequestData);
+  if (!requestIntent) {
     return;
   }
 
@@ -434,13 +624,18 @@ export async function learnSkillIntent(
       return;
     }
 
-    const intent = await embedIntent(
+    const intent = await embedRequestIntent(
       c,
       connector,
-      intentText,
+      requestIntent,
       embeddingConfig.modelId,
     );
-    if (intent.absorbedBy.has(skill.id)) {
+    const primary = intent.identity ?? intent.conversation;
+    if (
+      primary?.absorbedBy.has(skill.id) &&
+      (!intent.conversation ||
+        intent.conversation.absorbedBy.has(conversationKey(skill.id)))
+    ) {
       return;
     }
     const [routing] = await connector.getSkillRoutings(c, {
