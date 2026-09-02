@@ -290,6 +290,10 @@ export async function embedText(
     // dimensions.
     const response = await fetch(`${getApiUrl(c)}/v1/embeddings`, {
       method: 'POST',
+      // `fetch` has no timeout of its own, and this is on the request path:
+      // routing embeds every request's intent, so a provider that never
+      // answers would hang the caller indefinitely.
+      signal: AbortSignal.timeout(embeddingConfig.timeoutMs),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${getBearerToken(c)}`,

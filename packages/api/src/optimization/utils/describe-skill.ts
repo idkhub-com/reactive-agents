@@ -21,8 +21,6 @@ const SkillDescription = z.object({
 });
 
 const NAME_MAX_LENGTH = 40;
-/** One attempt; the client retries once, so the whole call takes at most twice this. */
-const DESCRIBE_TIMEOUT_MS = 15_000;
 /** `SkillCreateParams` bounds. */
 const DESCRIPTION_MIN_LENGTH = 25;
 const DESCRIPTION_MAX_LENGTH = 10000;
@@ -151,7 +149,7 @@ export async function describeSkillForRequest(
     const client = new OpenAI({
       apiKey: '',
       baseURL: `${getApiUrl(c)}/v1`,
-      timeout: DESCRIBE_TIMEOUT_MS,
+      timeout: modelConfig.timeoutMs,
       maxRetries: 1,
     });
     const saConfig = {

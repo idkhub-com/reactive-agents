@@ -15,15 +15,29 @@ CREATE TABLE IF NOT EXISTS system_settings (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   -- Model settings for internal operations
   -- ON DELETE RESTRICT prevents deleting models that are in use by settings
+  -- Each model sits beside how long one call to it may take. Every internal
+  -- skill is a gateway request this server sends to itself, and an unbounded
+  -- one either makes a caller wait forever or outlives the lock it holds.
   system_prompt_reflection_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
+  system_prompt_reflection_timeout_ms INTEGER NOT NULL DEFAULT 120000 CHECK (system_prompt_reflection_timeout_ms > 0),
   evaluation_generation_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
+  evaluation_generation_timeout_ms INTEGER NOT NULL DEFAULT 120000 CHECK (evaluation_generation_timeout_ms > 0),
   embedding_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
+  embedding_timeout_ms INTEGER NOT NULL DEFAULT 30000 CHECK (embedding_timeout_ms > 0),
   judge_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
+  judge_timeout_ms INTEGER NOT NULL DEFAULT 60000 CHECK (judge_timeout_ms > 0),
   -- The skill arbiter: the model that decides whether a request no skill
   -- matches closely is a new kind of job (NULL defers to the reflection
   -- model), and how long one of its attempts may take
   skill_arbiter_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
   skill_arbiter_timeout_ms INTEGER NOT NULL DEFAULT 15000 CHECK (skill_arbiter_timeout_ms > 0),
+  -- Intent compaction: the model that summarises a system prompt too long to
+  -- embed whole before routing embeds it (NULL defers to the reflection
+  -- model), and how long one of its attempts may take. Separate from the
+  -- arbiter because the prompts are long and the call is correspondingly
+  -- slower
+  intent_compaction_model_id UUID REFERENCES models(id) ON DELETE RESTRICT,
+  intent_compaction_timeout_ms INTEGER NOT NULL DEFAULT 60000 CHECK (intent_compaction_timeout_ms > 0),
   -- Developer mode: when enabled, shows the super-agents internal agent and its skills
   developer_mode BOOLEAN NOT NULL DEFAULT FALSE,
   -- Timestamps
@@ -129,6 +143,11 @@ BEGIN
     RAISE EXCEPTION 'skill_arbiter_model_id must reference a text model';
   END IF;
 
+  -- Validate intent_compaction_model_id must be a text model
+  IF NOT public.check_model_type(NEW.intent_compaction_model_id, 'text') THEN
+    RAISE EXCEPTION 'intent_compaction_model_id must reference a text model';
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql
@@ -157,6 +176,7 @@ BEGIN
        OR evaluation_generation_model_id = NEW.id
        OR judge_model_id = NEW.id
        OR skill_arbiter_model_id = NEW.id
+       OR intent_compaction_model_id = NEW.id
   ) THEN
     RAISE EXCEPTION 'Cannot change model_type for a model that is referenced in system_settings';
   END IF;

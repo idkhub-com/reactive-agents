@@ -147,6 +147,8 @@ export interface LLMJudgeModelConfig {
   apiKey?: string;
   /** The provider's configured base URL, where it has one. */
   customHost?: string;
+  /** How long one judging attempt may take, from `judge_timeout_ms`. */
+  timeoutMs?: number;
 }
 
 export function createLLMJudge(
@@ -159,7 +161,9 @@ export function createLLMJudge(
     model: modelConfig?.model || config.model || 'gpt-5-mini',
     temperature: config.temperature || 0.1,
     max_tokens: config.max_tokens || 1000,
-    timeout: config.timeout || 30000,
+    // The resolved model carries the setting; `config.timeout` stays as the
+    // override for a caller that resolves no model of its own.
+    timeout: modelConfig?.timeoutMs ?? config.timeout ?? 30000,
   };
 
   // Provider and API key from model config or defaults
@@ -174,6 +178,11 @@ export function createLLMJudge(
       apiKey: '',
       baseURL: `${getApiUrl(c)}/v1`,
       dangerouslyAllowBrowser: true, // Safe in server-side Node.js context
+      // This was computed into `judgeConfig` and never passed on, so every
+      // judging call ran under the client's ten-minute default, retried
+      // twice -- three times the lock it holds.
+      timeout: judgeConfig.timeout,
+      maxRetries: 1,
     });
 
   /**

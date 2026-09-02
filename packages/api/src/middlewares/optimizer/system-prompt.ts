@@ -1,3 +1,4 @@
+import { reflectionLockWindowMs } from '@api/middlewares/optimizer/locks';
 import { generateReflectiveSystemPromptForSkill } from '@api/optimization/utils/system-prompt';
 import type {
   LogsStorageConnector,
@@ -19,6 +20,9 @@ import { SuperAgentsResponseBody } from '@shared/types/api/response';
 import type { Log, Skill, SkillOptimizationCluster } from '@shared/types/data';
 import { SkillEventType } from '@shared/types/data/skill-event';
 import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
+
+/** The shortest a reflection lock is ever held. */
+const REFLECTION_LOCK_FLOOR_MS = 10 * 60 * 1000;
 
 /**
  * Extracts relevant request parameters that affect the output format and constraints.
@@ -107,13 +111,19 @@ export async function acquireReflectionLock(
 
   const latestCluster = latestClusters[0];
 
-  // Check if reflection lock exists and is recent (< 10 minutes old)
+  // Check if a reflection lock exists and still covers its work. Ten minutes
+  // is the floor; the window grows with the reflection timeout, so raising it
+  // for a slow model does not start letting a second reflection in.
   const lockTimestamp = latestCluster.reflection_lock_acquired_at;
   if (lockTimestamp) {
     const lockAge = Date.now() - new Date(lockTimestamp).getTime();
-    const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+    const lockWindow = await reflectionLockWindowMs(
+      c,
+      userDataStorageConnector,
+      REFLECTION_LOCK_FLOOR_MS,
+    );
 
-    if (lockAge < LOCK_TIMEOUT_MS) {
+    if (lockAge < lockWindow) {
       return null;
     }
   }

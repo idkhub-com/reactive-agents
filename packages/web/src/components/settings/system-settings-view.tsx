@@ -2,15 +2,19 @@
 
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import {
-  MAX_SKILL_ARBITER_TIMEOUT_MS,
-  MIN_SKILL_ARBITER_TIMEOUT_MS,
   type SystemSettingsUpdateParams,
+  TIMEOUT_SETTINGS,
+  type TimeoutSetting,
 } from '@shared/types/data/system-settings';
 import { DeveloperModeToggle } from '@web/components/settings/developer-mode-toggle';
 import {
   type ModelOption,
   ModelSelector,
 } from '@web/components/settings/model-selector';
+import {
+  TimeoutField,
+  timeoutProblem,
+} from '@web/components/settings/timeout-field';
 import {
   ErrorWarning,
   IncompleteSettingsWarning,
@@ -24,8 +28,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@web/components/ui/card';
-import { Input } from '@web/components/ui/input';
-import { Label } from '@web/components/ui/label';
 import { PageHeader } from '@web/components/ui/page-header';
 import { useToast } from '@web/hooks/use-toast';
 import { useAIProviders } from '@web/providers/ai-providers';
@@ -34,35 +36,56 @@ import { useSystemSettings } from '@web/providers/system-settings';
 import { sortModels } from '@web/utils/model-sorting';
 import { RouteIcon, SaveIcon, SettingsIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
-import { useEffect, useId, useMemo, useState } from 'react';
-
-const MIN_ARBITER_TIMEOUT_SECONDS = MIN_SKILL_ARBITER_TIMEOUT_MS / 1000;
-const MAX_ARBITER_TIMEOUT_SECONDS = MAX_SKILL_ARBITER_TIMEOUT_MS / 1000;
+import { useEffect, useMemo, useState } from 'react';
 
 type ModelField =
   | 'system_prompt_reflection_model_id'
   | 'evaluation_generation_model_id'
   | 'embedding_model_id'
   | 'judge_model_id'
-  | 'skill_arbiter_model_id';
+  | 'skill_arbiter_model_id'
+  | 'intent_compaction_model_id';
 
 interface FormValues extends Record<ModelField, string | null> {
-  /** Edited in seconds; the setting itself is in milliseconds. */
-  skill_arbiter_timeout_seconds: number;
+  /**
+   * Edited in seconds, keyed by the millisecond setting each one saves to, so
+   * adding a timeout setting adds a field here without touching the wiring.
+   */
+  timeouts: Record<TimeoutSetting, number>;
   developer_mode: boolean;
 }
 
-/** Why the arbiter timeout cannot be saved as entered, or null when it can. */
-export function arbiterTimeoutProblem(seconds: number): string | null {
-  if (
-    Number.isInteger(seconds) &&
-    seconds >= MIN_ARBITER_TIMEOUT_SECONDS &&
-    seconds <= MAX_ARBITER_TIMEOUT_SECONDS
-  ) {
-    return null;
-  }
-  return `Enter a whole number of seconds between ${MIN_ARBITER_TIMEOUT_SECONDS} and ${MAX_ARBITER_TIMEOUT_SECONDS}.`;
-}
+/** Every timeout at its default, in seconds, before settings arrive. */
+const blankTimeouts = (): Record<TimeoutSetting, number> =>
+  Object.fromEntries(TIMEOUT_SETTINGS.map((key) => [key, 15])) as Record<
+    TimeoutSetting,
+    number
+  >;
+
+/** How each timeout reads in the dashboard. */
+const TIMEOUT_LABELS: Record<TimeoutSetting, string> = {
+  system_prompt_reflection_timeout_ms: 'Reflection Timeout',
+  evaluation_generation_timeout_ms: 'Evaluation Generation Timeout',
+  embedding_timeout_ms: 'Embedding Timeout',
+  judge_timeout_ms: 'Judge Timeout',
+  skill_arbiter_timeout_ms: 'Arbiter Timeout',
+  intent_compaction_timeout_ms: 'Compaction Timeout',
+};
+
+const TIMEOUT_DESCRIPTIONS: Record<TimeoutSetting, string> = {
+  system_prompt_reflection_timeout_ms:
+    'Seconds one attempt may take at writing a system prompt or naming a new skill. Naming happens on the request path, so keep it within what the request can wait for.',
+  evaluation_generation_timeout_ms:
+    "Seconds one attempt at generating a skill's evaluations may take. Runs in the background, but holds the evaluation lock while it does.",
+  embedding_timeout_ms:
+    'Seconds one embedding call may take. Routing embeds every request, so this is the one every caller waits for — keep it short.',
+  judge_timeout_ms:
+    'Seconds one judging attempt may take, task extraction included. Runs after the response, once per evaluation per log.',
+  skill_arbiter_timeout_ms:
+    'Seconds one arbiter attempt may take; a timed-out attempt is retried once. Keep it as short as the model allows, since a request that matches no skill closely waits for the answer.',
+  intent_compaction_timeout_ms:
+    'Seconds one compaction attempt may take; a timed-out attempt is retried once. These prompts run to thousands of tokens, so allow more than the arbiter gets — when compaction keeps timing out, every request carrying that prompt pays the wait and then routes on a truncated one.',
+};
 
 export function SystemSettingsView(): ReactElement {
   const { toast } = useToast();
@@ -70,8 +93,6 @@ export function SystemSettingsView(): ReactElement {
     useSystemSettings();
   const { models, isLoading: isLoadingModels, setQueryParams } = useModels();
   const { aiProviderConfigs: apiKeys } = useAIProviders();
-  const timeoutId = useId();
-  const timeoutDescriptionId = `${timeoutId}-description`;
 
   // Local state for form values
   const [formValues, setFormValues] = useState<FormValues>({
@@ -80,7 +101,8 @@ export function SystemSettingsView(): ReactElement {
     embedding_model_id: null,
     judge_model_id: null,
     skill_arbiter_model_id: null,
-    skill_arbiter_timeout_seconds: 15,
+    intent_compaction_model_id: null,
+    timeouts: blankTimeouts(),
     developer_mode: false,
   });
 
@@ -102,7 +124,10 @@ export function SystemSettingsView(): ReactElement {
         embedding_model_id: settings.embedding_model_id,
         judge_model_id: settings.judge_model_id,
         skill_arbiter_model_id: settings.skill_arbiter_model_id,
-        skill_arbiter_timeout_seconds: settings.skill_arbiter_timeout_ms / 1000,
+        intent_compaction_model_id: settings.intent_compaction_model_id,
+        timeouts: Object.fromEntries(
+          TIMEOUT_SETTINGS.map((key) => [key, settings[key] / 1000]),
+        ) as Record<TimeoutSetting, number>,
         developer_mode: settings.developer_mode,
       });
       setIsDirty(false);
@@ -145,10 +170,10 @@ export function SystemSettingsView(): ReactElement {
     setIsDirty(true);
   };
 
-  const handleTimeoutChange = (seconds: number) => {
+  const handleTimeoutChange = (field: TimeoutSetting, seconds: number) => {
     setFormValues((prev) => ({
       ...prev,
-      skill_arbiter_timeout_seconds: seconds,
+      timeouts: { ...prev.timeouts, [field]: seconds },
     }));
     setIsDirty(true);
   };
@@ -184,8 +209,9 @@ export function SystemSettingsView(): ReactElement {
 
   const isSettingsComplete = missingFields.length === 0;
 
-  const timeoutProblem = arbiterTimeoutProblem(
-    formValues.skill_arbiter_timeout_seconds,
+  // The first timeout that cannot be saved, so the toast can name it.
+  const badTimeout = TIMEOUT_SETTINGS.find(
+    (key) => timeoutProblem(formValues.timeouts[key]) !== null,
   );
 
   const handleSave = async () => {
@@ -198,10 +224,10 @@ export function SystemSettingsView(): ReactElement {
       });
       return;
     }
-    if (timeoutProblem) {
+    if (badTimeout) {
       toast({
-        title: 'Invalid arbiter timeout',
-        description: timeoutProblem,
+        title: `Invalid ${TIMEOUT_LABELS[badTimeout].toLowerCase()}`,
+        description: timeoutProblem(formValues.timeouts[badTimeout]) ?? '',
         variant: 'destructive',
       });
       return;
@@ -236,9 +262,18 @@ export function SystemSettingsView(): ReactElement {
       ) {
         updateParams.skill_arbiter_model_id = formValues.skill_arbiter_model_id;
       }
-      const timeoutMs = formValues.skill_arbiter_timeout_seconds * 1000;
-      if (timeoutMs !== settings?.skill_arbiter_timeout_ms) {
-        updateParams.skill_arbiter_timeout_ms = timeoutMs;
+      if (
+        formValues.intent_compaction_model_id !==
+        settings?.intent_compaction_model_id
+      ) {
+        updateParams.intent_compaction_model_id =
+          formValues.intent_compaction_model_id;
+      }
+      for (const key of TIMEOUT_SETTINGS) {
+        const ms = formValues.timeouts[key] * 1000;
+        if (ms !== settings?.[key]) {
+          updateParams[key] = ms;
+        }
       }
       if (formValues.developer_mode !== settings?.developer_mode) {
         updateParams.developer_mode = formValues.developer_mode;
@@ -323,6 +358,18 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
             />
 
+            <TimeoutField
+              label={TIMEOUT_LABELS.system_prompt_reflection_timeout_ms}
+              description={
+                TIMEOUT_DESCRIPTIONS.system_prompt_reflection_timeout_ms
+              }
+              seconds={formValues.timeouts.system_prompt_reflection_timeout_ms}
+              onChange={(v) =>
+                handleTimeoutChange('system_prompt_reflection_timeout_ms', v)
+              }
+              isLoading={isAnyLoading}
+            />
+
             <ModelSelector
               label="Evaluation Generation"
               description="Model used for automatically generating evaluation criteria for skills."
@@ -332,6 +379,18 @@ export function SystemSettingsView(): ReactElement {
                 handleFieldChange('evaluation_generation_model_id', v)
               }
               modelOptions={textModelOptions}
+              isLoading={isAnyLoading}
+            />
+
+            <TimeoutField
+              label={TIMEOUT_LABELS.evaluation_generation_timeout_ms}
+              description={
+                TIMEOUT_DESCRIPTIONS.evaluation_generation_timeout_ms
+              }
+              seconds={formValues.timeouts.evaluation_generation_timeout_ms}
+              onChange={(v) =>
+                handleTimeoutChange('evaluation_generation_timeout_ms', v)
+              }
               isLoading={isAnyLoading}
             />
 
@@ -345,6 +404,14 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
             />
 
+            <TimeoutField
+              label={TIMEOUT_LABELS.embedding_timeout_ms}
+              description={TIMEOUT_DESCRIPTIONS.embedding_timeout_ms}
+              seconds={formValues.timeouts.embedding_timeout_ms}
+              onChange={(v) => handleTimeoutChange('embedding_timeout_ms', v)}
+              isLoading={isAnyLoading}
+            />
+
             <ModelSelector
               label="Judge Model"
               description="Model used for evaluating and scoring responses during optimization."
@@ -352,6 +419,14 @@ export function SystemSettingsView(): ReactElement {
               value={formValues.judge_model_id}
               onChange={(v) => handleFieldChange('judge_model_id', v)}
               modelOptions={textModelOptions}
+              isLoading={isAnyLoading}
+            />
+
+            <TimeoutField
+              label={TIMEOUT_LABELS.judge_timeout_ms}
+              description={TIMEOUT_DESCRIPTIONS.judge_timeout_ms}
+              seconds={formValues.timeouts.judge_timeout_ms}
+              onChange={(v) => handleTimeoutChange('judge_timeout_ms', v)}
               isLoading={isAnyLoading}
             />
           </CardContent>
@@ -364,11 +439,13 @@ export function SystemSettingsView(): ReactElement {
               Skill Routing
             </CardTitle>
             <CardDescription>
-              When a request names only its agent and resembles none of the
-              agent&apos;s skills closely, the arbiter decides whether it is a
-              known job on new material or a new kind of job. It answers on the
-              request path, so the request waits for it. Each agent can override
-              both settings.
+              Two models sit on the request path when an agent routes a request
+              to a skill itself, so a request waits for whichever it needs. The
+              arbiter decides whether a request that resembles none of the
+              agent&apos;s skills closely is a known job on new material or a
+              new kind of job; each agent can override its model and timeout.
+              The compactor summarises a system prompt too long to embed whole
+              before routing embeds it.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -384,51 +461,39 @@ export function SystemSettingsView(): ReactElement {
               emptyOption="Same as System Prompt Reflection"
             />
 
-            <div className="grid gap-4 md:grid-cols-[1fr,300px] items-start py-4 border-b last:border-b-0">
-              <div className="space-y-1">
-                <Label htmlFor={timeoutId} className="font-medium text-base">
-                  Arbiter Timeout
-                </Label>
-                <p
-                  id={timeoutDescriptionId}
-                  className="text-sm text-muted-foreground"
-                >
-                  Seconds one arbiter attempt may take; a timed-out attempt is
-                  retried once. Keep it as short as the model allows, since a
-                  request that matches no skill closely waits for the answer.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Input
-                    id={timeoutId}
-                    type="number"
-                    inputMode="numeric"
-                    min={MIN_ARBITER_TIMEOUT_SECONDS}
-                    max={MAX_ARBITER_TIMEOUT_SECONDS}
-                    step={1}
-                    className="w-32"
-                    value={
-                      Number.isNaN(formValues.skill_arbiter_timeout_seconds)
-                        ? ''
-                        : formValues.skill_arbiter_timeout_seconds
-                    }
-                    onChange={(e) =>
-                      handleTimeoutChange(e.target.valueAsNumber)
-                    }
-                    disabled={isAnyLoading}
-                    aria-describedby={timeoutDescriptionId}
-                    aria-invalid={timeoutProblem !== null}
-                  />
-                  <span className="text-sm text-muted-foreground">seconds</span>
-                </div>
-                {timeoutProblem && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {timeoutProblem}
-                  </p>
-                )}
-              </div>
-            </div>
+            <TimeoutField
+              label={TIMEOUT_LABELS.skill_arbiter_timeout_ms}
+              description={TIMEOUT_DESCRIPTIONS.skill_arbiter_timeout_ms}
+              seconds={formValues.timeouts.skill_arbiter_timeout_ms}
+              onChange={(v) =>
+                handleTimeoutChange('skill_arbiter_timeout_ms', v)
+              }
+              isLoading={isAnyLoading}
+            />
+
+            <ModelSelector
+              label="Intent Compaction"
+              description="Model that summarises an oversized system prompt so routing embeds what identifies the job rather than the prompt's first few thousand characters. Each distinct prompt is compacted once and cached."
+              recommendation="gpt-5-mini or claude-haiku-4-5"
+              value={formValues.intent_compaction_model_id}
+              onChange={(v) =>
+                handleFieldChange('intent_compaction_model_id', v)
+              }
+              modelOptions={textModelOptions}
+              isLoading={isAnyLoading}
+              required={false}
+              emptyOption="Same as System Prompt Reflection"
+            />
+
+            <TimeoutField
+              label={TIMEOUT_LABELS.intent_compaction_timeout_ms}
+              description={TIMEOUT_DESCRIPTIONS.intent_compaction_timeout_ms}
+              seconds={formValues.timeouts.intent_compaction_timeout_ms}
+              onChange={(v) =>
+                handleTimeoutChange('intent_compaction_timeout_ms', v)
+              }
+              isLoading={isAnyLoading}
+            />
           </CardContent>
         </Card>
 

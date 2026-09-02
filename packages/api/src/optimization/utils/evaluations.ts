@@ -145,6 +145,10 @@ export async function generateEvaluationCreateParams(
   const client = new OpenAI({
     apiKey: '',
     baseURL: `${getApiUrl(c)}/v1`,
+    // Without this the client waits ten minutes and retries twice, which
+    // outlives the evaluation lock this runs under.
+    timeout: modelConfig.timeoutMs,
+    maxRetries: 1,
   });
 
   const saConfig = {

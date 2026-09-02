@@ -26,6 +26,7 @@ const SYSTEM_SETTINGS_MODEL_SLOTS = [
   ['embedding_model_id', 'Embedding'],
   ['judge_model_id', 'Judge'],
   ['skill_arbiter_model_id', 'Skill Arbiter'],
+  ['intent_compaction_model_id', 'Intent Compaction'],
 ] as const;
 
 /** "A", "A and B", "A, B and C". */

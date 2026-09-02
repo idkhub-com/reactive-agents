@@ -1,6 +1,7 @@
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import { createMockContext } from '@api/test-utils/mock-context';
 import { AIProvider } from '@shared/types/constants';
+import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockContext = createMockContext();
@@ -65,6 +66,28 @@ describe('LLM Judge', () => {
     expect(llmJudge.config.temperature).toBe(0.1);
     expect(llmJudge.config.max_tokens).toBe(1000);
     expect(llmJudge.config.timeout).toBe(30000);
+  });
+
+  it('bounds the judging call with the resolved timeout', () => {
+    // This was computed into the config and never passed to the client, so
+    // every judging call ran under the SDK's ten-minute default and retried
+    // twice -- three times the lock the caller holds.
+    vi.clearAllMocks();
+    createLLMJudge(mockContext, {}, { ...mockModelConfig, timeoutMs: 45_000 });
+
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 45_000,
+      maxRetries: 1,
+    });
+  });
+
+  it('falls back to the config timeout when the model carries none', () => {
+    vi.clearAllMocks();
+    createLLMJudge(mockContext, { timeout: 5_000 }, mockModelConfig);
+
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 5_000,
+    });
   });
 
   it('should create LLM judge with custom config', () => {

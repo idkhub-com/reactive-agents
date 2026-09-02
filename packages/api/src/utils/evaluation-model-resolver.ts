@@ -31,6 +31,16 @@ export interface ResolvedModelConfig {
    * is logged, and optimization simply stops happening.
    */
   customHost?: string;
+  /**
+   * How long one attempt at this call may take, from the timeout that sits
+   * beside the model in system settings.
+   *
+   * It rides along with the model because every caller that needs one needs
+   * the other, and resolving them together is what keeps a new internal skill
+   * from quietly inheriting the OpenAI client's ten-minute default. Absent
+   * only from a model resolved by id alone, which has no setting of its own.
+   */
+  timeoutMs?: number;
 }
 
 /**
@@ -41,7 +51,8 @@ export type SystemSettingsModelType =
   | 'embedding'
   | 'system_prompt_reflection'
   | 'evaluation_generation'
-  | 'skill_arbiter';
+  | 'skill_arbiter'
+  | 'intent_compaction';
 
 /**
  * Resolves a model configuration from a model ID.
@@ -115,6 +126,9 @@ export async function resolveSystemSettingsModel(
 
   let modelId: string | null = null;
   let configured = `${modelType}_model_id`;
+  // Each model setting has a timeout beside it, and the two are resolved
+  // together so a caller cannot take one without the other.
+  const timeoutMs: number = systemSettings[`${modelType}_timeout_ms`];
 
   switch (modelType) {
     case 'judge':
@@ -138,6 +152,15 @@ export async function resolveSystemSettingsModel(
       configured =
         'skill_arbiter_model_id or system_prompt_reflection_model_id';
       break;
+    case 'intent_compaction':
+      // As with the arbiter: a model of its own only when one is chosen for
+      // it, and the reflection model otherwise.
+      modelId =
+        systemSettings.intent_compaction_model_id ??
+        systemSettings.system_prompt_reflection_model_id;
+      configured =
+        'intent_compaction_model_id or system_prompt_reflection_model_id';
+      break;
   }
 
   if (!modelId) {
@@ -145,7 +168,8 @@ export async function resolveSystemSettingsModel(
     return null;
   }
 
-  return resolveModelById(c, modelId, connector, logPrefix);
+  const resolved = await resolveModelById(c, modelId, connector, logPrefix);
+  return resolved && { ...resolved, timeoutMs };
 }
 
 /**
@@ -166,9 +190,20 @@ export async function resolveEvaluationModelConfig(
 ): Promise<LLMJudgeModelConfig | null> {
   const logPrefix = 'EVAL_MODEL_RESOLVER';
 
-  // If evaluation has a model_id, use it
+  // If evaluation has a model_id, use it. A model named by an evaluation has
+  // no timeout setting of its own, so it is judged under the judge's.
   if (evaluation.model_id) {
-    return await resolveModelById(c, evaluation.model_id, connector, logPrefix);
+    const resolved = await resolveModelById(
+      c,
+      evaluation.model_id,
+      connector,
+      logPrefix,
+    );
+    if (!resolved) {
+      return null;
+    }
+    const { judge_timeout_ms } = await connector.getSystemSettings(c);
+    return { ...resolved, timeoutMs: judge_timeout_ms };
   }
 
   // Fall back to system settings judge_model_id
@@ -182,6 +217,8 @@ export interface EmbeddingModelConfig {
   modelId: string;
   model: Model;
   dimensions: number;
+  /** How long one embedding call may take, from system settings. */
+  timeoutMs: number;
 }
 
 /**
@@ -225,5 +262,6 @@ export async function resolveEmbeddingModelConfig(
     modelId: model.id,
     model,
     dimensions: model.embedding_dimensions,
+    timeoutMs: systemSettings.embedding_timeout_ms,
   };
 }

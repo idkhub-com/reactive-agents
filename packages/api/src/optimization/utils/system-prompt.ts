@@ -96,6 +96,10 @@ async function createSystemPromptClient(
   const client = new OpenAI({
     apiKey: '',
     baseURL: `${getApiUrl(c)}/v1`,
+    // Without this the client waits ten minutes and retries twice, which
+    // outlives the reflection lock this runs under.
+    timeout: modelConfig.timeoutMs,
+    maxRetries: 1,
   });
 
   const saConfig = {

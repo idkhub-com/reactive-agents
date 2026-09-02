@@ -458,11 +458,17 @@ const initialSchema: LibsqlMigration = {
       id TEXT PRIMARY KEY,
       singleton INTEGER NOT NULL DEFAULT 1 UNIQUE CHECK (singleton = 1),
       system_prompt_reflection_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      system_prompt_reflection_timeout_ms INTEGER NOT NULL DEFAULT 120000 CHECK (system_prompt_reflection_timeout_ms > 0),
       evaluation_generation_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      evaluation_generation_timeout_ms INTEGER NOT NULL DEFAULT 120000 CHECK (evaluation_generation_timeout_ms > 0),
       embedding_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      embedding_timeout_ms INTEGER NOT NULL DEFAULT 30000 CHECK (embedding_timeout_ms > 0),
       judge_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      judge_timeout_ms INTEGER NOT NULL DEFAULT 60000 CHECK (judge_timeout_ms > 0),
       skill_arbiter_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
       skill_arbiter_timeout_ms INTEGER NOT NULL DEFAULT 15000 CHECK (skill_arbiter_timeout_ms > 0),
+      intent_compaction_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      intent_compaction_timeout_ms INTEGER NOT NULL DEFAULT 60000 CHECK (intent_compaction_timeout_ms > 0),
       developer_mode INTEGER NOT NULL DEFAULT 0 CHECK (developer_mode IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
       updated_at TEXT NOT NULL DEFAULT (${NOW_ISO})
@@ -490,6 +496,9 @@ const initialSchema: LibsqlMigration = {
       SELECT CASE WHEN NEW.skill_arbiter_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.skill_arbiter_model_id) IS NOT 'text'
         THEN RAISE(ABORT, 'skill_arbiter_model_id must reference a text model') END;
+      SELECT CASE WHEN NEW.intent_compaction_model_id IS NOT NULL
+        AND (SELECT model_type FROM models WHERE id = NEW.intent_compaction_model_id) IS NOT 'text'
+        THEN RAISE(ABORT, 'intent_compaction_model_id must reference a text model') END;
       SELECT CASE WHEN NEW.embedding_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.embedding_model_id) IS NOT 'embed'
         THEN RAISE(ABORT, 'embedding_model_id must reference an embed model') END;
@@ -510,6 +519,9 @@ const initialSchema: LibsqlMigration = {
       SELECT CASE WHEN NEW.skill_arbiter_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.skill_arbiter_model_id) IS NOT 'text'
         THEN RAISE(ABORT, 'skill_arbiter_model_id must reference a text model') END;
+      SELECT CASE WHEN NEW.intent_compaction_model_id IS NOT NULL
+        AND (SELECT model_type FROM models WHERE id = NEW.intent_compaction_model_id) IS NOT 'text'
+        THEN RAISE(ABORT, 'intent_compaction_model_id must reference a text model') END;
       SELECT CASE WHEN NEW.embedding_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.embedding_model_id) IS NOT 'embed'
         THEN RAISE(ABORT, 'embedding_model_id must reference an embed model') END;
@@ -541,6 +553,7 @@ const initialSchema: LibsqlMigration = {
            OR evaluation_generation_model_id = NEW.id
            OR judge_model_id = NEW.id
            OR skill_arbiter_model_id = NEW.id
+           OR intent_compaction_model_id = NEW.id
            OR embedding_model_id = NEW.id
       ) OR EXISTS (
         SELECT 1 FROM agents WHERE skill_arbiter_model_id = NEW.id

@@ -61,6 +61,12 @@ describe('Evaluation Model Resolver', () => {
     evaluation_generation_model_id: 'model-1111-2222-3333-444455556666',
     skill_arbiter_model_id: null,
     skill_arbiter_timeout_ms: 15_000,
+    intent_compaction_model_id: null,
+    intent_compaction_timeout_ms: 15_000,
+    system_prompt_reflection_timeout_ms: 120_000,
+    evaluation_generation_timeout_ms: 120_000,
+    embedding_timeout_ms: 30_000,
+    judge_timeout_ms: 60_000,
     developer_mode: false,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -90,6 +96,7 @@ describe('Evaluation Model Resolver', () => {
         model: 'gpt-4',
         provider: 'openai',
         apiKey: 'sk-test-api-key',
+        timeoutMs: 60_000,
       });
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
@@ -116,6 +123,7 @@ describe('Evaluation Model Resolver', () => {
         model: 'text-embedding-3-small',
         provider: 'openai',
         apiKey: 'sk-test-api-key',
+        timeoutMs: 30_000,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.embedding_model_id,
@@ -141,6 +149,7 @@ describe('Evaluation Model Resolver', () => {
         model: 'gpt-4',
         provider: 'openai',
         apiKey: 'sk-test-api-key',
+        timeoutMs: 120_000,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.system_prompt_reflection_model_id,
@@ -166,6 +175,7 @@ describe('Evaluation Model Resolver', () => {
         model: 'gpt-4',
         provider: 'openai',
         apiKey: 'sk-test-api-key',
+        timeoutMs: 120_000,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.evaluation_generation_model_id,
@@ -268,7 +278,45 @@ describe('Evaluation Model Resolver', () => {
         provider: 'ollama',
         apiKey: undefined,
         customHost: 'http://localhost:11434',
+        timeoutMs: 120_000,
       });
+    });
+
+    it('resolves intent compaction to its own model when one is chosen, and the reflection model otherwise', async () => {
+      vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        mockProvider,
+      ]);
+
+      // Unset, it borrows the reflection model, as it always did.
+      await resolveSystemSettingsModel(
+        mockContext,
+        'intent_compaction',
+        mockConnector,
+      );
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
+        id: mockSystemSettings.system_prompt_reflection_model_id,
+      });
+
+      const compactionModelId = 'compact-11-2222-3333-444455556666';
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
+        ...mockSystemSettings,
+        intent_compaction_model_id: compactionModelId,
+      });
+      vi.mocked(mockConnector.getModels).mockResolvedValue([
+        { ...mockModel, id: compactionModelId, model_name: 'gpt-5-mini' },
+      ]);
+
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'intent_compaction',
+        mockConnector,
+      );
+
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
+        id: compactionModelId,
+      });
+      expect(result?.model).toBe('gpt-5-mini');
     });
 
     it('resolves the skill arbiter to its own model when one is chosen', async () => {
@@ -374,11 +422,14 @@ describe('Evaluation Model Resolver', () => {
         model: 'custom-model',
         provider: 'openai',
         apiKey: 'sk-test-api-key',
+        timeoutMs: 60_000,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: 'custom-model-1111-2222-333344445555',
       });
-      expect(mockConnector.getSystemSettings).not.toHaveBeenCalled();
+      // The model comes from the evaluation, but a model named there has no
+      // timeout of its own, so the judge's is still read for it.
+      expect(mockConnector.getSystemSettings).toHaveBeenCalled();
     });
 
     it('should fall back to system settings judge_model_id when evaluation has no model_id', async () => {
@@ -400,6 +451,7 @@ describe('Evaluation Model Resolver', () => {
         model: 'gpt-4',
         provider: 'openai',
         apiKey: 'sk-test-api-key',
+        timeoutMs: 60_000,
       });
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
     });
@@ -453,6 +505,7 @@ describe('Evaluation Model Resolver', () => {
         modelId: 'embed-1111-2222-3333-444455556666',
         model: mockEmbedModel,
         dimensions: 1536,
+        timeoutMs: 30_000,
       });
     });
 

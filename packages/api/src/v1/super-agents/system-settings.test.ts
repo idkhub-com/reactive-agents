@@ -32,6 +32,12 @@ describe('System Settings API', () => {
     judge_model_id: 'model-4444-5555-6666-777788889999',
     skill_arbiter_model_id: null,
     skill_arbiter_timeout_ms: 15_000,
+    intent_compaction_model_id: null,
+    intent_compaction_timeout_ms: 15_000,
+    system_prompt_reflection_timeout_ms: 120_000,
+    evaluation_generation_timeout_ms: 120_000,
+    embedding_timeout_ms: 30_000,
+    judge_timeout_ms: 60_000,
     developer_mode: false,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -181,6 +187,65 @@ describe('System Settings API', () => {
       for (const skill_arbiter_timeout_ms of [0, 500, 600_001, 15_000.5]) {
         const res = await client.index.$patch({
           json: { skill_arbiter_timeout_ms },
+        });
+
+        expect(res.status).toBe(400);
+      }
+      expect(
+        mockUserDataStorageConnector.updateSystemSettings,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should bound every internal timeout the same way', async () => {
+      // They share bounds because they bound the same thing: one call to a
+      // model. A new one added without bounds would be caught here.
+      for (const setting of [
+        'system_prompt_reflection_timeout_ms',
+        'evaluation_generation_timeout_ms',
+        'embedding_timeout_ms',
+        'judge_timeout_ms',
+        'skill_arbiter_timeout_ms',
+        'intent_compaction_timeout_ms',
+      ] as const) {
+        for (const value of [0, 500, 600_001, 15_000.5]) {
+          const res = await client.index.$patch({
+            json: { [setting]: value },
+          });
+          expect(res.status).toBe(400);
+        }
+
+        mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
+          ...mockSettings,
+          [setting]: 90_000,
+        });
+        const ok = await client.index.$patch({ json: { [setting]: 90_000 } });
+        expect(ok.status).toBe(200);
+      }
+    });
+
+    it('should accept an intent compaction timeout within bounds', async () => {
+      mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
+        ...mockSettings,
+        intent_compaction_timeout_ms: 120_000,
+      });
+
+      const res = await client.index.$patch({
+        json: { intent_compaction_timeout_ms: 120_000 },
+      });
+
+      expect(res.status).toBe(200);
+      expect(
+        mockUserDataStorageConnector.updateSystemSettings,
+      ).toHaveBeenCalledWith(expect.anything(), {
+        intent_compaction_timeout_ms: 120_000,
+      });
+    });
+
+    it('should return 400 for an intent compaction timeout out of bounds', async () => {
+      // Below a second, above ten minutes, and not a whole millisecond.
+      for (const intent_compaction_timeout_ms of [0, 500, 600_001, 15_000.5]) {
+        const res = await client.index.$patch({
+          json: { intent_compaction_timeout_ms },
         });
 
         expect(res.status).toBe(400);

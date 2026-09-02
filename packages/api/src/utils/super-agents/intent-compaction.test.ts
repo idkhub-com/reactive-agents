@@ -7,6 +7,7 @@ import {
 } from '@api/utils/super-agents/intent-compaction';
 import { AIProvider } from '@shared/types/constants';
 import { SYSTEM_PROMPT_BUDGET } from '@shared/utils/request-intent';
+import OpenAI from 'openai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -43,6 +44,7 @@ describe('compactSystemPrompt', () => {
       model: 'reflect-model',
       provider: AIProvider.OPENAI,
       apiKey: 'key',
+      timeoutMs: 90_000,
     } as never);
     mockCreate.mockResolvedValue({
       choices: [{ message: { content: 'A coding CLI for the blog.' } }],
@@ -61,6 +63,22 @@ describe('compactSystemPrompt', () => {
     expect(mockCreate.mock.calls[0][0].temperature).toBe(0);
     expect(JSON.stringify(mockCreate.mock.calls[0])).toContain(
       'You are a coding CLI.',
+    );
+  });
+
+  it('waits as long as the configured compaction timeout allows', async () => {
+    await compactSystemPrompt(createMockContext(), connector, longPrompt);
+
+    // The prompts that need compacting are long, so the wait is a setting
+    // rather than a constant -- a slow model would otherwise never finish.
+    // It arrives with the model, from `intent_compaction_timeout_ms`.
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 90_000,
+    });
+    expect(vi.mocked(resolveSystemSettingsModel)).toHaveBeenCalledWith(
+      expect.anything(),
+      'intent_compaction',
+      connector,
     );
   });
 
