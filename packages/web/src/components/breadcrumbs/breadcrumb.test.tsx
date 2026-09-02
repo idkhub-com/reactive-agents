@@ -1,7 +1,7 @@
 import type { Agent } from '@shared/types/data';
 import type { Skill } from '@shared/types/data/skill';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { BreadcrumbComponent } from '@web/components/breadcrumb/breadcrumb';
 import { AgentsProvider } from '@web/providers/agents';
 import { NavigationProvider } from '@web/providers/navigation';
@@ -344,17 +344,9 @@ const mockLocalStorage: Storage = {
   length: 0,
 };
 
-// Mock window with proper typing
-const mockWindow = {
-  ...window,
-  localStorage: mockLocalStorage,
-};
-
-Object.defineProperty(global, 'window', {
-  value: mockWindow,
-  writable: true,
-});
-
+// Only localStorage is mocked: replacing `window` wholesale with a spread of
+// itself drops every prototype method, `getComputedStyle` among them, which
+// Radix needs to place a popover.
 Object.defineProperty(window, 'localStorage', {
   value: mockLocalStorage,
   writable: true,
@@ -559,6 +551,35 @@ describe('BreadcrumbComponent', () => {
       // Avatar should have SVG data (using encodeURIComponent now)
       const src = skillAvatar?.getAttribute('src');
       expect(src).toContain('data:image/svg+xml');
+    });
+  });
+  describe('Dropdown keyboard access', () => {
+    it('opens the picker on ArrowDown, where a click navigates', async () => {
+      setMockBreadcrumbs([{ label: 'Agent', path: '', isAgentDropdown: true }]);
+      setMockSelectedAgent(mockAgents[0]);
+
+      await act(() => {
+        renderWithProviders(<BreadcrumbComponent />);
+      });
+
+      const trigger = screen.getByRole('button', { name: /Test Agent 1/ });
+
+      // A click goes to the agent rather than opening the picker
+      await act(() => {
+        fireEvent.click(trigger);
+      });
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: `/agents/${encodeURIComponent('Test Agent 1')}`,
+      });
+      expect(screen.queryByPlaceholderText('Search agents...')).toBeNull();
+
+      // ArrowDown stands in for the right click a keyboard cannot make
+      await act(() => {
+        fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+      });
+      expect(
+        screen.getByPlaceholderText('Search agents...'),
+      ).toBeInTheDocument();
     });
   });
 });

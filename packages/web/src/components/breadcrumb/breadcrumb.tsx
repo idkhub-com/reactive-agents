@@ -83,6 +83,34 @@ const createAgentAvatar = (agentName: string) => {
 };
 
 // ============================================================================
+// Dropdown Keyboard Handling
+// ============================================================================
+
+/**
+ * The keyboard half of a breadcrumb dropdown. The button itself navigates, and
+ * the picker opens on a right click, which a keyboard cannot make: ArrowDown
+ * opens it instead, the combobox convention. Closing it puts focus back on the
+ * button, which Radix does on its own only for a `PopoverTrigger`.
+ */
+function useDropdownKeyboard(setComboboxOpen: (open: boolean) => void) {
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setComboboxOpen(true);
+    }
+  };
+
+  const handleCloseAutoFocus = (event: Event) => {
+    event.preventDefault();
+    triggerRef.current?.focus();
+  };
+
+  return { triggerRef, handleKeyDown, handleCloseAutoFocus };
+}
+
+// ============================================================================
 // Agent Breadcrumb Components
 // ============================================================================
 
@@ -145,6 +173,8 @@ function AgentCombobox<T extends { id: string; name: string }>({
   onCreateClick: () => void;
 }): ReactElement {
   const modifierKey = useModifierKey();
+  const { triggerRef, handleKeyDown, handleCloseAutoFocus } =
+    useDropdownKeyboard(setComboboxOpen);
 
   return (
     <BreadcrumbItem>
@@ -163,6 +193,10 @@ function AgentCombobox<T extends { id: string; name: string }>({
               event.preventDefault();
               setComboboxOpen(true);
             }}
+            onKeyDown={handleKeyDown}
+            ref={triggerRef}
+            aria-haspopup="dialog"
+            aria-expanded={comboboxOpen}
           >
             <img
               src={agentAvatars.get(activeAgent.name) || ''}
@@ -179,6 +213,7 @@ function AgentCombobox<T extends { id: string; name: string }>({
           align="start"
           side="bottom"
           sideOffset={4}
+          onCloseAutoFocus={handleCloseAutoFocus}
         >
           <Command>
             <CommandInput placeholder="Search agents..." className="h-9" />
@@ -333,6 +368,9 @@ function SkillCombobox<T extends { id: string; name: string }>({
   onSkillSelect: (skill: T) => void;
   onCreateClick: () => void;
 }): ReactElement {
+  const { triggerRef, handleKeyDown, handleCloseAutoFocus } =
+    useDropdownKeyboard(setComboboxOpen);
+
   return (
     <BreadcrumbItem>
       <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
@@ -350,6 +388,10 @@ function SkillCombobox<T extends { id: string; name: string }>({
               event.preventDefault();
               setComboboxOpen(true);
             }}
+            onKeyDown={handleKeyDown}
+            ref={triggerRef}
+            aria-haspopup="dialog"
+            aria-expanded={comboboxOpen}
           >
             <img
               src={skillAvatars.get(activeSkill.name) || ''}
@@ -366,6 +408,7 @@ function SkillCombobox<T extends { id: string; name: string }>({
           align="start"
           side="bottom"
           sideOffset={4}
+          onCloseAutoFocus={handleCloseAutoFocus}
         >
           <Command>
             <CommandInput placeholder="Search skills..." className="h-9" />
@@ -493,6 +536,8 @@ function ClusterDropdownBreadcrumb(): ReactElement {
   const { selectedAgent } = useAgents();
   const { selectedSkill } = useSkills();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
+  const { triggerRef, handleKeyDown, handleCloseAutoFocus } =
+    useDropdownKeyboard(setComboboxOpen);
 
   const clusterAvatars = useMemo(() => {
     const avatars = new Map<string, string>();
@@ -575,6 +620,10 @@ function ClusterDropdownBreadcrumb(): ReactElement {
               event.preventDefault();
               setComboboxOpen(true);
             }}
+            onKeyDown={handleKeyDown}
+            ref={triggerRef}
+            aria-haspopup="dialog"
+            aria-expanded={comboboxOpen}
           >
             <img
               src={clusterAvatars.get(activeCluster.name) || ''}
@@ -591,6 +640,7 @@ function ClusterDropdownBreadcrumb(): ReactElement {
           align="start"
           side="bottom"
           sideOffset={4}
+          onCloseAutoFocus={handleCloseAutoFocus}
         >
           <Command>
             <CommandInput placeholder="Search partitions..." className="h-9" />
@@ -634,6 +684,8 @@ function ArmDropdownBreadcrumb(): ReactElement {
   const { selectedSkill } = useSkills();
   const { selectedCluster } = useSkillOptimizationClusters();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
+  const { triggerRef, handleKeyDown, handleCloseAutoFocus } =
+    useDropdownKeyboard(setComboboxOpen);
 
   const armAvatars = useMemo(() => {
     const avatars = new Map<string, string>();
@@ -714,6 +766,10 @@ function ArmDropdownBreadcrumb(): ReactElement {
               event.preventDefault();
               setComboboxOpen(true);
             }}
+            onKeyDown={handleKeyDown}
+            ref={triggerRef}
+            aria-haspopup="dialog"
+            aria-expanded={comboboxOpen}
           >
             <img
               src={armAvatars.get(activeArm.name) || ''}
@@ -730,6 +786,7 @@ function ArmDropdownBreadcrumb(): ReactElement {
           align="start"
           side="bottom"
           sideOffset={4}
+          onCloseAutoFocus={handleCloseAutoFocus}
         >
           <Command>
             <CommandInput
