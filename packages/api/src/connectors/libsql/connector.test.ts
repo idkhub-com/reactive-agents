@@ -817,6 +817,27 @@ describe('logs', () => {
     expect(ranged.map((l) => l.start_time)).toEqual([2000]);
   });
 
+  it('finds the logs on either side of one by time', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+
+    await logs.createLog(c, logParams(agent.id, skill.id, 1000));
+    await logs.createLog(c, logParams(agent.id, skill.id, 2000));
+    await logs.createLog(c, logParams(agent.id, skill.id, 3000));
+
+    // How the dashboard steps between logs: the nearest log after one is
+    // the first oldest-first, the nearest before it the first newest-first.
+    const [newer] = await logs.getLogs(c, {
+      after: 2001,
+      order: 'asc',
+      limit: 1,
+    });
+    const [older] = await logs.getLogs(c, { before: 1999, limit: 1 });
+    expect(newer.start_time).toBe(3000);
+    expect(older.start_time).toBe(1000);
+  });
+
   it('filters on embeddings being present', async () => {
     const { c } = await freshDatabase();
     const agent = await seedAgent(c);

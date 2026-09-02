@@ -1,4 +1,7 @@
-import { supabaseUserDataStorageConnector } from '@api/connectors/supabase';
+import {
+  supabaseLogsStorageConnector,
+  supabaseUserDataStorageConnector,
+} from '@api/connectors/supabase';
 import { createMockContext } from '@api/test-utils/mock-context';
 import type {
   ToolCreateParams,
@@ -548,5 +551,45 @@ describe('supabaseUserDataStorageConnector - skill creation lease', () => {
       holder: null,
       lease_until: null,
     });
+  });
+});
+
+describe('supabaseLogsStorageConnector - getLogs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const sentUrl = (): URL => {
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    return new URL(String(url));
+  };
+
+  it('orders newest first by default', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as Response);
+
+    await supabaseLogsStorageConnector.getLogs(mockContext, {});
+
+    expect(sentUrl().searchParams.get('order')).toBe('start_time.desc');
+  });
+
+  it('orders oldest first when asked, so the nearest later log is first', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as Response);
+
+    await supabaseLogsStorageConnector.getLogs(mockContext, {
+      after: 2001,
+      order: 'asc',
+      limit: 1,
+    });
+
+    const params = sentUrl().searchParams;
+    expect(params.get('order')).toBe('start_time.asc');
+    expect(params.get('start_time')).toBe('gte.2001');
+    expect(params.get('limit')).toBe('1');
   });
 });
