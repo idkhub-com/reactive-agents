@@ -25,6 +25,7 @@ const SYSTEM_SETTINGS_MODEL_SLOTS = [
   ['evaluation_generation_model_id', 'Evaluation Generation'],
   ['embedding_model_id', 'Embedding'],
   ['judge_model_id', 'Judge'],
+  ['skill_arbiter_model_id', 'Skill Arbiter'],
 ] as const;
 
 /** "A", "A and B", "A, B and C". */

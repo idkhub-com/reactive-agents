@@ -60,10 +60,29 @@ const initialSchema: LibsqlMigration = {
       auto_create_skills INTEGER NOT NULL DEFAULT 1 CHECK (auto_create_skills IN (0, 1)),
       skill_match_threshold REAL NOT NULL DEFAULT 0.8,
       max_auto_created_skills INTEGER NOT NULL DEFAULT 10,
+      skill_arbiter_model_id TEXT REFERENCES models(id) ON DELETE SET NULL,
+      skill_arbiter_timeout_ms INTEGER CHECK (skill_arbiter_timeout_ms IS NULL OR skill_arbiter_timeout_ms > 0),
       created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
       updated_at TEXT NOT NULL DEFAULT (${NOW_ISO})
     )`,
     updatedAtTrigger('agents'),
+    // Postgres enforces this through `validate_agent_model_types`.
+    `CREATE TRIGGER IF NOT EXISTS agents_validate_model_types_insert
+    BEFORE INSERT ON agents
+    FOR EACH ROW
+    WHEN NEW.skill_arbiter_model_id IS NOT NULL
+    BEGIN
+      SELECT CASE WHEN (SELECT model_type FROM models WHERE id = NEW.skill_arbiter_model_id) IS NOT 'text'
+        THEN RAISE(ABORT, 'skill_arbiter_model_id must reference a text model') END;
+    END`,
+    `CREATE TRIGGER IF NOT EXISTS agents_validate_model_types_update
+    BEFORE UPDATE ON agents
+    FOR EACH ROW
+    WHEN NEW.skill_arbiter_model_id IS NOT NULL
+    BEGIN
+      SELECT CASE WHEN (SELECT model_type FROM models WHERE id = NEW.skill_arbiter_model_id) IS NOT 'text'
+        THEN RAISE(ABORT, 'skill_arbiter_model_id must reference a text model') END;
+    END`,
 
     // --------------------------------------------------------- ai_providers
     `CREATE TABLE IF NOT EXISTS ai_providers (
@@ -442,6 +461,8 @@ const initialSchema: LibsqlMigration = {
       evaluation_generation_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
       embedding_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
       judge_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      skill_arbiter_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
+      skill_arbiter_timeout_ms INTEGER NOT NULL DEFAULT 15000 CHECK (skill_arbiter_timeout_ms > 0),
       developer_mode INTEGER NOT NULL DEFAULT 0 CHECK (developer_mode IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
       updated_at TEXT NOT NULL DEFAULT (${NOW_ISO})
@@ -466,6 +487,9 @@ const initialSchema: LibsqlMigration = {
       SELECT CASE WHEN NEW.judge_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.judge_model_id) IS NOT 'text'
         THEN RAISE(ABORT, 'judge_model_id must reference a text model') END;
+      SELECT CASE WHEN NEW.skill_arbiter_model_id IS NOT NULL
+        AND (SELECT model_type FROM models WHERE id = NEW.skill_arbiter_model_id) IS NOT 'text'
+        THEN RAISE(ABORT, 'skill_arbiter_model_id must reference a text model') END;
       SELECT CASE WHEN NEW.embedding_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.embedding_model_id) IS NOT 'embed'
         THEN RAISE(ABORT, 'embedding_model_id must reference an embed model') END;
@@ -483,6 +507,9 @@ const initialSchema: LibsqlMigration = {
       SELECT CASE WHEN NEW.judge_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.judge_model_id) IS NOT 'text'
         THEN RAISE(ABORT, 'judge_model_id must reference a text model') END;
+      SELECT CASE WHEN NEW.skill_arbiter_model_id IS NOT NULL
+        AND (SELECT model_type FROM models WHERE id = NEW.skill_arbiter_model_id) IS NOT 'text'
+        THEN RAISE(ABORT, 'skill_arbiter_model_id must reference a text model') END;
       SELECT CASE WHEN NEW.embedding_model_id IS NOT NULL
         AND (SELECT model_type FROM models WHERE id = NEW.embedding_model_id) IS NOT 'embed'
         THEN RAISE(ABORT, 'embedding_model_id must reference an embed model') END;
@@ -513,7 +540,10 @@ const initialSchema: LibsqlMigration = {
         WHERE system_prompt_reflection_model_id = NEW.id
            OR evaluation_generation_model_id = NEW.id
            OR judge_model_id = NEW.id
+           OR skill_arbiter_model_id = NEW.id
            OR embedding_model_id = NEW.id
+      ) OR EXISTS (
+        SELECT 1 FROM agents WHERE skill_arbiter_model_id = NEW.id
       ) OR EXISTS (
         SELECT 1 FROM skill_optimization_evaluations WHERE model_id = NEW.id
       ) OR EXISTS (

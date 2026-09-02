@@ -199,6 +199,11 @@ an agent without skills, no arbiter asked -- becomes a new skill through
 (`agent_models`), and seeded with the caller's system prompt
 (`skills.seed_system_prompt`), which `handleGenerateArms` uses verbatim so the
 skill starts as a pass-through. `max_auto_created_skills` caps this per agent.
+The arbiter's model and per-attempt timeout are system settings
+(`skill_arbiter_model_id`, the reflection model when unset, and
+`skill_arbiter_timeout_ms`), which an agent overrides with columns of the same
+names; the arbiter is asked under the skill-creation lease, so the lease
+stretches by twice the timeout to cover it.
 Creating happens under the agent's `skill_creation_leases` row
 (`withSkillCreationLease`), after a second look at the skills, so concurrent
 first requests produce one skill rather than one each. Intent embeddings are

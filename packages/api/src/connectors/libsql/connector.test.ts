@@ -546,14 +546,24 @@ describe('agent models and routing settings', () => {
     expect(agent.auto_create_skills).toBe(false);
     expect(agent.skill_match_threshold).toBe(0.65);
     expect(agent.max_auto_created_skills).toBe(3);
+    // Unset overrides come back as null, never undefined.
+    expect(agent.skill_arbiter_model_id).toBeNull();
+    expect(agent.skill_arbiter_timeout_ms).toBeNull();
 
     const updated = await store.updateAgent(c, agent.id, {
       auto_create_skills: true,
       max_auto_created_skills: 5,
+      skill_arbiter_timeout_ms: 30_000,
     });
     expect(updated.auto_create_skills).toBe(true);
     expect(updated.max_auto_created_skills).toBe(5);
+    expect(updated.skill_arbiter_timeout_ms).toBe(30_000);
     expect(updated.description).toBe(agent.description);
+
+    const cleared = await store.updateAgent(c, agent.id, {
+      skill_arbiter_timeout_ms: null,
+    });
+    expect(cleared.skill_arbiter_timeout_ms).toBeNull();
   });
 
   it('keeps the seed prompt and the auto-created flag on a skill', async () => {

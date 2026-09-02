@@ -1,4 +1,15 @@
 import { z } from 'zod';
+import {
+  MAX_SKILL_ARBITER_TIMEOUT_MS,
+  MIN_SKILL_ARBITER_TIMEOUT_MS,
+} from './system-settings';
+
+/** The agent's own arbiter timeout, in milliseconds; null means the system setting. */
+const SkillArbiterTimeoutOverride = z
+  .int()
+  .min(MIN_SKILL_ARBITER_TIMEOUT_MS)
+  .max(MAX_SKILL_ARBITER_TIMEOUT_MS)
+  .nullable();
 
 export const Agent = z.object({
   id: z.uuid(),
@@ -17,6 +28,14 @@ export const Agent = z.object({
   /** How many skills the gateway may create for the agent. Past it, requests
    * go to the closest skill however far it is. */
   max_auto_created_skills: z.int().min(0),
+
+  /** The model the skill arbiter asks for this agent's requests; null means
+   * the system setting. */
+  skill_arbiter_model_id: z.uuid().nullable(),
+
+  /** How long one arbiter attempt may take for this agent; null means the
+   * system setting. */
+  skill_arbiter_timeout_ms: SkillArbiterTimeoutOverride,
 
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -61,6 +80,8 @@ export const AgentCreateParams = z
     auto_create_skills: z.boolean().default(true),
     skill_match_threshold: z.number().min(0).max(1).default(0.8),
     max_auto_created_skills: z.int().min(0).default(10),
+    skill_arbiter_model_id: z.uuid().nullable().optional(),
+    skill_arbiter_timeout_ms: SkillArbiterTimeoutOverride.optional(),
   })
   .strict();
 
@@ -73,6 +94,8 @@ export const AgentUpdateParams = z
     auto_create_skills: z.boolean().optional(),
     skill_match_threshold: z.number().min(0).max(1).optional(),
     max_auto_created_skills: z.int().min(0).optional(),
+    skill_arbiter_model_id: z.uuid().nullable().optional(),
+    skill_arbiter_timeout_ms: SkillArbiterTimeoutOverride.optional(),
   })
   .strict()
   .refine(
@@ -83,6 +106,8 @@ export const AgentUpdateParams = z
         'auto_create_skills',
         'skill_match_threshold',
         'max_auto_created_skills',
+        'skill_arbiter_model_id',
+        'skill_arbiter_timeout_ms',
       ];
       return updateFields.some(
         (field) => data[field as keyof typeof data] !== undefined,

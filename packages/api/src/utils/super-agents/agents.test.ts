@@ -144,6 +144,8 @@ describe('getAgent', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);
@@ -173,6 +175,8 @@ describe('getAgent', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
         {
           id: '223e4567-e89b-12d3-a456-426614174000',
@@ -184,6 +188,8 @@ describe('getAgent', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
       ];
 
@@ -212,6 +218,8 @@ describe('getAgent', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([]);
@@ -265,6 +273,8 @@ describe('getAgent', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
@@ -309,6 +319,8 @@ describe('getAgent', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([agent]);
@@ -335,6 +347,8 @@ describe('getAgent', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       };
 
       vi.mocked(mockConnector.getAgents).mockResolvedValue([existingAgent]);

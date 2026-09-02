@@ -38,14 +38,19 @@ export interface ModelSelectorProps {
   recommendation?: string;
   /** Currently selected model ID */
   value: string | null;
-  /** Callback when model selection changes */
-  onChange: (value: string) => void;
+  /** Callback when model selection changes; null clears an optional field */
+  onChange: (value: string | null) => void;
   /** Available model options to choose from */
   modelOptions: ModelOption[];
   /** Whether the component is in loading state */
   isLoading: boolean;
   /** Whether this field is required */
   required?: boolean;
+  /**
+   * For an optional field: what leaving it empty means. Offered as a choice
+   * that clears the field, and shown in place of a selection when it is empty.
+   */
+  emptyOption?: string;
 }
 
 export function ModelSelector({
@@ -57,6 +62,7 @@ export function ModelSelector({
   modelOptions,
   isLoading,
   required = true,
+  emptyOption,
 }: ModelSelectorProps): ReactElement {
   const [open, setOpen] = useState(false);
 
@@ -122,7 +128,9 @@ export function ModelSelector({
                     </Badge>
                   </div>
                 ) : (
-                  <span className="text-muted-foreground">Select a model</span>
+                  <span className="text-muted-foreground">
+                    {emptyOption ?? 'Select a model'}
+                  </span>
                 )}
                 <ChevronsUpDownIcon
                   className="ml-2 h-4 w-4 shrink-0 opacity-50"
@@ -143,6 +151,26 @@ export function ModelSelector({
                 >
                   <CommandEmpty>No model found.</CommandEmpty>
                   <CommandGroup>
+                    {emptyOption && (
+                      <CommandItem
+                        value={emptyOption}
+                        onSelect={() => {
+                          onChange(null);
+                          setOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={value === null}
+                      >
+                        <CheckIcon
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            value === null ? 'opacity-100' : 'opacity-0',
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span>{emptyOption}</span>
+                      </CommandItem>
+                    )}
                     {modelOptions.map((model) => (
                       <CommandItem
                         key={model.id}

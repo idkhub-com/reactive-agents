@@ -512,6 +512,8 @@ describe('Agent Data Transforms and Validation', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       };
 
       const result = Agent.parse(validAgent);
@@ -527,6 +529,8 @@ describe('Agent Data Transforms and Validation', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
         created_at: '2023-01-01T00:00:00.000+00:00',
         updated_at: '2023-01-02T12:30:45.123-05:00',
       };
@@ -582,6 +586,8 @@ describe('Agent Data Transforms and Validation', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -611,6 +617,8 @@ describe('Agent Data Transforms and Validation', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
       };
@@ -630,6 +638,18 @@ describe('automatic skill settings', () => {
       skill_match_threshold: 0.8,
       max_auto_created_skills: 10,
     });
+  });
+
+  it('leave the arbiter to the system settings unless overridden', () => {
+    const created = AgentCreateParams.parse(minimal);
+    expect(created.skill_arbiter_model_id).toBeUndefined();
+    expect(created.skill_arbiter_timeout_ms).toBeUndefined();
+    expect(() =>
+      AgentCreateParams.parse({ ...minimal, skill_arbiter_timeout_ms: 500 }),
+    ).toThrow();
+    expect(AgentUpdateParams.parse({ skill_arbiter_timeout_ms: null })).toEqual(
+      { skill_arbiter_timeout_ms: null },
+    );
   });
 
   it('keep the threshold between 0 and 1 and the cap a whole, non-negative number', () => {

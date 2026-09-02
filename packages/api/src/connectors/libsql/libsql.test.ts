@@ -306,6 +306,34 @@ describe('libsql schema semantics', () => {
         args: ['model-embed'],
       }),
     ).rejects.toThrow(/judge_model_id must reference a text model/);
+    await expect(
+      client.execute({
+        sql: 'UPDATE system_settings SET skill_arbiter_model_id = ?',
+        args: ['model-embed'],
+      }),
+    ).rejects.toThrow(/skill_arbiter_model_id must reference a text model/);
+
+    // An agent's own arbiter override is held to the same rule.
+    await seedAgentAndSkill(client);
+    await expect(
+      client.execute({
+        sql: 'UPDATE agents SET skill_arbiter_model_id = ?',
+        args: ['model-embed'],
+      }),
+    ).rejects.toThrow(/skill_arbiter_model_id must reference a text model/);
+  });
+
+  it('gives the skill arbiter fifteen seconds by default, and keeps it positive', async () => {
+    const { client } = await freshDatabase();
+
+    const seeded = await client.execute(
+      'SELECT skill_arbiter_timeout_ms FROM system_settings',
+    );
+    expect(Number(seeded.rows[0].skill_arbiter_timeout_ms)).toBe(15_000);
+
+    await expect(
+      client.execute('UPDATE system_settings SET skill_arbiter_timeout_ms = 0'),
+    ).rejects.toThrow();
   });
 
   it('requires embedding_dimensions exactly for embed models', async () => {
