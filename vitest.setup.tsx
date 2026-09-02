@@ -169,6 +169,13 @@ global.ResizeObserver = class ResizeObserver {
   }
 };
 
+// jsdom has no scrollIntoView, which cmdk calls as its list highlights an item
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = (): void => {
+    // Mock implementation
+  };
+}
+
 // Soften noisy React warnings that don't affect assertions in our suite.
 // These warnings can flood output and cause OOM in CI when many async state
 // updates happen during provider effects.
