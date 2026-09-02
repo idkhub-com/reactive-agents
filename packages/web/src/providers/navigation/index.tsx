@@ -282,19 +282,6 @@ export function NavigationProvider({
         });
       }
 
-      // Add Skills breadcrumb if we're on a skill route
-      if (
-        newState.selectedAgentName &&
-        (newState.selectedSkillName ||
-          currentView === 'agent-view' ||
-          currentView === 'create-skill')
-      ) {
-        breadcrumbs.push({
-          label: 'Skills',
-          path: `/agents/${encodeURIComponent(newState.selectedAgentName)}`,
-        });
-      }
-
       if (newState.selectedAgentName && newState.selectedSkillName) {
         breadcrumbs.push({
           label: newState.selectedSkillName,
@@ -320,15 +307,6 @@ export function NavigationProvider({
             label: 'Datasets',
             path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/datasets`,
           });
-        } else if (
-          currentView === 'configurations' ||
-          currentView === 'create-configuration' ||
-          currentView === 'edit-configuration'
-        ) {
-          breadcrumbs.push({
-            label: 'Configurations',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/configurations`,
-          });
         } else if (currentView === 'models') {
           breadcrumbs.push({
             label: 'Models',
@@ -339,16 +317,10 @@ export function NavigationProvider({
             label: 'Events',
             path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/events`,
           });
-        } else if (currentView === 'clusters') {
-          breadcrumbs.push({
-            label: 'Partitions',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/clusters`,
-          });
-        } else if (currentView === 'cluster-arms') {
-          breadcrumbs.push({
-            label: 'Partitions',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/clusters`,
-          });
+        } else if (
+          currentView === 'cluster-arms' ||
+          currentView === 'arm-detail'
+        ) {
           if (newState.selectedClusterName) {
             breadcrumbs.push({
               label: newState.selectedClusterName,
@@ -356,26 +328,6 @@ export function NavigationProvider({
               isClusterDropdown: true,
             });
           }
-          breadcrumbs.push({
-            label: 'Configurations',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/clusters/${encodeURIComponent(newState.selectedClusterName!)}/configurations`,
-          });
-        } else if (currentView === 'arm-detail') {
-          breadcrumbs.push({
-            label: 'Partitions',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/clusters`,
-          });
-          if (newState.selectedClusterName) {
-            breadcrumbs.push({
-              label: newState.selectedClusterName,
-              path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/clusters/${encodeURIComponent(newState.selectedClusterName)}/configurations`,
-              isClusterDropdown: true,
-            });
-          }
-          breadcrumbs.push({
-            label: 'Configurations',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/clusters/${encodeURIComponent(newState.selectedClusterName!)}/configurations`,
-          });
           if (newState.selectedArmName) {
             breadcrumbs.push({
               label: newState.selectedArmName,

@@ -46,7 +46,7 @@ import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
 import { useAgents } from '@web/providers/agents';
 import { useNavigation } from '@web/providers/navigation';
 import { useSkills } from '@web/providers/skills';
-import { createSkillAvatar } from '@web/utils/skill-avatar';
+import { createSkillAvatar } from '@web/utils/avatars';
 import {
   BarChart3Icon,
   Clock,

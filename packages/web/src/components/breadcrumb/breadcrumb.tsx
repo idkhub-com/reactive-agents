@@ -22,8 +22,8 @@ import {
 } from '@web/components/ui/command';
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from '@web/components/ui/popover';
 import { useModifierKey } from '@web/hooks/use-keyboard-shortcuts';
 import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
@@ -33,8 +33,20 @@ import { useNavigation } from '@web/providers/navigation';
 import { useSkillOptimizationArms } from '@web/providers/skill-optimization-arms';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkills } from '@web/providers/skills';
-import { createSkillAvatar } from '@web/utils/skill-avatar';
-import { Bot, ChevronRight, Plus, PlusCircleIcon } from 'lucide-react';
+import {
+  createArmAvatar,
+  createClusterAvatar,
+  createSkillAvatar,
+} from '@web/utils/avatars';
+import { cn } from '@web/utils/ui/utils';
+import {
+  Bot,
+  BoxIcon,
+  ChevronRight,
+  LayersIcon,
+  Plus,
+  PlusCircleIcon,
+} from 'lucide-react';
 import React, { type ReactElement, useMemo } from 'react';
 
 // ============================================================================
@@ -137,11 +149,20 @@ function AgentCombobox<T extends { id: string; name: string }>({
   return (
     <BreadcrumbItem>
       <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className={cn(
+              'h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              comboboxOpen &&
+                'bg-sidebar-accent text-sidebar-accent-foreground',
+            )}
+            onClick={() => onAgentSelect(activeAgent)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setComboboxOpen(true);
+            }}
           >
             <img
               src={agentAvatars.get(activeAgent.name) || ''}
@@ -152,7 +173,7 @@ function AgentCombobox<T extends { id: string; name: string }>({
             />
             <span className="truncate font-medium">{activeAgent.name}</span>
           </Button>
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
           className="w-[300px] p-0"
           align="start"
@@ -315,11 +336,20 @@ function SkillCombobox<T extends { id: string; name: string }>({
   return (
     <BreadcrumbItem>
       <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className={cn(
+              'h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              comboboxOpen &&
+                'bg-sidebar-accent text-sidebar-accent-foreground',
+            )}
+            onClick={() => onSkillSelect(activeSkill)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setComboboxOpen(true);
+            }}
           >
             <img
               src={skillAvatars.get(activeSkill.name) || ''}
@@ -330,7 +360,7 @@ function SkillCombobox<T extends { id: string; name: string }>({
             />
             <span className="truncate font-medium">{activeSkill.name}</span>
           </Button>
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
           className="w-[300px] p-0"
           align="start"
@@ -464,6 +494,25 @@ function ClusterDropdownBreadcrumb(): ReactElement {
   const { selectedSkill } = useSkills();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
+  const clusterAvatars = useMemo(() => {
+    const avatars = new Map<string, string>();
+    if (!selectedSkill) {
+      return avatars;
+    }
+    for (const cluster of [
+      ...(selectedCluster ? [selectedCluster] : []),
+      ...clusters,
+    ]) {
+      if (!avatars.has(cluster.name)) {
+        avatars.set(
+          cluster.name,
+          createClusterAvatar(selectedSkill.name, cluster.name),
+        );
+      }
+    }
+    return avatars;
+  }, [clusters, selectedCluster, selectedSkill]);
+
   const handleClusterSelect = (cluster: (typeof clusters)[0]) => {
     if (selectedAgent && selectedSkill) {
       navigateToClusterArms(
@@ -484,7 +533,7 @@ function ClusterDropdownBreadcrumb(): ReactElement {
           disabled
           className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
         >
-          <Bot className="size-5" />
+          <LayersIcon className="size-5" />
           <span className="truncate font-medium">No partitions</span>
         </Button>
       </BreadcrumbItem>
@@ -502,7 +551,7 @@ function ClusterDropdownBreadcrumb(): ReactElement {
           disabled
           className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
         >
-          <Bot className="size-5" />
+          <LayersIcon className="size-5" />
           <span className="truncate font-medium">Loading...</span>
         </Button>
       </BreadcrumbItem>
@@ -512,16 +561,31 @@ function ClusterDropdownBreadcrumb(): ReactElement {
   return (
     <BreadcrumbItem>
       <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className={cn(
+              'h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              comboboxOpen &&
+                'bg-sidebar-accent text-sidebar-accent-foreground',
+            )}
+            onClick={() => handleClusterSelect(activeCluster)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setComboboxOpen(true);
+            }}
           >
-            <Bot className="size-5" />
+            <img
+              src={clusterAvatars.get(activeCluster.name) || ''}
+              alt={`Partition ${activeCluster.name} icon`}
+              width={20}
+              height={20}
+              className="size-5 rounded-sm shrink-0"
+            />
             <span className="truncate font-medium">{activeCluster.name}</span>
           </Button>
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
           className="w-[300px] p-0"
           align="start"
@@ -538,7 +602,15 @@ function ClusterDropdownBreadcrumb(): ReactElement {
                     key={cluster.id}
                     value={cluster.name}
                     onSelect={() => handleClusterSelect(cluster)}
+                    className="gap-2"
                   >
+                    <img
+                      src={clusterAvatars.get(cluster.name) || ''}
+                      alt={`Partition ${cluster.name} icon`}
+                      width={20}
+                      height={20}
+                      className="size-5 rounded-sm shrink-0"
+                    />
                     <span className="flex-1 truncate">{cluster.name}</span>
                   </CommandItem>
                 ))}
@@ -563,6 +635,22 @@ function ArmDropdownBreadcrumb(): ReactElement {
   const { selectedCluster } = useSkillOptimizationClusters();
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
+  const armAvatars = useMemo(() => {
+    const avatars = new Map<string, string>();
+    if (!selectedSkill || !selectedCluster) {
+      return avatars;
+    }
+    for (const arm of [...(selectedArm ? [selectedArm] : []), ...arms]) {
+      if (!avatars.has(arm.name)) {
+        avatars.set(
+          arm.name,
+          createArmAvatar(selectedSkill.name, selectedCluster.name, arm.name),
+        );
+      }
+    }
+    return avatars;
+  }, [arms, selectedArm, selectedSkill, selectedCluster]);
+
   const handleArmSelect = (arm: (typeof arms)[0]) => {
     if (selectedAgent && selectedSkill && selectedCluster) {
       navigateToArmDetail(
@@ -584,7 +672,7 @@ function ArmDropdownBreadcrumb(): ReactElement {
           disabled
           className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
         >
-          <Bot className="size-5" />
+          <BoxIcon className="size-5" />
           <span className="truncate font-medium">No configurations</span>
         </Button>
       </BreadcrumbItem>
@@ -602,7 +690,7 @@ function ArmDropdownBreadcrumb(): ReactElement {
           disabled
           className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-transparent"
         >
-          <Bot className="size-5" />
+          <BoxIcon className="size-5" />
           <span className="truncate font-medium">Loading...</span>
         </Button>
       </BreadcrumbItem>
@@ -612,16 +700,31 @@ function ArmDropdownBreadcrumb(): ReactElement {
   return (
     <BreadcrumbItem>
       <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className={cn(
+              'h-8 py-1 px-2 gap-2 justify-start bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              comboboxOpen &&
+                'bg-sidebar-accent text-sidebar-accent-foreground',
+            )}
+            onClick={() => handleArmSelect(activeArm)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setComboboxOpen(true);
+            }}
           >
-            <Bot className="size-5" />
+            <img
+              src={armAvatars.get(activeArm.name) || ''}
+              alt={`Configuration ${activeArm.name} icon`}
+              width={20}
+              height={20}
+              className="size-5 rounded-sm shrink-0"
+            />
             <span className="truncate font-medium">{activeArm.name}</span>
           </Button>
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
           className="w-[300px] p-0"
           align="start"
@@ -641,7 +744,15 @@ function ArmDropdownBreadcrumb(): ReactElement {
                     key={arm.id}
                     value={arm.name}
                     onSelect={() => handleArmSelect(arm)}
+                    className="gap-2"
                   >
+                    <img
+                      src={armAvatars.get(arm.name) || ''}
+                      alt={`Configuration ${arm.name} icon`}
+                      width={20}
+                      height={20}
+                      className="size-5 rounded-sm shrink-0"
+                    />
                     <span className="flex-1 truncate">{arm.name}</span>
                   </CommandItem>
                 ))}

@@ -53,7 +53,7 @@ import { useNavigation } from '@web/providers/navigation';
 import { useSkillEvents } from '@web/providers/skill-events';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkills } from '@web/providers/skills';
-import { createSkillAvatar } from '@web/utils/skill-avatar';
+import { createClusterAvatar, createSkillAvatar } from '@web/utils/avatars';
 import {
   AlertCircle,
   CalendarIcon,
@@ -624,7 +624,17 @@ export function SkillDashboardView(): ReactElement {
                   }
                 >
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg leading-none mb-2">
+                    <CardTitle className="text-lg leading-none mb-2 flex items-center gap-2">
+                      <img
+                        src={createClusterAvatar(
+                          selectedSkill.name,
+                          cluster.name,
+                        )}
+                        alt={`Partition ${cluster.name} icon`}
+                        width={24}
+                        height={24}
+                        className="size-6 rounded-sm shrink-0"
+                      />
                       {cluster.name}
                     </CardTitle>
                   </CardHeader>
