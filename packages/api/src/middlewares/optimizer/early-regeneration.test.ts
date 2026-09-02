@@ -94,6 +94,12 @@ const connectors = (
     userData: {
       getSkills,
       updateSkill: vi.fn().mockResolvedValue(undefined),
+      // The lock window is derived from the timeouts the lock guards; at
+      // their defaults the floor still wins, so these tests read as before.
+      getSystemSettings: vi.fn().mockResolvedValue({
+        system_prompt_reflection_timeout_ms: 120_000,
+        evaluation_generation_timeout_ms: 120_000,
+      }),
     } as unknown as UserDataStorageConnector,
     logsStore: {
       getLogs: vi.fn().mockResolvedValue(logs),

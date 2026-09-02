@@ -1,3 +1,4 @@
+import { evaluationLockWindowMs } from '@api/middlewares/optimizer/locks';
 import { generateExampleConversations } from '@api/middlewares/optimizer/system-prompt';
 import { repairSkillNaming } from '@api/optimization/utils/describe-skill';
 import {
@@ -22,6 +23,9 @@ import type {
 } from '@shared/types/data';
 import { SkillEventType } from '@shared/types/data/skill-event';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
+
+/** The shortest a regeneration lock is ever held. */
+const EVALUATION_LOCK_FLOOR_MS = 5 * 60 * 1000;
 
 export async function addSkillOptimizationEvaluationRun(
   c: AppContext,
@@ -100,13 +104,20 @@ export async function checkAndRegenerateEvaluationsEarly(
       return;
     }
 
-    // Check if regeneration lock exists and is recent (< 5 minutes old)
+    // Check if a regeneration lock exists and still covers its work. Five
+    // minutes is the floor; the window grows with the timeouts of the calls
+    // the lock guards, so raising one for a slow model does not start
+    // letting a second request in on top of the first.
     const lockTimestamp = latestSkill.evaluation_lock_acquired_at;
     if (lockTimestamp) {
       const lockAge = Date.now() - new Date(lockTimestamp).getTime();
-      const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+      const lockWindow = await evaluationLockWindowMs(
+        c,
+        userDataStorageConnector,
+        EVALUATION_LOCK_FLOOR_MS,
+      );
 
-      if (lockAge < LOCK_TIMEOUT_MS) {
+      if (lockAge < lockWindow) {
         return;
       }
     }

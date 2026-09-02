@@ -312,6 +312,12 @@ describe('libsql schema semantics', () => {
         args: ['model-embed'],
       }),
     ).rejects.toThrow(/skill_arbiter_model_id must reference a text model/);
+    await expect(
+      client.execute({
+        sql: 'UPDATE system_settings SET intent_compaction_model_id = ?',
+        args: ['model-embed'],
+      }),
+    ).rejects.toThrow(/intent_compaction_model_id must reference a text model/);
 
     // An agent's own arbiter override is held to the same rule.
     await seedAgentAndSkill(client);
@@ -333,6 +339,44 @@ describe('libsql schema semantics', () => {
 
     await expect(
       client.execute('UPDATE system_settings SET skill_arbiter_timeout_ms = 0'),
+    ).rejects.toThrow();
+  });
+
+  it('defaults every internal timeout, and keeps each positive', async () => {
+    const { client } = await freshDatabase();
+
+    // Chosen per call rather than one number for everything: the two on the
+    // request path are short, the generation calls are long.
+    const defaults = {
+      system_prompt_reflection_timeout_ms: 120_000,
+      evaluation_generation_timeout_ms: 120_000,
+      embedding_timeout_ms: 30_000,
+      judge_timeout_ms: 60_000,
+    };
+
+    const seeded = await client.execute(
+      `SELECT ${Object.keys(defaults).join(', ')} FROM system_settings`,
+    );
+    for (const [column, expected] of Object.entries(defaults)) {
+      expect(Number(seeded.rows[0][column])).toBe(expected);
+      await expect(
+        client.execute(`UPDATE system_settings SET ${column} = 0`),
+      ).rejects.toThrow();
+    }
+  });
+
+  it('gives intent compaction a minute by default, and keeps it positive', async () => {
+    const { client } = await freshDatabase();
+
+    const seeded = await client.execute(
+      'SELECT intent_compaction_timeout_ms FROM system_settings',
+    );
+    expect(Number(seeded.rows[0].intent_compaction_timeout_ms)).toBe(60_000);
+
+    await expect(
+      client.execute(
+        'UPDATE system_settings SET intent_compaction_timeout_ms = 0',
+      ),
     ).rejects.toThrow();
   });
 

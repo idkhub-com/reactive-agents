@@ -6,9 +6,6 @@ import { warn } from '@shared/console-logging';
 import { SYSTEM_PROMPT_BUDGET } from '@shared/utils/request-intent';
 import OpenAI from 'openai';
 
-/** One attempt; the client retries once, so the whole call takes at most twice this. */
-const COMPACT_TIMEOUT_MS = 15_000;
-
 /** A little under the budget, so the instruction has room to be overshot. */
 const COMPACT_TARGET_CHARS = 3500;
 
@@ -31,17 +28,19 @@ async function compactOnce(
 ): Promise<string> {
   const modelConfig = await resolveSystemSettingsModel(
     c,
-    'system_prompt_reflection',
+    'intent_compaction',
     connector,
   );
   if (!modelConfig) {
-    throw new Error('No system prompt reflection model configured');
+    throw new Error('No intent compaction model configured');
   }
 
   const client = new OpenAI({
     apiKey: '',
     baseURL: `${getApiUrl(c)}/v1`,
-    timeout: COMPACT_TIMEOUT_MS,
+    // One attempt; the client retries once, so the whole call takes at most
+    // twice this.
+    timeout: modelConfig.timeoutMs,
     maxRetries: 1,
   });
   const saConfig = {

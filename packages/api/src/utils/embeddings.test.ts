@@ -1,11 +1,78 @@
+import { createMockContext } from '@api/test-utils/mock-context';
+import type { UserDataStorageConnector } from '@api/types/connector';
 import {
+  embedText,
   extractMessagesFromRequestData,
   formatMessagesForEmbedding,
   RequestEmbeddingError,
 } from '@api/utils/embeddings';
+import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolver';
 import { FunctionName } from '@shared/types/api/request';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@api/utils/evaluation-model-resolver', () => ({
+  resolveEmbeddingModelConfig: vi.fn(),
+}));
+
+vi.mock('@api/constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@api/constants')>()),
+  getApiUrl: () => 'http://localhost:8787',
+  getBearerToken: () => 'super-agents',
+}));
+
+describe('embedText', () => {
+  const connector = {
+    getAIProviderAPIKeys: vi
+      .fn()
+      .mockResolvedValue([{ ai_provider: 'openai', api_key: 'sk-test' }]),
+  } as unknown as UserDataStorageConnector;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(resolveEmbeddingModelConfig).mockResolvedValue({
+      modelId: 'embed-model',
+      model: {
+        id: 'embed-model',
+        ai_provider_id: 'provider-1',
+        model_name: 'text-embedding-3-small',
+      },
+      dimensions: 1536,
+      timeoutMs: 7_000,
+    } as never);
+  });
+
+  it('bounds the call with the configured embedding timeout', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ embedding: [0.1, 0.2] }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await embedText(createMockContext(), connector, 'some text');
+
+    // `fetch` has no timeout of its own, and routing embeds every request, so
+    // without a signal a provider that never answers hangs the caller.
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal?.aborted).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('surfaces a timed-out embedding as a RequestEmbeddingError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new Error('The operation was aborted')),
+    );
+
+    await expect(
+      embedText(createMockContext(), connector, 'some text'),
+    ).rejects.toBeInstanceOf(RequestEmbeddingError);
+
+    vi.unstubAllGlobals();
+  });
+});
 
 describe('Embeddings Utility', () => {
   describe('RequestEmbeddingError', () => {

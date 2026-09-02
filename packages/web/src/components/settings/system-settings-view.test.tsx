@@ -22,6 +22,12 @@ const settings: SystemSettings = {
   judge_model_id: null,
   skill_arbiter_model_id: null,
   skill_arbiter_timeout_ms: 15_000,
+  intent_compaction_model_id: null,
+  intent_compaction_timeout_ms: 15_000,
+  system_prompt_reflection_timeout_ms: 120_000,
+  evaluation_generation_timeout_ms: 120_000,
+  embedding_timeout_ms: 30_000,
+  judge_timeout_ms: 60_000,
   developer_mode: false,
   created_at: '2023-01-01T00:00:00Z',
   updated_at: '2023-01-01T00:00:00Z',
@@ -76,6 +82,81 @@ describe('SystemSettingsView', () => {
         skill_arbiter_timeout_ms: 120_000,
       });
     });
+  });
+
+  it('shows the compaction timeout in seconds and saves it in milliseconds', async () => {
+    render(<SystemSettingsView />);
+
+    const timeout = screen.getByLabelText('Compaction Timeout');
+    expect(timeout).toHaveValue(15);
+
+    fireEvent.change(timeout, { target: { value: '120' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith({
+        intent_compaction_timeout_ms: 120_000,
+      });
+    });
+  });
+
+  it('refuses a compaction timeout outside the allowed range', async () => {
+    render(<SystemSettingsView />);
+
+    fireEvent.change(screen.getByLabelText('Compaction Timeout'), {
+      target: { value: '0' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Invalid compaction timeout',
+          variant: 'destructive',
+        }),
+      );
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('shows every internal timeout, and saves the ones that changed', async () => {
+    render(<SystemSettingsView />);
+
+    // Each timeout sits beside the model it bounds, in seconds.
+    expect(screen.getByLabelText('Reflection Timeout')).toHaveValue(120);
+    expect(screen.getByLabelText('Evaluation Generation Timeout')).toHaveValue(
+      120,
+    );
+    expect(screen.getByLabelText('Embedding Timeout')).toHaveValue(30);
+    expect(screen.getByLabelText('Judge Timeout')).toHaveValue(60);
+
+    fireEvent.change(screen.getByLabelText('Judge Timeout'), {
+      target: { value: '90' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith({ judge_timeout_ms: 90_000 });
+    });
+  });
+
+  it('names the timeout it refuses', async () => {
+    render(<SystemSettingsView />);
+
+    fireEvent.change(screen.getByLabelText('Embedding Timeout'), {
+      target: { value: '0' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Invalid embedding timeout',
+          variant: 'destructive',
+        }),
+      );
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it('refuses a timeout outside the allowed range', async () => {

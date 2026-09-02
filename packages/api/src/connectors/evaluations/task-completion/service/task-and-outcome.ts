@@ -64,6 +64,8 @@ export async function extractTaskAndOutcome(
   const client = new OpenAI({
     apiKey: '',
     baseURL: `${getApiUrl(c)}/v1`,
+    timeout: modelConfig.timeoutMs,
+    maxRetries: 1,
   });
 
   const saConfig = {

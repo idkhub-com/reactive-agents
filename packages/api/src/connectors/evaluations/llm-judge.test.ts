@@ -1,6 +1,7 @@
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import { createMockContext } from '@api/test-utils/mock-context';
 import { AIProvider } from '@shared/types/constants';
+import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockContext = createMockContext();
@@ -63,8 +64,114 @@ describe('LLM Judge', () => {
   it('should create LLM judge with default config', () => {
     expect(llmJudge.config.model).toBe('gpt-5-mini');
     expect(llmJudge.config.temperature).toBe(0.1);
-    expect(llmJudge.config.max_tokens).toBe(1000);
+    expect(llmJudge.config.max_tokens).toBe(4000);
     expect(llmJudge.config.timeout).toBe(30000);
+  });
+
+  it('bounds the judging call with the resolved timeout', () => {
+    // This was computed into the config and never passed to the client, so
+    // every judging call ran under the SDK's ten-minute default and retried
+    // twice -- three times the lock the caller holds.
+    vi.clearAllMocks();
+    createLLMJudge(mockContext, {}, { ...mockModelConfig, timeoutMs: 45_000 });
+
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 45_000,
+      maxRetries: 1,
+    });
+  });
+
+  it('falls back to the config timeout when the model carries none', () => {
+    vi.clearAllMocks();
+    createLLMJudge(mockContext, { timeout: 5_000 }, mockModelConfig);
+
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 5_000,
+    });
+  });
+
+  it('sends the configured temperature and max_tokens to the model', async () => {
+    // They were computed into the config and never put on the request, so an
+    // evaluation's parameters had no effect on judging at all.
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { content: '{"score":0.7,"reasoning":"ok"}' } }],
+    });
+
+    const judge = createLLMJudge(
+      mockContext,
+      { temperature: 0.42, max_tokens: 2222 },
+      mockModelConfig,
+    );
+    await judge.evaluate({ text: 'anything' } as never);
+
+    expect(mockParse).toHaveBeenCalledWith(
+      expect.objectContaining({ temperature: 0.42, max_tokens: 2222 }),
+    );
+  });
+
+  it('leaves a reasoning model room to think by default', async () => {
+    // The default is sent now, so a cap under what the model spends on
+    // reasoning would come back as an empty completion, not a short one.
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { content: '{"score":0.7,"reasoning":"ok"}' } }],
+    });
+
+    await createLLMJudge(mockContext, {}, mockModelConfig).evaluate({
+      text: 'anything',
+    } as never);
+
+    expect(mockParse).toHaveBeenCalledWith(
+      expect.objectContaining({ max_tokens: 4000, temperature: 0.1 }),
+    );
+  });
+
+  it('retries an empty completion, which is transient', async () => {
+    // glm-5.3-flash:cloud stops cleanly having burned a thousand completion
+    // tokens on reasoning that never reaches `content`. The identical request
+    // usually answers properly next time -- but this was the one failure the
+    // retry predicate did not match, so it gave up on the first attempt.
+    mockParse.mockReset();
+    mockParse
+      .mockResolvedValueOnce({
+        choices: [{ finish_reason: 'stop', message: { content: '' } }],
+        usage: { completion_tokens: 1933 },
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: { content: '{"score":0.8,"reasoning":"fine"}' },
+          },
+        ],
+      });
+
+    const evaluatePromise = llmJudge.evaluate({ text: 'anything' } as never);
+    await vi.advanceTimersByTimeAsync(8787);
+    const result = await evaluatePromise;
+
+    expect(mockParse).toHaveBeenCalledTimes(2);
+    expect(result.score).toBe(0.8);
+  });
+
+  it('says what an empty completion actually was', async () => {
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ finish_reason: 'stop', message: { content: '' } }],
+      usage: { completion_tokens: 1933 },
+    });
+
+    const evaluatePromise = llmJudge.evaluate({ text: 'anything' } as never);
+    await vi.advanceTimersByTimeAsync(8787);
+    const result = await evaluatePromise;
+
+    // The old message was shared with the JSON parse failure, so a log could
+    // not tell "answered nothing" from "answered badly".
+    const details = result.metadata?.errorDetails;
+    expect(details).toContain('empty completion');
+    expect(details).toContain('1933');
+    expect(details).toContain('finish_reason: stop');
   });
 
   it('should create LLM judge with custom config', () => {

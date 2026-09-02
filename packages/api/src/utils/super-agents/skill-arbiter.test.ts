@@ -63,6 +63,12 @@ const intent: RequestIntent = {
 const settings = {
   skill_arbiter_model_id: null,
   skill_arbiter_timeout_ms: 42_000,
+  intent_compaction_model_id: null,
+  intent_compaction_timeout_ms: 15_000,
+  system_prompt_reflection_timeout_ms: 120_000,
+  evaluation_generation_timeout_ms: 120_000,
+  embedding_timeout_ms: 30_000,
+  judge_timeout_ms: 60_000,
   system_prompt_reflection_model_id: 'reflection-model',
 } as SystemSettings;
 
