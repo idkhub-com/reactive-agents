@@ -1,5 +1,6 @@
 import type { AppContext } from '@api/types/hono';
 import type { HttpMethod } from '@api/types/http';
+import { withClientTracing } from '@api/utils/super-agents/client-tracing';
 import { SuperAgentsConfigPreProcessed } from '@shared/types/api/request/headers';
 import {
   InvalidRequestBodyError,
@@ -58,7 +59,7 @@ export const commonVariablesMiddleware = createMiddleware(
         // The path always wins over the header so that a client pointed at a
         // skill's base URL cannot accidentally target another skill. A path
         // that names only the agent leaves a skill from the header in place.
-        const config = agentSkillScope
+        const scopedConfig = agentSkillScope
           ? {
               ...rawConfig,
               agent_name: agentSkillScope.agent_name,
@@ -67,6 +68,8 @@ export const commonVariablesMiddleware = createMiddleware(
                 : {}),
             }
           : rawConfig;
+        // Tracing a client sends as plain headers rather than in the config
+        const config = withClientTracing(scopedConfig, c.req.raw.headers);
 
         const saConfigPreProcessed = SuperAgentsConfigPreProcessed.safeParse(
           config,

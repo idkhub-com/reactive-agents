@@ -113,6 +113,8 @@ export const LogsQueryParams = z.object({
   cluster_id: z.uuid().optional(),
   arm_id: z.uuid().optional(),
   app_id: z.uuid().optional(),
+  /** The trace -- for a client that names its session, the session. */
+  trace_id: z.string().optional(),
   after: z
     .string()
     .transform((val) => (val ? Number(val) : undefined))
