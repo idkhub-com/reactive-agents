@@ -17,7 +17,7 @@ import { useLogs } from '@web/providers/logs';
 import { useNavigation } from '@web/providers/navigation';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkills } from '@web/providers/skills';
-import { createSkillAvatar } from '@web/utils/skill-avatar';
+import { createSkillAvatar } from '@web/utils/avatars';
 import { LayersIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';

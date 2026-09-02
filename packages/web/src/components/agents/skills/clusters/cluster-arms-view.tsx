@@ -42,10 +42,12 @@ import { useSkillOptimizationArms } from '@web/providers/skill-optimization-arms
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluations } from '@web/providers/skill-optimization-evaluations';
 import { useSkills } from '@web/providers/skills';
+import { createArmAvatar, createClusterAvatar } from '@web/utils/avatars';
 import {
   ArrowUpDown,
   BoxIcon,
   Clock,
+  LayersIcon,
   MoreVertical,
   PaletteIcon,
   RefreshCwIcon,
@@ -511,7 +513,20 @@ export function ClusterArmsView(): ReactElement {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BoxIcon className="h-5 w-5" />
+                {selectedSkill ? (
+                  <img
+                    src={createClusterAvatar(
+                      selectedSkill.name,
+                      selectedCluster.name,
+                    )}
+                    alt={`Partition ${selectedCluster.name} icon`}
+                    width={20}
+                    height={20}
+                    className="size-5 rounded-sm shrink-0"
+                  />
+                ) : (
+                  <LayersIcon className="h-5 w-5" />
+                )}
                 Partition Information
               </CardTitle>
               <CardDescription>
@@ -786,7 +801,20 @@ export function ClusterArmsView(): ReactElement {
                     }
                   >
                     <CardHeader>
-                      <CardTitle className="text-lg leading-none mb-2">
+                      <CardTitle className="text-lg leading-none mb-2 flex items-center gap-2">
+                        {selectedSkill && selectedCluster && (
+                          <img
+                            src={createArmAvatar(
+                              selectedSkill.name,
+                              selectedCluster.name,
+                              arm.name,
+                            )}
+                            alt={`Configuration ${arm.name} icon`}
+                            width={24}
+                            height={24}
+                            className="size-6 rounded-sm shrink-0"
+                          />
+                        )}
                         {arm.name}
                       </CardTitle>
                       <CardDescription className="leading-none m-0">

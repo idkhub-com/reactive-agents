@@ -26,7 +26,7 @@ import { useNavigation } from '@web/providers/navigation';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@web/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@web/providers/skills';
-import { createSkillAvatar } from '@web/utils/skill-avatar';
+import { createSkillAvatar } from '@web/utils/avatars';
 import {
   describeSkillRouting,
   readSkillRouting,
