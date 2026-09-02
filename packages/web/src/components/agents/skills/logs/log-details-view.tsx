@@ -318,7 +318,7 @@ export function LogDetailsView(): ReactElement {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-1 min-h-0 flex-col">
       <PageHeader
         title="Log Details"
         description={formatLogTimestamp(selectedLog.start_time)}

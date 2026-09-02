@@ -41,12 +41,12 @@ export const defaultExtensions = (): (Extension | Node | Mark)[] => [
     codeBlock: {
       HTMLAttributes: {
         class:
-          'rounded-sm p-5 font-mono font-medium text-stone-800 whitespace-pre overflow-x-auto',
+          'rounded-sm p-5 font-mono font-medium text-foreground whitespace-pre overflow-x-auto',
       },
     },
     code: {
       HTMLAttributes: {
-        class: 'rounded-md px-1.5 py-1 font-mono font-medium text-stone-900',
+        class: 'rounded-md px-1.5 py-1 font-mono font-medium text-foreground',
         spellcheck: 'false',
       },
     },
@@ -129,7 +129,7 @@ export const jinjaExtensions = (): (Extension | Node | Mark)[] => [
     heading: false, // Disable headings for system prompts
     code: {
       HTMLAttributes: {
-        class: 'rounded-md px-1.5 py-1 font-mono font-medium text-stone-900',
+        class: 'rounded-md px-1.5 py-1 font-mono font-medium text-foreground',
         spellcheck: 'false',
       },
     },

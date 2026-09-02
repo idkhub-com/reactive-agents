@@ -330,7 +330,7 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
 }
 
 .editor .ProseMirror pre {
-  @apply whitespace-pre rounded-md bg-stone-100;
+  @apply whitespace-pre rounded-md bg-muted;
 }
 
 .editor .ProseMirror blockquote {
