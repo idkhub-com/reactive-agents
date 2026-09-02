@@ -41,7 +41,11 @@ function isRetryableLLMJudgeError(error: unknown): boolean {
       message.includes('gateway') ||
       message.includes('service unavailable') ||
       // A judge that answered garbage may answer properly the second time.
-      message.includes('valid json')
+      message.includes('valid json') ||
+      // And one that answered nothing at all is the clearer case of the same
+      // thing: a self-hosted model can stop cleanly having emitted only
+      // reasoning, then answer the identical request properly on the retry.
+      message.includes('empty completion')
     );
   }
   return false;
@@ -160,7 +164,10 @@ export function createLLMJudge(
   const judgeConfig = {
     model: modelConfig?.model || config.model || 'gpt-5-mini',
     temperature: config.temperature || 0.1,
-    max_tokens: config.max_tokens || 1000,
+    // For the callers that pass no evaluation parameters. Same reason as the
+    // evaluation schemas: this is sent now, and a reasoning model spends more
+    // than a thousand tokens before it answers.
+    max_tokens: config.max_tokens || 4000,
     // The resolved model carries the setting; `config.timeout` stays as the
     // override for a caller that resolves no model of its own.
     timeout: modelConfig?.timeoutMs ?? config.timeout ?? 30000,
@@ -308,6 +315,10 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         const response = await clientWithHeaders.chat.completions.create({
           ...SA_SKILL_REQUEST_PARAMS,
           model: judgeConfig.model,
+          // Both were computed into `judgeConfig` and never sent, so an
+          // evaluation's configured parameters had no effect on judging.
+          temperature: judgeConfig.temperature,
+          max_tokens: judgeConfig.max_tokens,
           messages: [
             { role: 'system', content: prompt.systemPrompt },
             { role: 'user', content: prompt.userPrompt },
@@ -328,13 +339,23 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         }
         const content = choice.message.content;
         if (!content) {
-          throw new Error('No parsed response from AI provider');
+          // Distinct from the parse failure below, and carrying what tells
+          // the two apart in a log: a model that burned completion tokens and
+          // stopped cleanly did answer, it just answered nowhere we can read.
+          const { completion_tokens } = response.usage ?? {};
+          throw new Error(
+            `The judge returned an empty completion (finish_reason: ${
+              choice.finish_reason ?? 'none'
+            }, ${completion_tokens ?? 0} completion tokens)`,
+          );
         }
         // The SDK's `.parse()` throws on anything but strict JSON, and a
         // self-hosted judge answers with a trailing comma often enough that
         // evaluations kept dying on it.
         const parsed = parseJudgeJson(content);
         if (!parsed || typeof parsed !== 'object') {
+          // Content that parsed to a non-object -- a bare `null` or number.
+          // Unique to this branch now that an empty answer says so itself.
           throw new Error('No parsed response from AI provider');
         }
 
@@ -389,7 +410,8 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         lastError.message.includes('JSON') ||
         lastError.message.includes('parse') ||
         lastError.message.includes('No valid message output') ||
-        lastError.message.includes('No valid text content')
+        lastError.message.includes('No valid text content') ||
+        lastError.message.includes('empty completion')
       ) {
         return getFallbackResult('parse_error', lastError.message, retryInfo);
       }
