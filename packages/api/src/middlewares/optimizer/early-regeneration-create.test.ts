@@ -1,5 +1,7 @@
 import { checkAndRegenerateEvaluationsEarly } from '@api/middlewares/optimizer/evaluations';
+import { repairSkillNaming } from '@api/optimization/utils/describe-skill';
 import { regenerateEvaluationsWithExamples } from '@api/optimization/utils/evaluations';
+import { generateSeedSystemPromptWithContext } from '@api/optimization/utils/system-prompt';
 import { createMockContext } from '@api/test-utils/mock-context';
 import type {
   EvaluationMethodConnector,
@@ -34,6 +36,9 @@ vi.mock('@api/optimization/utils/evaluations', () => ({
   regenerateEvaluationsWithExamples: vi.fn(),
 }));
 vi.mock('@api/utils/sse-event-manager', () => ({ emitSSEEvent: vi.fn() }));
+vi.mock('@api/optimization/utils/describe-skill', () => ({
+  repairSkillNaming: vi.fn().mockResolvedValue(null),
+}));
 
 const mockContext = createMockContext();
 
@@ -138,6 +143,7 @@ const run = (
   );
 
 beforeEach(() => {
+  vi.mocked(repairSkillNaming).mockResolvedValue(null);
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-03-01T12:00:00.000Z'));
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -216,6 +222,39 @@ describe('checkAndRegenerateEvaluationsEarly, past the guards', () => {
       { params: {}, weight: 1 },
     );
     expect(userData.createSkillOptimizationEvaluations).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it('builds the regenerated prompt and evaluations on a repaired naming', async () => {
+    // A skill created while system settings had no models kept the
+    // heuristic fallback naming; this pass repairs it first, so everything
+    // regenerated here describes the job with the real words.
+    const skill = skillOf();
+    const { userData, logsStore } = connectors(skill, []);
+    vi.mocked(repairSkillNaming).mockResolvedValue({
+      name: 'answer-analytics-questions',
+      description: 'Answers questions about the analytics warehouse.',
+    });
+
+    await run(userData, logsStore, skill);
+
+    expect(repairSkillNaming).toHaveBeenCalledWith(
+      mockContext,
+      userData,
+      skill,
+      'an agent that answers analytics questions',
+      expect.stringContaining('How many users signed up?'),
+    );
+    expect(
+      vi.mocked(generateSeedSystemPromptWithContext).mock.calls[0][2],
+    ).toBe('Answers questions about the analytics warehouse.');
+    expect(
+      vi.mocked(regenerateEvaluationsWithExamples).mock.calls[0][1],
+    ).toEqual(
+      expect.objectContaining({
+        description: 'Answers questions about the analytics warehouse.',
+      }),
+    );
     expect(console.error).not.toHaveBeenCalled();
   });
 

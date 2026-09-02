@@ -1,4 +1,5 @@
 import { generateExampleConversations } from '@api/middlewares/optimizer/system-prompt';
+import { repairSkillNaming } from '@api/optimization/utils/describe-skill';
 import { regenerateEvaluationsWithExamples } from '@api/optimization/utils/evaluations';
 import { generateSeedSystemPromptWithContext } from '@api/optimization/utils/system-prompt';
 import type {
@@ -176,6 +177,22 @@ export async function checkAndRegenerateEvaluationsEarly(
       return;
     }
 
+    // A skill born before system settings had models kept its heuristic
+    // fallback naming -- `describeSkillForRequest` could not be asked, and
+    // nothing else revisits naming. This pass is that retry too, and it runs
+    // first so the regenerated prompt and evaluations build on the real
+    // description rather than the boilerplate.
+    const repairedNaming = await repairSkillNaming(
+      c,
+      userDataStorageConnector,
+      skill,
+      agentDescription,
+      examples[0],
+    );
+    const describedSkill = repairedNaming
+      ? { ...skill, ...repairedNaming }
+      : skill;
+
     // Extract response format from the first log that has one (needed for system prompt)
     let responseFormat: unknown;
     for (const log of exampleLogs) {
@@ -190,7 +207,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     const newSystemPrompt = await generateSeedSystemPromptWithContext(
       c,
       agentDescription,
-      skill.description,
+      describedSkill.description,
       examples,
       userDataStorageConnector,
       responseFormat,
@@ -218,7 +235,7 @@ export async function checkAndRegenerateEvaluationsEarly(
     // Regenerate evaluations with real examples
     const newEvaluationParams = await regenerateEvaluationsWithExamples(
       c,
-      skill,
+      describedSkill,
       agentDescription,
       examples,
       evaluationConnectorsMap,
