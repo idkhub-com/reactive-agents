@@ -1,6 +1,9 @@
 import { generateExampleConversations } from '@api/middlewares/optimizer/system-prompt';
 import { repairSkillNaming } from '@api/optimization/utils/describe-skill';
-import { regenerateEvaluationsWithExamples } from '@api/optimization/utils/evaluations';
+import {
+  applyRegeneratedEvaluations,
+  regenerateEvaluationsWithExamples,
+} from '@api/optimization/utils/evaluations';
 import { generateSeedSystemPromptWithContext } from '@api/optimization/utils/system-prompt';
 import type {
   EvaluationMethodConnector,
@@ -243,24 +246,13 @@ export async function checkAndRegenerateEvaluationsEarly(
       userDataStorageConnector,
     );
 
-    // Update evaluations in-place to preserve their IDs and relationships
-    // Match evaluations by method to ensure correct updates
-    for (const evaluation of existingEvaluations) {
-      const newParams = newEvaluationParams.find(
-        (p) => p.evaluation_method === evaluation.evaluation_method,
-      );
-
-      if (newParams) {
-        await userDataStorageConnector.updateSkillOptimizationEvaluation(
-          c,
-          evaluation.id,
-          {
-            params: newParams.params,
-            weight: newParams.weight,
-          },
-        );
-      }
-    }
+    // In place, so the ids -- and every score recorded against them -- stay
+    await applyRegeneratedEvaluations(
+      c,
+      userDataStorageConnector,
+      existingEvaluations,
+      newEvaluationParams,
+    );
 
     // The from-scratch case: record what was generated, the way creation
     // would have.

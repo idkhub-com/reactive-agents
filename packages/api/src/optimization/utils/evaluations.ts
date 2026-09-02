@@ -7,7 +7,10 @@ import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import type { Skill } from '@shared/types/data';
-import type { SkillOptimizationEvaluationCreateParams } from '@shared/types/data/skill-optimization-evaluation';
+import type {
+  SkillOptimizationEvaluation,
+  SkillOptimizationEvaluationCreateParams,
+} from '@shared/types/data/skill-optimization-evaluation';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
@@ -274,4 +277,31 @@ export async function regenerateEvaluationsWithExamples(
   });
 
   return await Promise.all(regeneratePromises);
+}
+
+/**
+ * Apply regenerated evaluations to the ones a skill already has: matched by
+ * method, updated in place. An evaluation's id is what every judge result
+ * recorded against it points at -- a log's weighted score is computed by
+ * joining its results back to these rows -- so regeneration must never
+ * delete and recreate them: that orphans every score the skill's logs have
+ * and blanks them in the dashboard. A method that was not regenerated keeps
+ * what it had.
+ */
+export async function applyRegeneratedEvaluations(
+  c: AppContext,
+  connector: UserDataStorageConnector,
+  existing: SkillOptimizationEvaluation[],
+  regenerated: SkillOptimizationEvaluationCreateParams[],
+): Promise<void> {
+  for (const evaluation of existing) {
+    const next = regenerated.find(
+      (params) => params.evaluation_method === evaluation.evaluation_method,
+    );
+    if (!next) continue;
+    await connector.updateSkillOptimizationEvaluation(c, evaluation.id, {
+      params: next.params,
+      weight: next.weight,
+    });
+  }
 }
