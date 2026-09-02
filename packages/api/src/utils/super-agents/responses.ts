@@ -175,6 +175,7 @@ export async function createResponse(
       status: mappedResponse.status,
       statusText: mappedResponse.statusText,
       body: await mappedResponse.text(),
+      contentType: mappedResponse.headers.get('content-type') ?? undefined,
     });
     throw errorObj;
   }

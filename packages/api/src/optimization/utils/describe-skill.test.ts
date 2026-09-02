@@ -224,13 +224,11 @@ describe('repairSkillNaming', () => {
 
   const repairConnector = (siblings: string[] = ['translate']) =>
     ({
-      getSkills: vi
-        .fn()
-        .mockResolvedValue(
-          [...siblings, 'you-are-a-restaurant-concierge'].map((name) => ({
-            name,
-          })),
-        ),
+      getSkills: vi.fn().mockResolvedValue(
+        [...siblings, 'you-are-a-restaurant-concierge'].map((name) => ({
+          name,
+        })),
+      ),
       updateSkill: vi.fn().mockResolvedValue(undefined),
       createSkillEvent: vi.fn().mockResolvedValue(undefined),
     }) as unknown as UserDataStorageConnector;

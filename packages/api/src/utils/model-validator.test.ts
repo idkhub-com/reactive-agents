@@ -2,6 +2,7 @@
  * Tests for model capability validation and parameter transformation.
  */
 
+import { openAIModelCapabilities } from '@api/ai-providers/openai/model-capabilities';
 import {
   parseModelIdentifier,
   registerProviderCapabilities,
@@ -539,6 +540,45 @@ describe('Model Validator', () => {
 
       // Should be supported because gpt-3.5 doesn't match the gpt-4.* pattern
       expect(result.isSupported).toBe(true);
+    });
+  });
+
+  /**
+   * Against the real OpenAI table. Only `gpt-5`, `gpt-5-mini` and
+   * `gpt-5-nano` used to match, by exact name, so every point release and
+   * dated snapshot was sent `temperature` -- which reasoning models answer
+   * with a 400.
+   */
+  describe('the OpenAI gpt-5 family', () => {
+    beforeEach(() => {
+      registerProviderCapabilities(openAIModelCapabilities);
+    });
+
+    const takesTemperature = (model: string) =>
+      validateParameter(
+        AIProvider.OPENAI,
+        model,
+        ModelParameter.TEMPERATURE,
+        FunctionName.CHAT_COMPLETE,
+      ).isSupported;
+
+    it.each([
+      'gpt-5',
+      'gpt-5-mini',
+      'gpt-5-nano-2025-08-07',
+      'gpt-5-pro',
+      'gpt-5.1',
+      'gpt-5.6-sol',
+    ])('drops temperature for %s', (model) => {
+      expect(takesTemperature(model)).toBe(false);
+    });
+
+    it('keeps temperature for the chat variants, which take it', () => {
+      expect(takesTemperature('gpt-5-chat-latest')).toBe(true);
+    });
+
+    it('does not mistake gpt-50 for the family', () => {
+      expect(takesTemperature('gpt-50')).toBe(true);
     });
   });
 });
