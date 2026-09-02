@@ -36,6 +36,7 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
     eq('cluster_id', queryParams.cluster_id);
     eq('arm_id', queryParams.arm_id);
     eq('app_id', queryParams.app_id);
+    eq('trace_id', queryParams.trace_id);
     eq('id', queryParams.id);
     eq('method', queryParams.method);
     eq('endpoint', queryParams.endpoint);

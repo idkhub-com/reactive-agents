@@ -838,6 +838,28 @@ describe('logs', () => {
     expect(older.start_time).toBe(1000);
   });
 
+  it('filters on the trace, which is the session of a client that names one', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+
+    await logs.createLog(c, {
+      ...logParams(agent.id, skill.id, 1000),
+      trace_id: 'ses_1',
+    });
+    await logs.createLog(c, {
+      ...logParams(agent.id, skill.id, 2000),
+      trace_id: 'ses_2',
+    });
+    await logs.createLog(c, {
+      ...logParams(agent.id, skill.id, 3000),
+      trace_id: 'ses_1',
+    });
+
+    const session = await logs.getLogs(c, { trace_id: 'ses_1', order: 'asc' });
+    expect(session.map((l) => l.start_time)).toEqual([1000, 3000]);
+  });
+
   it('filters on embeddings being present', async () => {
     const { c } = await freshDatabase();
     const agent = await seedAgent(c);

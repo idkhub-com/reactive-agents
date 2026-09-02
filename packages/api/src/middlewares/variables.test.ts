@@ -100,6 +100,20 @@ describe('commonVariablesMiddleware', () => {
       });
     });
 
+    it('should trace a client that names its session in plain headers', async () => {
+      // OpenCode sends no sa-config, only a session id and a product token.
+      const response = await post('/v1/agents/captain_code/chat/completions', {
+        'user-agent':
+          'opencode/1.18.18 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14',
+        'x-session-id': 'ses_fa0504e30ffe',
+      });
+
+      expect(response.status).toBe(200);
+      const body = await readBody(response);
+      expect(body.config.trace_id).toBe('ses_fa0504e30ffe');
+      expect(body.config.app_id).toBe('opencode/1.18.18');
+    });
+
     it('should default to auto optimization when no target is given', async () => {
       const response = await post(
         '/v1/agents/captain_code/skills/programming/chat/completions',

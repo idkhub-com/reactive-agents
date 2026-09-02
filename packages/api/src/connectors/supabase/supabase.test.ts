@@ -592,4 +592,17 @@ describe('supabaseLogsStorageConnector - getLogs', () => {
     expect(params.get('start_time')).toBe('gte.2001');
     expect(params.get('limit')).toBe('1');
   });
+
+  it('filters on the trace', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as Response);
+
+    await supabaseLogsStorageConnector.getLogs(mockContext, {
+      trace_id: 'ses_1',
+    });
+
+    expect(sentUrl().searchParams.get('trace_id')).toBe('eq.ses_1');
+  });
 });

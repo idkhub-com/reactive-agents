@@ -1399,6 +1399,9 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     if (queryParams.app_id) {
       postgRESTQuery.app_id = `eq.${queryParams.app_id}`;
     }
+    if (queryParams.trace_id) {
+      postgRESTQuery.trace_id = `eq.${queryParams.trace_id}`;
+    }
     if (queryParams.id) {
       postgRESTQuery.id = `eq.${queryParams.id}`;
     }

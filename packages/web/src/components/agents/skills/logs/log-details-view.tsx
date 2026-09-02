@@ -9,6 +9,7 @@ import { extractSystemPrompt } from '@shared/utils/system-prompt';
 import { CompletionViewer } from '@web/components/agents/skills/logs/components/completion-viewer';
 import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
 import { MessagesView } from '@web/components/agents/skills/logs/components/messages-view';
+import { SessionMap } from '@web/components/agents/skills/logs/components/session-map';
 import { LogFeedback } from '@web/components/agents/skills/logs/log-feedback';
 import { LogNavigation } from '@web/components/agents/skills/logs/log-navigation';
 import { Badge } from '@web/components/ui/badge';
@@ -17,6 +18,7 @@ import { Card, CardContent, CardHeader } from '@web/components/ui/card';
 import { PageHeader } from '@web/components/ui/page-header';
 import { Separator } from '@web/components/ui/separator';
 import { Skeleton } from '@web/components/ui/skeleton';
+import { useLogSession } from '@web/hooks/use-log-session';
 import { useSmartBack } from '@web/hooks/use-smart-back';
 import { useAgents } from '@web/providers/agents';
 import { useLogs } from '@web/providers/logs';
@@ -88,6 +90,7 @@ export function LogDetailsView(): ReactElement {
   const { selectedLog, newerLog, olderLog, isLoading, setAgentId, setSkillId } =
     useLogs();
   const { replaceToLogDetail, navigateToSkillDashboard } = useNavigation();
+  const session = useLogSession(selectedLog);
   const { clusters, setSkillId: setClustersSkillId } =
     useSkillOptimizationClusters();
   const {
@@ -251,6 +254,21 @@ export function LogDetailsView(): ReactElement {
 
   const openLog = (log: Log): void => {
     if (selectedAgent) replaceToLogDetail(selectedAgent.name, log.id);
+  };
+
+  // What a request in the session was: its span, or what varied across the
+  // session -- the skill it was routed to, the model that answered it
+  const sessionSpansSkills =
+    new Set(session.logs.map((log) => log.skill_id)).size > 1;
+  const sessionSpansModels =
+    new Set(session.logs.map((log) => log.model)).size > 1;
+  const sessionLabelOf = (log: Log): string | null => {
+    if (log.span_name) return log.span_name;
+    const parts = [
+      sessionSpansSkills ? skillNameOf(log) : null,
+      sessionSpansModels ? log.model : null,
+    ].filter((part): part is string => !!part);
+    return parts.length ? parts.join(' · ') : null;
   };
 
   const handleBack = () => {
@@ -573,6 +591,18 @@ export function LogDetailsView(): ReactElement {
             </div>
           )}
           <CardContent className="flex flex-row p-0 h-full relative overflow-hidden">
+            {selectedLog.trace_id && session.logs.length > 1 && (
+              <SessionMap
+                logs={session.logs}
+                currentId={selectedLog.id}
+                hasEarlier={session.hasEarlier}
+                hasLater={session.hasLater}
+                traceId={selectedLog.trace_id}
+                appId={selectedLog.app_id}
+                labelOf={sessionLabelOf}
+                onSelect={openLog}
+              />
+            )}
             <div className="inset-0 flex flex-col flex-1 w-full min-w-0 p-4 gap-4 overflow-hidden overflow-y-auto">
               {selectedLog && originalSystemPrompt && (
                 <GenericViewer

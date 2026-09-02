@@ -15,6 +15,7 @@ export async function queryLogs(params: LogsQueryParams): Promise<Log[]> {
       agent_id: params.agent_id,
       skill_id: params.skill_id,
       cluster_id: params.cluster_id,
+      trace_id: params.trace_id,
       id: params.id,
       ids: params.ids,
       app_id: params.app_id,
