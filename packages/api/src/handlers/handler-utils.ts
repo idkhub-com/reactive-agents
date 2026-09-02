@@ -222,21 +222,39 @@ export async function tryPost(
       ...overrideParams,
     } as SuperAgentsRequestBody;
 
-    // Anthropic has no `response_format`, so the gateway emulates it with the
-    // `__json_output` tool (see ai-providers/anthropic/chat-complete.ts). Every
-    // other provider has to put the JSON in the message itself, and telling one
-    // to call a tool it was never given is how answers end up narrated or
-    // wrapped in a ```json fence.
-    const jsonOutputInstruction =
-      saTarget.configuration.ai_provider === AIProvider.ANTHROPIC
-        ? 'Use the __json_output tool to provide your response.'
-        : 'Respond with the JSON object alone: no markdown code fences, no commentary, no other text.';
+    // `response_format` is an OpenAI concept, and most providers carry it
+    // themselves: either as a parameter their config forwards, or -- Anthropic,
+    // which has no such field -- as the `__json_output` tool that config builds,
+    // forces through `tool_choice`, and explains in a system instruction of its
+    // own (see ai-providers/anthropic/chat-complete.ts). Where the provider is
+    // already constraining the output, restating the schema in the system prompt
+    // adds nothing and crowds out the prompt the skill was configured with.
+    const providerCarriesResponseFormat = ((): boolean => {
+      const provider = saTarget.configuration.ai_provider;
+      if (provider === AIProvider.ANTHROPIC) return true;
 
-    // Helper to generate JSON schema instructions for response_format
+      const providerConfig = providerConfigs[provider];
+      const functionConfig = providerConfig?.getConfig
+        ? providerConfig.getConfig(overriddenSuperAgentsRequestBody)[
+            saRequestData.functionName
+          ]
+        : providerConfig?.[saRequestData.functionName];
+
+      return Boolean(functionConfig && 'response_format' in functionConfig);
+    })();
+
+    // Helper to generate JSON schema instructions for response_format.
+    // Only for the providers that cannot express the constraint at all
+    // (Bedrock, Replicate, Workers AI, ...), which have to be asked in prose.
     const getJsonSchemaInstructions = (
       responseFormat: ChatCompletionRequestBody['response_format'],
     ): string => {
-      if (!responseFormat) return '';
+      if (!responseFormat || providerCarriesResponseFormat) return '';
+
+      // Telling a provider to call a tool it was never given is how answers end
+      // up narrated or wrapped in a ```json fence, so ask for the bare object.
+      const jsonOutputInstruction =
+        'Respond with the JSON object alone: no markdown code fences, no commentary, no other text.';
 
       if (responseFormat.type === 'json_schema') {
         const schema =

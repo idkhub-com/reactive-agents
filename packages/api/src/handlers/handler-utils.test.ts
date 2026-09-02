@@ -51,6 +51,8 @@ import type {
   SuperAgentsTarget,
 } from '@shared/types/api/request/headers';
 import { HeaderKey, StrategyModes } from '@shared/types/api/request/headers';
+import type { ChatCompletionRequestBody } from '@shared/types/api/routes/chat-completions-api/request';
+import type { ChatCompletionMessage } from '@shared/types/api/routes/shared/messages';
 import { ChatCompletionMessageRole } from '@shared/types/api/routes/shared/messages';
 import { AIProvider, ContentTypeName } from '@shared/types/constants';
 import { CacheMode } from '@shared/types/middleware/cache';
@@ -303,6 +305,149 @@ describe('tryPost Error Handling', () => {
       );
 
       expect(mockSuperAgentsRequestData.requestBody).toEqual(before);
+    });
+  });
+
+  describe('the JSON instructions added for `response_format`', () => {
+    /**
+     * Restating the schema in the system prompt is a fallback for providers
+     * that cannot express the constraint at all. Handing it to a provider that
+     * carries `response_format` itself only buries the skill's own prompt --
+     * for `json_schema` the block was prepended, so the skill's instructions
+     * ended up behind gateway boilerplate.
+     */
+    afterEach(() => {
+      vi.mocked(transformToProviderRequest).mockReset();
+    });
+
+    /** Records the body handed to the provider transform, then stops there. */
+    const captureProviderBody = (functionConfig?: AIProviderConfig) => {
+      (providerConfigs as Record<string, AIProviderConfig | undefined>)[
+        mockSuperAgentsTarget.configuration.ai_provider
+      ] = {
+        api: {
+          getBaseURL: vi.fn().mockResolvedValue('https://api.example.com'),
+          getEndpoint: vi.fn().mockReturnValue('/v1/chat/completions'),
+          headers: vi.fn().mockResolvedValue({}),
+        },
+        ...functionConfig,
+      } as unknown as AIProviderConfig;
+      vi.mocked(inputHookHandler).mockResolvedValue({
+        errorResponse: undefined,
+        transformedSuperAgentsBody: undefined,
+      });
+
+      const seen: { messages?: ChatCompletionMessage[] } = {};
+      vi.mocked(transformToProviderRequest).mockImplementation(
+        (_provider, _saTarget, saRequestData) => {
+          seen.messages = (
+            saRequestData.requestBody as ChatCompletionRequestBody
+          ).messages;
+          throw new Error('stop here');
+        },
+      );
+      return seen;
+    };
+
+    const nativeResponseFormat = {
+      [FunctionName.CHAT_COMPLETE]: {
+        response_format: { param: 'response_format' },
+      },
+    } as unknown as AIProviderConfig;
+
+    const askForJson = () => {
+      mockSuperAgentsRequestData.requestBody = {
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: ChatCompletionMessageRole.USER, content: 'Hello' }],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'answer',
+            schema: { type: 'object', properties: { a: { type: 'string' } } },
+          },
+        },
+      } as never;
+      mockSuperAgentsTarget.configuration.system_prompt = 'You are helpful.';
+    };
+
+    it('are left out when the provider forwards `response_format`', async () => {
+      const seen = captureProviderBody(nativeResponseFormat);
+      askForJson();
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      expect(seen.messages?.[0]).toEqual({
+        role: ChatCompletionMessageRole.SYSTEM,
+        content: 'You are helpful.',
+      });
+    });
+
+    it('are left out for Anthropic, which builds the tool itself', async () => {
+      mockSuperAgentsTarget.configuration.ai_provider = AIProvider.ANTHROPIC;
+      const seen = captureProviderBody();
+      askForJson();
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      expect(seen.messages?.[0]).toEqual({
+        role: ChatCompletionMessageRole.SYSTEM,
+        content: 'You are helpful.',
+      });
+    });
+
+    it('are added when the provider has no way to ask for JSON', async () => {
+      const seen = captureProviderBody();
+      askForJson();
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      const systemPrompt = seen.messages?.[0].content as string;
+      expect(systemPrompt).toContain('strictly conforms to the following');
+      expect(systemPrompt).toContain('You are helpful.');
+      expect(systemPrompt).not.toContain('__json_output');
+    });
+
+    it('are left out of a caller system message the provider can constrain', async () => {
+      const seen = captureProviderBody(nativeResponseFormat);
+      askForJson();
+      (
+        mockSuperAgentsRequestData.requestBody as ChatCompletionRequestBody
+      ).messages.unshift({
+        role: ChatCompletionMessageRole.SYSTEM,
+        content: 'From the caller',
+      });
+      mockSuperAgentsTarget.configuration.system_prompt = null;
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      expect(seen.messages?.[0]).toEqual({
+        role: ChatCompletionMessageRole.SYSTEM,
+        content: 'From the caller',
+      });
     });
   });
 
