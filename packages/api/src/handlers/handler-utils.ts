@@ -197,6 +197,39 @@ function getHyperParamDefaults(
 }
 
 /**
+ * Removes from the outgoing body the parameters the target model rejects.
+ *
+ * The capability table keeps such parameters out of the target's *defaults*
+ * (`getHyperParamDefaults`), but a caller's own `temperature` used to ride
+ * through the spread untouched -- and a reasoning model answers that with a
+ * 400 for the whole request. Dropping it is the only way the request can
+ * succeed; the warning records that it happened.
+ */
+function dropUnsupportedParameters(
+  functionName: FunctionName,
+  saTarget: SuperAgentsTarget,
+  body: Record<string, unknown>,
+): void {
+  const provider = saTarget.configuration.ai_provider;
+  const modelId = saTarget.configuration.model;
+
+  for (const parameter of Object.values(ModelParameter)) {
+    if (!(parameter in body)) continue;
+    const validation = validateParameter(
+      provider,
+      modelId,
+      parameter,
+      functionName,
+    );
+    if (validation.isSupported) continue;
+    delete body[parameter];
+    console.warn(
+      `[${provider}/${modelId}][${functionName}] ✗ Dropped ${parameter} from the request: ${validation.reason}`,
+    );
+  }
+}
+
+/**
  * Makes a POST request to a provider and returns the response.
  * The POST request is constructed using the provider, apiKey, and requestBody parameters.
  * The fn parameter is the type of request being made (e.g., "complete", "chatComplete").
@@ -221,6 +254,11 @@ export async function tryPost(
       ...hyperParamDefaults,
       ...overrideParams,
     } as SuperAgentsRequestBody;
+    dropUnsupportedParameters(
+      saRequestData.functionName,
+      saTarget,
+      overriddenSuperAgentsRequestBody as Record<string, unknown>,
+    );
 
     // Anthropic has no `response_format`, so the gateway emulates it with the
     // `__json_output` tool (see ai-providers/anthropic/chat-complete.ts). Every
@@ -611,10 +649,7 @@ export async function tryPost(
     return createResponse(c, createResponseOptions);
   } catch (error) {
     if (error instanceof HttpError) {
-      return new Response(error.response.body, {
-        status: error.response.status,
-        statusText: error.response.statusText,
-      });
+      return error.toResponse();
     }
     return new Response(
       JSON.stringify({
@@ -753,10 +788,7 @@ export async function tryTargets(
           );
         } else {
           if (e instanceof HttpError) {
-            response = new Response(e.response.body, {
-              status: e.response.status,
-              statusText: e.response.statusText,
-            });
+            response = e.toResponse();
           }
         }
       }
@@ -873,6 +905,7 @@ export async function recursiveOutputHookHandler(
       status: mappedResponse.status,
       statusText: mappedResponse.statusText,
       body: errorBody,
+      contentType: mappedResponse.headers.get('content-type') ?? undefined,
     });
   }
 

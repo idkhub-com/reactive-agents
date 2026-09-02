@@ -102,6 +102,7 @@ export const retryRequest = async (
               status: response.status,
               statusText: response.statusText,
               body: responseText,
+              contentType: response.headers.get('content-type') ?? undefined,
             });
 
             if (response.status === 429 && followProviderRetry) {
@@ -156,6 +157,7 @@ export const retryRequest = async (
               status: response.status,
               statusText: response.statusText,
               body: responseText,
+              contentType: response.headers.get('content-type') ?? undefined,
             });
             bail(errorObj);
             return;
@@ -203,10 +205,7 @@ export const retryRequest = async (
         status: 503,
       });
     } else if (error instanceof HttpError) {
-      errorResponse = new Response(error.response.body, {
-        status: error.response.status,
-        statusText: error.response.statusText,
-      });
+      errorResponse = error.toResponse();
     } else if (error instanceof Error) {
       // The retry handler will always attach status code to the error object
       errorResponse = new Response(

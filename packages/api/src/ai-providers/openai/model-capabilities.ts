@@ -25,10 +25,13 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
   },
 
   models: [
-    // GPT-5 models (reasoning models)
+    // GPT-5 reasoning models: gpt-5, -mini, -nano, -pro, the 5.x point
+    // releases and their dated snapshots. Only the default temperature is
+    // accepted, so sampling parameters are dropped rather than sent. The
+    // `-chat` variants are ordinary chat models and take them.
     // Support reasoning_effort: minimal, low, medium, high
     {
-      modelPattern: /^(gpt-5|gpt-5-mini|gpt-5-nano)$/,
+      modelPattern: /^gpt-5(?!-chat)([.-].*)?$/,
       endpointConfigs: {
         [FunctionName.CHAT_COMPLETE]: {
           unsupportedParameters: [

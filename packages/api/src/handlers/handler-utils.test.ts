@@ -42,8 +42,10 @@ import type { AppContext } from '@api/types/hono';
 import { HttpMethod } from '@api/types/http';
 import { getCachedResponse } from '@api/utils/cache';
 import { inputHookHandler } from '@api/utils/hooks';
+import { registerProviderCapabilities } from '@api/utils/model-validator';
 import { constructRequest } from '@api/utils/super-agents/requests';
 import type { AIProviderConfig } from '@shared/types/ai-providers/config';
+import { ModelParameter } from '@shared/types/ai-providers/model-capabilities';
 import { FunctionName } from '@shared/types/api/request';
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type {
@@ -303,6 +305,58 @@ describe('tryPost Error Handling', () => {
       );
 
       expect(mockSuperAgentsRequestData.requestBody).toEqual(before);
+    });
+
+    /**
+     * The capability table kept unsupported parameters out of the target's
+     * defaults, but a `temperature` the caller sent rode through the spread
+     * untouched -- and a reasoning model rejects the whole request over it.
+     */
+    it('loses the parameters the target model rejects, and only those', async () => {
+      reachTheTransform();
+      registerProviderCapabilities({
+        provider: AIProvider.OPENAI,
+        models: [
+          {
+            modelPattern: 'reasoning-only',
+            endpointConfigs: {
+              [FunctionName.CHAT_COMPLETE]: {
+                unsupportedParameters: [ModelParameter.TEMPERATURE],
+              },
+            },
+          },
+        ],
+      });
+      mockSuperAgentsTarget.configuration.model = 'reasoning-only';
+      mockSuperAgentsTarget.configuration.top_p = null;
+      mockSuperAgentsRequestData.requestBody = {
+        model: 'reasoning-only',
+        temperature: 0,
+        top_p: 0.5,
+        messages: [{ role: ChatCompletionMessageRole.USER, content: 'Hello' }],
+      } as never;
+      const before = structuredClone(mockSuperAgentsRequestData.requestBody);
+      const warn = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      const sent = vi.mocked(transformToProviderRequest).mock.calls[0][2]
+        .requestBody as Record<string, unknown>;
+      expect(sent).not.toHaveProperty('temperature');
+      expect(sent.top_p).toBe(0.5);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Dropped temperature'),
+      );
+      expect(mockSuperAgentsRequestData.requestBody).toEqual(before);
+      warn.mockRestore();
     });
   });
 

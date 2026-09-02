@@ -201,6 +201,7 @@ describe('createResponse', () => {
         ok: false,
         status: 400,
         statusText: 'Bad Request',
+        headers: new Headers({ 'content-type': 'application/json' }),
         clone: vi.fn(),
         text: vi.fn().mockResolvedValue('{"error": "Invalid request"}'),
       } as unknown as Response;
