@@ -1381,7 +1381,7 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     queryParams: LogsQueryParams,
   ): Promise<Log[]> => {
     const postgRESTQuery: Record<string, string> = {
-      order: 'start_time.desc',
+      order: queryParams.order === 'asc' ? 'start_time.asc' : 'start_time.desc',
     };
 
     if (queryParams.agent_id) {

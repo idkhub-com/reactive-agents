@@ -2,6 +2,7 @@
 
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
+import type { Log } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 import { extractSystemPrompt } from '@shared/utils/system-prompt';
@@ -9,28 +10,26 @@ import { CompletionViewer } from '@web/components/agents/skills/logs/components/
 import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
 import { MessagesView } from '@web/components/agents/skills/logs/components/messages-view';
 import { LogFeedback } from '@web/components/agents/skills/logs/log-feedback';
+import { LogNavigation } from '@web/components/agents/skills/logs/log-navigation';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@web/components/ui/card';
+import { Card, CardContent, CardHeader } from '@web/components/ui/card';
 import { PageHeader } from '@web/components/ui/page-header';
 import { Separator } from '@web/components/ui/separator';
 import { Skeleton } from '@web/components/ui/skeleton';
 import { useSmartBack } from '@web/hooks/use-smart-back';
 import { useAgents } from '@web/providers/agents';
 import { useLogs } from '@web/providers/logs';
+import { useNavigation } from '@web/providers/navigation';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkillOptimizationEvaluationRuns } from '@web/providers/skill-optimization-evaluation-runs';
 import { useSkills } from '@web/providers/skills';
+import { createSkillAvatar } from '@web/utils/skill-avatar';
 import {
   describeSkillRouting,
   readSkillRouting,
 } from '@web/utils/skill-routing';
-import { format } from 'date-fns';
+import { formatLogTimestamp } from '@web/utils/time';
 import {
   AlertTriangle,
   ArrowLeftIcon,
@@ -39,7 +38,7 @@ import {
   ChevronRight,
   XCircle,
 } from 'lucide-react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
 // Pretty names for evaluation methods
@@ -54,20 +53,49 @@ const EvaluationMethodNames: Record<EvaluationMethodName, string> = {
   [EvaluationMethodName.LATENCY]: 'Latency',
 };
 
+/**
+ * One fact about the log in its header. Every item is the same height, so
+ * however the row wraps each line is as tall as the next and text, badges
+ * and icons sit on one centre line.
+ */
+function HeaderItem({
+  label,
+  title,
+  children,
+}: {
+  label?: string;
+  title?: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <div className="flex h-6 items-center gap-1.5" title={title}>
+      {label && <span className="text-muted-foreground">{label}</span>}
+      {children}
+    </div>
+  );
+}
+
+/** A badge sized to the header's items, whatever its variant */
+const HEADER_BADGE = 'h-5 px-2 py-0 text-xs';
+
+const HeaderSeparator = (): ReactElement => (
+  <Separator orientation="vertical" className="h-4" />
+);
+
 export function LogDetailsView(): ReactElement {
   const { selectedAgent } = useAgents();
-  const { selectedSkill } = useSkills();
-  const { selectedLog, isLoading, setAgentId, setSkillId, setAgentWide } =
+  const { skills, setQueryParams: setSkillQueryParams } = useSkills();
+  const { selectedLog, newerLog, olderLog, isLoading, setAgentId, setSkillId } =
     useLogs();
-  const { clusters } = useSkillOptimizationClusters();
+  const { replaceToLogDetail, navigateToSkillDashboard } = useNavigation();
+  const { clusters, setSkillId: setClustersSkillId } =
+    useSkillOptimizationClusters();
   const {
     evaluationRuns,
     setSkillId: setEvalSkillId,
     setLogId: setEvalLogId,
   } = useSkillOptimizationEvaluationRuns();
   const smartBack = useSmartBack();
-  const [saRequestData, setSuperAgentsRequestData] =
-    useState<SuperAgentsRequestData | null>(null);
   const [showEvaluationDetails, setShowEvaluationDetails] = useState(false);
   const [expandedEvaluations, setExpandedEvaluations] = useState<Set<string>>(
     new Set(),
@@ -76,26 +104,27 @@ export function LogDetailsView(): ReactElement {
     new Set(),
   );
 
-  // Set agentId, skillId, and logId when agent/skill/log changes
+  // A log lives under its agent; its skill is a fact about the log, not
+  // part of its address. The agent's skills are loaded to name it.
   useEffect(() => {
-    if (selectedAgent && selectedSkill) {
+    if (selectedAgent) {
       setAgentId(selectedAgent.id);
-      setSkillId(selectedSkill.id);
-      setAgentWide(false);
-      setEvalSkillId(selectedSkill.id);
-    } else {
-      setAgentId(null);
-      setSkillId(null);
-      setEvalSkillId(null);
+      setSkillQueryParams({ agent_id: selectedAgent.id, limit: 100 });
     }
-  }, [
-    selectedAgent,
-    selectedSkill,
-    setAgentId,
-    setSkillId,
-    setAgentWide,
-    setEvalSkillId,
-  ]);
+  }, [selectedAgent, setAgentId, setSkillQueryParams]);
+
+  // Name the log's skill for the logs, clusters and evaluation runs
+  // providers. Whether the logs scope is the skill or the whole agent is
+  // left as the list the log was opened from set it, so the arrows follow
+  // that list; agent-wide, the skill is not part of the scope anyway.
+  const logSkillId = selectedLog?.skill_id;
+  useEffect(() => {
+    if (logSkillId) {
+      setSkillId(logSkillId);
+      setClustersSkillId(logSkillId);
+      setEvalSkillId(logSkillId);
+    }
+  }, [logSkillId, setSkillId, setClustersSkillId, setEvalSkillId]);
 
   // Set log ID for evaluation runs provider
   useEffect(() => {
@@ -105,12 +134,6 @@ export function LogDetailsView(): ReactElement {
       setEvalLogId(null);
     }
   }, [selectedLog, setEvalLogId]);
-
-  // Function to format timestamp
-  const formatTimestamp = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    return format(date, 'MMM d, HH:mm:ss a');
-  };
 
   // Get cluster name
   const clusterName = useMemo(() => {
@@ -163,6 +186,27 @@ export function LogDetailsView(): ReactElement {
     return null;
   }, [selectedLog]);
 
+  // Derived, not set in an effect, so a log switch never paints a frame of
+  // the previous log's messages under the new log's header.
+  const saRequestData = useMemo((): SuperAgentsRequestData | null => {
+    if (!selectedLog) return null;
+    // A log recorded against a route or body shape this build no longer
+    // knows how to parse should cost us this one view, not the whole
+    // dashboard -- the error boundary above wraps every provider.
+    try {
+      return produceSuperAgentsRequestData(
+        selectedLog.ai_provider_request_log.method,
+        selectedLog.ai_provider_request_log.request_url,
+        {},
+        selectedLog.ai_provider_request_log.request_body,
+        selectedLog.ai_provider_request_log.response_body,
+      );
+    } catch (error) {
+      console.error('Failed to parse the log request data:', error);
+      return null;
+    }
+  }, [selectedLog]);
+
   // The prompt the client sent. Only worth a panel of its own when it differs
   // from what reached the provider; otherwise it is the system message below.
   const originalSystemPrompt = useMemo(() => {
@@ -201,32 +245,17 @@ export function LogDetailsView(): ReactElement {
     return allDetails;
   }, [evaluationRuns]);
 
-  useEffect(() => {
-    if (selectedLog) {
-      // A log recorded against a route or body shape this build no longer
-      // knows how to parse should cost us this one view, not the whole
-      // dashboard -- the error boundary above wraps every provider.
-      try {
-        const saRequestData = produceSuperAgentsRequestData(
-          selectedLog.ai_provider_request_log.method,
-          selectedLog.ai_provider_request_log.request_url,
-          {},
-          selectedLog.ai_provider_request_log.request_body,
-          selectedLog.ai_provider_request_log.response_body,
-        );
+  const skillNameOf = (log: Log): string | null =>
+    skills.find((skill) => skill.id === log.skill_id)?.name ?? null;
+  const logSkillName = selectedLog ? skillNameOf(selectedLog) : null;
 
-        setSuperAgentsRequestData(saRequestData);
-      } catch (error) {
-        console.error('Failed to parse the log request data:', error);
-        setSuperAgentsRequestData(null);
-      }
-    }
-  }, [selectedLog]);
+  const openLog = (log: Log): void => {
+    if (selectedAgent) replaceToLogDetail(selectedAgent.name, log.id);
+  };
 
   const handleBack = () => {
-    if (selectedAgent && selectedSkill) {
-      const fallbackUrl = `/agents/${encodeURIComponent(selectedAgent.name)}/skills/${encodeURIComponent(selectedSkill.name)}/logs`;
-      smartBack(fallbackUrl);
+    if (selectedAgent) {
+      smartBack(`/agents/${encodeURIComponent(selectedAgent.name)}/logs`);
     } else {
       smartBack('/agents');
     }
@@ -274,141 +303,171 @@ export function LogDetailsView(): ReactElement {
     <div className="flex flex-col h-full">
       <PageHeader
         title="Log Details"
-        description={formatTimestamp(selectedLog.start_time)}
+        description={formatLogTimestamp(selectedLog.start_time)}
         showBackButton
         onBack={handleBack}
-        actions={<LogFeedback logId={selectedLog.id} />}
+        actions={
+          <>
+            <LogNavigation
+              newerLog={newerLog}
+              olderLog={olderLog}
+              onNavigate={openLog}
+            />
+            <Separator orientation="vertical" className="h-6" />
+            <LogFeedback logId={selectedLog.id} />
+          </>
+        }
       />
       <div className="flex-1 overflow-hidden p-6">
         {/* Log Detail Card */}
         <Card className="flex flex-col h-full overflow-hidden">
           <CardHeader className="flex flex-row justify-between items-center p-4 bg-card-header border-b">
-            <CardTitle className="text-lg font-medium m-0 flex flex-row items-center gap-2 flex-wrap">
-              <span className="text-sm font-light">
-                {formatTimestamp(selectedLog.start_time)}
-              </span>
+            <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
+              <HeaderItem>
+                <span className="text-sm">
+                  {formatLogTimestamp(selectedLog.start_time)}
+                </span>
+              </HeaderItem>
+              {logSkillName && selectedAgent && (
+                <>
+                  <HeaderSeparator />
+                  <HeaderItem label="Skill:">
+                    <button
+                      type="button"
+                      className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() =>
+                        navigateToSkillDashboard(
+                          selectedAgent.name,
+                          logSkillName,
+                        )
+                      }
+                    >
+                      <Badge
+                        variant="outline"
+                        className={`${HEADER_BADGE} gap-1.5 hover:bg-accent`}
+                      >
+                        <img
+                          src={createSkillAvatar(logSkillName)}
+                          alt=""
+                          className="h-3.5 w-3.5 rounded-sm"
+                        />
+                        {logSkillName}
+                      </Badge>
+                    </button>
+                  </HeaderItem>
+                </>
+              )}
+              <HeaderSeparator />
+              <HeaderItem label="Model:">
+                <span className="font-mono">
+                  {PrettyAIProvider[selectedLog.ai_provider] ??
+                    selectedLog.ai_provider}
+                  /{selectedLog.model}
+                </span>
+              </HeaderItem>
               {selectedLog.span_name && (
                 <>
-                  <Separator orientation="vertical" />
-                  <span className="text-xs font-light">
-                    {selectedLog.span_name}
-                  </span>
+                  <HeaderSeparator />
+                  <HeaderItem>
+                    <span>{selectedLog.span_name}</span>
+                  </HeaderItem>
                 </>
               )}
               {clusterName && (
                 <>
-                  <Separator orientation="vertical" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-light text-muted-foreground">
-                      Cluster:
-                    </span>
-                    <Badge variant="outline" className="font-mono text-xs">
+                  <HeaderSeparator />
+                  <HeaderItem label="Cluster:">
+                    <Badge
+                      variant="outline"
+                      className={`${HEADER_BADGE} font-mono`}
+                    >
                       {clusterName}
                     </Badge>
-                  </div>
+                  </HeaderItem>
                 </>
               )}
               {skillRouting && (
                 <>
-                  <Separator orientation="vertical" />
-                  <div
-                    className="flex items-center gap-1"
-                    title={skillRouting.title}
-                  >
-                    <span className="text-xs font-light text-muted-foreground">
-                      Routed:
-                    </span>
-                    <Badge variant="outline" className="text-xs">
+                  <HeaderSeparator />
+                  <HeaderItem label="Routed:" title={skillRouting.title}>
+                    <Badge variant="outline" className={HEADER_BADGE}>
                       {skillRouting.label}
                     </Badge>
                     {skillRouting.detail && (
-                      <span className="font-mono text-xs text-muted-foreground">
+                      <span className="font-mono text-muted-foreground">
                         {skillRouting.detail}
                       </span>
                     )}
-                  </div>
+                  </HeaderItem>
                 </>
               )}
               {temperature !== null && (
                 <>
-                  <Separator orientation="vertical" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-light text-muted-foreground">
-                      Temp:
-                    </span>
-                    <span className="font-mono text-xs">
-                      {temperature.toFixed(2)}
-                    </span>
-                  </div>
+                  <HeaderSeparator />
+                  <HeaderItem label="Temp:">
+                    <span className="font-mono">{temperature.toFixed(2)}</span>
+                  </HeaderItem>
                 </>
               )}
               {thinkingEffort && (
                 <>
-                  <Separator orientation="vertical" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-light text-muted-foreground">
-                      Thinking:
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
+                  <HeaderSeparator />
+                  <HeaderItem label="Thinking:">
+                    <Badge variant="secondary" className={HEADER_BADGE}>
                       {thinkingEffort}
                     </Badge>
-                  </div>
+                  </HeaderItem>
                 </>
               )}
               {averageScore !== null && (
                 <>
-                  <Separator orientation="vertical" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-light text-muted-foreground">
-                      Weighted Eval Score:
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {averageScore >= 0.7 ? (
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                      ) : (
-                        <XCircle className="h-3 w-3 text-red-500" />
-                      )}
-                      <span className="font-mono text-xs font-medium">
-                        {(averageScore * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                </>
-              )}
-              {evaluationDetails.length > 0 && (
-                <>
-                  <Separator orientation="vertical" />
-                  <Badge variant="outline" className="text-xs">
-                    {evaluationDetails.length} eval
-                    {evaluationDetails.length > 1 ? 's' : ''}
-                  </Badge>
-                </>
-              )}
-              {evaluationDetails.length > 0 && (
-                <>
-                  <Separator orientation="vertical" />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowEvaluationDetails(!showEvaluationDetails)
-                    }
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showEvaluationDetails ? (
-                      <>
-                        <ChevronDown className="h-3 w-3" />
-                        <span>Hide Details</span>
-                      </>
+                  <HeaderSeparator />
+                  <HeaderItem label="Weighted Eval Score:">
+                    {averageScore >= 0.7 ? (
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
                     ) : (
-                      <>
-                        <ChevronRight className="h-3 w-3" />
-                        <span>Show Details ({evaluationDetails.length})</span>
-                      </>
+                      <XCircle className="h-3 w-3 text-red-500" />
                     )}
-                  </button>
+                    <span className="font-mono font-medium">
+                      {(averageScore * 100).toFixed(0)}%
+                    </span>
+                  </HeaderItem>
                 </>
               )}
-            </CardTitle>
+              {evaluationDetails.length > 0 && (
+                <>
+                  <HeaderSeparator />
+                  <HeaderItem>
+                    <Badge variant="outline" className={HEADER_BADGE}>
+                      {evaluationDetails.length} eval
+                      {evaluationDetails.length > 1 ? 's' : ''}
+                    </Badge>
+                  </HeaderItem>
+                  <HeaderSeparator />
+                  <HeaderItem>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowEvaluationDetails(!showEvaluationDetails)
+                      }
+                      className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showEvaluationDetails ? (
+                        <>
+                          <ChevronDown className="h-3 w-3" />
+                          <span>Hide Details</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronRight className="h-3 w-3" />
+                          <span>Show Details ({evaluationDetails.length})</span>
+                        </>
+                      )}
+                    </button>
+                  </HeaderItem>
+                </>
+              )}
+            </div>
           </CardHeader>
           {showEvaluationDetails && evaluationDetails.length > 0 && (
             <div className="px-4 py-4 space-y-2 bg-muted/30 border-b">
@@ -514,10 +573,7 @@ export function LogDetailsView(): ReactElement {
             </div>
           )}
           <CardContent className="flex flex-row p-0 h-full relative overflow-hidden">
-            {/*<div className="flex h-full w-[200px] border-r">
-              <LogMap logs={[selectedLog]} />
-            </div>*/}
-            <div className="inset-0 flex flex-col flex-1 w-full p-4 gap-4 overflow-hidden overflow-y-auto">
+            <div className="inset-0 flex flex-col flex-1 w-full min-w-0 p-4 gap-4 overflow-hidden overflow-y-auto">
               {selectedLog && originalSystemPrompt && (
                 <GenericViewer
                   path={`${selectedLog.id}-original-system-prompt`}

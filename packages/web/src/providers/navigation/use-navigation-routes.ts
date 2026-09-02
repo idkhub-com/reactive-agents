@@ -21,19 +21,34 @@ export function useNavigationRoutes(navigate: NavigateFn) {
     [navigate],
   );
 
+  // The agent's logs, narrowed to one skill when one is named
   const navigateToLogs = useCallback(
-    (agentName: string, skillName: string) => {
+    (agentName: string, skillName?: string) => {
       navigate({
-        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/logs`,
+        to: `/agents/${encodeURIComponent(agentName)}/logs`,
+        ...(skillName ? { search: { skill: skillName } } : {}),
       });
     },
     [navigate],
   );
 
+  // A log lives under its agent: its skill is a fact about it, not its address
   const navigateToLogDetail = useCallback(
-    (agentName: string, skillName: string, logId: string) => {
+    (agentName: string, logId: string) => {
       navigate({
-        to: `/agents/${encodeURIComponent(agentName)}/skills/${encodeURIComponent(skillName)}/logs/${logId}`,
+        to: `/agents/${encodeURIComponent(agentName)}/logs/${logId}`,
+      });
+    },
+    [navigate],
+  );
+
+  // Stepping between logs from the detail view: replacing keeps the browser
+  // history at list -> log, so back still leaves the detail view
+  const replaceToLogDetail = useCallback(
+    (agentName: string, logId: string) => {
+      navigate({
+        to: `/agents/${encodeURIComponent(agentName)}/logs/${logId}`,
+        replace: true,
       });
     },
     [navigate],
@@ -176,6 +191,7 @@ export function useNavigationRoutes(navigate: NavigateFn) {
     navigateToSkillDashboard,
     navigateToLogs,
     navigateToLogDetail,
+    replaceToLogDetail,
     navigateToEvaluations,
     navigateToEvaluationDetail,
     navigateToEditEvaluation,

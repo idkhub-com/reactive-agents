@@ -44,7 +44,7 @@ import {
   TooltipTrigger,
 } from '@web/components/ui/tooltip';
 import { useLogs } from '@web/providers/logs';
-import { format } from 'date-fns';
+import { formatLogTimestamp } from '@web/utils/time';
 import {
   CalendarIcon,
   CheckCircle2,
@@ -57,11 +57,11 @@ import type { ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
 
 /**
- * The request-logs page shared by the skill-scoped and the agent-wide logs
- * views. The caller wires the fetch scope into the logs provider and says
- * what its middle column is (the skill view shows the partition, the agent
- * view shows the skill); everything else -- filters, table, pagination --
- * renders the provider's current page identically in both places.
+ * The request-logs page. The caller wires the fetch scope into the logs
+ * provider, says what its middle column is (the skill across an agent, the
+ * partition within one skill) and adds any filter of its own; everything
+ * else -- search, status, table, pagination -- renders the provider's
+ * current page.
  */
 export interface LogsTableViewProps {
   description: string;
@@ -72,6 +72,8 @@ export interface LogsTableViewProps {
     header: string;
     render: (log: Log) => ReactNode;
   };
+  /** The caller's own filter controls, beside the status filter */
+  filters?: ReactNode;
 }
 
 const getTemperature = (log: Log): number | null => {
@@ -119,6 +121,7 @@ export function LogsTableView({
   onBack,
   onLogClick,
   extraColumn,
+  filters,
 }: LogsTableViewProps): ReactElement {
   const { logs, isLoading, page, pageSize, totalPages, setPage, setPageSize } =
     useLogs();
@@ -167,6 +170,7 @@ export function LogsTableView({
                   />
                 </div>
               </div>
+              {filters}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by status" />
@@ -319,7 +323,7 @@ export function LogsTableView({
                           )}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(log.start_time), 'MMM dd, HH:mm:ss')}
+                          {formatLogTimestamp(log.start_time)}
                         </TableCell>
                         <TableCell>
                           {log.duration ? `${log.duration}ms` : 'N/A'}

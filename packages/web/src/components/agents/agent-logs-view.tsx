@@ -1,46 +1,77 @@
 'use client';
 
 import type { Log } from '@shared/types/data';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { LogsTableView } from '@web/components/agents/logs-table-view';
 import { Badge } from '@web/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@web/components/ui/select';
 import { useSmartBack } from '@web/hooks/use-smart-back';
 import { useAgents } from '@web/providers/agents';
 import { useLogs } from '@web/providers/logs';
 import { useNavigation } from '@web/providers/navigation';
+import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkills } from '@web/providers/skills';
+import { createSkillAvatar } from '@web/utils/skill-avatar';
+import { LayersIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
+const ALL_SKILLS = 'all';
+
 /**
- * Every request log of the agent, across all of its skills: the shared
- * table with a skill column. A row still opens the skill-scoped log detail
- * -- the skill name is resolved from the agent's skills list.
+ * Every request log of the agent in one table, narrowed to one skill by
+ * `?skill=<name>` -- a skill's logs have an address without a page of their
+ * own. Across skills the table names each log's skill; within one it shows
+ * the partition instead, which only means something there.
  */
 export function AgentLogsView(): ReactElement {
   const { navigateToLogDetail } = useNavigation();
+  const navigate = useNavigate();
+  const { skill: skillFilter } = useSearch({
+    from: '/_main/agents/$agentName/logs/',
+  });
   const smartBack = useSmartBack();
   const { selectedAgent } = useAgents();
   const { skills, setQueryParams: setSkillQueryParams } = useSkills();
+  const { clusters, setSkillId: setClustersSkillId } =
+    useSkillOptimizationClusters();
   const { setAgentId, setSkillId, setAgentWide } = useLogs();
 
-  // Fetch agent-wide: all skills, no skill filter on the logs query
+  const filteredSkill = skillFilter
+    ? skills.find((skill) => skill.name === skillFilter)
+    : undefined;
+  const filteredSkillId = filteredSkill?.id ?? null;
+
+  // The scope: the whole agent, or the one skill named in the URL -- which
+  // is then the list the log detail's arrows step through. A named skill
+  // not yet resolved leaves the scope unset rather than showing everything.
   useEffect(() => {
-    if (selectedAgent) {
-      setAgentId(selectedAgent.id);
-      setSkillId(null);
-      setAgentWide(true);
-      setSkillQueryParams({ agent_id: selectedAgent.id, limit: 100 });
-    } else {
+    if (!selectedAgent) {
       setAgentId(null);
       setSkillId(null);
       setAgentWide(false);
+      return;
     }
+    setAgentId(selectedAgent.id);
+    setSkillQueryParams({ agent_id: selectedAgent.id, limit: 100 });
+    setSkillId(filteredSkillId);
+    setAgentWide(!skillFilter);
+    setClustersSkillId(filteredSkillId);
   }, [
     selectedAgent,
+    skillFilter,
+    filteredSkillId,
     setAgentId,
     setSkillId,
     setAgentWide,
     setSkillQueryParams,
+    setClustersSkillId,
   ]);
 
   if (!selectedAgent) {
@@ -62,23 +93,78 @@ export function AgentLogsView(): ReactElement {
     );
   };
 
+  const renderPartition = (log: Log) => {
+    if (!log.cluster_id) {
+      return <span className="text-muted-foreground text-xs">—</span>;
+    }
+    const cluster = clusters.find((c) => c.id === log.cluster_id);
+    if (!cluster) {
+      return <span className="text-muted-foreground text-xs">Not found</span>;
+    }
+    return (
+      <Badge variant="outline" className="font-mono text-xs">
+        {cluster.name}
+      </Badge>
+    );
+  };
+
+  const selectSkill = (value: string): void => {
+    navigate({
+      to: '/agents/$agentName/logs',
+      params: { agentName: selectedAgent.name },
+      search: value === ALL_SKILLS ? {} : { skill: value },
+      replace: true,
+    });
+  };
+
   return (
     <LogsTableView
-      description={`Request logs across all skills for ${selectedAgent.name}`}
-      emptyText="No logs available for this agent yet."
+      description={
+        skillFilter
+          ? `Request logs for ${skillFilter}`
+          : `Request logs across all skills for ${selectedAgent.name}`
+      }
+      emptyText={
+        skillFilter
+          ? 'No logs for this skill yet.'
+          : 'No logs available for this agent yet.'
+      }
       onBack={() =>
         smartBack(`/agents/${encodeURIComponent(selectedAgent.name)}`)
       }
-      onLogClick={(log) => {
-        // The detail route lives under the skill; without a resolved name
-        // there is nowhere to go, and the skills list covers every skill
-        // the agent has, so this only skips while it is still loading.
-        const skillName = getSkillName(log);
-        if (skillName) {
-          navigateToLogDetail(selectedAgent.name, skillName, log.id);
-        }
-      }}
-      extraColumn={{ header: 'Skill', render: renderSkill }}
+      onLogClick={(log) => navigateToLogDetail(selectedAgent.name, log.id)}
+      extraColumn={
+        skillFilter
+          ? { header: 'Partition', render: renderPartition }
+          : { header: 'Skill', render: renderSkill }
+      }
+      filters={
+        <Select value={skillFilter ?? ALL_SKILLS} onValueChange={selectSkill}>
+          <SelectTrigger className="w-[280px]" aria-label="Filter by skill">
+            <SelectValue placeholder="Filter by skill" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SKILLS}>
+              <span className="flex items-center gap-2">
+                <LayersIcon className="h-4 w-4 text-muted-foreground" />
+                All skills
+              </span>
+            </SelectItem>
+            {skills.map((skill) => (
+              <SelectItem key={skill.id} value={skill.name}>
+                <span className="flex items-center gap-2">
+                  <img
+                    src={createSkillAvatar(skill.name)}
+                    alt=""
+                    className="h-4 w-4 rounded-sm"
+                  />
+                  {skill.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
     />
   );
 }

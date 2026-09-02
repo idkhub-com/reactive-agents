@@ -59,7 +59,8 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
-    sql += ' ORDER BY start_time DESC';
+    const direction = queryParams.order === 'asc' ? 'ASC' : 'DESC';
+    sql += ` ORDER BY start_time ${direction}`;
 
     if (queryParams.limit !== undefined) {
       sql += ' LIMIT ?';

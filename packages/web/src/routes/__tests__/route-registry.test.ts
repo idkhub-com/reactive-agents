@@ -21,6 +21,8 @@ const EXPECTED_ROUTE_IDS = [
   '/_main/agents/$agentName/',
   '/_main/agents/$agentName/edit',
   '/_main/agents/$agentName/logs',
+  '/_main/agents/$agentName/logs/',
+  '/_main/agents/$agentName/logs/$logId',
   '/_main/agents/$agentName/skills/create',
   '/_main/agents/$agentName/skills/$skillName',
   '/_main/agents/$agentName/skills/$skillName/',

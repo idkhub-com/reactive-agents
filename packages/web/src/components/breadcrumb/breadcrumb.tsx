@@ -1,6 +1,6 @@
 'use client';
 
-import { botttsNeutral, shapes } from '@dicebear/collection';
+import { botttsNeutral } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import { MAX_AGENT_SHORTCUTS } from '@web/components/agents/constants';
 import {
@@ -33,6 +33,7 @@ import { useNavigation } from '@web/providers/navigation';
 import { useSkillOptimizationArms } from '@web/providers/skill-optimization-arms';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkills } from '@web/providers/skills';
+import { createSkillAvatar } from '@web/utils/skill-avatar';
 import { Bot, ChevronRight, Plus, PlusCircleIcon } from 'lucide-react';
 import React, { type ReactElement, useMemo } from 'react';
 
@@ -43,35 +44,6 @@ import React, { type ReactElement, useMemo } from 'react';
 const createAgentAvatar = (agentName: string) => {
   const svg = createAvatar(botttsNeutral, {
     seed: agentName,
-    size: 24,
-    backgroundColor: [
-      '00acc1',
-      '039be5',
-      '1e88e5',
-      '43a047',
-      '546e7a',
-      '5e35b1',
-      '6d4c41',
-      '757575',
-      '7cb342',
-      '8e24aa',
-      'c0ca33',
-      'd81b60',
-      'e53935',
-      'f4511e',
-      'fb8c00',
-      'fdd835',
-      'ffb300',
-      '00897b',
-      '3949ab',
-    ],
-  }).toString();
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-};
-
-const createSkillAvatar = (skillName: string) => {
-  const svg = createAvatar(shapes, {
-    seed: skillName,
     size: 24,
     backgroundColor: [
       '00acc1',

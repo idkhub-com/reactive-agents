@@ -72,6 +72,7 @@ vi.mock('@web/providers/navigation', () => ({
   }),
 }));
 
+import type { Log } from '@shared/types/data/log';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { queryLogs } from '@web/api/v1/super-agents/observability/logs';
@@ -97,7 +98,15 @@ const localStorageMock = (() => {
 })();
 
 function TestComponent(): React.ReactElement {
-  const { logs, selectedLog, setAgentId, setSkillId } = useLogs();
+  const {
+    logs,
+    selectedLog,
+    newerLog,
+    olderLog,
+    isLoading,
+    setAgentId,
+    setSkillId,
+  } = useLogs();
 
   // Set agentId and skillId on mount to trigger log fetching
   React.useEffect(() => {
@@ -109,9 +118,57 @@ function TestComponent(): React.ReactElement {
     <div>
       <div data-testid="logs-length">{logs.length}</div>
       <div data-testid="selected-log">{selectedLog?.id ?? ''}</div>
+      <div data-testid="newer-log">{newerLog?.id ?? ''}</div>
+      <div data-testid="older-log">{olderLog?.id ?? ''}</div>
+      <div data-testid="is-loading">{String(isLoading)}</div>
     </div>
   );
 }
+
+// The agent-level logs page: the whole agent, no skill in the scope
+function AgentWideComponent(): React.ReactElement {
+  const {
+    page,
+    newerLog,
+    olderLog,
+    setAgentId,
+    setAgentWide,
+    setPage,
+    setSkillId,
+  } = useLogs();
+
+  React.useEffect(() => {
+    setAgentId('test-agent');
+    setAgentWide(true);
+  }, [setAgentId, setAgentWide]);
+
+  return (
+    <div>
+      <div data-testid="page">{page}</div>
+      <div data-testid="newer-log">{newerLog?.id ?? ''}</div>
+      <div data-testid="older-log">{olderLog?.id ?? ''}</div>
+      <button type="button" onClick={() => setPage(2)}>
+        page 2
+      </button>
+      <button type="button" onClick={() => setSkillId('test-skill')}>
+        name skill
+      </button>
+    </div>
+  );
+}
+
+const asLogs = (logs: Partial<Log>[]): Log[] => logs as Log[];
+
+const neighborsOfLog2 = (params: unknown): Promise<Log[]> => {
+  const { after, before } = params as { after?: string; before?: string };
+  if (after) {
+    return Promise.resolve(asLogs([{ id: 'log-3', start_time: 3000 }]));
+  }
+  if (before) {
+    return Promise.resolve(asLogs([{ id: 'log-1', start_time: 1000 }]));
+  }
+  return Promise.resolve(asLogs([{ id: 'log-2', start_time: 2000 }]));
+};
 
 describe('LogsProvider', (): void => {
   let queryClient: QueryClient;
@@ -219,6 +276,160 @@ describe('LogsProvider', (): void => {
     await waitFor(() => {
       expect(screen.getByTestId('selected-log').textContent).toBe('log-9');
     });
+  });
+
+  it('is loading, not missing, while a log is fetched by id', async (): Promise<void> => {
+    // Between the page arriving without the log and the fetch by id
+    // resolving, the detail view must show its skeleton, not "not found".
+    mockNavigationState.logId = 'log-9';
+    let resolveDetail!: (logs: Log[]) => void;
+    const detail = new Promise<Log[]>((resolve) => {
+      resolveDetail = resolve;
+    });
+    vi.mocked(queryLogs).mockImplementation((params) => {
+      if ((params as { id?: string }).id === 'log-9') return detail;
+      return Promise.resolve(asLogs([{ id: '1' }]));
+    });
+
+    await act(async (): Promise<void> => {
+      await Promise.resolve();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <LogsProvider>
+            <TestComponent />
+          </LogsProvider>
+        </QueryClientProvider>,
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('logs-length').textContent).toBe('1');
+    });
+    expect(screen.getByTestId('selected-log').textContent).toBe('');
+    expect(screen.getByTestId('is-loading').textContent).toBe('true');
+
+    await act(async (): Promise<void> => {
+      resolveDetail(asLogs([{ id: 'log-9' }]));
+      await detail;
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-log').textContent).toBe('log-9');
+    });
+    expect(screen.getByTestId('is-loading').textContent).toBe('false');
+  });
+
+  it("looks up the selected log's neighbors by time", async (): Promise<void> => {
+    // Stepping to the previous or next log has to work across pages and
+    // from a deep link, so the neighbors are found by start_time rather
+    // than in the page: the nearest log strictly after it, oldest first,
+    // and the nearest strictly before it, newest first.
+    mockNavigationState.logId = 'log-2';
+    vi.mocked(queryLogs).mockImplementation(neighborsOfLog2);
+
+    await act(async (): Promise<void> => {
+      await Promise.resolve();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <LogsProvider>
+            <TestComponent />
+          </LogsProvider>
+        </QueryClientProvider>,
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('newer-log').textContent).toBe('log-3');
+      expect(screen.getByTestId('older-log').textContent).toBe('log-1');
+    });
+
+    const sent = vi.mocked(queryLogs).mock.calls.map(([params]) => params);
+    expect(sent).toContainEqual({
+      agent_id: 'test-agent',
+      skill_id: 'test-skill',
+      after: '2001',
+      order: 'asc',
+      limit: '1',
+    });
+    expect(sent).toContainEqual({
+      agent_id: 'test-agent',
+      skill_id: 'test-skill',
+      before: '1999',
+      limit: '1',
+    });
+
+    // Both are seeded into the detail cache, so stepping to one renders it
+    // without waiting on a fetch by id.
+    expect(queryClient.getQueryData(['logs', 'detail', 'log-3'])).toMatchObject(
+      { id: 'log-3' },
+    );
+    expect(queryClient.getQueryData(['logs', 'detail', 'log-1'])).toMatchObject(
+      { id: 'log-1' },
+    );
+  });
+
+  it('looks up neighbors across the agent when the view is agent-wide', async (): Promise<void> => {
+    // A log opened from the agent's logs page steps through the agent's
+    // logs, whatever skill they belong to.
+    mockNavigationState.logId = 'log-2';
+    vi.mocked(queryLogs).mockImplementation(neighborsOfLog2);
+
+    await act(async (): Promise<void> => {
+      await Promise.resolve();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <LogsProvider>
+            <AgentWideComponent />
+          </LogsProvider>
+        </QueryClientProvider>,
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('newer-log').textContent).toBe('log-3');
+      expect(screen.getByTestId('older-log').textContent).toBe('log-1');
+    });
+
+    const sent = vi.mocked(queryLogs).mock.calls.map(([params]) => params);
+    expect(sent).toContainEqual({
+      agent_id: 'test-agent',
+      after: '2001',
+      order: 'asc',
+      limit: '1',
+    });
+    expect(sent).toContainEqual({
+      agent_id: 'test-agent',
+      before: '1999',
+      limit: '1',
+    });
+  });
+
+  it('keeps the agent-wide page when a skill is named under it', async (): Promise<void> => {
+    // The detail view names the skill of the log it shows even when the log
+    // was opened agent-wide. That is not a scope change: going back to the
+    // agent's logs must land on the page the log was opened from.
+    await act(async (): Promise<void> => {
+      await Promise.resolve();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <LogsProvider>
+            <AgentWideComponent />
+          </LogsProvider>
+        </QueryClientProvider>,
+      );
+    });
+
+    await act(async (): Promise<void> => {
+      await Promise.resolve();
+      screen.getByText('page 2').click();
+    });
+    expect(screen.getByTestId('page').textContent).toBe('2');
+
+    await act(async (): Promise<void> => {
+      await Promise.resolve();
+      screen.getByText('name skill').click();
+    });
+    expect(screen.getByTestId('page').textContent).toBe('2');
   });
 
   it('throws if useLogs is used outside provider', (): void => {
