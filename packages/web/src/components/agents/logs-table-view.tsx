@@ -44,6 +44,7 @@ import {
   TooltipTrigger,
 } from '@web/components/ui/tooltip';
 import { useLogs } from '@web/providers/logs';
+import { getStringHashColor } from '@web/utils/http-method-colors';
 import { formatLogTimestamp } from '@web/utils/time';
 import {
   CalendarIcon,
@@ -234,6 +235,7 @@ export function LogsTableView({
                     <TableHead>Function</TableHead>
                     <TableHead>Endpoint</TableHead>
                     <TableHead>Model</TableHead>
+                    <TableHead>Trace ID</TableHead>
                     <TableHead>{extraColumn.header}</TableHead>
                     <TableHead>Temp</TableHead>
                     <TableHead>Reasoning</TableHead>
@@ -289,6 +291,20 @@ export function LogsTableView({
                         </TableCell>
                         <TableCell>
                           <span className="text-xs">{log.model}</span>
+                        </TableCell>
+                        <TableCell>
+                          {log.trace_id ? (
+                            <Badge
+                              variant="outline"
+                              className={`font-mono text-xs ${getStringHashColor(log.trace_id)}`}
+                            >
+                              {log.trace_id}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              —
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>{extraColumn.render(log)}</TableCell>
                         <TableCell>
