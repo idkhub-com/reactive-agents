@@ -230,6 +230,31 @@ function dropUnsupportedParameters(
 }
 
 /**
+ * The providers that constrain the output to a `response_format` themselves,
+ * so a request carrying one comes back as JSON without any help from the
+ * prompt: the ones whose structured outputs are documented as enforced, and
+ * Anthropic, which has no such field and instead builds the `__json_output`
+ * tool, forces it through `tool_choice` and explains it in a system
+ * instruction of its own (see ai-providers/anthropic/chat-complete.ts).
+ *
+ * Forwarding the field is not enforcing it. Ollama, OpenRouter, Together and
+ * the other pass-through hosts hand `response_format` to whatever model sits
+ * behind them, and a model that ignores it answers a `json_schema` request with
+ * prose -- glm-5.3-flash through Ollama cloud wrote markdown essays where the
+ * judge expected `{"score", "reasoning"}`. Those providers keep the schema
+ * restated in the system prompt, which is what such models actually follow.
+ */
+const STRUCTURED_OUTPUT_ENFORCED_BY: ReadonlySet<AIProvider> = new Set([
+  AIProvider.ANTHROPIC,
+  AIProvider.OPENAI,
+  AIProvider.AZURE_OPENAI,
+  AIProvider.GOOGLE,
+  AIProvider.GOOGLE_VERTEX_AI,
+  AIProvider.MISTRAL_AI,
+  AIProvider.XAI,
+]);
+
+/**
  * Makes a POST request to a provider and returns the response.
  * The POST request is constructed using the provider, apiKey, and requestBody parameters.
  * The fn parameter is the type of request being made (e.g., "complete", "chatComplete").
@@ -260,34 +285,20 @@ export async function tryPost(
       overriddenSuperAgentsRequestBody as Record<string, unknown>,
     );
 
-    // `response_format` is an OpenAI concept, and most providers carry it
-    // themselves: either as a parameter their config forwards, or -- Anthropic,
-    // which has no such field -- as the `__json_output` tool that config builds,
-    // forces through `tool_choice`, and explains in a system instruction of its
-    // own (see ai-providers/anthropic/chat-complete.ts). Where the provider is
-    // already constraining the output, restating the schema in the system prompt
-    // adds nothing and crowds out the prompt the skill was configured with.
-    const providerCarriesResponseFormat = ((): boolean => {
-      const provider = saTarget.configuration.ai_provider;
-      if (provider === AIProvider.ANTHROPIC) return true;
+    // Where the provider constrains the output itself, restating the schema in
+    // the system prompt adds nothing and only crowds out the prompt the skill
+    // was configured with. Everywhere else it is what gets the JSON answered.
+    const providerEnforcesResponseFormat = STRUCTURED_OUTPUT_ENFORCED_BY.has(
+      saTarget.configuration.ai_provider,
+    );
 
-      const providerConfig = providerConfigs[provider];
-      const functionConfig = providerConfig?.getConfig
-        ? providerConfig.getConfig(overriddenSuperAgentsRequestBody)[
-            saRequestData.functionName
-          ]
-        : providerConfig?.[saRequestData.functionName];
-
-      return Boolean(functionConfig && 'response_format' in functionConfig);
-    })();
-
-    // Helper to generate JSON schema instructions for response_format.
-    // Only for the providers that cannot express the constraint at all
-    // (Bedrock, Replicate, Workers AI, ...), which have to be asked in prose.
+    // The JSON instructions asked for in prose: the schema, for the providers
+    // that cannot express the constraint at all (Bedrock, Replicate, Workers
+    // AI, ...) and for the ones that only forward it to the model behind them.
     const getJsonSchemaInstructions = (
       responseFormat: ChatCompletionRequestBody['response_format'],
     ): string => {
-      if (!responseFormat || providerCarriesResponseFormat) return '';
+      if (!responseFormat || providerEnforcesResponseFormat) return '';
 
       // Telling a provider to call a tool it was never given is how answers end
       // up narrated or wrapped in a ```json fence, so ask for the bare object.
@@ -316,18 +327,14 @@ export async function tryPost(
       // Handle system prompt with template variables
       let systemPrompt = saTarget.configuration.system_prompt;
 
-      // Augment system prompt with JSON schema instructions if response_format is present
+      // The JSON instructions, where they are needed, follow the skill's own
+      // prompt: they describe the shape of the answer, not the job, and a
+      // prompt that opens with gateway boilerplate reads as if the schema were
+      // the point.
       const responseFormat = (
         overriddenSuperAgentsRequestBody as ChatCompletionRequestBody
       ).response_format;
-      const jsonSchemaInstructions = getJsonSchemaInstructions(responseFormat);
-
-      // For strict JSON schema, prepend the instructions to ensure they override learned behavior
-      if (responseFormat?.type === 'json_schema' && jsonSchemaInstructions) {
-        systemPrompt = `${jsonSchemaInstructions}\n\n${systemPrompt}`;
-      } else {
-        systemPrompt += jsonSchemaInstructions;
-      }
+      systemPrompt += getJsonSchemaInstructions(responseFormat);
 
       // Add system prompt if not overridden by the user
       switch (saRequestData.functionName) {

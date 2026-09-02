@@ -188,6 +188,42 @@ describe('LLM Judge', () => {
     expect(config.targets[0].custom_host).toBe('http://localhost:11434');
   });
 
+  it('bypasses the cache when it retries a bad answer', async () => {
+    // The judge caches its answers, and a retry sends the identical request:
+    // without a forced refresh it would be served the same essay again.
+    mockParse
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: '# Evaluation\n\nThe answer was fine.' } },
+        ],
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ score: 0.8, reasoning: 'Fine' }),
+            },
+          },
+        ],
+      });
+
+    const evaluatePromise = llmJudge.evaluate({
+      text: 'This is a test evaluation.',
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    const result = await evaluatePromise;
+
+    expect(result.score).toBe(0.8);
+    const configs = vi
+      .mocked(mockWithOptions)
+      .mock.calls.map((call) =>
+        JSON.parse(call[0].defaultHeaders['sa-config']),
+      );
+    expect(configs).toHaveLength(2);
+    expect(configs[0].force_refresh).toBeUndefined();
+    expect(configs[1].force_refresh).toBe(true);
+  });
+
   it('should handle API errors gracefully', async () => {
     mockParse.mockRejectedValue(
       new Error('OpenAI API error: 500 Internal Server Error - API Error'),

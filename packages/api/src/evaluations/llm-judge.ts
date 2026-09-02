@@ -266,27 +266,30 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
       });
     }
 
-    const saConfig = {
-      targets: [
-        {
-          provider: provider,
-          model: judgeConfig.model,
-          cache: {
-            mode: CacheMode.SIMPLE,
-          },
-          ...(apiKey ? { api_key: apiKey } : {}),
-          ...(customHost ? { custom_host: customHost } : {}),
-        },
-      ],
-      agent_name: 'super-agents',
-      skill_name: 'judge',
-    };
-
     let lastError: unknown;
     let retryCount = 0;
     for (let i = 0; i < LLM_JUDGE_MAX_RETRIES; i++) {
       try {
         const prompt = generateEvaluationPrompt(input);
+        // Identical requests share a cache entry, and a retry is identical to
+        // the attempt whose answer was no good. It has to bypass the cache or
+        // it is handed that same answer again; the fresh one takes its place.
+        const saConfig = {
+          targets: [
+            {
+              provider: provider,
+              model: judgeConfig.model,
+              cache: {
+                mode: CacheMode.SIMPLE,
+              },
+              ...(apiKey ? { api_key: apiKey } : {}),
+              ...(customHost ? { custom_host: customHost } : {}),
+            },
+          ],
+          agent_name: 'super-agents',
+          skill_name: 'judge',
+          ...(i > 0 ? { force_refresh: true } : {}),
+        };
         const clientWithHeaders = client.withOptions({
           defaultHeaders: {
             'sa-config': JSON.stringify(saConfig),

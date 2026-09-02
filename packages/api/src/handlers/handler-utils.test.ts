@@ -404,11 +404,12 @@ describe('tryPost Error Handling', () => {
 
   describe('the JSON instructions added for `response_format`', () => {
     /**
-     * Restating the schema in the system prompt is a fallback for providers
-     * that cannot express the constraint at all. Handing it to a provider that
-     * carries `response_format` itself only buries the skill's own prompt --
-     * for `json_schema` the block was prepended, so the skill's instructions
-     * ended up behind gateway boilerplate.
+     * Restating the schema in the system prompt is what makes a model that
+     * ignores `response_format` answer in JSON anyway. Only a provider that
+     * enforces the format itself can do without it; a host that merely forwards
+     * the field to whatever model sits behind it cannot be trusted to, and a
+     * judge on such a host answered markdown essays the moment the block went
+     * missing. Where it is added, it follows the skill's own prompt.
      */
     afterEach(() => {
       vi.mocked(transformToProviderRequest).mockReset();
@@ -464,7 +465,7 @@ describe('tryPost Error Handling', () => {
       mockSuperAgentsTarget.configuration.system_prompt = 'You are helpful.';
     };
 
-    it('are left out when the provider forwards `response_format`', async () => {
+    it('are left out when the provider enforces `response_format` itself', async () => {
       const seen = captureProviderBody(nativeResponseFormat);
       askForJson();
 
@@ -480,6 +481,28 @@ describe('tryPost Error Handling', () => {
         role: ChatCompletionMessageRole.SYSTEM,
         content: 'You are helpful.',
       });
+    });
+
+    it('are added, after the skill prompt, when the provider only forwards `response_format`', async () => {
+      // Ollama forwards the field, but whether the model behind it honours the
+      // constraint is up to that model.
+      mockSuperAgentsTarget.configuration.ai_provider = AIProvider.OLLAMA;
+      const seen = captureProviderBody(nativeResponseFormat);
+      askForJson();
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      const systemPrompt = seen.messages?.[0].content as string;
+      expect(systemPrompt.startsWith('You are helpful.')).toBe(true);
+      expect(systemPrompt).toContain('strictly conforms to the following');
+      expect(systemPrompt).toContain('"a"');
+      expect(systemPrompt).not.toContain('__json_output');
     });
 
     it('are left out for Anthropic, which builds the tool itself', async () => {
@@ -502,6 +525,7 @@ describe('tryPost Error Handling', () => {
     });
 
     it('are added when the provider has no way to ask for JSON', async () => {
+      mockSuperAgentsTarget.configuration.ai_provider = AIProvider.BEDROCK;
       const seen = captureProviderBody();
       askForJson();
 
