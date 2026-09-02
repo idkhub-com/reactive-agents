@@ -34,7 +34,6 @@ export interface NavigationState {
     | 'create-skill'
     | 'skill-dashboard'
     | 'edit-skill'
-    | 'logs'
     | 'evaluations'
     | 'edit-evaluation'
     | 'datasets'
@@ -63,12 +62,9 @@ export interface NavigationContextType {
   navigate: NavigateFn;
   setSection: (section: NavigationState['section']) => void;
   navigateToSkillDashboard: (agentName: string, skillName: string) => void;
-  navigateToLogs: (agentName: string, skillName: string) => void;
-  navigateToLogDetail: (
-    agentName: string,
-    skillName: string,
-    logId: string,
-  ) => void;
+  navigateToLogs: (agentName: string, skillName?: string) => void;
+  navigateToLogDetail: (agentName: string, logId: string) => void;
+  replaceToLogDetail: (agentName: string, logId: string) => void;
   navigateToEvaluations: (agentName: string, skillName: string) => void;
   navigateToEvaluationDetail: (
     agentName: string,

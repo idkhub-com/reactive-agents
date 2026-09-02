@@ -14,7 +14,7 @@ import { ClusterArmsView } from './skills/clusters/cluster-arms-view';
 import { EvaluationEditView } from './skills/evaluations/evaluation-edit-view';
 import { EvaluationsListView } from './skills/evaluations/evaluations-list-view';
 import { SkillEventsView } from './skills/events/skill-events-view';
-import { LogDetailsView, LogsView } from './skills/logs';
+import { LogDetailsView } from './skills/logs/log-details-view';
 
 export function AgentsView(): ReactElement {
   const { navigationState } = useNavigation();
@@ -67,12 +67,6 @@ export function AgentsView(): ReactElement {
         return (
           <AgentErrorBoundary sectionName="Edit Skill">
             <EditSkillView />
-          </AgentErrorBoundary>
-        );
-      case 'logs':
-        return (
-          <AgentErrorBoundary sectionName="Logs">
-            <LogsView />
           </AgentErrorBoundary>
         );
       case 'log-detail':

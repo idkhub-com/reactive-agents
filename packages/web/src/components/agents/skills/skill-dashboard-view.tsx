@@ -1,7 +1,5 @@
 'use client';
 
-import { shapes } from '@dicebear/collection';
-import { createAvatar } from '@dicebear/core';
 import { PrettyFunctionName } from '@shared/types/api/request/function-name';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -55,6 +53,7 @@ import { useNavigation } from '@web/providers/navigation';
 import { useSkillEvents } from '@web/providers/skill-events';
 import { useSkillOptimizationClusters } from '@web/providers/skill-optimization-clusters';
 import { useSkills } from '@web/providers/skills';
+import { createSkillAvatar } from '@web/utils/skill-avatar';
 import {
   AlertCircle,
   CalendarIcon,
@@ -80,35 +79,6 @@ import { SkillPerformanceChart } from './skill-performance-chart';
 // ============================================================================
 // Utility Functions
 // ============================================================================
-
-const createSkillAvatar = (skillName: string) => {
-  const svg = createAvatar(shapes, {
-    seed: skillName,
-    size: 24,
-    backgroundColor: [
-      '00acc1',
-      '039be5',
-      '1e88e5',
-      '43a047',
-      '546e7a',
-      '5e35b1',
-      '6d4c41',
-      '757575',
-      '7cb342',
-      '8e24aa',
-      'c0ca33',
-      'd81b60',
-      'e53935',
-      'f4511e',
-      'fb8c00',
-      'fdd835',
-      'ffb300',
-      '00897b',
-      '3949ab',
-    ],
-  }).toString();
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-};
 
 export function SkillDashboardView(): ReactElement {
   const { navigateToLogs, navigateToClusterArms } = useNavigation();
@@ -169,6 +139,7 @@ export function SkillDashboardView(): ReactElement {
     isLoading: isLoadingLogs,
     setAgentId: setLogsAgentId,
     setSkillId: setLogsSkillId,
+    setAgentWide: setLogsAgentWide,
   } = useLogs();
 
   // Models via provider
@@ -248,8 +219,9 @@ export function SkillDashboardView(): ReactElement {
   const { events: skillEvents = [], setSkillId: setSkillEventsSkillId } =
     useSkillEvents();
 
-  // Update logs agentId and skillId
+  // The recent logs are this skill's, whatever scope the logs page left
   useEffect(() => {
+    setLogsAgentWide(false);
     if (selectedAgent && selectedSkill) {
       setLogsAgentId(selectedAgent.id);
       setLogsSkillId(selectedSkill.id);
@@ -257,7 +229,13 @@ export function SkillDashboardView(): ReactElement {
       setLogsAgentId(null);
       setLogsSkillId(null);
     }
-  }, [selectedAgent, selectedSkill, setLogsAgentId, setLogsSkillId]);
+  }, [
+    selectedAgent,
+    selectedSkill,
+    setLogsAgentId,
+    setLogsSkillId,
+    setLogsAgentWide,
+  ]);
 
   // Update models query params
   useEffect(() => {

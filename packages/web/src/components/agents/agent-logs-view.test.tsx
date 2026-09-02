@@ -1,10 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * The agent-wide logs page: one table over every skill's logs. What matters:
- * it asks the provider for the agent-wide scope (no skill id), names each
- * log's skill in the table, and a row opens the skill-scoped log detail.
+ * The agent's logs page: one table over every skill's logs, or one skill's
+ * when `?skill=` names it. What matters: the scope it asks the provider for
+ * (agent-wide, or the named skill), the middle column (skill across the
+ * agent, partition within a skill), and that a row opens the log detail.
  */
 
 const navigateToLogDetail = vi.fn();
@@ -66,7 +67,29 @@ vi.mock('@web/hooks/use-smart-back', () => ({
   useSmartBack: () => vi.fn(),
 }));
 
+const setClustersSkillId = vi.fn();
+vi.mock('@web/providers/skill-optimization-clusters', () => ({
+  useSkillOptimizationClusters: () => ({
+    clusters: [{ id: 'cluster-1', name: 'partition-a' }],
+    setSkillId: setClustersSkillId,
+  }),
+}));
+
+// The filter lives in the URL: `?skill=<name>`
+const navigate = vi.fn();
+let search: { skill?: string } = {};
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigate,
+  useSearch: () => search,
+  useRouter: () => ({ history: { back: vi.fn() } }),
+}));
+
 import { AgentLogsView } from '@web/components/agents/agent-logs-view';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  search = {};
+});
 
 describe('AgentLogsView', () => {
   it('fetches agent-wide and shows which skill served each log', () => {
@@ -86,15 +109,37 @@ describe('AgentLogsView', () => {
     expect(screen.getByText('generate-thread-titles')).toBeInTheDocument();
   });
 
-  it('opens the skill-scoped log detail from a row', () => {
+  it('opens the log detail from a row', () => {
     render(<AgentLogsView />);
 
     fireEvent.click(screen.getByText('generate-thread-titles'));
 
     expect(navigateToLogDetail).toHaveBeenCalledWith(
       'menjivar-website',
-      'generate-thread-titles',
       'log-1',
     );
+  });
+
+  it('narrows the scope to the skill named in the URL', () => {
+    search = { skill: 'generate-thread-titles' };
+    render(<AgentLogsView />);
+
+    expect(setSkillId).toHaveBeenCalledWith('skill-2');
+    expect(setAgentWide).toHaveBeenCalledWith(false);
+    expect(setClustersSkillId).toHaveBeenCalledWith('skill-2');
+    expect(
+      screen.getByText('Request logs for generate-thread-titles'),
+    ).toBeInTheDocument();
+    // Within one skill the column that means something is the partition
+    expect(screen.getByText('Partition')).toBeInTheDocument();
+    expect(screen.queryByText('Skill')).not.toBeInTheDocument();
+  });
+
+  it('waits for a named skill to resolve rather than showing everything', () => {
+    search = { skill: 'not-loaded-yet' };
+    render(<AgentLogsView />);
+
+    expect(setAgentWide).toHaveBeenCalledWith(false);
+    expect(setSkillId).toHaveBeenCalledWith(null);
   });
 });

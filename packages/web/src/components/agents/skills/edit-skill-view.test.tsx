@@ -133,6 +133,7 @@ describe('EditSkillView', () => {
       navigateToSkillDashboard: vi.fn(),
       navigateToLogs: vi.fn(),
       navigateToLogDetail: vi.fn(),
+      replaceToLogDetail: vi.fn(),
       navigateToEvaluations: vi.fn(),
       navigateToEvaluationDetail: vi.fn(),
       navigateToEditEvaluation: vi.fn(),

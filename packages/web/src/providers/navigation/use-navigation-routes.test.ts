@@ -19,6 +19,7 @@ describe('useNavigationRoutes', () => {
     expect(result.current).toHaveProperty('navigateToEvaluationDetail');
     expect(result.current).toHaveProperty('navigateToEditEvaluation');
     expect(result.current).toHaveProperty('navigateToCreateEvaluation');
+    expect(result.current).toHaveProperty('replaceToLogDetail');
     expect(result.current).toHaveProperty('replaceToEvaluations');
     expect(result.current).toHaveProperty('navigateToDatasets');
     expect(result.current).toHaveProperty('replaceToDatasets');
@@ -54,13 +55,22 @@ describe('useNavigationRoutes', () => {
   });
 
   describe('navigateToLogs', () => {
-    it('navigates to logs page', () => {
+    it("navigates to the agent's logs page", () => {
+      const { result } = renderHook(() => useNavigationRoutes(mockNavigate));
+
+      result.current.navigateToLogs('Agent');
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/agents/Agent/logs' });
+    });
+
+    it('narrows it to a skill by search param', () => {
       const { result } = renderHook(() => useNavigationRoutes(mockNavigate));
 
       result.current.navigateToLogs('Agent', 'Skill');
 
       expect(mockNavigate).toHaveBeenCalledWith({
-        to: '/agents/Agent/skills/Skill/logs',
+        to: '/agents/Agent/logs',
+        search: { skill: 'Skill' },
       });
     });
   });
@@ -69,10 +79,10 @@ describe('useNavigationRoutes', () => {
     it('navigates to specific log', () => {
       const { result } = renderHook(() => useNavigationRoutes(mockNavigate));
 
-      result.current.navigateToLogDetail('Agent', 'Skill', 'log-123');
+      result.current.navigateToLogDetail('Agent', 'log-123');
 
       expect(mockNavigate).toHaveBeenCalledWith({
-        to: '/agents/Agent/skills/Skill/logs/log-123',
+        to: '/agents/Agent/logs/log-123',
       });
     });
   });
@@ -121,6 +131,19 @@ describe('useNavigationRoutes', () => {
 
       expect(mockNavigate).toHaveBeenCalledWith({
         to: '/agents/Agent/skills/Skill/evaluations/create',
+      });
+    });
+  });
+
+  describe('replaceToLogDetail', () => {
+    it('replaces navigation to a log detail page', () => {
+      const { result } = renderHook(() => useNavigationRoutes(mockNavigate));
+
+      result.current.replaceToLogDetail('Agent', 'log-1');
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: '/agents/Agent/logs/log-1',
+        replace: true,
       });
     });
   });

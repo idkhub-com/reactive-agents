@@ -79,16 +79,12 @@ vi.mock('@web/components/agents/skills/create-skill-complete-view', () => ({
   CreateSkillCompleteView: () => <div data-testid="page-skill-setup" />,
 }));
 
-vi.mock('@web/components/agents/skills/logs/logs-view', () => ({
-  LogsView: () => <div data-testid="page-skill-logs" />,
-}));
-
 vi.mock('@web/components/agents/agent-logs-view', () => ({
   AgentLogsView: () => <div data-testid="page-agent-logs" />,
 }));
 
 vi.mock('@web/components/agents/skills/logs/log-details-view', () => ({
-  LogDetailsView: () => <div data-testid="page-skill-log-detail" />,
+  LogDetailsView: () => <div data-testid="page-log-detail" />,
 }));
 
 vi.mock('@web/components/agents/skills/events/skill-events-view', () => ({
@@ -191,6 +187,7 @@ const ROUTE_TABLE: [string, string, string][] = [
   ['add models to provider', '/ai-providers/p1/add-models', 'page-models-add'],
   ['settings', '/settings', 'page-settings'],
   ['agent logs', '/agents/test-agent/logs', 'page-agent-logs'],
+  ['agent log detail', '/agents/test-agent/logs/log-1', 'page-log-detail'],
   ['create skill', '/agents/test-agent/skills/create', 'page-skill-create'],
   [
     'skill dashboard',
@@ -207,15 +204,17 @@ const ROUTE_TABLE: [string, string, string][] = [
     '/agents/test-agent/skills/test-skill/setup',
     'page-skill-setup',
   ],
+  // A skill has no logs pages of its own any more: both addresses redirect
+  // to the agent's, the list narrowed to the skill by a search param
   [
-    'skill logs',
+    'skill logs (redirects to the agent logs)',
     '/agents/test-agent/skills/test-skill/logs',
-    'page-skill-logs',
+    'page-agent-logs',
   ],
   [
-    'skill log detail',
+    'skill log detail (redirects to the agent log)',
     '/agents/test-agent/skills/test-skill/logs/log-1',
-    'page-skill-log-detail',
+    'page-log-detail',
   ],
   [
     'skill events',

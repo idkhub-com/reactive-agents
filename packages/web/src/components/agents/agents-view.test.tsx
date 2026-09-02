@@ -67,10 +67,6 @@ vi.mock('@web/components/agents/skills/edit-skill-view', () => ({
   EditSkillView: () => <div data-testid="edit-skill-view">Edit Skill</div>,
 }));
 
-vi.mock('@web/components/agents/skills/logs/logs-view', () => ({
-  LogsView: () => <div data-testid="logs-view">Logs View</div>,
-}));
-
 vi.mock('@web/components/agents/skills/logs/log-details-view', () => ({
   LogDetailsView: () => <div data-testid="log-details-view">Log Detail</div>,
 }));
@@ -225,22 +221,12 @@ describe('AgentsView', () => {
     expect(screen.getByText('Edit Skill')).toBeInTheDocument();
   });
 
-  it('renders logs view when current view is logs', async () => {
-    setMockParams({ agentName: 'Test Agent', skillName: 'Test Skill' });
-    setMockPathname('/agents/Test%20Agent/skills/Test%20Skill/logs');
-
-    await renderWithProviders(<AgentsView />);
-
-    expect(screen.getByTestId('logs-view')).toBeInTheDocument();
-  });
-
   it('renders log detail view when current view is log-detail', async () => {
     setMockParams({
       agentName: 'Test Agent',
-      skillName: 'Test Skill',
       logId: 'log-123',
     });
-    setMockPathname('/agents/Test%20Agent/skills/Test%20Skill/logs/log-123');
+    setMockPathname('/agents/Test%20Agent/logs/log-123');
 
     await renderWithProviders(<AgentsView />);
 

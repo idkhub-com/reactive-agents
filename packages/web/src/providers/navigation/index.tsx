@@ -85,6 +85,13 @@ export function NavigationProvider({
       return 'edit-agent'; // /agents/[agentName]/edit
     if (pathSegments.length === 3 && agentName && pathSegments[2] === 'logs')
       return 'agent-logs'; // /agents/[agentName]/logs
+    if (
+      pathSegments.length === 4 &&
+      agentName &&
+      pathSegments[2] === 'logs' &&
+      logId
+    )
+      return 'log-detail'; // /agents/[agentName]/logs/[logId]
     if (pathSegments.length === 3 && agentName && pathSegments[2] === 'skills')
       return 'agent-view'; // /agents/[agentName]/skills
     if (
@@ -103,10 +110,6 @@ export function NavigationProvider({
       return 'skill-dashboard'; // /agents/[agentName]/skills/[skillName]
 
     const subPath = pathSegments[4]; // Now at index 4 because of /skills/ in path
-    if (subPath === 'logs') {
-      if (logId) return 'log-detail'; // /agents/[agentName]/skills/[skillName]/logs/[logId]
-      return 'logs'; // /agents/[agentName]/skills/[skillName]/logs
-    }
     if (subPath === 'evaluations') {
       if (pathSegments[5] === 'create') return 'create-evaluation';
       if (evalId && pathSegments[6] === 'edit') return 'edit-evaluation';
@@ -267,8 +270,12 @@ export function NavigationProvider({
         }
       }
 
-      // The agent-wide logs page sits directly under the agent
-      if (newState.selectedAgentName && currentView === 'agent-logs') {
+      // The agent-wide logs page, and every log's detail, sit directly
+      // under the agent
+      if (
+        newState.selectedAgentName &&
+        (currentView === 'agent-logs' || currentView === 'log-detail')
+      ) {
         breadcrumbs.push({
           label: 'Logs',
           path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/logs`,
@@ -295,12 +302,7 @@ export function NavigationProvider({
           isSkillDropdown: true,
         });
 
-        if (currentView === 'logs' || currentView === 'log-detail') {
-          breadcrumbs.push({
-            label: 'Logs',
-            path: `/agents/${encodeURIComponent(newState.selectedAgentName)}/skills/${encodeURIComponent(newState.selectedSkillName)}/logs`,
-          });
-        } else if (
+        if (
           currentView === 'evaluations' ||
           currentView === 'evaluation-detail' ||
           currentView === 'create-evaluation'
