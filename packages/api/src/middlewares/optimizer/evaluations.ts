@@ -12,6 +12,7 @@ import type {
 } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
+import { judgeLogsWithoutRuns } from '@api/utils/super-agents/judge-backlog';
 import { FunctionName } from '@shared/types/api/request';
 import type {
   Skill,
@@ -271,6 +272,15 @@ export async function checkAndRegenerateEvaluationsEarly(
           metadata: { evaluation_method: evaluation.evaluation_method },
         });
       }
+      // Every request so far was answered against no evaluations
+      await judgeLogsWithoutRuns(
+        c,
+        userDataStorageConnector,
+        logsStorageConnector,
+        evaluationConnectorsMap,
+        skill,
+        createdEvaluations,
+      );
     }
 
     // Update all arms in-place with new system prompts

@@ -870,6 +870,31 @@ describe('logs', () => {
     expect(session.map((l) => l.start_time)).toEqual([1000, 3000]);
   });
 
+  it('lists the logs that have no evaluation run yet', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+
+    const judged = await logs.createLog(c, logParams(agent.id, skill.id, 1000));
+    const skipped = await logs.createLog(
+      c,
+      logParams(agent.id, skill.id, 2000),
+    );
+    await store.createSkillOptimizationEvaluationRun(c, {
+      agent_id: agent.id,
+      skill_id: skill.id,
+      cluster_id: null,
+      log_id: judged.id,
+      results: [],
+    });
+
+    const backlog = await logs.getLogs(c, {
+      skill_id: skill.id,
+      unjudged: true,
+    });
+    expect(backlog.map((l) => l.id)).toEqual([skipped.id]);
+  });
+
   it('filters on embeddings being present', async () => {
     const { c } = await freshDatabase();
     const agent = await seedAgent(c);

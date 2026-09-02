@@ -605,4 +605,17 @@ describe('supabaseLogsStorageConnector - getLogs', () => {
 
     expect(sentUrl().searchParams.get('trace_id')).toBe('eq.ses_1');
   });
+
+  it('lists the logs that have no evaluation run yet', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as Response);
+
+    await supabaseLogsStorageConnector.getLogs(mockContext, {
+      unjudged: true,
+    });
+
+    expect(sentUrl().searchParams.get('eval_run_count')).toBe('eq.0');
+  });
 });

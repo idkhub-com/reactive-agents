@@ -8,6 +8,7 @@ import type {
   LogsStorageConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import { judgeLogsWithoutRuns } from '@api/utils/super-agents/judge-backlog';
 import { FunctionName } from '@shared/types/api/request';
 import type { Skill } from '@shared/types/data';
 import type { Log } from '@shared/types/data/log';
@@ -39,6 +40,9 @@ vi.mock('@api/optimization/utils/evaluations', async (importOriginal) => ({
   regenerateEvaluationsWithExamples: vi.fn(),
 }));
 vi.mock('@api/utils/sse-event-manager', () => ({ emitSSEEvent: vi.fn() }));
+vi.mock('@api/utils/super-agents/judge-backlog', () => ({
+  judgeLogsWithoutRuns: vi.fn().mockResolvedValue(0),
+}));
 vi.mock('@api/optimization/utils/describe-skill', () => ({
   repairSkillNaming: vi.fn().mockResolvedValue(null),
 }));
@@ -197,6 +201,21 @@ describe('checkAndRegenerateEvaluationsEarly, past the guards', () => {
         }),
       );
     }
+    // Every request so far was answered against no evaluations: judged now
+    expect(judgeLogsWithoutRuns).toHaveBeenCalledWith(
+      mockContext,
+      userData,
+      logsStore,
+      connectorsMap,
+      skill,
+      [
+        expect.objectContaining({ id: 'made-0', evaluation_method: 'latency' }),
+        expect.objectContaining({
+          id: 'made-1',
+          evaluation_method: 'task_completion',
+        }),
+      ],
+    );
     // And the pass completed: the one-shot flag is set with the lock released.
     expect(userData.updateSkill).toHaveBeenLastCalledWith(
       mockContext,
@@ -225,6 +244,7 @@ describe('checkAndRegenerateEvaluationsEarly, past the guards', () => {
       { params: {}, weight: 1 },
     );
     expect(userData.createSkillOptimizationEvaluations).not.toHaveBeenCalled();
+    expect(judgeLogsWithoutRuns).not.toHaveBeenCalled();
     expect(console.error).not.toHaveBeenCalled();
   });
 
