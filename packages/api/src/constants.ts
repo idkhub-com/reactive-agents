@@ -1,4 +1,5 @@
 import type { AppContext } from '@api/types/hono';
+import type { ChatCompletionRequestBody } from '@shared/types/api/routes/chat-completions-api/request';
 
 const DUMMY_JWT_SECRET = 'default-dev-jwt-secret';
 /**
@@ -190,3 +191,19 @@ export const SA_SKILLS = [
   'route-or-create',
   'compact-intent',
 ];
+
+/**
+ * Request parameters every internal skill call carries.
+ *
+ * Internal skills are one-shot: a judge call, an evaluation generation, a
+ * reflection, each with a prompt no later request shares. OpenAI's GPT-5.6
+ * models cache the prompt implicitly and bill the write at 1.25x the input
+ * price, so each call was paying to cache a prefix nothing would read back.
+ * Explicit mode caches only the blocks marked with a breakpoint, and none are
+ * marked, so nothing is written. The gateway drops the option for the models
+ * that reject it (`dropUnsupportedParameters`) and forwards it only where a
+ * provider's config lists it, so sending it unconditionally is safe.
+ */
+export const SA_SKILL_REQUEST_PARAMS = {
+  prompt_cache_options: { mode: 'explicit' },
+} as const satisfies Pick<ChatCompletionRequestBody, 'prompt_cache_options'>;

@@ -23,6 +23,7 @@ const MODEL_PARAMETERS = [
   'thinking',
   'logprobs',
   'top_logprobs',
+  'prompt_cache_options',
 ] as const;
 
 /**
@@ -51,6 +52,7 @@ export const ModelParameter = {
   THINKING: 'thinking',
   LOGPROBS: 'logprobs',
   TOP_LOGPROBS: 'top_logprobs',
+  PROMPT_CACHE_OPTIONS: 'prompt_cache_options',
 } as const;
 
 /**

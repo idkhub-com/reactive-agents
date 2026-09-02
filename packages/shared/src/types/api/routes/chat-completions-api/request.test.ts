@@ -24,6 +24,24 @@ describe('Chat Completions API Request Types', () => {
       expect(parsed.messages[0].content).toBe('Hello, world!');
     });
 
+    it('accepts prompt_cache_options and rejects a mode it does not know', () => {
+      const request = {
+        model: 'gpt-5.6',
+        messages: [{ role: 'user', content: 'Hello, world!' }],
+        prompt_cache_options: { mode: 'explicit' },
+      };
+
+      expect(
+        ChatCompletionRequestBody.parse(request).prompt_cache_options,
+      ).toEqual({ mode: 'explicit' });
+      expect(() =>
+        ChatCompletionRequestBody.parse({
+          ...request,
+          prompt_cache_options: { mode: 'never' },
+        }),
+      ).toThrow();
+    });
+
     it('should validate request with system and user messages', () => {
       const request = {
         model: 'claude-3-5-sonnet-20241022',

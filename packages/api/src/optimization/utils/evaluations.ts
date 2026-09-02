@@ -1,4 +1,4 @@
-import { getApiUrl } from '@api/constants';
+import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
@@ -194,6 +194,7 @@ export async function generateEvaluationCreateParams(
       },
     })
     .chat.completions.parse({
+      ...SA_SKILL_REQUEST_PARAMS,
       model: modelConfig.model,
       messages: [
         { role: 'system', content: systemPrompt },
