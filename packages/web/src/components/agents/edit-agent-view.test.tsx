@@ -35,6 +35,8 @@ const mockAgent = {
   auto_create_skills: true,
   skill_match_threshold: 0.8,
   max_auto_created_skills: 10,
+  skill_arbiter_model_id: null,
+  skill_arbiter_timeout_ms: null,
   created_at: '2023-01-01T10:30:00Z',
   updated_at: '2023-01-01T10:30:00Z',
 };
@@ -94,6 +96,19 @@ vi.mock('@web/providers/system-settings', () => ({
   })),
   SystemSettingsProvider: ({ children }: { children: React.ReactNode }) =>
     children,
+}));
+
+// The arbiter override lists the text models; none here.
+vi.mock('@web/providers/models', () => ({
+  useModels: vi.fn(() => ({
+    models: [],
+    isLoading: false,
+    setQueryParams: vi.fn(),
+  })),
+}));
+
+vi.mock('@web/providers/ai-providers', () => ({
+  useAIProviders: vi.fn(() => ({ aiProviderConfigs: [] })),
 }));
 
 describe('EditAgentView', () => {
@@ -516,7 +531,36 @@ describe('EditAgentView', () => {
           auto_create_skills: false,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 3,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         });
+      });
+    });
+
+    it('saves an arbiter timeout of its own in milliseconds, and clears it when emptied', async () => {
+      renderEditAgentView();
+
+      const timeout = screen.getByLabelText('Arbiter timeout (seconds)');
+      expect(timeout).toHaveValue(null);
+
+      fireEvent.change(timeout, { target: { value: '30' } });
+      fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateAgent).toHaveBeenCalledWith(
+          'agent-1',
+          expect.objectContaining({ skill_arbiter_timeout_ms: 30_000 }),
+        );
+      });
+
+      fireEvent.change(timeout, { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateAgent).toHaveBeenLastCalledWith(
+          'agent-1',
+          expect.objectContaining({ skill_arbiter_timeout_ms: null }),
+        );
       });
     });
 

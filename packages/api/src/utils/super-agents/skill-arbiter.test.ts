@@ -1,10 +1,14 @@
 import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
-import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
+import {
+  resolveModelById,
+  resolveSystemSettingsModel,
+} from '@api/utils/evaluation-model-resolver';
 import { arbitrateSkillForRequest } from '@api/utils/super-agents/skill-arbiter';
 import { AIProvider } from '@shared/types/constants';
-import type { Agent, Skill } from '@shared/types/data';
+import type { Agent, Skill, SystemSettings } from '@shared/types/data';
 import type { RequestIntent } from '@shared/utils/request-intent';
+import OpenAI from 'openai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -29,6 +33,7 @@ vi.mock('@api/constants', async (importOriginal) => ({
 }));
 
 vi.mock('@api/utils/evaluation-model-resolver', () => ({
+  resolveModelById: vi.fn(),
   resolveSystemSettingsModel: vi.fn(),
 }));
 
@@ -55,6 +60,11 @@ const intent: RequestIntent = {
   tools: 'Tools: read, write',
   conversation: 'User: create a new draft post about the renaming',
 };
+const settings = {
+  skill_arbiter_model_id: null,
+  skill_arbiter_timeout_ms: 42_000,
+  system_prompt_reflection_model_id: 'reflection-model',
+} as SystemSettings;
 
 const answer = (skillName: string | null) => ({
   choices: [{ message: { parsed: { skill_name: skillName } } }],
@@ -77,7 +87,60 @@ describe('arbitrateSkillForRequest', () => {
       agent,
       skills,
       intent,
+      settings,
     );
+
+  it('takes its model and timeout from the settings it is handed', async () => {
+    mockParse.mockResolvedValue(answer(null));
+
+    await arbitrate();
+
+    expect(resolveSystemSettingsModel).toHaveBeenCalledWith(
+      expect.anything(),
+      'skill_arbiter',
+      connector,
+      settings,
+    );
+    // One attempt within the configured time, and one retry.
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 42_000,
+      maxRetries: 1,
+    });
+  });
+
+  it("prefers the agent's own arbiter model and timeout", async () => {
+    vi.mocked(resolveModelById).mockResolvedValue({
+      model: 'agent-model',
+      provider: AIProvider.OPENAI,
+      apiKey: 'key',
+    });
+    mockParse.mockResolvedValue(answer(null));
+
+    await arbitrateSkillForRequest(
+      createMockContext(),
+      connector,
+      {
+        ...agent,
+        skill_arbiter_model_id: 'agent-arbiter-model',
+        skill_arbiter_timeout_ms: 7_000,
+      },
+      skills,
+      intent,
+      settings,
+    );
+
+    expect(resolveModelById).toHaveBeenCalledWith(
+      expect.anything(),
+      'agent-arbiter-model',
+      connector,
+      expect.any(String),
+    );
+    expect(resolveSystemSettingsModel).not.toHaveBeenCalled();
+    expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
+      timeout: 7_000,
+    });
+    expect(mockParse.mock.calls[0][0]).toMatchObject({ model: 'agent-model' });
+  });
 
   it('maps a named skill to an existing verdict', async () => {
     mockParse.mockResolvedValue(answer('generate-thread-titles'));

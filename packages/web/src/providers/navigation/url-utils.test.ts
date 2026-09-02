@@ -97,6 +97,8 @@ describe('url-utils', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       },
       {
         id: 'agent-2',
@@ -108,6 +110,8 @@ describe('url-utils', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       },
       {
         id: 'agent-3',
@@ -119,6 +123,8 @@ describe('url-utils', () => {
         auto_create_skills: true,
         skill_match_threshold: 0.8,
         max_auto_created_skills: 10,
+        skill_arbiter_model_id: null,
+        skill_arbiter_timeout_ms: null,
       },
     ];
 
@@ -166,6 +172,8 @@ describe('url-utils', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
       ];
       const result = getAgentByName(agentsWithSpecialChars, 'Agent & Helper');
@@ -409,6 +417,8 @@ describe('url-utils', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
       ];
       const result = getAgentByName(mockAgents, '');
@@ -427,6 +437,8 @@ describe('url-utils', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
       ];
       const result = getAgentByName(mockAgents, 'Agente Español 日本語');
@@ -445,6 +457,8 @@ describe('url-utils', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
       ];
       // URL-encoded 'Test Agent'
@@ -464,6 +478,8 @@ describe('url-utils', () => {
           auto_create_skills: true,
           skill_match_threshold: 0.8,
           max_auto_created_skills: 10,
+          skill_arbiter_model_id: null,
+          skill_arbiter_timeout_ms: null,
         },
       ];
       const result = getAgentByName(mockAgents, 'test agent');

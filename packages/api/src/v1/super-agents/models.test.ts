@@ -301,6 +301,8 @@ describe('Models API Status Codes', () => {
       evaluation_generation_model_id: null,
       embedding_model_id: null,
       judge_model_id: null,
+      skill_arbiter_model_id: null,
+      skill_arbiter_timeout_ms: 15_000,
       developer_mode: false,
       created_at: '2023-01-01T00:00:00.000Z',
       updated_at: '2023-01-01T00:00:00.000Z',
@@ -319,13 +321,16 @@ describe('Models API Status Codes', () => {
         ...systemSettings,
         system_prompt_reflection_model_id: modelId,
         judge_model_id: modelId,
+        skill_arbiter_model_id: modelId,
       });
 
       const res = await client[':id'].$delete({ param: { id: modelId } });
 
       expect(res.status).toBe(409);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain('System Prompt Reflection and Judge model');
+      expect(data.error).toContain(
+        'System Prompt Reflection, Judge and Skill Arbiter model',
+      );
     });
 
     it('should leave the skills alone when the delete is refused', async () => {

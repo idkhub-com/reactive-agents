@@ -14,6 +14,8 @@ export function createMockStorageConnector(): UserDataStorageConnector {
       reflection_model_id: 'model-123',
       evaluation_generation_model_id: 'model-123',
       embedding_model_id: 'embed-123',
+      skill_arbiter_model_id: null,
+      skill_arbiter_timeout_ms: 15_000,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }),

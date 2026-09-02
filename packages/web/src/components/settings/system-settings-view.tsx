@@ -1,7 +1,11 @@
 'use client';
 
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
-import type { SystemSettingsUpdateParams } from '@shared/types/data/system-settings';
+import {
+  MAX_SKILL_ARBITER_TIMEOUT_MS,
+  MIN_SKILL_ARBITER_TIMEOUT_MS,
+  type SystemSettingsUpdateParams,
+} from '@shared/types/data/system-settings';
 import { DeveloperModeToggle } from '@web/components/settings/developer-mode-toggle';
 import {
   type ModelOption,
@@ -20,22 +24,44 @@ import {
   CardHeader,
   CardTitle,
 } from '@web/components/ui/card';
+import { Input } from '@web/components/ui/input';
+import { Label } from '@web/components/ui/label';
 import { PageHeader } from '@web/components/ui/page-header';
 import { useToast } from '@web/hooks/use-toast';
 import { useAIProviders } from '@web/providers/ai-providers';
 import { useModels } from '@web/providers/models';
 import { useSystemSettings } from '@web/providers/system-settings';
 import { sortModels } from '@web/utils/model-sorting';
-import { SaveIcon, SettingsIcon } from 'lucide-react';
+import { RouteIcon, SaveIcon, SettingsIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
-interface FormValues {
-  system_prompt_reflection_model_id: string | null;
-  evaluation_generation_model_id: string | null;
-  embedding_model_id: string | null;
-  judge_model_id: string | null;
+const MIN_ARBITER_TIMEOUT_SECONDS = MIN_SKILL_ARBITER_TIMEOUT_MS / 1000;
+const MAX_ARBITER_TIMEOUT_SECONDS = MAX_SKILL_ARBITER_TIMEOUT_MS / 1000;
+
+type ModelField =
+  | 'system_prompt_reflection_model_id'
+  | 'evaluation_generation_model_id'
+  | 'embedding_model_id'
+  | 'judge_model_id'
+  | 'skill_arbiter_model_id';
+
+interface FormValues extends Record<ModelField, string | null> {
+  /** Edited in seconds; the setting itself is in milliseconds. */
+  skill_arbiter_timeout_seconds: number;
   developer_mode: boolean;
+}
+
+/** Why the arbiter timeout cannot be saved as entered, or null when it can. */
+export function arbiterTimeoutProblem(seconds: number): string | null {
+  if (
+    Number.isInteger(seconds) &&
+    seconds >= MIN_ARBITER_TIMEOUT_SECONDS &&
+    seconds <= MAX_ARBITER_TIMEOUT_SECONDS
+  ) {
+    return null;
+  }
+  return `Enter a whole number of seconds between ${MIN_ARBITER_TIMEOUT_SECONDS} and ${MAX_ARBITER_TIMEOUT_SECONDS}.`;
 }
 
 export function SystemSettingsView(): ReactElement {
@@ -44,6 +70,8 @@ export function SystemSettingsView(): ReactElement {
     useSystemSettings();
   const { models, isLoading: isLoadingModels, setQueryParams } = useModels();
   const { aiProviderConfigs: apiKeys } = useAIProviders();
+  const timeoutId = useId();
+  const timeoutDescriptionId = `${timeoutId}-description`;
 
   // Local state for form values
   const [formValues, setFormValues] = useState<FormValues>({
@@ -51,6 +79,8 @@ export function SystemSettingsView(): ReactElement {
     evaluation_generation_model_id: null,
     embedding_model_id: null,
     judge_model_id: null,
+    skill_arbiter_model_id: null,
+    skill_arbiter_timeout_seconds: 15,
     developer_mode: false,
   });
 
@@ -71,6 +101,8 @@ export function SystemSettingsView(): ReactElement {
         evaluation_generation_model_id: settings.evaluation_generation_model_id,
         embedding_model_id: settings.embedding_model_id,
         judge_model_id: settings.judge_model_id,
+        skill_arbiter_model_id: settings.skill_arbiter_model_id,
+        skill_arbiter_timeout_seconds: settings.skill_arbiter_timeout_ms / 1000,
         developer_mode: settings.developer_mode,
       });
       setIsDirty(false);
@@ -108,8 +140,16 @@ export function SystemSettingsView(): ReactElement {
     [modelOptions],
   );
 
-  const handleFieldChange = (field: keyof FormValues, value: string) => {
+  const handleFieldChange = (field: ModelField, value: string | null) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleTimeoutChange = (seconds: number) => {
+    setFormValues((prev) => ({
+      ...prev,
+      skill_arbiter_timeout_seconds: seconds,
+    }));
     setIsDirty(true);
   };
 
@@ -144,12 +184,24 @@ export function SystemSettingsView(): ReactElement {
 
   const isSettingsComplete = missingFields.length === 0;
 
+  const timeoutProblem = arbiterTimeoutProblem(
+    formValues.skill_arbiter_timeout_seconds,
+  );
+
   const handleSave = async () => {
     // Validate all required fields
     if (missingFields.length > 0) {
       toast({
         title: 'Missing required fields',
         description: `Please configure: ${missingFields.join(', ')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (timeoutProblem) {
+      toast({
+        title: 'Invalid arbiter timeout',
+        description: timeoutProblem,
         variant: 'destructive',
       });
       return;
@@ -178,6 +230,15 @@ export function SystemSettingsView(): ReactElement {
       }
       if (formValues.judge_model_id !== settings?.judge_model_id) {
         updateParams.judge_model_id = formValues.judge_model_id;
+      }
+      if (
+        formValues.skill_arbiter_model_id !== settings?.skill_arbiter_model_id
+      ) {
+        updateParams.skill_arbiter_model_id = formValues.skill_arbiter_model_id;
+      }
+      const timeoutMs = formValues.skill_arbiter_timeout_seconds * 1000;
+      if (timeoutMs !== settings?.skill_arbiter_timeout_ms) {
+        updateParams.skill_arbiter_timeout_ms = timeoutMs;
       }
       if (formValues.developer_mode !== settings?.developer_mode) {
         updateParams.developer_mode = formValues.developer_mode;
@@ -293,6 +354,81 @@ export function SystemSettingsView(): ReactElement {
               modelOptions={textModelOptions}
               isLoading={isAnyLoading}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RouteIcon className="h-5 w-5" aria-hidden="true" />
+              Skill Routing
+            </CardTitle>
+            <CardDescription>
+              When a request names only its agent and resembles none of the
+              agent&apos;s skills closely, the arbiter decides whether it is a
+              known job on new material or a new kind of job. It answers on the
+              request path, so the request waits for it. Each agent can override
+              both settings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ModelSelector
+              label="Skill Arbiter"
+              description="Model that makes the call. A fast model serves best; it only has to name a skill or none."
+              recommendation="gpt-5-mini or claude-haiku-4-5"
+              value={formValues.skill_arbiter_model_id}
+              onChange={(v) => handleFieldChange('skill_arbiter_model_id', v)}
+              modelOptions={textModelOptions}
+              isLoading={isAnyLoading}
+              required={false}
+              emptyOption="Same as System Prompt Reflection"
+            />
+
+            <div className="grid gap-4 md:grid-cols-[1fr,300px] items-start py-4 border-b last:border-b-0">
+              <div className="space-y-1">
+                <Label htmlFor={timeoutId} className="font-medium text-base">
+                  Arbiter Timeout
+                </Label>
+                <p
+                  id={timeoutDescriptionId}
+                  className="text-sm text-muted-foreground"
+                >
+                  Seconds one arbiter attempt may take; a timed-out attempt is
+                  retried once. Keep it as short as the model allows, since a
+                  request that matches no skill closely waits for the answer.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id={timeoutId}
+                    type="number"
+                    inputMode="numeric"
+                    min={MIN_ARBITER_TIMEOUT_SECONDS}
+                    max={MAX_ARBITER_TIMEOUT_SECONDS}
+                    step={1}
+                    className="w-32"
+                    value={
+                      Number.isNaN(formValues.skill_arbiter_timeout_seconds)
+                        ? ''
+                        : formValues.skill_arbiter_timeout_seconds
+                    }
+                    onChange={(e) =>
+                      handleTimeoutChange(e.target.valueAsNumber)
+                    }
+                    disabled={isAnyLoading}
+                    aria-describedby={timeoutDescriptionId}
+                    aria-invalid={timeoutProblem !== null}
+                  />
+                  <span className="text-sm text-muted-foreground">seconds</span>
+                </div>
+                {timeoutProblem && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {timeoutProblem}
+                  </p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -1,9 +1,12 @@
 import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
-import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
+import {
+  resolveModelById,
+  resolveSystemSettingsModel,
+} from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
-import type { Agent, Skill } from '@shared/types/data';
+import type { Agent, Skill, SystemSettings } from '@shared/types/data';
 import type { RequestIntent } from '@shared/utils/request-intent';
 import OpenAI from 'openai';
 import { z } from 'zod';
@@ -27,9 +30,16 @@ const ArbiterAnswer = z.object({
   skill_name: z.union([z.null(), z.string()]),
 });
 
-/** One attempt; the client retries once. Bounded so that arbitration plus
- * skill creation still finish inside the creation lease. */
-const ARBITER_TIMEOUT_MS = 15_000;
+/**
+ * How long one arbiter attempt may take for this agent: its own setting when
+ * it has one, otherwise the system's.
+ */
+export function skillArbiterTimeoutMs(
+  agent: Agent,
+  settings: SystemSettings,
+): number {
+  return agent.skill_arbiter_timeout_ms ?? settings.skill_arbiter_timeout_ms;
+}
 
 const PROMPT_EXCERPT = 1500;
 const CONVERSATION_EXCERPT = 1500;
@@ -83,6 +93,12 @@ function arbiterUserMessage(
  * through the internal `route-or-create` skill like the other generation
  * steps. Anything going wrong answers `unavailable`, and the caller routes to
  * the closest skill rather than creating one -- the conservative side.
+ *
+ * The agent chooses its model and how long one attempt may take (the client
+ * retries once), falling back to the system settings -- and, for the model,
+ * to the reflection model when neither names one. The caller passes the
+ * settings because it needs the timeout too: the arbiter is asked under the
+ * skill-creation lease, which has to outlast it.
  */
 export async function arbitrateSkillForRequest(
   c: AppContext,
@@ -90,16 +106,25 @@ export async function arbitrateSkillForRequest(
   agent: Agent,
   skills: Skill[],
   intent: RequestIntent,
+  settings: SystemSettings,
 ): Promise<SkillArbiterVerdict> {
   try {
-    const modelConfig = await resolveSystemSettingsModel(
-      c,
-      'system_prompt_reflection',
-      connector,
-    );
+    const modelConfig = agent.skill_arbiter_model_id
+      ? await resolveModelById(
+          c,
+          agent.skill_arbiter_model_id,
+          connector,
+          'MODEL_RESOLVER_SKILL_ARBITER',
+        )
+      : await resolveSystemSettingsModel(
+          c,
+          'skill_arbiter',
+          connector,
+          settings,
+        );
     if (!modelConfig) {
       warn(
-        '[SKILL_ROUTING] No system prompt reflection model configured; routing to the closest skill without arbitration',
+        '[SKILL_ROUTING] No skill arbiter model configured, for the agent or the system; routing to the closest skill without arbitration',
       );
       return { kind: 'unavailable' };
     }
@@ -107,7 +132,7 @@ export async function arbitrateSkillForRequest(
     const client = new OpenAI({
       apiKey: '',
       baseURL: `${getApiUrl(c)}/v1`,
-      timeout: ARBITER_TIMEOUT_MS,
+      timeout: skillArbiterTimeoutMs(agent, settings),
       maxRetries: 1,
     });
     const saConfig = {

@@ -59,6 +59,8 @@ describe('Evaluation Model Resolver', () => {
     embedding_model_id: 'embed-1111-2222-3333-444455556666',
     system_prompt_reflection_model_id: 'model-1111-2222-3333-444455556666',
     evaluation_generation_model_id: 'model-1111-2222-3333-444455556666',
+    skill_arbiter_model_id: null,
+    skill_arbiter_timeout_ms: 15_000,
     developer_mode: false,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -267,6 +269,69 @@ describe('Evaluation Model Resolver', () => {
         apiKey: undefined,
         customHost: 'http://localhost:11434',
       });
+    });
+
+    it('resolves the skill arbiter to its own model when one is chosen', async () => {
+      const arbiterModelId = 'arbiter-111-2222-3333-444455556666';
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
+        ...mockSystemSettings,
+        skill_arbiter_model_id: arbiterModelId,
+      });
+      vi.mocked(mockConnector.getModels).mockResolvedValue([
+        { ...mockModel, id: arbiterModelId, model_name: 'gpt-5-mini' },
+      ]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        mockProvider,
+      ]);
+
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'skill_arbiter',
+        mockConnector,
+      );
+
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
+        id: arbiterModelId,
+      });
+      expect(result?.model).toBe('gpt-5-mini');
+    });
+
+    it('falls back to the reflection model for the skill arbiter when none is chosen', async () => {
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue(
+        mockSystemSettings,
+      );
+      vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        mockProvider,
+      ]);
+
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'skill_arbiter',
+        mockConnector,
+      );
+
+      expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
+        id: mockSystemSettings.system_prompt_reflection_model_id,
+      });
+      expect(result?.model).toBe('gpt-4');
+    });
+
+    it('reads the settings it is handed instead of storage', async () => {
+      vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        mockProvider,
+      ]);
+
+      const result = await resolveSystemSettingsModel(
+        mockContext,
+        'judge',
+        mockConnector,
+        mockSystemSettings,
+      );
+
+      expect(mockConnector.getSystemSettings).not.toHaveBeenCalled();
+      expect(result?.model).toBe('gpt-4');
     });
   });
 

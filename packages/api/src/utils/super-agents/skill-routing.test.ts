@@ -28,7 +28,10 @@ vi.mock('@api/utils/evaluation-model-resolver', () => ({
 vi.mock('@api/utils/super-agents/skill-creation', () => ({
   createSkillForRequest: vi.fn(),
 }));
-vi.mock('@api/utils/super-agents/skill-arbiter', () => ({
+vi.mock('@api/utils/super-agents/skill-arbiter', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@api/utils/super-agents/skill-arbiter')
+  >()),
   arbitrateSkillForRequest: vi.fn(),
 }));
 
@@ -126,9 +129,11 @@ const routingConnector = (): RoutingConnector => {
       stored.set(params.skill_id, row);
       return Promise.resolve(row);
     }),
-    getSystemSettings: vi
-      .fn()
-      .mockResolvedValue({ embedding_model_id: MODEL_ID }),
+    getSystemSettings: vi.fn().mockResolvedValue({
+      embedding_model_id: MODEL_ID,
+      skill_arbiter_model_id: null,
+      skill_arbiter_timeout_ms: 15_000,
+    }),
     claimSkillCreationLease: vi.fn().mockResolvedValue(true),
     releaseSkillCreationLease: vi.fn(),
   };
@@ -422,6 +427,19 @@ describe('routeRequestToSkill', () => {
       );
     });
 
+    it('holds the lease long enough for the arbiter to answer', async () => {
+      connector.getSkills.mockResolvedValue([skill('s1', 'translate')]);
+      // The agent's own arbiter timeout wins over the system's 15 seconds.
+      const patient = { ...growing, skill_arbiter_timeout_ms: 30_000 } as Agent;
+
+      await route(patient, chat('Draw a picture of a cat.'));
+
+      // Creation's own budget, plus one arbiter attempt and its retry.
+      const [, , , now, until] = connector.claimSkillCreationLease.mock
+        .calls[0] as string[];
+      expect(Date.parse(until) - Date.parse(now)).toBe(45_000 + 2 * 30_000);
+    });
+
     it('takes the skill another request created while it waited for the lease', async () => {
       const translate = skill('s1', 'translate');
       connector.getSkills
@@ -527,6 +545,8 @@ describe('routeRequestToSkill', () => {
         growing,
         [translate, sql],
         expect.objectContaining({ systemPrompt: 'Draw a picture of a cat.' }),
+        // The system settings, read once and handed on.
+        expect.objectContaining({ skill_arbiter_timeout_ms: 15_000 }),
       );
       expect(createSkillForRequest).toHaveBeenCalledWith(
         c,

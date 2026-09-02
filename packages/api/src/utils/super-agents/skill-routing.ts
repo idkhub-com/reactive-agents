@@ -8,9 +8,15 @@ import {
   embedRequestIntent,
   type RequestIntentEmbedding,
 } from '@api/utils/super-agents/intent-embeddings';
-import { arbitrateSkillForRequest } from '@api/utils/super-agents/skill-arbiter';
+import {
+  arbitrateSkillForRequest,
+  skillArbiterTimeoutMs,
+} from '@api/utils/super-agents/skill-arbiter';
 import { createSkillForRequest } from '@api/utils/super-agents/skill-creation';
-import { withSkillCreationLease } from '@api/utils/super-agents/skill-creation-lease';
+import {
+  SKILL_CREATION_LEASE_MS,
+  withSkillCreationLease,
+} from '@api/utils/super-agents/skill-creation-lease';
 import { warn } from '@shared/console-logging';
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type {
@@ -505,7 +511,13 @@ export async function routeRequestToSkill(
     return first.result;
   }
 
-  return withSkillCreationLease(c, connector, agent, async () => {
+  // The arbiter is asked under the lease, so the lease has to outlast its
+  // budget -- one attempt and the client's one retry -- on top of creation.
+  const settings = await connector.getSystemSettings(c);
+  const leaseMs =
+    SKILL_CREATION_LEASE_MS + 2 * skillArbiterTimeoutMs(agent, settings);
+
+  const underLease = async (): Promise<SkillRoutingResult> => {
     const again = await routeOnce(c, connector, agent, requestIntent);
     if (again.kind === 'routed') {
       return again.result;
@@ -529,6 +541,7 @@ export async function routeRequestToSkill(
         agent,
         again.skills,
         requestIntent,
+        settings,
       );
       if (verdict.kind === 'existing') {
         // Teach the router, so the next such request needs no arbiter.
@@ -570,7 +583,9 @@ export async function routeRequestToSkill(
       ),
       decision: decision('created'),
     };
-  });
+  };
+
+  return withSkillCreationLease(c, connector, agent, underLease, leaseMs);
 }
 
 /** When each skill last learned from a request that named it. */

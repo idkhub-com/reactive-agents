@@ -42,6 +42,8 @@ const mockAgents: Agent[] = [
     auto_create_skills: true,
     skill_match_threshold: 0.8,
     max_auto_created_skills: 10,
+    skill_arbiter_model_id: null,
+    skill_arbiter_timeout_ms: null,
   },
   {
     id: 'agent-2',
@@ -53,6 +55,8 @@ const mockAgents: Agent[] = [
     auto_create_skills: true,
     skill_match_threshold: 0.8,
     max_auto_created_skills: 10,
+    skill_arbiter_model_id: null,
+    skill_arbiter_timeout_ms: null,
   },
 ];
 

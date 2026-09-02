@@ -30,6 +30,8 @@ describe('System Settings API', () => {
     evaluation_generation_model_id: 'model-2222-3333-4444-555566667777',
     embedding_model_id: 'model-3333-4444-5555-666677778888',
     judge_model_id: 'model-4444-5555-6666-777788889999',
+    skill_arbiter_model_id: null,
+    skill_arbiter_timeout_ms: 15_000,
     developer_mode: false,
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -154,6 +156,38 @@ describe('System Settings API', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual(updatedSettings);
+    });
+
+    it('should accept a skill arbiter timeout within bounds', async () => {
+      mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
+        ...mockSettings,
+        skill_arbiter_timeout_ms: 120_000,
+      });
+
+      const res = await client.index.$patch({
+        json: { skill_arbiter_timeout_ms: 120_000 },
+      });
+
+      expect(res.status).toBe(200);
+      expect(
+        mockUserDataStorageConnector.updateSystemSettings,
+      ).toHaveBeenCalledWith(expect.anything(), {
+        skill_arbiter_timeout_ms: 120_000,
+      });
+    });
+
+    it('should return 400 for a skill arbiter timeout out of bounds', async () => {
+      // Below a second, above ten minutes, and not a whole millisecond.
+      for (const skill_arbiter_timeout_ms of [0, 500, 600_001, 15_000.5]) {
+        const res = await client.index.$patch({
+          json: { skill_arbiter_timeout_ms },
+        });
+
+        expect(res.status).toBe(400);
+      }
+      expect(
+        mockUserDataStorageConnector.updateSystemSettings,
+      ).not.toHaveBeenCalled();
     });
 
     it('should return 400 for invalid UUID format', async () => {

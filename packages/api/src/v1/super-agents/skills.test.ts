@@ -150,6 +150,8 @@ describe('Skills API Status Codes', () => {
       judge_model_id: null,
       system_prompt_reflection_model_id: null,
       evaluation_generation_model_id: null,
+      skill_arbiter_model_id: null,
+      skill_arbiter_timeout_ms: 15_000,
     });
   });
 

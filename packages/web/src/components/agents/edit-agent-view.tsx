@@ -1,7 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import type { AgentUpdateParams } from '@shared/types/data';
+import {
+  MAX_SKILL_ARBITER_TIMEOUT_MS,
+  MIN_SKILL_ARBITER_TIMEOUT_MS,
+} from '@shared/types/data/system-settings';
 import { sanitizeUserInput } from '@shared/utils/security';
 import { useParams } from '@tanstack/react-router';
 import { Button } from '@web/components/ui/button';
@@ -23,14 +28,30 @@ import {
 } from '@web/components/ui/form';
 import { Input } from '@web/components/ui/input';
 import { PageHeader } from '@web/components/ui/page-header';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@web/components/ui/select';
 import { Switch } from '@web/components/ui/switch';
 import { Textarea } from '@web/components/ui/textarea';
 import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
 import { useAgents } from '@web/providers/agents';
+import { useAIProviders } from '@web/providers/ai-providers';
+import { useModels } from '@web/providers/models';
+import { sortModels } from '@web/utils/model-sorting';
 import { Bot, Settings } from 'lucide-react';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+
+const MIN_ARBITER_TIMEOUT_SECONDS = MIN_SKILL_ARBITER_TIMEOUT_MS / 1000;
+const MAX_ARBITER_TIMEOUT_SECONDS = MAX_SKILL_ARBITER_TIMEOUT_MS / 1000;
+
+/** The select's value for "no override": a Radix item cannot be the empty string. */
+const SYSTEM_DEFAULT = '__system_default__';
 
 const EditAgentFormSchema = z
   .object({
@@ -47,6 +68,20 @@ const EditAgentFormSchema = z
       .number({ error: 'Enter a whole number' })
       .int('Must be a whole number')
       .min(0, 'Cannot be negative'),
+    // Null means the system setting applies.
+    skill_arbiter_model_id: z.string().nullable(),
+    skill_arbiter_timeout_seconds: z
+      .number({ error: 'Enter a whole number of seconds, or leave it empty' })
+      .int('Must be a whole number of seconds')
+      .min(
+        MIN_ARBITER_TIMEOUT_SECONDS,
+        `Must be at least ${MIN_ARBITER_TIMEOUT_SECONDS}`,
+      )
+      .max(
+        MAX_ARBITER_TIMEOUT_SECONDS,
+        `Must be at most ${MAX_ARBITER_TIMEOUT_SECONDS}`,
+      )
+      .nullable(),
   })
   .strict();
 
@@ -54,9 +89,37 @@ type EditAgentFormData = z.infer<typeof EditAgentFormSchema>;
 
 export function EditAgentView(): React.ReactElement {
   const { selectedAgent, updateAgent, isUpdating } = useAgents();
+  const { models, setQueryParams } = useModels();
+  const { aiProviderConfigs } = useAIProviders();
   const navigate = usePermissiveNavigate();
   const { agentName } = useParams({ strict: false }) as { agentName?: string };
   const agentNameInputId = React.useId();
+
+  // Load all models, for the arbiter override.
+  React.useEffect(() => {
+    setQueryParams({});
+  }, [setQueryParams]);
+
+  const textModelOptions = React.useMemo(
+    () =>
+      sortModels(
+        models
+          .filter((model) => model.model_type === 'text')
+          .map((model) => {
+            const provider = aiProviderConfigs.find(
+              (config) => config.id === model.ai_provider_id,
+            )?.ai_provider as AIProvider | undefined;
+            return {
+              id: model.id,
+              modelName: model.model_name,
+              providerName: provider
+                ? PrettyAIProvider[provider] || provider
+                : 'Unknown',
+            };
+          }),
+      ),
+    [models, aiProviderConfigs],
+  );
 
   const form = useForm<EditAgentFormData>({
     resolver: zodResolver(EditAgentFormSchema),
@@ -65,6 +128,8 @@ export function EditAgentView(): React.ReactElement {
       auto_create_skills: true,
       skill_match_threshold: 0.8,
       max_auto_created_skills: 10,
+      skill_arbiter_model_id: null,
+      skill_arbiter_timeout_seconds: null,
     },
   });
 
@@ -76,6 +141,11 @@ export function EditAgentView(): React.ReactElement {
         auto_create_skills: selectedAgent.auto_create_skills,
         skill_match_threshold: selectedAgent.skill_match_threshold,
         max_auto_created_skills: selectedAgent.max_auto_created_skills,
+        skill_arbiter_model_id: selectedAgent.skill_arbiter_model_id,
+        skill_arbiter_timeout_seconds:
+          selectedAgent.skill_arbiter_timeout_ms === null
+            ? null
+            : selectedAgent.skill_arbiter_timeout_ms / 1000,
       });
     }
   }, [selectedAgent, form]);
@@ -92,6 +162,11 @@ export function EditAgentView(): React.ReactElement {
         auto_create_skills: data.auto_create_skills,
         skill_match_threshold: data.skill_match_threshold,
         max_auto_created_skills: data.max_auto_created_skills,
+        skill_arbiter_model_id: data.skill_arbiter_model_id,
+        skill_arbiter_timeout_ms:
+          data.skill_arbiter_timeout_seconds === null
+            ? null
+            : data.skill_arbiter_timeout_seconds * 1000,
       };
 
       await updateAgent(selectedAgent.id, updateParams);
@@ -299,6 +374,86 @@ export function EditAgentView(): React.ReactElement {
                               onBlur={field.onBlur}
                               onChange={(e) =>
                                 field.onChange(e.target.valueAsNumber)
+                              }
+                              disabled={isUpdating}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* The arbiter: the model asked when no skill matches closely */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="skill_arbiter_model_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Arbiter model</FormLabel>
+                          <FormDescription>
+                            Decides whether an unfamiliar request is a new kind
+                            of job. Empty uses the system setting.
+                          </FormDescription>
+                          <Select
+                            value={field.value ?? SYSTEM_DEFAULT}
+                            onValueChange={(value) =>
+                              field.onChange(
+                                value === SYSTEM_DEFAULT ? null : value,
+                              )
+                            }
+                            disabled={isUpdating}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={SYSTEM_DEFAULT}>
+                                System default
+                              </SelectItem>
+                              {textModelOptions.map((model) => (
+                                <SelectItem key={model.id} value={model.id}>
+                                  {model.modelName}{' '}
+                                  <span className="text-muted-foreground">
+                                    ({model.providerName})
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="skill_arbiter_timeout_seconds"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Arbiter timeout (seconds)</FormLabel>
+                          <FormDescription>
+                            Per attempt, retried once. Empty uses the system
+                            setting.
+                          </FormDescription>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="1"
+                              min={MIN_ARBITER_TIMEOUT_SECONDS}
+                              max={MAX_ARBITER_TIMEOUT_SECONDS}
+                              placeholder="System default"
+                              name={field.name}
+                              value={field.value ?? ''}
+                              onBlur={field.onBlur}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value === ''
+                                    ? null
+                                    : e.target.valueAsNumber,
+                                )
                               }
                               disabled={isUpdating}
                             />

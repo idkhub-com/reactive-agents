@@ -4,7 +4,11 @@ import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { warn } from '@shared/console-logging';
 import type { AIProvider } from '@shared/types/constants';
-import type { Model, SkillOptimizationEvaluation } from '@shared/types/data';
+import type {
+  Model,
+  SkillOptimizationEvaluation,
+  SystemSettings,
+} from '@shared/types/data';
 
 /**
  * Model configuration resolved from system settings or evaluation.
@@ -36,7 +40,8 @@ export type SystemSettingsModelType =
   | 'judge'
   | 'embedding'
   | 'system_prompt_reflection'
-  | 'evaluation_generation';
+  | 'evaluation_generation'
+  | 'skill_arbiter';
 
 /**
  * Resolves a model configuration from a model ID.
@@ -46,7 +51,7 @@ export type SystemSettingsModelType =
  * @param logPrefix - Prefix for log messages
  * @returns The model configuration or null if not found
  */
-async function resolveModelById(
+export async function resolveModelById(
   c: AppContext,
   modelId: string,
   connector: UserDataStorageConnector,
@@ -96,17 +101,20 @@ async function resolveModelById(
  *
  * @param modelType - The type of model to resolve from system settings
  * @param connector - The storage connector to look up models and settings
+ * @param settings - The system settings, when the caller already read them
  * @returns The model configuration or null if not configured
  */
 export async function resolveSystemSettingsModel(
   c: AppContext,
   modelType: SystemSettingsModelType,
   connector: UserDataStorageConnector,
+  settings?: SystemSettings,
 ): Promise<ResolvedModelConfig | null> {
   const logPrefix = `MODEL_RESOLVER_${modelType.toUpperCase()}`;
-  const systemSettings = await connector.getSystemSettings(c);
+  const systemSettings = settings ?? (await connector.getSystemSettings(c));
 
   let modelId: string | null = null;
+  let configured = `${modelType}_model_id`;
 
   switch (modelType) {
     case 'judge':
@@ -121,12 +129,19 @@ export async function resolveSystemSettingsModel(
     case 'evaluation_generation':
       modelId = systemSettings.evaluation_generation_model_id;
       break;
+    case 'skill_arbiter':
+      // The arbiter has a model of its own only when one is chosen for it;
+      // otherwise it borrows the reflection model, as it always did.
+      modelId =
+        systemSettings.skill_arbiter_model_id ??
+        systemSettings.system_prompt_reflection_model_id;
+      configured =
+        'skill_arbiter_model_id or system_prompt_reflection_model_id';
+      break;
   }
 
   if (!modelId) {
-    warn(
-      `[${logPrefix}] No ${modelType}_model_id configured in system settings`,
-    );
+    warn(`[${logPrefix}] No ${configured} configured in system settings`);
     return null;
   }
 
