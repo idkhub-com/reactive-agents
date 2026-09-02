@@ -13,6 +13,7 @@ import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolve
 import { getInitialClusterCentroids } from '@api/utils/math';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import type { RequestIntentEmbedding } from '@api/utils/super-agents/intent-embeddings';
+import { judgeLogsWithoutRuns } from '@api/utils/super-agents/judge-backlog';
 import { error, info, warn } from '@shared/console-logging';
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type { Agent, Skill } from '@shared/types/data';
@@ -58,8 +59,8 @@ export async function createInitialClusters(
 
 /**
  * Generates the skill's evaluations with every method the server has. Each
- * is a model call, so this runs after the request that created the skill has
- * been answered; the first few logs go unscored.
+ * is a model call, so this runs behind the request that created the skill;
+ * the requests answered before it returns are judged once it has.
  */
 async function generateEvaluations(
   c: AppContext,
@@ -105,6 +106,15 @@ async function generateEvaluations(
       metadata: { evaluation_method: evaluation.evaluation_method },
     });
   }
+
+  await judgeLogsWithoutRuns(
+    c,
+    connector,
+    c.get('logs_storage_connector'),
+    connectorsMap,
+    skill,
+    created,
+  );
 }
 
 /**

@@ -1427,6 +1427,9 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
       postgRESTQuery.offset = queryParams.offset.toString();
     }
 
+    if (queryParams.unjudged) {
+      postgRESTQuery.eval_run_count = 'eq.0';
+    }
     if (queryParams.embedding_not_null) {
       postgRESTQuery.embedding = 'not.is.null';
     }

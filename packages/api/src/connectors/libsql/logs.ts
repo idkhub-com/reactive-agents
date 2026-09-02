@@ -47,6 +47,9 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
     if (queryParams.embedding_not_null) {
       conditions.push('embedding IS NOT NULL');
     }
+    if (queryParams.unjudged) {
+      conditions.push('eval_run_count = 0');
+    }
     if (queryParams.after !== undefined) {
       conditions.push('start_time >= ?');
       args.push(queryParams.after);

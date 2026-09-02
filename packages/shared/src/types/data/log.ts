@@ -132,6 +132,8 @@ export const LogsQueryParams = z.object({
     .optional(),
   cache_status: z.enum(CacheStatus).optional(),
   embedding_not_null: z.coerce.boolean().optional(),
+  /** Only logs with no evaluation run yet. */
+  unjudged: z.coerce.boolean().optional(),
   /** By `start_time`; newest first unless asked for `asc`. */
   order: z.enum(['asc', 'desc']).optional(),
   limit: z.string().default('50').transform(Number).optional(),

@@ -4,6 +4,7 @@ import { generateEvaluationCreateParams } from '@api/optimization/utils/evaluati
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveEmbeddingModelConfig } from '@api/utils/evaluation-model-resolver';
+import { judgeLogsWithoutRuns } from '@api/utils/super-agents/judge-backlog';
 import {
   adoptDefaultModels,
   createSkillForRequest,
@@ -30,6 +31,9 @@ vi.mock('@api/utils/evaluation-model-resolver', () => ({
   resolveEmbeddingModelConfig: vi.fn(),
 }));
 vi.mock('@api/utils/sse-event-manager', () => ({ emitSSEEvent: vi.fn() }));
+vi.mock('@api/utils/super-agents/judge-backlog', () => ({
+  judgeLogsWithoutRuns: vi.fn().mockResolvedValue(0),
+}));
 
 const c = {
   get: (key: string) => (key === 'evaluation_connectors_map' ? {} : undefined),
@@ -337,6 +341,17 @@ describe('adoptDefaultModels', () => {
         .map((params) => params.evaluation_method)
         .sort(),
     ).toEqual(['latency', 'task_completion']);
+    // The requests answered while that ran are judged against what it made
+    await vi.waitFor(() => {
+      expect(judgeLogsWithoutRuns).toHaveBeenCalledWith(
+        cWithMethods,
+        connector,
+        undefined,
+        { latency: {}, task_completion: {} },
+        expect.objectContaining({ id: 'bare' }),
+        created,
+      );
+    });
   });
 
   it('leaves evaluations alone when the skill already has them', async () => {
