@@ -1,5 +1,5 @@
 import type { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/task-completion/types';
-import { getApiUrl } from '@api/constants';
+import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import { parseJudgeJson } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
@@ -93,6 +93,7 @@ export async function extractTaskAndOutcome(
       },
     })
     .chat.completions.create({
+      ...SA_SKILL_REQUEST_PARAMS,
       model: modelConfig.model,
       messages: [
         { role: 'system', content: systemPrompt },

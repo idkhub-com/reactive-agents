@@ -91,6 +91,26 @@ describe('generateEvaluationCreateParams', () => {
     expect(params.skill_id).toBe('skill-1');
   });
 
+  it('opts out of the implicit prompt cache, like every internal skill call', async () => {
+    mockParse.mockResolvedValue(parsedAs({ task: 'Review the diff' }));
+
+    await generateEvaluationCreateParams(
+      mockContext,
+      skill,
+      connectorFor(
+        EvaluationMethodName.TASK_COMPLETION,
+        z.object({ task: z.string() }),
+      ),
+      EvaluationMethodName.TASK_COMPLETION,
+      'an agent that maintains a website',
+      storageConnector,
+    );
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      prompt_cache_options: { mode: 'explicit' },
+    });
+  });
+
   it('does not call the model for a method with no AI parameters', async () => {
     /**
      * Every method but task_completion declares an empty AI schema. Asking a

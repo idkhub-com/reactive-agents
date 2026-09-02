@@ -11,6 +11,25 @@ import {
 import { z } from 'zod';
 
 /**
+ * How the provider caches the prompt prefix: OpenAI's `prompt_cache_options`,
+ * which exists from GPT-5.6 on. Those models cache implicitly by default and
+ * bill the write; `explicit` caches only the blocks marked with a breakpoint,
+ * so a request that marks none writes nothing.
+ *
+ * @see https://developers.openai.com/api/docs/guides/prompt-caching
+ */
+export const ChatCompletionPromptCacheOptions = z.object({
+  /** `implicit`, the default, places a breakpoint at the end of the prompt. */
+  mode: z.enum(['implicit', 'explicit']).optional(),
+  /** Minimum lifetime of the breakpoints the request writes; `30m` so far. */
+  ttl: z.string().optional(),
+});
+
+export type ChatCompletionPromptCacheOptions = z.infer<
+  typeof ChatCompletionPromptCacheOptions
+>;
+
+/**
  * The parameters for the chat completions API request.
  * Used for the /v1/chat/completions endpoint.
  */
@@ -104,6 +123,8 @@ export const ChatCompletionRequestBody = z.object({
   top_logprobs: z.number().optional(),
   /** Whether to enable parallel function calling during tool use. */
   parallel_tool_calls: z.boolean().optional(),
+  /** How the provider caches the prompt prefix. Forwarded only to the models that take it. */
+  prompt_cache_options: ChatCompletionPromptCacheOptions.optional(),
   // Provider-specific parameters
   /** Google Vertex AI specific safety settings. */
   safety_settings: z.any().optional(),

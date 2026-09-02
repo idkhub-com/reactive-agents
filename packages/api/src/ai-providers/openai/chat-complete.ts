@@ -120,6 +120,9 @@ export const openAIChatCompleteConfig: AIProviderFunctionConfig = {
   reasoning_effort: {
     param: 'reasoning_effort',
   },
+  prompt_cache_options: {
+    param: 'prompt_cache_options',
+  },
 };
 
 export const openAIChatCompleteResponseTransform: ResponseTransformFunction = (

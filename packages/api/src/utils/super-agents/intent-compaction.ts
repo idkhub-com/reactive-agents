@@ -1,4 +1,4 @@
-import { getApiUrl } from '@api/constants';
+import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
@@ -64,6 +64,7 @@ async function compactOnce(
       defaultHeaders: { 'sa-config': JSON.stringify(saConfig) },
     })
     .chat.completions.create({
+      ...SA_SKILL_REQUEST_PARAMS,
       model: modelConfig.model,
       // Deterministic, so the summary -- and with it the identity embedding
       // -- stays put across restarts instead of drifting per process.

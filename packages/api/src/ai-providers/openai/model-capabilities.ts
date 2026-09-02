@@ -24,14 +24,20 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
     presence_penalty: { min: -2, max: 2 },
   },
 
+  // `prompt_cache_options` exists from gpt-5.6 on, and the models before it
+  // answer the field with a 400 rather than ignoring it. So the entry for
+  // gpt-5.6 and later is the only one that takes it: every other entry lists
+  // it as unsupported, and this default covers the models with no entry.
+  defaultUnsupportedParameters: [ModelParameter.PROMPT_CACHE_OPTIONS],
+
   models: [
-    // GPT-5 reasoning models: gpt-5, -mini, -nano, -pro, the 5.x point
-    // releases and their dated snapshots. Only the default temperature is
-    // accepted, so sampling parameters are dropped rather than sent. The
-    // `-chat` variants are ordinary chat models and take them.
-    // Support reasoning_effort: minimal, low, medium, high
+    // GPT-5.6 and later, reasoning variants: the same restrictions as the
+    // rest of the gpt-5 family below, plus `prompt_cache_options`. Listed
+    // first because the family pattern below matches these names too. The
+    // major versions from 6 to 9 are included on the assumption that a
+    // successor keeps what its predecessor took.
     {
-      modelPattern: /^gpt-5(?!-chat)([.-].*)?$/,
+      modelPattern: /^gpt-(?:5\.(?:[6-9]|[1-9]\d)|[6-9])(?!-chat)(?:[.-].*)?$/,
       endpointConfigs: {
         [FunctionName.CHAT_COMPLETE]: {
           unsupportedParameters: [
@@ -57,6 +63,40 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
         },
       },
     },
+    // GPT-5 reasoning models: gpt-5, -mini, -nano, -pro, the 5.x point
+    // releases before 5.6 and their dated snapshots. Only the default
+    // temperature is accepted, so sampling parameters are dropped rather than
+    // sent. The `-chat` variants are ordinary chat models and take them.
+    // Support reasoning_effort: minimal, low, medium, high
+    {
+      modelPattern: /^gpt-5(?!-chat)([.-].*)?$/,
+      endpointConfigs: {
+        [FunctionName.CHAT_COMPLETE]: {
+          unsupportedParameters: [
+            ModelParameter.TEMPERATURE,
+            ModelParameter.TOP_P,
+            ModelParameter.PRESENCE_PENALTY,
+            ModelParameter.FREQUENCY_PENALTY,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
+          ],
+          legacyParameterMapping: {
+            [ModelParameter.MAX_TOKENS]: ModelParameter.MAX_COMPLETION_TOKENS,
+          },
+        },
+        [FunctionName.STREAM_CHAT_COMPLETE]: {
+          unsupportedParameters: [
+            ModelParameter.TEMPERATURE,
+            ModelParameter.TOP_P,
+            ModelParameter.PRESENCE_PENALTY,
+            ModelParameter.FREQUENCY_PENALTY,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
+          ],
+          legacyParameterMapping: {
+            [ModelParameter.MAX_TOKENS]: ModelParameter.MAX_COMPLETION_TOKENS,
+          },
+        },
+      },
+    },
     // o1 models
     {
       modelPattern: /^o1(-preview|-mini)?$/,
@@ -67,6 +107,7 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
             ModelParameter.TOP_P,
             ModelParameter.FREQUENCY_PENALTY,
             ModelParameter.PRESENCE_PENALTY,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
           ],
           legacyParameterMapping: {
             [ModelParameter.MAX_TOKENS]: ModelParameter.MAX_COMPLETION_TOKENS,
@@ -78,6 +119,7 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
             ModelParameter.TOP_P,
             ModelParameter.FREQUENCY_PENALTY,
             ModelParameter.PRESENCE_PENALTY,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
           ],
           legacyParameterMapping: {
             [ModelParameter.MAX_TOKENS]: ModelParameter.MAX_COMPLETION_TOKENS,
@@ -123,6 +165,7 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
             ModelParameter.TOP_P,
             ModelParameter.PRESENCE_PENALTY,
             ModelParameter.FREQUENCY_PENALTY,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
           ],
           legacyParameterMapping: {
             [ModelParameter.MAX_TOKENS]: ModelParameter.MAX_COMPLETION_TOKENS,
@@ -134,6 +177,7 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
             ModelParameter.TOP_P,
             ModelParameter.PRESENCE_PENALTY,
             ModelParameter.FREQUENCY_PENALTY,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
           ],
           legacyParameterMapping: {
             [ModelParameter.MAX_TOKENS]: ModelParameter.MAX_COMPLETION_TOKENS,
@@ -146,10 +190,16 @@ export const openAIModelCapabilities: ProviderModelCapabilities = {
       modelPattern: /^gpt-4o(-mini)?$/,
       endpointConfigs: {
         [FunctionName.CHAT_COMPLETE]: {
-          unsupportedParameters: [ModelParameter.REASONING_EFFORT],
+          unsupportedParameters: [
+            ModelParameter.REASONING_EFFORT,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
+          ],
         },
         [FunctionName.STREAM_CHAT_COMPLETE]: {
-          unsupportedParameters: [ModelParameter.REASONING_EFFORT],
+          unsupportedParameters: [
+            ModelParameter.REASONING_EFFORT,
+            ModelParameter.PROMPT_CACHE_OPTIONS,
+          ],
         },
       },
     },

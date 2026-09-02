@@ -35,6 +35,7 @@ vi.mock('@shared/console-logging', () => ({
 }));
 
 import { providerConfigs } from '@api/ai-providers';
+import { openAIModelCapabilities } from '@api/ai-providers/openai/model-capabilities';
 // Import after mocks are set up
 import { tryPost } from '@api/handlers/handler-utils';
 import transformToProviderRequest from '@api/services/transform-to-provider-request';
@@ -358,6 +359,45 @@ describe('tryPost Error Handling', () => {
         expect.stringContaining('Dropped temperature'),
       );
       expect(mockSuperAgentsRequestData.requestBody).toEqual(before);
+      warn.mockRestore();
+    });
+
+    /**
+     * The internal skills send `prompt_cache_options` on every call, and the
+     * OpenAI models before gpt-5.6 answer it with a 400. Against the real
+     * table: kept away from those, through to the ones that take it.
+     */
+    it.each([
+      ['gpt-5-mini', false],
+      ['gpt-5.6', true],
+    ])('forwards prompt_cache_options to %s: %s', async (model, forwarded) => {
+      reachTheTransform();
+      registerProviderCapabilities(openAIModelCapabilities);
+      mockSuperAgentsTarget.configuration.model = model;
+      mockSuperAgentsRequestData.requestBody = {
+        model,
+        messages: [{ role: ChatCompletionMessageRole.USER, content: 'Hello' }],
+        prompt_cache_options: { mode: 'explicit' },
+      } as never;
+      const warn = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      const sent = vi.mocked(transformToProviderRequest).mock.calls[0][2]
+        .requestBody as Record<string, unknown>;
+      if (forwarded) {
+        expect(sent.prompt_cache_options).toEqual({ mode: 'explicit' });
+      } else {
+        expect(sent).not.toHaveProperty('prompt_cache_options');
+      }
       warn.mockRestore();
     });
   });

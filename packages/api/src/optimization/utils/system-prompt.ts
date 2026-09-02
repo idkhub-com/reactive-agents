@@ -1,4 +1,4 @@
-import { getApiUrl } from '@api/constants';
+import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
@@ -133,6 +133,7 @@ async function callSystemPromptAPI(
       },
     })
     .chat.completions.parse({
+      ...SA_SKILL_REQUEST_PARAMS,
       model,
       messages: [
         { role: 'system', content: systemPrompt },

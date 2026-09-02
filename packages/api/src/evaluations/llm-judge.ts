@@ -1,5 +1,5 @@
 import { isAPIKeyRequiredForProvider } from '@api/ai-providers';
-import { getApiUrl } from '@api/constants';
+import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import {
   evaluationCriteria,
   scoringGuidelinesText,
@@ -294,6 +294,7 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
         });
 
         const response = await clientWithHeaders.chat.completions.create({
+          ...SA_SKILL_REQUEST_PARAMS,
           model: judgeConfig.model,
           messages: [
             { role: 'system', content: prompt.systemPrompt },

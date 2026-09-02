@@ -581,4 +581,59 @@ describe('Model Validator', () => {
       expect(takesTemperature('gpt-50')).toBe(true);
     });
   });
+
+  /**
+   * Against the real OpenAI table. `prompt_cache_options` exists from
+   * gpt-5.6 on, and the models before it answer the field with a 400 rather
+   * than ignoring it, so the table has to say no for everything else --
+   * including the models it has no entry for.
+   */
+  describe('prompt_cache_options on OpenAI', () => {
+    beforeEach(() => {
+      registerProviderCapabilities(openAIModelCapabilities);
+    });
+
+    const takes = (parameter: ModelParameter, model: string) =>
+      validateParameter(
+        AIProvider.OPENAI,
+        model,
+        parameter,
+        FunctionName.CHAT_COMPLETE,
+      ).isSupported;
+
+    it.each([
+      'gpt-5.6',
+      'gpt-5.6-sol',
+      'gpt-5.6-mini-2026-08-01',
+      'gpt-5.7',
+      'gpt-5.10',
+      'gpt-6',
+      'gpt-6.1-pro',
+    ])('is kept for %s', (model) => {
+      expect(takes(ModelParameter.PROMPT_CACHE_OPTIONS, model)).toBe(true);
+    });
+
+    it.each([
+      'gpt-5',
+      'gpt-5-mini',
+      'gpt-5.1',
+      'gpt-5.5',
+      'gpt-5-chat-latest',
+      'gpt-4o',
+      'gpt-4.1',
+      'gpt-3.5-turbo',
+      'o1',
+      'o3-mini',
+      'o4-mini',
+      'gpt-60',
+    ])('is dropped for %s', (model) => {
+      expect(takes(ModelParameter.PROMPT_CACHE_OPTIONS, model)).toBe(false);
+    });
+
+    it('keeps the family restrictions for the models that take it', () => {
+      expect(takes(ModelParameter.TEMPERATURE, 'gpt-5.6')).toBe(false);
+      expect(takes(ModelParameter.TEMPERATURE, 'gpt-6')).toBe(false);
+      expect(takes(ModelParameter.REASONING_EFFORT, 'gpt-5.6')).toBe(true);
+    });
+  });
 });

@@ -117,6 +117,8 @@ describe('LLM Judge', () => {
           expect.objectContaining({ role: 'system' }),
           expect.objectContaining({ role: 'user' }),
         ]),
+        // One-shot prompts: nothing would read a cache written for them.
+        prompt_cache_options: { mode: 'explicit' },
       }),
     );
   });

@@ -465,6 +465,13 @@ Both failures are quiet: the call cannot connect, the caller logs and continues,
 and optimization simply never happens. `e2e/contract/optimizer.spec.ts` covers
 the whole path against the stub provider.
 
+Every internal call also spreads `SA_SKILL_REQUEST_PARAMS` (`constants.ts`)
+into its request body: `prompt_cache_options: { mode: 'explicit' }`, which on
+OpenAI's GPT-5.6 models stops a billed cache write that no later request would
+read, since each call's prompt is its own. The gateway drops the parameter for
+the models that reject it (`dropUnsupportedParameters`, from the capability
+table) and forwards it only where a provider's config lists it.
+
 ## Skill Optimization System
 
 ### System Prompt Evolution
