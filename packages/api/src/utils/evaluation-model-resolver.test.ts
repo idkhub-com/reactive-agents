@@ -3,6 +3,7 @@ import type { UserDataStorageConnector } from '@api/types/connector';
 import {
   resolveEmbeddingModelConfig,
   resolveEvaluationModelConfig,
+  resolveJudgeModelConfig,
   resolveSystemSettingsModel,
 } from '@api/utils/evaluation-model-resolver';
 import type { Model, SkillOptimizationEvaluation } from '@shared/types/data';
@@ -60,14 +61,16 @@ describe('Evaluation Model Resolver', () => {
     system_prompt_reflection_model_id: 'model-1111-2222-3333-444455556666',
     evaluation_generation_model_id: 'model-1111-2222-3333-444455556666',
     skill_arbiter_model_id: null,
-    skill_arbiter_timeout_ms: 15_000,
     intent_compaction_model_id: null,
-    intent_compaction_timeout_ms: 15_000,
-    system_prompt_reflection_timeout_ms: 120_000,
-    evaluation_generation_timeout_ms: 120_000,
-    embedding_timeout_ms: 30_000,
-    judge_timeout_ms: 60_000,
-    developer_mode: false,
+    options: {
+      system_prompt_reflection: { timeout_ms: 120_000 },
+      evaluation_generation: { timeout_ms: 120_000 },
+      embedding: { timeout_ms: 30_000 },
+      judge: { timeout_ms: 60_000, max_tokens: 4_000 },
+      skill_arbiter: { timeout_ms: 15_000 },
+      intent_compaction: { timeout_ms: 15_000 },
+      developer_mode: false,
+    },
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };
@@ -423,12 +426,13 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
         timeoutMs: 60_000,
+        maxTokens: 4_000,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: 'custom-model-1111-2222-333344445555',
       });
       // The model comes from the evaluation, but a model named there has no
-      // timeout of its own, so the judge's is still read for it.
+      // timeout or budget of its own, so the judge's are still read for it.
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
     });
 
@@ -452,6 +456,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
         timeoutMs: 60_000,
+        maxTokens: 4_000,
       });
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
     });
@@ -486,6 +491,43 @@ describe('Evaluation Model Resolver', () => {
       );
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('resolveJudgeModelConfig', () => {
+    it('resolves the judge with its timeout and token budget', async () => {
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
+        ...mockSystemSettings,
+        options: {
+          ...mockSystemSettings.options,
+          judge: { timeout_ms: 90_000, max_tokens: 16_000 },
+        },
+      });
+      vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        mockProvider,
+      ]);
+
+      const result = await resolveJudgeModelConfig(mockContext, mockConnector);
+
+      expect(result).toEqual({
+        model: 'gpt-4',
+        provider: 'openai',
+        apiKey: 'sk-test-api-key',
+        timeoutMs: 90_000,
+        maxTokens: 16_000,
+      });
+    });
+
+    it('returns null when no judge model is configured', async () => {
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
+        ...mockSystemSettings,
+        judge_model_id: null,
+      });
+
+      expect(
+        await resolveJudgeModelConfig(mockContext, mockConnector),
+      ).toBeNull();
     });
   });
 

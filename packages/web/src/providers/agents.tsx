@@ -125,11 +125,11 @@ export const AgentsProvider = ({
   const agents: Agent[] = useMemo(() => {
     const allAgents = data?.pages?.flat() ?? [];
     // Show all agents when developer mode is enabled, otherwise filter out internal agents
-    if (settings?.developer_mode) {
+    if (settings?.options.developer_mode) {
       return allAgents;
     }
     return allAgents.filter((agent) => agent.name !== 'super-agents');
-  }, [data, settings?.developer_mode]);
+  }, [data, settings?.options.developer_mode]);
 
   // Fetch individual agent by name when URL has a selected agent
   const { data: selectedAgentData } = useQuery({

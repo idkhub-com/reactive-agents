@@ -454,22 +454,23 @@ const initialSchema: LibsqlMigration = {
     // Postgres enforces the singleton with a unique index on the constant
     // expression `(true)`. SQLite cannot index a constant, so a pinned column
     // carries the same guarantee.
+    //
+    // The model ids are columns because the constraints on them do real work:
+    // a model a setting names cannot be deleted, and the triggers below keep
+    // an embedding model out of a text slot. Everything else -- timeouts,
+    // the judge's token budget, developer mode -- is a JSON document typed by
+    // `SystemSettingsOptions`, whose defaults fill whatever a row lacks, so a
+    // new setting is a schema change there and not here.
     `CREATE TABLE IF NOT EXISTS system_settings (
       id TEXT PRIMARY KEY,
       singleton INTEGER NOT NULL DEFAULT 1 UNIQUE CHECK (singleton = 1),
       system_prompt_reflection_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
-      system_prompt_reflection_timeout_ms INTEGER NOT NULL DEFAULT 120000 CHECK (system_prompt_reflection_timeout_ms > 0),
       evaluation_generation_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
-      evaluation_generation_timeout_ms INTEGER NOT NULL DEFAULT 120000 CHECK (evaluation_generation_timeout_ms > 0),
       embedding_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
-      embedding_timeout_ms INTEGER NOT NULL DEFAULT 30000 CHECK (embedding_timeout_ms > 0),
       judge_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
-      judge_timeout_ms INTEGER NOT NULL DEFAULT 60000 CHECK (judge_timeout_ms > 0),
       skill_arbiter_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
-      skill_arbiter_timeout_ms INTEGER NOT NULL DEFAULT 15000 CHECK (skill_arbiter_timeout_ms > 0),
       intent_compaction_model_id TEXT REFERENCES models(id) ON DELETE RESTRICT,
-      intent_compaction_timeout_ms INTEGER NOT NULL DEFAULT 60000 CHECK (intent_compaction_timeout_ms > 0),
-      developer_mode INTEGER NOT NULL DEFAULT 0 CHECK (developer_mode IN (0, 1)),
+      options TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (${NOW_ISO}),
       updated_at TEXT NOT NULL DEFAULT (${NOW_ISO})
     )`,

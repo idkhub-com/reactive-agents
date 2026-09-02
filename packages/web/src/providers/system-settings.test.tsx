@@ -40,14 +40,16 @@ describe('SystemSettingsProvider', () => {
     embedding_model_id: 'model-3333-4444-5555-666677778888',
     judge_model_id: 'model-4444-5555-6666-777788889999',
     skill_arbiter_model_id: null,
-    skill_arbiter_timeout_ms: 15_000,
     intent_compaction_model_id: null,
-    intent_compaction_timeout_ms: 15_000,
-    system_prompt_reflection_timeout_ms: 120_000,
-    evaluation_generation_timeout_ms: 120_000,
-    embedding_timeout_ms: 30_000,
-    judge_timeout_ms: 60_000,
-    developer_mode: false,
+    options: {
+      system_prompt_reflection: { timeout_ms: 120_000 },
+      evaluation_generation: { timeout_ms: 120_000 },
+      embedding: { timeout_ms: 30_000 },
+      judge: { timeout_ms: 60_000, max_tokens: 4_000 },
+      skill_arbiter: { timeout_ms: 15_000 },
+      intent_compaction: { timeout_ms: 15_000 },
+      developer_mode: false,
+    },
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };
@@ -244,7 +246,7 @@ describe('SystemSettingsProvider', () => {
 
       // Start the update
       act(() => {
-        result.current.update({ developer_mode: true });
+        result.current.update({ options: { developer_mode: true } });
       });
 
       // Wait for isUpdating to become true
@@ -276,7 +278,7 @@ describe('SystemSettingsProvider', () => {
 
       await expect(
         act(async () => {
-          await result.current.update({ developer_mode: true });
+          await result.current.update({ options: { developer_mode: true } });
         }),
       ).rejects.toThrow('Update failed');
     });
@@ -289,7 +291,7 @@ describe('SystemSettingsProvider', () => {
         ...mockSettings,
         judge_model_id: newJudgeId,
         embedding_model_id: newEmbedId,
-        developer_mode: true,
+        options: { ...mockSettings.options, developer_mode: true },
       };
       mockUpdateSystemSettings.mockResolvedValue(updatedSettings);
 
@@ -305,7 +307,7 @@ describe('SystemSettingsProvider', () => {
         await result.current.update({
           judge_model_id: newJudgeId,
           embedding_model_id: newEmbedId,
-          developer_mode: true,
+          options: { developer_mode: true },
         });
       });
 
@@ -315,7 +317,7 @@ describe('SystemSettingsProvider', () => {
       expect(callArgs[0]).toEqual({
         judge_model_id: newJudgeId,
         embedding_model_id: newEmbedId,
-        developer_mode: true,
+        options: { developer_mode: true },
       });
     });
 
@@ -362,7 +364,7 @@ describe('SystemSettingsProvider', () => {
       // Update the mock to return different data
       const newSettings: SystemSettings = {
         ...mockSettings,
-        developer_mode: true,
+        options: { ...mockSettings.options, developer_mode: true },
       };
       mockGetSystemSettings.mockResolvedValue(newSettings);
 
@@ -375,7 +377,7 @@ describe('SystemSettingsProvider', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.settings?.developer_mode).toBe(true);
+        expect(result.current.settings?.options.developer_mode).toBe(true);
       });
     });
   });

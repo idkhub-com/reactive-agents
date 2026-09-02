@@ -89,7 +89,6 @@ describe('Task Completion - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         task: 'Book a flight to Paris',
         strict_mode: false,
       },
@@ -223,7 +222,6 @@ describe('Task Completion - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         task: 'Book a flight to Paris',
         strict_mode: false,
       },
@@ -442,7 +440,6 @@ describe('Task Completion - agentic logs', () => {
       evaluation_method: EvaluationMethodName.TASK_COMPLETION,
       params: {
         temperature: 0.1,
-        max_tokens: 1000,
         strict_mode: false,
         task: 'review the code changes',
       },

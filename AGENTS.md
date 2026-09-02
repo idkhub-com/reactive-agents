@@ -201,9 +201,10 @@ an agent without skills, no arbiter asked -- becomes a new skill through
 skill starts as a pass-through. `max_auto_created_skills` caps this per agent.
 The arbiter's model and per-attempt timeout are system settings
 (`skill_arbiter_model_id`, the reflection model when unset, and
-`skill_arbiter_timeout_ms`), which an agent overrides with columns of the same
-names; the arbiter is asked under the skill-creation lease, so the lease
-stretches by twice the timeout to cover it.
+`options.skill_arbiter.timeout_ms`), which an agent overrides with its own
+`skill_arbiter_model_id` and `skill_arbiter_timeout_ms` columns; the arbiter
+is asked under the skill-creation lease, so the lease stretches by twice the
+timeout to cover it.
 Creating happens under the agent's `skill_creation_leases` row
 (`withSkillCreationLease`), after a second look at the skills, so concurrent
 first requests produce one skill rather than one each. Intent embeddings are
@@ -294,6 +295,17 @@ Database management:
   request recreate it. For Supabase, `supabase db reset`.
 - Seed data: `supabase/seed.sql`
 - Start/stop: `supabase start|stop`
+
+System settings (`system_settings`, a singleton row) keep only the model ids
+as columns, because the database does real work for those: `ON DELETE
+RESTRICT`, and triggers that keep an embedding model out of a text slot.
+Everything else -- the timeout beside each model, the judge's token budget,
+developer mode -- lives in the `options` JSON column, typed by
+`SystemSettingsOptions` in `@shared/types/data/system-settings` with a default
+on every field, so a row written before a field existed reads as the default.
+Adding a setting is a change to that schema and the settings form, not to
+either backend's schema. A PATCH sends the fields it changes; the connectors
+merge them over the stored options (`mergeSystemSettingsOptions`).
 
 Core data models:
 - `Agent` - AI agent configurations

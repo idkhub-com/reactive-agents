@@ -77,7 +77,6 @@ describe('Knowledge Retention - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         expected_knowledge: ['Paris is the capital of France'],
       },
       weight: 1.0,
@@ -219,7 +218,6 @@ describe('Knowledge Retention - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         expected_knowledge: ['Paris is the capital of France'],
       },
       weight: 1.0,
@@ -347,7 +345,7 @@ describe('Knowledge Retention - evaluateLog', () => {
       agent_id: 'agent-123',
       skill_id: 'skill-123',
       evaluation_method: EvaluationMethodName.KNOWLEDGE_RETENTION,
-      params: { temperature: 0.1, max_tokens: 1000 },
+      params: { temperature: 0.1 },
       weight: 1.0,
       model_id: null,
       created_at: '2024-01-01T00:00:00.000Z',

@@ -51,7 +51,6 @@ export async function evaluateConversationCompleteness(
     c,
     {
       temperature: params.temperature,
-      max_tokens: params.max_tokens,
     },
     modelConfig ?? undefined,
   );

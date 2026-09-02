@@ -128,7 +128,7 @@ export async function resolveSystemSettingsModel(
   let configured = `${modelType}_model_id`;
   // Each model setting has a timeout beside it, and the two are resolved
   // together so a caller cannot take one without the other.
-  const timeoutMs: number = systemSettings[`${modelType}_timeout_ms`];
+  const timeoutMs = systemSettings.options[modelType].timeout_ms;
 
   switch (modelType) {
     case 'judge':
@@ -173,6 +173,31 @@ export async function resolveSystemSettingsModel(
 }
 
 /**
+ * Resolves the judge with everything a judging call needs from settings:
+ * the model, its timeout, and the completion budget that lets a reasoning
+ * model finish its answer.
+ */
+export async function resolveJudgeModelConfig(
+  c: AppContext,
+  connector: UserDataStorageConnector,
+  settings?: SystemSettings,
+): Promise<LLMJudgeModelConfig | null> {
+  const systemSettings = settings ?? (await connector.getSystemSettings(c));
+  const resolved = await resolveSystemSettingsModel(
+    c,
+    'judge',
+    connector,
+    systemSettings,
+  );
+  return (
+    resolved && {
+      ...resolved,
+      maxTokens: systemSettings.options.judge.max_tokens,
+    }
+  );
+}
+
+/**
  * Resolves the model configuration for an evaluation.
  *
  * Resolution order:
@@ -191,7 +216,7 @@ export async function resolveEvaluationModelConfig(
   const logPrefix = 'EVAL_MODEL_RESOLVER';
 
   // If evaluation has a model_id, use it. A model named by an evaluation has
-  // no timeout setting of its own, so it is judged under the judge's.
+  // no timeout or token budget of its own, so it is judged under the judge's.
   if (evaluation.model_id) {
     const resolved = await resolveModelById(
       c,
@@ -202,12 +227,16 @@ export async function resolveEvaluationModelConfig(
     if (!resolved) {
       return null;
     }
-    const { judge_timeout_ms } = await connector.getSystemSettings(c);
-    return { ...resolved, timeoutMs: judge_timeout_ms };
+    const { options } = await connector.getSystemSettings(c);
+    return {
+      ...resolved,
+      timeoutMs: options.judge.timeout_ms,
+      maxTokens: options.judge.max_tokens,
+    };
   }
 
   // Fall back to system settings judge_model_id
-  return await resolveSystemSettingsModel(c, 'judge', connector);
+  return await resolveJudgeModelConfig(c, connector);
 }
 
 /**
@@ -262,6 +291,6 @@ export async function resolveEmbeddingModelConfig(
     modelId: model.id,
     model,
     dimensions: model.embedding_dimensions,
-    timeoutMs: systemSettings.embedding_timeout_ms,
+    timeoutMs: systemSettings.options.embedding.timeout_ms,
   };
 }

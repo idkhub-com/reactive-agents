@@ -329,54 +329,16 @@ describe('libsql schema semantics', () => {
     ).rejects.toThrow(/skill_arbiter_model_id must reference a text model/);
   });
 
-  it('gives the skill arbiter fifteen seconds by default, and keeps it positive', async () => {
+  it('seeds the settings options as an empty document, and keeps it present', async () => {
     const { client } = await freshDatabase();
 
-    const seeded = await client.execute(
-      'SELECT skill_arbiter_timeout_ms FROM system_settings',
-    );
-    expect(Number(seeded.rows[0].skill_arbiter_timeout_ms)).toBe(15_000);
+    // The timeouts and the judge's budget are not columns: they are keys of
+    // this document, and a key the row lacks reads as its code default.
+    const seeded = await client.execute('SELECT options FROM system_settings');
+    expect(seeded.rows[0].options).toBe('{}');
 
     await expect(
-      client.execute('UPDATE system_settings SET skill_arbiter_timeout_ms = 0'),
-    ).rejects.toThrow();
-  });
-
-  it('defaults every internal timeout, and keeps each positive', async () => {
-    const { client } = await freshDatabase();
-
-    // Chosen per call rather than one number for everything: the two on the
-    // request path are short, the generation calls are long.
-    const defaults = {
-      system_prompt_reflection_timeout_ms: 120_000,
-      evaluation_generation_timeout_ms: 120_000,
-      embedding_timeout_ms: 30_000,
-      judge_timeout_ms: 60_000,
-    };
-
-    const seeded = await client.execute(
-      `SELECT ${Object.keys(defaults).join(', ')} FROM system_settings`,
-    );
-    for (const [column, expected] of Object.entries(defaults)) {
-      expect(Number(seeded.rows[0][column])).toBe(expected);
-      await expect(
-        client.execute(`UPDATE system_settings SET ${column} = 0`),
-      ).rejects.toThrow();
-    }
-  });
-
-  it('gives intent compaction a minute by default, and keeps it positive', async () => {
-    const { client } = await freshDatabase();
-
-    const seeded = await client.execute(
-      'SELECT intent_compaction_timeout_ms FROM system_settings',
-    );
-    expect(Number(seeded.rows[0].intent_compaction_timeout_ms)).toBe(60_000);
-
-    await expect(
-      client.execute(
-        'UPDATE system_settings SET intent_compaction_timeout_ms = 0',
-      ),
+      client.execute('UPDATE system_settings SET options = NULL'),
     ).rejects.toThrow();
   });
 

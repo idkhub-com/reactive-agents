@@ -928,18 +928,45 @@ describe('system settings', () => {
 
     const settings = await store.getSystemSettings(c);
     expect(settings.id).toBeTruthy();
-    expect(settings.developer_mode).toBe(false);
+    // An empty options document reads as every default.
+    expect(settings.options.developer_mode).toBe(false);
+    expect(settings.options.judge).toEqual({
+      timeout_ms: 60_000,
+      max_tokens: 4_000,
+    });
   });
 
   it('updates the singleton without needing its id', async () => {
     const { c } = await freshDatabase();
 
     const updated = await store.updateSystemSettings(c, {
-      developer_mode: true,
-    } as Parameters<typeof store.updateSystemSettings>[1]);
+      options: { developer_mode: true },
+    });
 
-    expect(updated.developer_mode).toBe(true);
-    expect((await store.getSystemSettings(c)).developer_mode).toBe(true);
+    expect(updated.options.developer_mode).toBe(true);
+    expect((await store.getSystemSettings(c)).options.developer_mode).toBe(
+      true,
+    );
+  });
+
+  it('merges an options patch over what is stored', async () => {
+    const { c } = await freshDatabase();
+
+    await store.updateSystemSettings(c, {
+      options: { judge: { timeout_ms: 90_000 } },
+    });
+    const updated = await store.updateSystemSettings(c, {
+      options: { judge: { max_tokens: 16_000 }, developer_mode: true },
+    });
+
+    // The earlier timeout survives a patch that names only the budget, and
+    // the roles the patch never mentioned keep their defaults.
+    expect(updated.options.judge).toEqual({
+      timeout_ms: 90_000,
+      max_tokens: 16_000,
+    });
+    expect(updated.options.developer_mode).toBe(true);
+    expect(updated.options.embedding.timeout_ms).toBe(30_000);
   });
 });
 

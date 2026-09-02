@@ -77,7 +77,6 @@ describe('Conversation Completeness - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
       },
       weight: 1.0,
       model_id: null,
@@ -211,7 +210,6 @@ describe('Conversation Completeness - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
       },
       weight: 1.0,
       model_id: null,
@@ -409,7 +407,7 @@ describe('Conversation Completeness - agentic logs', () => {
       agent_id: 'agent-9',
       skill_id: 'skill-9',
       evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
-      params: { temperature: 0.1, max_tokens: 1000 },
+      params: { temperature: 0.1 },
       weight: 1,
       model_id: null,
       created_at: '2024-01-01T00:00:00.000Z',
@@ -518,7 +516,7 @@ describe('Conversation Completeness - meta-conversation logs', () => {
       agent_id: 'agent-title',
       skill_id: 'skill-title',
       evaluation_method: EvaluationMethodName.CONVERSATION_COMPLETENESS,
-      params: { temperature: 0.1, max_tokens: 1000 },
+      params: { temperature: 0.1 },
       weight: 1,
       model_id: null,
       created_at: '2024-01-01T00:00:00.000Z',

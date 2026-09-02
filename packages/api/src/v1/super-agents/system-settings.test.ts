@@ -31,14 +31,16 @@ describe('System Settings API', () => {
     embedding_model_id: 'model-3333-4444-5555-666677778888',
     judge_model_id: 'model-4444-5555-6666-777788889999',
     skill_arbiter_model_id: null,
-    skill_arbiter_timeout_ms: 15_000,
     intent_compaction_model_id: null,
-    intent_compaction_timeout_ms: 15_000,
-    system_prompt_reflection_timeout_ms: 120_000,
-    evaluation_generation_timeout_ms: 120_000,
-    embedding_timeout_ms: 30_000,
-    judge_timeout_ms: 60_000,
-    developer_mode: false,
+    options: {
+      system_prompt_reflection: { timeout_ms: 120_000 },
+      evaluation_generation: { timeout_ms: 120_000 },
+      embedding: { timeout_ms: 30_000 },
+      judge: { timeout_ms: 60_000, max_tokens: 4_000 },
+      skill_arbiter: { timeout_ms: 15_000 },
+      intent_compaction: { timeout_ms: 15_000 },
+      developer_mode: false,
+    },
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };
@@ -127,7 +129,7 @@ describe('System Settings API', () => {
         ...mockSettings,
         judge_model_id: newJudgeId,
         embedding_model_id: newEmbedId,
-        developer_mode: true,
+        options: { ...mockSettings.options, developer_mode: true },
       };
       mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue(
         updatedSettings,
@@ -137,7 +139,7 @@ describe('System Settings API', () => {
         json: {
           judge_model_id: newJudgeId,
           embedding_model_id: newEmbedId,
-          developer_mode: true,
+          options: { developer_mode: true },
         },
       });
 
@@ -167,87 +169,97 @@ describe('System Settings API', () => {
     it('should accept a skill arbiter timeout within bounds', async () => {
       mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
         ...mockSettings,
-        skill_arbiter_timeout_ms: 120_000,
+        options: {
+          ...mockSettings.options,
+          skill_arbiter: { timeout_ms: 120_000 },
+        },
       });
 
       const res = await client.index.$patch({
-        json: { skill_arbiter_timeout_ms: 120_000 },
+        json: { options: { skill_arbiter: { timeout_ms: 120_000 } } },
       });
 
       expect(res.status).toBe(200);
+      // Passed through as the patch it is; the connector merges it.
       expect(
         mockUserDataStorageConnector.updateSystemSettings,
       ).toHaveBeenCalledWith(expect.anything(), {
-        skill_arbiter_timeout_ms: 120_000,
+        options: { skill_arbiter: { timeout_ms: 120_000 } },
       });
-    });
-
-    it('should return 400 for a skill arbiter timeout out of bounds', async () => {
-      // Below a second, above ten minutes, and not a whole millisecond.
-      for (const skill_arbiter_timeout_ms of [0, 500, 600_001, 15_000.5]) {
-        const res = await client.index.$patch({
-          json: { skill_arbiter_timeout_ms },
-        });
-
-        expect(res.status).toBe(400);
-      }
-      expect(
-        mockUserDataStorageConnector.updateSystemSettings,
-      ).not.toHaveBeenCalled();
     });
 
     it('should bound every internal timeout the same way', async () => {
       // They share bounds because they bound the same thing: one call to a
-      // model. A new one added without bounds would be caught here.
-      for (const setting of [
-        'system_prompt_reflection_timeout_ms',
-        'evaluation_generation_timeout_ms',
-        'embedding_timeout_ms',
-        'judge_timeout_ms',
-        'skill_arbiter_timeout_ms',
-        'intent_compaction_timeout_ms',
+      // model. A new role added without bounds would be caught here.
+      for (const role of [
+        'system_prompt_reflection',
+        'evaluation_generation',
+        'embedding',
+        'judge',
+        'skill_arbiter',
+        'intent_compaction',
       ] as const) {
-        for (const value of [0, 500, 600_001, 15_000.5]) {
+        // Below a second, above ten minutes, and not a whole millisecond.
+        for (const timeout_ms of [0, 500, 600_001, 15_000.5]) {
           const res = await client.index.$patch({
-            json: { [setting]: value },
+            json: { options: { [role]: { timeout_ms } } },
           });
           expect(res.status).toBe(400);
         }
 
         mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
           ...mockSettings,
-          [setting]: 90_000,
+          options: {
+            ...mockSettings.options,
+            [role]: { ...mockSettings.options[role], timeout_ms: 90_000 },
+          },
         });
-        const ok = await client.index.$patch({ json: { [setting]: 90_000 } });
+        const ok = await client.index.$patch({
+          json: { options: { [role]: { timeout_ms: 90_000 } } },
+        });
         expect(ok.status).toBe(200);
       }
-    });
-
-    it('should accept an intent compaction timeout within bounds', async () => {
-      mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
-        ...mockSettings,
-        intent_compaction_timeout_ms: 120_000,
-      });
-
-      const res = await client.index.$patch({
-        json: { intent_compaction_timeout_ms: 120_000 },
-      });
-
-      expect(res.status).toBe(200);
       expect(
         mockUserDataStorageConnector.updateSystemSettings,
-      ).toHaveBeenCalledWith(expect.anything(), {
-        intent_compaction_timeout_ms: 120_000,
-      });
+      ).toHaveBeenCalledTimes(6);
     });
 
-    it('should return 400 for an intent compaction timeout out of bounds', async () => {
-      // Below a second, above ten minutes, and not a whole millisecond.
-      for (const intent_compaction_timeout_ms of [0, 500, 600_001, 15_000.5]) {
+    it('should bound the judge token budget', async () => {
+      // Too small for an answer, above the ceiling, and not a whole token.
+      for (const max_tokens of [0, 100, 1_000_001, 4_000.5]) {
         const res = await client.index.$patch({
-          json: { intent_compaction_timeout_ms },
+          json: { options: { judge: { max_tokens } } },
         });
+        expect(res.status).toBe(400);
+      }
+      expect(
+        mockUserDataStorageConnector.updateSystemSettings,
+      ).not.toHaveBeenCalled();
 
+      mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
+        ...mockSettings,
+        options: {
+          ...mockSettings.options,
+          judge: { timeout_ms: 60_000, max_tokens: 16_000 },
+        },
+      });
+      const ok = await client.index.$patch({
+        json: { options: { judge: { max_tokens: 16_000 } } },
+      });
+      expect(ok.status).toBe(200);
+    });
+
+    it('should return 400 for an unknown option (strict validation)', async () => {
+      for (const json of [
+        { options: { judge: { reasoning: 'low' } } },
+        { options: { unknown_role: { timeout_ms: 1_000 } } },
+        // The old column names, which are options now.
+        { judge_timeout_ms: 60_000 },
+        { developer_mode: true },
+      ]) {
+        const res = await client.index.$patch({
+          json: json as unknown as Record<string, unknown>,
+        });
         expect(res.status).toBe(400);
       }
       expect(
@@ -268,8 +280,8 @@ describe('System Settings API', () => {
 
     it('should return 400 for invalid developer_mode type', async () => {
       const res = await client.index.$patch({
-        json: { developer_mode: 'true' } as unknown as {
-          developer_mode: boolean;
+        json: { options: { developer_mode: 'true' } } as unknown as {
+          options: { developer_mode: boolean };
         },
       });
 
@@ -299,7 +311,7 @@ describe('System Settings API', () => {
       );
 
       const res = await client.index.$patch({
-        json: { developer_mode: true },
+        json: { options: { developer_mode: true } },
       });
 
       expect(res.status).toBe(500);

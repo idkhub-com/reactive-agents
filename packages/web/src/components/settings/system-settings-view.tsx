@@ -2,10 +2,17 @@
 
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import {
+  INTERNAL_ROLES,
+  type InternalRole,
+  MAX_JUDGE_MAX_TOKENS,
+  MIN_JUDGE_MAX_TOKENS,
+  type SystemSettingsOptionsUpdate,
   type SystemSettingsUpdateParams,
-  TIMEOUT_SETTINGS,
-  type TimeoutSetting,
 } from '@shared/types/data/system-settings';
+import {
+  BoundedNumberField,
+  boundedNumberProblem,
+} from '@web/components/settings/bounded-number-field';
 import { DeveloperModeToggle } from '@web/components/settings/developer-mode-toggle';
 import {
   type ModelOption,
@@ -48,44 +55,60 @@ type ModelField =
 
 interface FormValues extends Record<ModelField, string | null> {
   /**
-   * Edited in seconds, keyed by the millisecond setting each one saves to, so
-   * adding a timeout setting adds a field here without touching the wiring.
+   * Edited in seconds, keyed by the role whose `options.<role>.timeout_ms`
+   * each one saves to, so adding a role adds a field here without touching
+   * the wiring.
    */
-  timeouts: Record<TimeoutSetting, number>;
+  timeouts: Record<InternalRole, number>;
+  /** `options.judge.max_tokens`: completion tokens one judging call may spend. */
+  judge_max_tokens: number;
   developer_mode: boolean;
 }
 
-/** Every timeout at its default, in seconds, before settings arrive. */
-const blankTimeouts = (): Record<TimeoutSetting, number> =>
-  Object.fromEntries(TIMEOUT_SETTINGS.map((key) => [key, 15])) as Record<
-    TimeoutSetting,
+/** Every timeout at a placeholder, in seconds, before settings arrive. */
+const blankTimeouts = (): Record<InternalRole, number> =>
+  Object.fromEntries(INTERNAL_ROLES.map((role) => [role, 15])) as Record<
+    InternalRole,
     number
   >;
 
-/** How each timeout reads in the dashboard. */
-const TIMEOUT_LABELS: Record<TimeoutSetting, string> = {
-  system_prompt_reflection_timeout_ms: 'Reflection Timeout',
-  evaluation_generation_timeout_ms: 'Evaluation Generation Timeout',
-  embedding_timeout_ms: 'Embedding Timeout',
-  judge_timeout_ms: 'Judge Timeout',
-  skill_arbiter_timeout_ms: 'Arbiter Timeout',
-  intent_compaction_timeout_ms: 'Compaction Timeout',
+/** How each role's timeout reads in the dashboard. */
+const TIMEOUT_LABELS: Record<InternalRole, string> = {
+  system_prompt_reflection: 'Reflection Timeout',
+  evaluation_generation: 'Evaluation Generation Timeout',
+  embedding: 'Embedding Timeout',
+  judge: 'Judge Timeout',
+  skill_arbiter: 'Arbiter Timeout',
+  intent_compaction: 'Compaction Timeout',
 };
 
-const TIMEOUT_DESCRIPTIONS: Record<TimeoutSetting, string> = {
-  system_prompt_reflection_timeout_ms:
+const TIMEOUT_DESCRIPTIONS: Record<InternalRole, string> = {
+  system_prompt_reflection:
     'Seconds one attempt may take at writing a system prompt or naming a new skill. Naming happens on the request path, so keep it within what the request can wait for.',
-  evaluation_generation_timeout_ms:
+  evaluation_generation:
     "Seconds one attempt at generating a skill's evaluations may take. Runs in the background, but holds the evaluation lock while it does.",
-  embedding_timeout_ms:
+  embedding:
     'Seconds one embedding call may take. Routing embeds every request, so this is the one every caller waits for — keep it short.',
-  judge_timeout_ms:
+  judge:
     'Seconds one judging attempt may take, task extraction included. Runs after the response, once per evaluation per log.',
-  skill_arbiter_timeout_ms:
+  skill_arbiter:
     'Seconds one arbiter attempt may take; a timed-out attempt is retried once. Keep it as short as the model allows, since a request that matches no skill closely waits for the answer.',
-  intent_compaction_timeout_ms:
+  intent_compaction:
     'Seconds one compaction attempt may take; a timed-out attempt is retried once. These prompts run to thousands of tokens, so allow more than the arbiter gets — when compaction keeps timing out, every request carrying that prompt pays the wait and then routes on a truncated one.',
 };
+
+const JUDGE_MAX_TOKENS_LABEL = 'Judge Token Budget';
+const JUDGE_MAX_TOKENS_DESCRIPTION =
+  "Completion tokens one judging attempt may spend, task extraction included. The answer itself is a few hundred tokens, but a reasoning model thinks first and counts that against the same budget — one it exhausts on reasoning returns nothing at all. Raise this when the judge's log shows empty answers that stopped on length.";
+
+/** Why the token budget cannot be saved as entered, or null when it can. */
+const judgeMaxTokensProblem = (tokens: number): string | null =>
+  boundedNumberProblem(
+    tokens,
+    MIN_JUDGE_MAX_TOKENS,
+    MAX_JUDGE_MAX_TOKENS,
+    'tokens',
+  );
 
 export function SystemSettingsView(): ReactElement {
   const { toast } = useToast();
@@ -103,6 +126,7 @@ export function SystemSettingsView(): ReactElement {
     skill_arbiter_model_id: null,
     intent_compaction_model_id: null,
     timeouts: blankTimeouts(),
+    judge_max_tokens: MIN_JUDGE_MAX_TOKENS,
     developer_mode: false,
   });
 
@@ -126,9 +150,13 @@ export function SystemSettingsView(): ReactElement {
         skill_arbiter_model_id: settings.skill_arbiter_model_id,
         intent_compaction_model_id: settings.intent_compaction_model_id,
         timeouts: Object.fromEntries(
-          TIMEOUT_SETTINGS.map((key) => [key, settings[key] / 1000]),
-        ) as Record<TimeoutSetting, number>,
-        developer_mode: settings.developer_mode,
+          INTERNAL_ROLES.map((role) => [
+            role,
+            settings.options[role].timeout_ms / 1000,
+          ]),
+        ) as Record<InternalRole, number>,
+        judge_max_tokens: settings.options.judge.max_tokens,
+        developer_mode: settings.options.developer_mode,
       });
       setIsDirty(false);
     }
@@ -170,11 +198,16 @@ export function SystemSettingsView(): ReactElement {
     setIsDirty(true);
   };
 
-  const handleTimeoutChange = (field: TimeoutSetting, seconds: number) => {
+  const handleTimeoutChange = (role: InternalRole, seconds: number) => {
     setFormValues((prev) => ({
       ...prev,
-      timeouts: { ...prev.timeouts, [field]: seconds },
+      timeouts: { ...prev.timeouts, [role]: seconds },
     }));
+    setIsDirty(true);
+  };
+
+  const handleJudgeMaxTokensChange = (tokens: number) => {
+    setFormValues((prev) => ({ ...prev, judge_max_tokens: tokens }));
     setIsDirty(true);
   };
 
@@ -210,9 +243,10 @@ export function SystemSettingsView(): ReactElement {
   const isSettingsComplete = missingFields.length === 0;
 
   // The first timeout that cannot be saved, so the toast can name it.
-  const badTimeout = TIMEOUT_SETTINGS.find(
-    (key) => timeoutProblem(formValues.timeouts[key]) !== null,
+  const badTimeout = INTERNAL_ROLES.find(
+    (role) => timeoutProblem(formValues.timeouts[role]) !== null,
   );
+  const badJudgeMaxTokens = judgeMaxTokensProblem(formValues.judge_max_tokens);
 
   const handleSave = async () => {
     // Validate all required fields
@@ -228,6 +262,14 @@ export function SystemSettingsView(): ReactElement {
       toast({
         title: `Invalid ${TIMEOUT_LABELS[badTimeout].toLowerCase()}`,
         description: timeoutProblem(formValues.timeouts[badTimeout]) ?? '',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (badJudgeMaxTokens) {
+      toast({
+        title: `Invalid ${JUDGE_MAX_TOKENS_LABEL.toLowerCase()}`,
+        description: badJudgeMaxTokens,
         variant: 'destructive',
       });
       return;
@@ -269,14 +311,26 @@ export function SystemSettingsView(): ReactElement {
         updateParams.intent_compaction_model_id =
           formValues.intent_compaction_model_id;
       }
-      for (const key of TIMEOUT_SETTINGS) {
-        const ms = formValues.timeouts[key] * 1000;
-        if (ms !== settings?.[key]) {
-          updateParams[key] = ms;
+      // The options patch carries only what changed; the server merges it
+      // over what is stored.
+      const options: SystemSettingsOptionsUpdate = {};
+      for (const role of INTERNAL_ROLES) {
+        const ms = formValues.timeouts[role] * 1000;
+        if (ms !== settings?.options[role].timeout_ms) {
+          options[role] = { timeout_ms: ms };
         }
       }
-      if (formValues.developer_mode !== settings?.developer_mode) {
-        updateParams.developer_mode = formValues.developer_mode;
+      if (formValues.judge_max_tokens !== settings?.options.judge.max_tokens) {
+        options.judge = {
+          ...options.judge,
+          max_tokens: formValues.judge_max_tokens,
+        };
+      }
+      if (formValues.developer_mode !== settings?.options.developer_mode) {
+        options.developer_mode = formValues.developer_mode;
+      }
+      if (Object.keys(options).length > 0) {
+        updateParams.options = options;
       }
 
       if (Object.keys(updateParams).length === 0) {
@@ -306,6 +360,19 @@ export function SystemSettingsView(): ReactElement {
 
   const isAnyLoading = isLoading || isLoadingModels;
   const hasNoModels = !isAnyLoading && models.length === 0;
+
+  /** One role's timeout, on the line beneath its model. */
+  const timeoutControl = (role: InternalRole): ReactElement => (
+    <TimeoutField
+      label={TIMEOUT_LABELS[role]}
+      inlineLabel="Timeout"
+      description={TIMEOUT_DESCRIPTIONS[role]}
+      seconds={formValues.timeouts[role]}
+      onChange={(v) => handleTimeoutChange(role, v)}
+      isLoading={isAnyLoading}
+      layout="inline"
+    />
+  );
 
   return (
     <>
@@ -342,7 +409,8 @@ export function SystemSettingsView(): ReactElement {
             <CardDescription>
               Select which models to use for internal AI operations. These
               models are used for system prompt optimization, evaluation
-              generation, and other automated processes.
+              generation, and other automated processes. Each model sits with
+              the bounds on one call to it.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -356,18 +424,7 @@ export function SystemSettingsView(): ReactElement {
               }
               modelOptions={textModelOptions}
               isLoading={isAnyLoading}
-            />
-
-            <TimeoutField
-              label={TIMEOUT_LABELS.system_prompt_reflection_timeout_ms}
-              description={
-                TIMEOUT_DESCRIPTIONS.system_prompt_reflection_timeout_ms
-              }
-              seconds={formValues.timeouts.system_prompt_reflection_timeout_ms}
-              onChange={(v) =>
-                handleTimeoutChange('system_prompt_reflection_timeout_ms', v)
-              }
-              isLoading={isAnyLoading}
+              controls={timeoutControl('system_prompt_reflection')}
             />
 
             <ModelSelector
@@ -380,54 +437,45 @@ export function SystemSettingsView(): ReactElement {
               }
               modelOptions={textModelOptions}
               isLoading={isAnyLoading}
-            />
-
-            <TimeoutField
-              label={TIMEOUT_LABELS.evaluation_generation_timeout_ms}
-              description={
-                TIMEOUT_DESCRIPTIONS.evaluation_generation_timeout_ms
-              }
-              seconds={formValues.timeouts.evaluation_generation_timeout_ms}
-              onChange={(v) =>
-                handleTimeoutChange('evaluation_generation_timeout_ms', v)
-              }
-              isLoading={isAnyLoading}
+              controls={timeoutControl('evaluation_generation')}
             />
 
             <ModelSelector
               label="Embedding Model"
-              description="Model used for generating text embeddings for request clustering."
+              description="Model used for generating text embeddings for request clustering. Routing embeds every request, so keep its timeout short."
               recommendation="text-embedding-3-small (OpenAI) or gemini-embedding-001 (Google)"
               value={formValues.embedding_model_id}
               onChange={(v) => handleFieldChange('embedding_model_id', v)}
               modelOptions={embedModelOptions}
               isLoading={isAnyLoading}
-            />
-
-            <TimeoutField
-              label={TIMEOUT_LABELS.embedding_timeout_ms}
-              description={TIMEOUT_DESCRIPTIONS.embedding_timeout_ms}
-              seconds={formValues.timeouts.embedding_timeout_ms}
-              onChange={(v) => handleTimeoutChange('embedding_timeout_ms', v)}
-              isLoading={isAnyLoading}
+              controls={timeoutControl('embedding')}
             />
 
             <ModelSelector
               label="Judge Model"
-              description="Model used for evaluating and scoring responses during optimization."
+              description="Model used for evaluating and scoring responses during optimization. One judging attempt gets the timeout and the token budget; a reasoning model spends the budget thinking before it answers, and one that runs out answers nothing."
               recommendation="gpt-5.1, claude-sonnet-4-5, or claude-opus-4-5"
               value={formValues.judge_model_id}
               onChange={(v) => handleFieldChange('judge_model_id', v)}
               modelOptions={textModelOptions}
               isLoading={isAnyLoading}
-            />
-
-            <TimeoutField
-              label={TIMEOUT_LABELS.judge_timeout_ms}
-              description={TIMEOUT_DESCRIPTIONS.judge_timeout_ms}
-              seconds={formValues.timeouts.judge_timeout_ms}
-              onChange={(v) => handleTimeoutChange('judge_timeout_ms', v)}
-              isLoading={isAnyLoading}
+              controls={
+                <>
+                  {timeoutControl('judge')}
+                  <BoundedNumberField
+                    label={JUDGE_MAX_TOKENS_LABEL}
+                    inlineLabel="Token budget"
+                    description={JUDGE_MAX_TOKENS_DESCRIPTION}
+                    value={formValues.judge_max_tokens}
+                    onChange={handleJudgeMaxTokensChange}
+                    min={MIN_JUDGE_MAX_TOKENS}
+                    max={MAX_JUDGE_MAX_TOKENS}
+                    unit="tokens"
+                    isLoading={isAnyLoading}
+                    layout="inline"
+                  />
+                </>
+              }
             />
           </CardContent>
         </Card>
@@ -451,7 +499,7 @@ export function SystemSettingsView(): ReactElement {
           <CardContent>
             <ModelSelector
               label="Skill Arbiter"
-              description="Model that makes the call. A fast model serves best; it only has to name a skill or none."
+              description="Model that makes the call. A fast model serves best; it only has to name a skill or none, and a request that matches no skill closely waits for the answer."
               recommendation="gpt-5-mini or claude-haiku-4-5"
               value={formValues.skill_arbiter_model_id}
               onChange={(v) => handleFieldChange('skill_arbiter_model_id', v)}
@@ -459,16 +507,7 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
               required={false}
               emptyOption="Same as System Prompt Reflection"
-            />
-
-            <TimeoutField
-              label={TIMEOUT_LABELS.skill_arbiter_timeout_ms}
-              description={TIMEOUT_DESCRIPTIONS.skill_arbiter_timeout_ms}
-              seconds={formValues.timeouts.skill_arbiter_timeout_ms}
-              onChange={(v) =>
-                handleTimeoutChange('skill_arbiter_timeout_ms', v)
-              }
-              isLoading={isAnyLoading}
+              controls={timeoutControl('skill_arbiter')}
             />
 
             <ModelSelector
@@ -483,16 +522,7 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
               required={false}
               emptyOption="Same as System Prompt Reflection"
-            />
-
-            <TimeoutField
-              label={TIMEOUT_LABELS.intent_compaction_timeout_ms}
-              description={TIMEOUT_DESCRIPTIONS.intent_compaction_timeout_ms}
-              seconds={formValues.timeouts.intent_compaction_timeout_ms}
-              onChange={(v) =>
-                handleTimeoutChange('intent_compaction_timeout_ms', v)
-              }
-              isLoading={isAnyLoading}
+              controls={timeoutControl('intent_compaction')}
             />
           </CardContent>
         </Card>
