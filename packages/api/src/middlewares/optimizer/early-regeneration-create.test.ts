@@ -32,7 +32,10 @@ vi.mock('@api/optimization/utils/system-prompt', () => ({
     Promise.resolve('a prompt improved from real examples'),
   ),
 }));
-vi.mock('@api/optimization/utils/evaluations', () => ({
+vi.mock('@api/optimization/utils/evaluations', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@api/optimization/utils/evaluations')
+  >()),
   regenerateEvaluationsWithExamples: vi.fn(),
 }));
 vi.mock('@api/utils/sse-event-manager', () => ({ emitSSEEvent: vi.fn() }));

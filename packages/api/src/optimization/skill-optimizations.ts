@@ -1,6 +1,9 @@
 import { generateExampleConversations } from '@api/middlewares/optimizer/system-prompt';
 import { BaseArmsParams } from '@api/optimization/base-arms';
-import { regenerateEvaluationsWithExamples } from '@api/optimization/utils/evaluations';
+import {
+  applyRegeneratedEvaluations,
+  regenerateEvaluationsWithExamples,
+} from '@api/optimization/utils/evaluations';
 import {
   generateSeedSystemPromptForSkill,
   generateSeedSystemPromptWithContext,
@@ -108,13 +111,12 @@ export async function handleGenerateArms(
             userStorageConnector,
           );
 
-        // Delete old evaluations and create new ones
-        await userStorageConnector.deleteSkillOptimizationEvaluationsForSkill(
+        // In place, so the ids -- and every score the skill's logs were
+        // given against these evaluations -- stay
+        await applyRegeneratedEvaluations(
           c,
-          skill.id,
-        );
-        await userStorageConnector.createSkillOptimizationEvaluations(
-          c,
+          userStorageConnector,
+          existingEvaluations,
           regeneratedEvaluationParams,
         );
       }
