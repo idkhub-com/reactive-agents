@@ -110,6 +110,8 @@ export async function evaluateLog(
 
   const judgeResult = await llmJudge.evaluate({
     text: `${systemPrompt}\n\n${userPrompt}`,
+    systemPrompt,
+    userPrompt,
   });
 
   let computed_score: number | null = null;

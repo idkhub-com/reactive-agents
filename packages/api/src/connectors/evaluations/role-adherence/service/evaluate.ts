@@ -86,6 +86,8 @@ export async function evaluateLog(
 
   const judgeResult = await llmJudge.evaluate({
     text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
+    systemPrompt: tpl.systemPrompt,
+    userPrompt: tpl.userPrompt,
   });
 
   let final_score = judgeResult.score;

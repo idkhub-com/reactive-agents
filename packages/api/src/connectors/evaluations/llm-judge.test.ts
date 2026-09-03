@@ -1015,10 +1015,9 @@ describe('LLM Judge', () => {
     };
 
     it('uses explicit prompts verbatim and returns the real score', async () => {
-      // The template heuristics split on the first blank line and flip to a
-      // "structured" result whenever the text mentions a JSON object -- which
-      // reported score 1.0 no matter what the judge answered. Explicit
-      // prompts must bypass all of it.
+      // The judge used to split `text` on its first blank line and report a
+      // flat 1.0 whenever the leading fragment mentioned a JSON object.
+      // Explicit prompts reach the model untouched.
       judgeAnswer({ score: 0.3, reasoning: 'barely relevant' });
 
       const systemPrompt =
@@ -1042,27 +1041,27 @@ describe('LLM Judge', () => {
       );
     });
 
-    it('treats a call as an extraction only when declared structured', async () => {
-      judgeAnswer({ task: 'summarize', outcome: 'a summary' });
+    it('scores template-shaped text instead of reading it as an extraction', async () => {
+      // No explicit prompts and no criteria: this used to match the template
+      // heuristics, and the leading "as a JSON object" flipped it to an
+      // extraction scored a flat 1.0. There is no such path any more.
+      judgeAnswer({ score: 0.25, reasoning: 'lost the earlier context' });
 
       const result = await llmJudge.evaluate({
-        text: '',
-        systemPrompt: 'Extract the task and outcome.',
-        userPrompt: 'INPUT: hello OUTPUT: world',
-        structured: true,
+        text: 'You are an expert evaluator. Provide your evaluation as a JSON object.\n\nCONVERSATION: hi\n\nthere',
       });
 
-      expect(result.score).toBe(1.0);
-      expect(result.metadata).toEqual({
-        task: 'summarize',
-        outcome: 'a summary',
-      });
+      expect(result.score).toBe(0.25);
+      expect(result.metadata).toBeUndefined();
+      expect(mockParse.mock.calls[0][0].messages[0].content).toContain(
+        'You are a quality evaluator',
+      );
     });
 
-    it('lets explicit criteria win over the template heuristics', async () => {
+    it('scores text that looks like a template when criteria are given', async () => {
       // Conversation content can contain "You are", "evaluate" and blank
       // lines; a caller that provided criteria means the scored criteria
-      // judge, never a heuristic re-split of its text.
+      // judge.
       judgeAnswer({ score: 0.2, reasoning: 'mostly unmet' });
 
       const result = await llmJudge.evaluate({

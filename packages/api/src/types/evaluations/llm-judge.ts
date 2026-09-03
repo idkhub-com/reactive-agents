@@ -47,19 +47,12 @@ export const EvaluationInputSchema = z.object({
   text: z.string(),
   evaluationCriteria: EvaluationCriteriaSchema.optional(),
   /**
-   * Explicit prompts, used verbatim when both are set. Without them the
-   * judge re-derives a system/user split from `text` heuristically, and a
-   * conversation that happens to contain a blank line splits mid-content.
+   * Explicit prompts, used verbatim when both are set. Without them the call
+   * is scored by the criteria judge, which builds its own prompts around
+   * `text`. The judge never re-derives a split from `text` itself.
    */
   systemPrompt: z.string().optional(),
   userPrompt: z.string().optional(),
-  /**
-   * True only for extraction calls, where the judge's JSON *is* the result
-   * and there is no score to read: the result carries the parsed object as
-   * metadata. A scoring call must leave this unset -- a structured result
-   * reports score 1.0 regardless of what the judge thought.
-   */
-  structured: z.boolean().optional(),
 });
 
 export type EvaluationInput = z.infer<typeof EvaluationInputSchema>;
