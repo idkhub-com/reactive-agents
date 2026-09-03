@@ -21,14 +21,16 @@ const settings: SystemSettings = {
   embedding_model_id: null,
   judge_model_id: null,
   skill_arbiter_model_id: null,
-  skill_arbiter_timeout_ms: 15_000,
   intent_compaction_model_id: null,
-  intent_compaction_timeout_ms: 15_000,
-  system_prompt_reflection_timeout_ms: 120_000,
-  evaluation_generation_timeout_ms: 120_000,
-  embedding_timeout_ms: 30_000,
-  judge_timeout_ms: 60_000,
-  developer_mode: false,
+  options: {
+    system_prompt_reflection: { timeout_ms: 120_000 },
+    evaluation_generation: { timeout_ms: 120_000 },
+    embedding: { timeout_ms: 30_000 },
+    judge: { timeout_ms: 60_000, max_tokens: 4_000 },
+    skill_arbiter: { timeout_ms: 15_000 },
+    intent_compaction: { timeout_ms: 15_000 },
+    developer_mode: false,
+  },
   created_at: '2023-01-01T00:00:00Z',
   updated_at: '2023-01-01T00:00:00Z',
 };
@@ -79,7 +81,7 @@ describe('SystemSettingsView', () => {
 
     await waitFor(() => {
       expect(mockUpdate).toHaveBeenCalledWith({
-        skill_arbiter_timeout_ms: 120_000,
+        options: { skill_arbiter: { timeout_ms: 120_000 } },
       });
     });
   });
@@ -95,7 +97,7 @@ describe('SystemSettingsView', () => {
 
     await waitFor(() => {
       expect(mockUpdate).toHaveBeenCalledWith({
-        intent_compaction_timeout_ms: 120_000,
+        options: { intent_compaction: { timeout_ms: 120_000 } },
       });
     });
   });
@@ -136,7 +138,64 @@ describe('SystemSettingsView', () => {
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith({ judge_timeout_ms: 90_000 });
+      expect(mockUpdate).toHaveBeenCalledWith({
+        options: { judge: { timeout_ms: 90_000 } },
+      });
+    });
+  });
+
+  it('shows the judge token budget and saves it beside the judge timeout', async () => {
+    render(<SystemSettingsView />);
+
+    const budget = screen.getByLabelText('Judge Token Budget');
+    expect(budget).toHaveValue(4000);
+
+    fireEvent.change(budget, { target: { value: '16000' } });
+    fireEvent.change(screen.getByLabelText('Judge Timeout'), {
+      target: { value: '90' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    // One patch for the judge, carrying both of its changed fields.
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith({
+        options: { judge: { timeout_ms: 90_000, max_tokens: 16_000 } },
+      });
+    });
+  });
+
+  it('refuses a judge token budget outside the allowed range', async () => {
+    render(<SystemSettingsView />);
+
+    fireEvent.change(screen.getByLabelText('Judge Token Budget'), {
+      target: { value: '10' },
+    });
+    expect(
+      screen.getByText(/whole number of tokens between 256 and 1000000/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Invalid judge token budget',
+          variant: 'destructive',
+        }),
+      );
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('saves developer mode as an option', async () => {
+    render(<SystemSettingsView />);
+
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith({
+        options: { developer_mode: true },
+      });
     });
   });
 

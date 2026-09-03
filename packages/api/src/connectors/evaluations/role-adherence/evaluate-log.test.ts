@@ -77,7 +77,6 @@ describe('Role Adherence - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         role_definition: 'You are a professional customer service agent',
       },
       weight: 1.0,
@@ -216,7 +215,6 @@ describe('Role Adherence - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         role_definition: 'You are a professional customer service agent',
       },
       weight: 1.0,

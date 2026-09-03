@@ -71,7 +71,7 @@ describe('compactSystemPrompt', () => {
 
     // The prompts that need compacting are long, so the wait is a setting
     // rather than a constant -- a slow model would otherwise never finish.
-    // It arrives with the model, from `intent_compaction_timeout_ms`.
+    // It arrives with the model, from `options.intent_compaction.timeout_ms`.
     expect(vi.mocked(OpenAI).mock.calls[0][0]).toMatchObject({
       timeout: 90_000,
     });

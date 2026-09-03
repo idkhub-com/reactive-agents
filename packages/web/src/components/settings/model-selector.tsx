@@ -18,7 +18,7 @@ import {
 import { Skeleton } from '@web/components/ui/skeleton';
 import { cn } from '@web/utils/ui/utils';
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useId, useMemo, useState } from 'react';
 
 export interface ModelOption {
@@ -51,6 +51,12 @@ export interface ModelSelectorProps {
    * that clears the field, and shown in place of a selection when it is empty.
    */
   emptyOption?: string;
+  /**
+   * The settings that belong to this model -- its timeout, a token budget --
+   * rendered on one line beneath the selector, so a model and the bounds on
+   * a call to it are one row and one decision.
+   */
+  controls?: ReactNode;
 }
 
 export function ModelSelector({
@@ -63,6 +69,7 @@ export function ModelSelector({
   isLoading,
   required = true,
   emptyOption,
+  controls,
 }: ModelSelectorProps): ReactElement {
   const [open, setOpen] = useState(false);
 
@@ -81,7 +88,7 @@ export function ModelSelector({
     required && !value && modelOptions.length > 0;
 
   return (
-    <div className="grid gap-4 md:grid-cols-[1fr,300px] items-start py-4 border-b last:border-b-0">
+    <div className="grid gap-4 py-4 border-b last:border-b-0">
       <div className="space-y-1">
         <h4 id={labelId} className="font-medium">
           {label}
@@ -207,6 +214,11 @@ export function ModelSelector({
           <p className="text-sm text-destructive" role="alert">
             This field is required
           </p>
+        )}
+        {controls && (
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-2 pt-1">
+            {controls}
+          </div>
         )}
       </div>
     </div>

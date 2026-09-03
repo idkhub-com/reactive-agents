@@ -77,6 +77,7 @@ import {
   type SkillRoutingUpsertParams,
 } from '@shared/types/data/skill-routing';
 import {
+  mergeSystemSettingsOptions,
   SystemSettings,
   type SystemSettingsUpdateParams,
 } from '@shared/types/data/system-settings';
@@ -1328,11 +1329,22 @@ export const supabaseUserDataStorageConnector: UserDataStorageConnector = {
     );
     const settingsId = currentSettings[0].id;
 
+    // The options patch is merged over what is stored, so a caller that
+    // changes one timeout does not have to send the rest.
+    const { options, ...rest } = update;
     const updatedSettings = await updateInSupabase(
       c,
       'system_settings',
       settingsId,
-      update,
+      {
+        ...rest,
+        ...(options && {
+          options: mergeSystemSettingsOptions(
+            currentSettings[0].options,
+            options,
+          ),
+        }),
+      },
       z.array(SystemSettings),
     );
     return updatedSettings[0];

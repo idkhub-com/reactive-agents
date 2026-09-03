@@ -132,13 +132,16 @@ const routingConnector = (): RoutingConnector => {
     getSystemSettings: vi.fn().mockResolvedValue({
       embedding_model_id: MODEL_ID,
       skill_arbiter_model_id: null,
-      skill_arbiter_timeout_ms: 15_000,
       intent_compaction_model_id: null,
-      intent_compaction_timeout_ms: 15_000,
-      system_prompt_reflection_timeout_ms: 120_000,
-      evaluation_generation_timeout_ms: 120_000,
-      embedding_timeout_ms: 30_000,
-      judge_timeout_ms: 60_000,
+      options: {
+        system_prompt_reflection: { timeout_ms: 120_000 },
+        evaluation_generation: { timeout_ms: 120_000 },
+        embedding: { timeout_ms: 30_000 },
+        judge: { timeout_ms: 60_000, max_tokens: 4_000 },
+        skill_arbiter: { timeout_ms: 15_000 },
+        intent_compaction: { timeout_ms: 15_000 },
+        developer_mode: false,
+      },
     }),
     claimSkillCreationLease: vi.fn().mockResolvedValue(true),
     releaseSkillCreationLease: vi.fn(),
@@ -552,7 +555,11 @@ describe('routeRequestToSkill', () => {
         [translate, sql],
         expect.objectContaining({ systemPrompt: 'Draw a picture of a cat.' }),
         // The system settings, read once and handed on.
-        expect.objectContaining({ skill_arbiter_timeout_ms: 15_000 }),
+        expect.objectContaining({
+          options: expect.objectContaining({
+            skill_arbiter: { timeout_ms: 15_000 },
+          }),
+        }),
       );
       expect(createSkillForRequest).toHaveBeenCalledWith(
         c,

@@ -16,6 +16,7 @@ import {
   type AIProvider,
   AIProvider as AIProviderEnum,
 } from '@shared/types/constants';
+import { DEFAULT_JUDGE_MAX_TOKENS } from '@shared/types/data/system-settings';
 import { CacheMode } from '@shared/types/middleware/cache';
 import OpenAI from 'openai';
 import { z } from 'zod';
@@ -151,8 +152,14 @@ export interface LLMJudgeModelConfig {
   apiKey?: string;
   /** The provider's configured base URL, where it has one. */
   customHost?: string;
-  /** How long one judging attempt may take, from `judge_timeout_ms`. */
+  /** How long one judging attempt may take, from `options.judge.timeout_ms`. */
   timeoutMs?: number;
+  /**
+   * How many completion tokens one attempt may spend, from
+   * `options.judge.max_tokens`. A reasoning model spends these thinking before
+   * it answers, and one that runs out returns nothing at all.
+   */
+  maxTokens?: number;
 }
 
 export function createLLMJudge(
@@ -164,12 +171,10 @@ export function createLLMJudge(
   const judgeConfig = {
     model: modelConfig?.model || config.model || 'gpt-5-mini',
     temperature: config.temperature || 0.1,
-    // For the callers that pass no evaluation parameters. Same reason as the
-    // evaluation schemas: this is sent now, and a reasoning model spends more
-    // than a thousand tokens before it answers.
-    max_tokens: config.max_tokens || 4000,
-    // The resolved model carries the setting; `config.timeout` stays as the
+    // The resolved model carries both settings; `config` stays as the
     // override for a caller that resolves no model of its own.
+    max_tokens:
+      modelConfig?.maxTokens ?? config.max_tokens ?? DEFAULT_JUDGE_MAX_TOKENS,
     timeout: modelConfig?.timeoutMs ?? config.timeout ?? 30000,
   };
 

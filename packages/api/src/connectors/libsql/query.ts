@@ -33,6 +33,7 @@ const JSON_COLUMNS: Record<string, string[]> = {
   skill_optimization_evaluations: ['params'],
   skill_optimization_evaluation_runs: ['results'],
   skill_events: ['metadata'],
+  system_settings: ['options'],
 };
 
 // The view is `SELECT l.*` plus two computed columns, so it decodes like logs.
@@ -42,7 +43,6 @@ JSON_COLUMNS.logs_with_eval_scores = JSON_COLUMNS.logs;
 const BOOL_COLUMNS: Record<string, string[]> = {
   agents: ['auto_create_skills'],
   skills: ['optimize', 'auto_created'],
-  system_settings: ['developer_mode'],
 };
 
 /** Executes statements; a `Transaction` satisfies this as well as a `Client`. */

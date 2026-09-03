@@ -96,7 +96,6 @@ export async function evaluateLog(
     c,
     {
       temperature: params.temperature,
-      max_tokens: params.max_tokens,
     },
     modelConfig ?? undefined,
   );

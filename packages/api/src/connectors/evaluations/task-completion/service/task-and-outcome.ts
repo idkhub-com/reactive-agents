@@ -3,7 +3,7 @@ import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import { parseJudgeJson } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
-import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
+import { resolveJudgeModelConfig } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
 import OpenAI from 'openai';
 import z from 'zod';
@@ -53,8 +53,10 @@ export async function extractTaskAndOutcome(
   output: string,
   connector: UserDataStorageConnector,
 ) {
-  // Resolve judge model from system settings for task extraction
-  const modelConfig = await resolveSystemSettingsModel(c, 'judge', connector);
+  // Resolve judge model from system settings for task extraction. Extraction
+  // runs under the judge's timeout and token budget alike: same model, same
+  // reasoning spent before the answer.
+  const modelConfig = await resolveJudgeModelConfig(c, connector);
 
   if (!modelConfig) {
     warn('[OPTIMIZER] No judge model configured in system settings');
@@ -97,6 +99,7 @@ export async function extractTaskAndOutcome(
     .chat.completions.create({
       ...SA_SKILL_REQUEST_PARAMS,
       model: modelConfig.model,
+      max_tokens: modelConfig.maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
         {

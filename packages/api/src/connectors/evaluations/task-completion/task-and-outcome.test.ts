@@ -32,10 +32,11 @@ vi.mock('openai', () => ({
 }));
 
 vi.mock('@api/utils/evaluation-model-resolver', () => ({
-  resolveSystemSettingsModel: vi.fn().mockResolvedValue({
+  resolveJudgeModelConfig: vi.fn().mockResolvedValue({
     model: 'judge-model',
     provider: 'ollama',
     customHost: 'http://localhost:11434/v1',
+    maxTokens: 4_000,
   }),
 }));
 
@@ -56,7 +57,6 @@ const run = () =>
       async_mode: false,
       verbose_mode: false,
       temperature: 0.1,
-      max_tokens: 1000,
       batch_size: 1,
     },
     'User: review the code changes',

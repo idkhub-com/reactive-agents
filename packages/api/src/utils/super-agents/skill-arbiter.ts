@@ -38,7 +38,9 @@ export function skillArbiterTimeoutMs(
   agent: Agent,
   settings: SystemSettings,
 ): number {
-  return agent.skill_arbiter_timeout_ms ?? settings.skill_arbiter_timeout_ms;
+  return (
+    agent.skill_arbiter_timeout_ms ?? settings.options.skill_arbiter.timeout_ms
+  );
 }
 
 const PROMPT_EXCERPT = 1500;

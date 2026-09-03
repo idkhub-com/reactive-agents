@@ -17,6 +17,7 @@ import {
   type ModelQueryParams,
   Model as ModelSchema,
   type ModelUpdateParams,
+  mergeSystemSettingsOptions,
   type Skill,
   type SkillCreateParams,
   type SkillEvent,
@@ -1346,18 +1347,20 @@ export const libsqlUserDataStorageConnector: UserDataStorageConnector = {
       { limit: 1 },
     );
 
-    const { developer_mode, ...rest } = update as SystemSettingsUpdateParams &
-      Record<string, unknown>;
-
+    // The options patch is merged over what is stored, so a caller that
+    // changes one timeout does not have to send the rest.
+    const { options, ...rest } = update;
     const rows = await updateIn(
       client,
       'system_settings',
       { id: current[0].id },
-      {
-        ...asColumns(rest),
-        developer_mode:
-          developer_mode === undefined ? undefined : developer_mode ? 1 : 0,
-      },
+      asColumns({
+        ...rest,
+        options:
+          options === undefined
+            ? undefined
+            : mergeSystemSettingsOptions(current[0].options, options),
+      }),
       z.array(SystemSettingsSchema),
     );
     return rows[0];

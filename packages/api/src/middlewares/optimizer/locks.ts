@@ -46,8 +46,8 @@ export async function evaluationLockWindowMs(
   return lockWindowMs(
     floorMs,
     Math.max(
-      s.evaluation_generation_timeout_ms,
-      s.system_prompt_reflection_timeout_ms,
+      s.options.evaluation_generation.timeout_ms,
+      s.options.system_prompt_reflection.timeout_ms,
     ),
   );
 }
@@ -60,5 +60,5 @@ export async function reflectionLockWindowMs(
   settings?: SystemSettings,
 ): Promise<number> {
   const s = settings ?? (await connector.getSystemSettings(c));
-  return lockWindowMs(floorMs, s.system_prompt_reflection_timeout_ms);
+  return lockWindowMs(floorMs, s.options.system_prompt_reflection.timeout_ms);
 }

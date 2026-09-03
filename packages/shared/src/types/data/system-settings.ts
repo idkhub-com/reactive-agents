@@ -41,7 +41,40 @@ export const DEFAULT_EVALUATION_GENERATION_TIMEOUT_MS = 120_000;
 export const DEFAULT_JUDGE_TIMEOUT_MS = 60_000;
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 30_000;
 
-const timeout = () => z.number().int().positive();
+/**
+ * How many completion tokens one judging call may spend.
+ *
+ * The judge's own answer is a few hundred tokens of JSON, but a reasoning
+ * model spends its budget thinking before it writes a word, and a budget it
+ * exhausts on reasoning returns an empty completion rather than a short one.
+ * glm-5.3-flash was measured burning 1100-2700 tokens on reasoning for a
+ * short prompt and all of 4000 for a transcript-sized one, so the right value
+ * depends on the model -- which is why it is a setting beside the judge model
+ * rather than a constant, or a parameter hidden on every evaluation.
+ *
+ * The floor leaves room for the answer itself; the ceiling only keeps a
+ * mistyped value from asking for the impossible.
+ */
+export const MIN_JUDGE_MAX_TOKENS = 256;
+export const MAX_JUDGE_MAX_TOKENS = 1_000_000;
+export const DEFAULT_JUDGE_MAX_TOKENS = 4_000;
+
+/**
+ * The internal roles that have a model slot of their own in system settings,
+ * each with a `<role>_model_id` column and an `options.<role>` object.
+ */
+export const INTERNAL_ROLES = [
+  'system_prompt_reflection',
+  'evaluation_generation',
+  'embedding',
+  'judge',
+  'skill_arbiter',
+  'intent_compaction',
+] as const;
+export type InternalRole = (typeof INTERNAL_ROLES)[number];
+
+const timeout = (defaultMs: number) =>
+  z.number().int().positive().default(defaultMs);
 const timeoutUpdate = () =>
   z
     .number()
@@ -50,76 +83,180 @@ const timeoutUpdate = () =>
     .max(MAX_INTERNAL_TIMEOUT_MS)
     .optional();
 
-export const SystemSettings = z.object({
-  id: z.uuid(),
-  system_prompt_reflection_model_id: z.uuid().nullable(),
+/**
+ * The settings that need no column of their own.
+ *
+ * The model ids are columns because the database does real work for them: a
+ * model a setting names cannot be deleted, and an embedding model cannot be
+ * put in a text slot. Nothing in the database interprets a timeout, a token
+ * budget or a flag, so those live together in one JSON column and are typed
+ * here instead. Every field has a default, so a row written before a field
+ * existed reads as if it had been set to the default, and adding a setting
+ * is a change to this schema and the form -- not to either backend's schema.
+ *
+ * `prefault` rather than `default` on the objects: a missing role object has
+ * to be parsed into its defaults, not returned as the empty object.
+ */
+export const SystemSettingsOptions = z.object({
   /**
    * How long one attempt may take at the calls this model serves: seeding a
    * new skill's system prompt, reflecting on an existing one, and naming a
    * skill the gateway creates.
    */
-  system_prompt_reflection_timeout_ms: timeout(),
-  evaluation_generation_model_id: z.uuid().nullable(),
+  system_prompt_reflection: z
+    .object({
+      timeout_ms: timeout(DEFAULT_SYSTEM_PROMPT_REFLECTION_TIMEOUT_MS),
+    })
+    .prefault({}),
   /** How long one attempt at generating a skill's evaluations may take. */
-  evaluation_generation_timeout_ms: timeout(),
-  embedding_model_id: z.uuid().nullable(),
+  evaluation_generation: z
+    .object({ timeout_ms: timeout(DEFAULT_EVALUATION_GENERATION_TIMEOUT_MS) })
+    .prefault({}),
   /**
    * How long one embedding call may take. On the request path -- routing
    * embeds every request's intent -- so this is the shortest of them.
    */
-  embedding_timeout_ms: timeout(),
+  embedding: z
+    .object({ timeout_ms: timeout(DEFAULT_EMBEDDING_TIMEOUT_MS) })
+    .prefault({}),
+  judge: z
+    .object({
+      /** How long one judging attempt may take, task extraction included. */
+      timeout_ms: timeout(DEFAULT_JUDGE_TIMEOUT_MS),
+      /** How many completion tokens one judging attempt may spend. */
+      max_tokens: z.number().int().positive().default(DEFAULT_JUDGE_MAX_TOKENS),
+    })
+    .prefault({}),
+  /** How long one arbiter attempt may take, in milliseconds. */
+  skill_arbiter: z
+    .object({ timeout_ms: timeout(DEFAULT_SKILL_ARBITER_TIMEOUT_MS) })
+    .prefault({}),
+  /** How long one compaction attempt may take, in milliseconds. */
+  intent_compaction: z
+    .object({ timeout_ms: timeout(DEFAULT_INTENT_COMPACTION_TIMEOUT_MS) })
+    .prefault({}),
+  /** Shows the `super-agents` internal agent and its skills in the dashboard. */
+  developer_mode: z.boolean().default(false),
+});
+export type SystemSettingsOptions = z.infer<typeof SystemSettingsOptions>;
+
+export const SystemSettings = z.object({
+  id: z.uuid(),
+  system_prompt_reflection_model_id: z.uuid().nullable(),
+  evaluation_generation_model_id: z.uuid().nullable(),
+  embedding_model_id: z.uuid().nullable(),
   judge_model_id: z.uuid().nullable(),
-  /** How long one judging attempt may take, task extraction included. */
-  judge_timeout_ms: timeout(),
   /**
    * The model the skill arbiter asks when a request matches no skill closely.
    * Null defers to the system prompt reflection model.
    */
   skill_arbiter_model_id: z.uuid().nullable(),
-  /** How long one arbiter attempt may take, in milliseconds. */
-  skill_arbiter_timeout_ms: timeout(),
   /**
    * The model that compacts a system prompt too long to embed whole before
    * routing embeds it. Null defers to the system prompt reflection model.
    */
   intent_compaction_model_id: z.uuid().nullable(),
-  /** How long one compaction attempt may take, in milliseconds. */
-  intent_compaction_timeout_ms: timeout(),
-  developer_mode: z.boolean(),
+  options: SystemSettingsOptions,
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
 export type SystemSettings = z.infer<typeof SystemSettings>;
 
-/** The settings that bound one internal call, for code that maps over them. */
-export const TIMEOUT_SETTINGS = [
-  'system_prompt_reflection_timeout_ms',
-  'evaluation_generation_timeout_ms',
-  'embedding_timeout_ms',
-  'judge_timeout_ms',
-  'skill_arbiter_timeout_ms',
-  'intent_compaction_timeout_ms',
-] as const;
-export type TimeoutSetting = (typeof TIMEOUT_SETTINGS)[number];
+/**
+ * A partial update to the options: each role object is merged over the stored
+ * one, so a caller sends only the fields it changes. Strict throughout, so a
+ * misspelled field is refused rather than stored and ignored.
+ */
+export const SystemSettingsOptionsUpdate = z
+  .object({
+    system_prompt_reflection: z
+      .object({ timeout_ms: timeoutUpdate() })
+      .strict()
+      .optional(),
+    evaluation_generation: z
+      .object({ timeout_ms: timeoutUpdate() })
+      .strict()
+      .optional(),
+    embedding: z.object({ timeout_ms: timeoutUpdate() }).strict().optional(),
+    judge: z
+      .object({
+        timeout_ms: timeoutUpdate(),
+        max_tokens: z
+          .number()
+          .int()
+          .min(MIN_JUDGE_MAX_TOKENS)
+          .max(MAX_JUDGE_MAX_TOKENS)
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    skill_arbiter: z
+      .object({ timeout_ms: timeoutUpdate() })
+      .strict()
+      .optional(),
+    intent_compaction: z
+      .object({ timeout_ms: timeoutUpdate() })
+      .strict()
+      .optional(),
+    developer_mode: z.boolean().optional(),
+  })
+  .strict();
+export type SystemSettingsOptionsUpdate = z.infer<
+  typeof SystemSettingsOptionsUpdate
+>;
 
 export const SystemSettingsUpdateParams = z
   .object({
     system_prompt_reflection_model_id: z.uuid().nullable().optional(),
-    system_prompt_reflection_timeout_ms: timeoutUpdate(),
     evaluation_generation_model_id: z.uuid().nullable().optional(),
-    evaluation_generation_timeout_ms: timeoutUpdate(),
     embedding_model_id: z.uuid().nullable().optional(),
-    embedding_timeout_ms: timeoutUpdate(),
     judge_model_id: z.uuid().nullable().optional(),
-    judge_timeout_ms: timeoutUpdate(),
     skill_arbiter_model_id: z.uuid().nullable().optional(),
-    skill_arbiter_timeout_ms: timeoutUpdate(),
     intent_compaction_model_id: z.uuid().nullable().optional(),
-    intent_compaction_timeout_ms: timeoutUpdate(),
-    developer_mode: z.boolean().optional(),
+    options: SystemSettingsOptionsUpdate.optional(),
   })
   .strict();
 
 export type SystemSettingsUpdateParams = z.infer<
   typeof SystemSettingsUpdateParams
 >;
+
+/**
+ * The stored options with an update laid over them: one level deep, so a
+ * role's unchanged fields survive a patch that names only one of them.
+ * Shared by both storage backends so they cannot drift on what a patch means.
+ */
+export function mergeSystemSettingsOptions(
+  current: SystemSettingsOptions,
+  update: SystemSettingsOptionsUpdate,
+): SystemSettingsOptions {
+  return {
+    system_prompt_reflection: mergeRole(
+      current,
+      update,
+      'system_prompt_reflection',
+    ),
+    evaluation_generation: mergeRole(current, update, 'evaluation_generation'),
+    embedding: mergeRole(current, update, 'embedding'),
+    judge: mergeRole(current, update, 'judge'),
+    skill_arbiter: mergeRole(current, update, 'skill_arbiter'),
+    intent_compaction: mergeRole(current, update, 'intent_compaction'),
+    developer_mode: update.developer_mode ?? current.developer_mode,
+  };
+}
+
+function mergeRole<R extends InternalRole>(
+  current: SystemSettingsOptions,
+  update: SystemSettingsOptionsUpdate,
+  role: R,
+): SystemSettingsOptions[R] {
+  const patch = update[role];
+  if (!patch) {
+    return current[role];
+  }
+  // Only the fields the patch actually sent, so `undefined` cannot unset one.
+  const sent = Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  );
+  return { ...current[role], ...sent };
+}

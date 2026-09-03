@@ -76,7 +76,6 @@ describe('Turn Relevancy - evaluateLog', () => {
       evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
       params: {
         temperature: 0.1,
-        max_tokens: 1000,
       },
       weight: 1.0,
       model_id: null,
@@ -196,7 +195,6 @@ describe('Turn Relevancy - evaluateLog', () => {
       evaluation_method: EvaluationMethodName.TURN_RELEVANCY,
       params: {
         temperature: 0.1,
-        max_tokens: 1000,
       },
       weight: 1.0,
       model_id: null,

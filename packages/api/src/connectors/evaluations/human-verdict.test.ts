@@ -131,10 +131,9 @@ const evaluationOf = (method: string): SkillOptimizationEvaluation =>
             async_mode: false,
             verbose_mode: false,
             temperature: 0.1,
-            max_tokens: 1000,
             batch_size: 1,
           }
-        : { temperature: 0.1, max_tokens: 1000 },
+        : { temperature: 0.1 },
     weight: 1,
     model_id: null,
     created_at: '2024-01-01T00:00:00.000Z',

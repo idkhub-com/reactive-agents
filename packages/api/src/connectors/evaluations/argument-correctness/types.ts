@@ -105,14 +105,6 @@ export const ArgumentCorrectnessEvaluationParameters =
     async_mode: z.boolean().default(true),
     verbose_mode: z.boolean().default(false),
     temperature: z.number().min(0).max(2).default(0.1),
-    /**
-     * Reaches the model now, where it used to be computed and dropped, so the
-     * value has to cover what a reasoning model spends before it writes a
-     * word: the judge's own answer is a few hundred tokens, but glm-5.3-flash
-     * was measured burning 1100-2700 on reasoning alone. A cap below that
-     * returns an empty completion rather than a short one.
-     */
-    max_tokens: z.number().positive().default(4000),
     batch_size: z.number().positive().default(10),
     input: z.string().optional(),
     actual_output: z.string().optional(),

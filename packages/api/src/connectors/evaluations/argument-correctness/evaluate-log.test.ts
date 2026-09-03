@@ -77,7 +77,6 @@ describe('Argument Correctness - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
         tools_called: [
           {
             name: 'database_query',
@@ -209,7 +208,6 @@ describe('Argument Correctness - evaluateLog', () => {
       params: {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 1000,
       },
       weight: 1.0,
       model_id: null,
