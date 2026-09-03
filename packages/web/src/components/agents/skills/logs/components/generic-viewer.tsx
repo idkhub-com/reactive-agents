@@ -1,14 +1,17 @@
 'use client';
 
 import type { RawSchema } from '@shared/types/api/routes/shared/tools';
+import {
+  MessageCard,
+  previewOf,
+} from '@web/components/agents/skills/logs/components/message-card';
 import { LazyTextViewer } from '@web/components/agents/skills/logs/components/text-viewer.lazy';
 import { MonacoEditor } from '@web/components/monaco-editor';
 import { Button } from '@web/components/ui/button';
-import { Separator } from '@web/components/ui/separator';
 import { cn } from '@web/utils/ui/utils';
 import Ajv, { type ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
-import { AlertTriangleIcon, CopyIcon, SaveIcon } from 'lucide-react';
+import { AlertTriangleIcon, SaveIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { type ReactNode, useEffect, useState } from 'react';
 
@@ -29,6 +32,9 @@ export interface DataCardProps {
   onSelect?: (selectedText: string) => void;
   wordWrap?: boolean;
   className?: string;
+  /** `response` tints the card as the agent's own answer to this turn. */
+  variant?: 'default' | 'response';
+  defaultCollapsed?: boolean;
 }
 export function GenericViewer({
   path,
@@ -41,6 +47,8 @@ export function GenericViewer({
   onSelect,
   wordWrap = true,
   className,
+  variant,
+  defaultCollapsed,
 }: DataCardProps): React.ReactElement {
   const { resolvedTheme } = useTheme();
   const [isValid, setIsValid] = useState(true);
@@ -135,38 +143,23 @@ export function GenericViewer({
   }
 
   return (
-    <div
-      className={cn(
-        'flex flex-col h-fit w-full gap-2 border rounded-lg overflow-hidden shrink-0 bg-card',
-        className,
-      )}
-    >
-      <div className="flex flex-col items-center border-b">
-        <div className="flex flex-row gap-2 w-full justify-between items-center h-10 px-2">
-          {children}
-          <Separator orientation="vertical" />
-          <div className="flex flex-row gap-2 w-full justify-between items-center">
-            <div className="text-sm font-normal">
-              {PrettyLanguage[language] || language}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(): void => {
-                navigator.clipboard.writeText(value);
-              }}
-            >
-              <CopyIcon size={16} />
-            </Button>
-          </div>
-        </div>
-        {schemaError && (
+    <MessageCard
+      label={children}
+      kind={PrettyLanguage[language] || language}
+      copyValue={value}
+      variant={variant}
+      defaultCollapsed={defaultCollapsed}
+      preview={previewOf(value)}
+      className={className}
+      headerExtra={
+        schemaError && (
           <div className="w-full text-orange-500 text-xs text-left flex flex-row items-center gap-2">
             <AlertTriangleIcon size={16} />
             {schemaError}
           </div>
-        )}
-      </div>
+        )
+      }
+    >
       {language === 'text' ? (
         <LazyTextViewer
           readOnly={readOnly}
@@ -203,6 +196,6 @@ export function GenericViewer({
           )}
         </div>
       )}
-    </div>
+    </MessageCard>
   );
 }

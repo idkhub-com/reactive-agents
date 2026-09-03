@@ -9,14 +9,18 @@ import type {
 import {
   type ChatCompletionMessage,
   ChatCompletionMessageRole,
+  ChatCompletionSystemMessageRoles,
   PrettyChatCompletionMessageRole,
 } from '@shared/types/api/routes/shared/messages';
+import { FunctionCallCard } from '@web/components/agents/skills/logs/components/function-call-card';
 import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
+import {
+  MessageCard,
+  previewOf,
+} from '@web/components/agents/skills/logs/components/message-card';
 import { Badge } from '@web/components/ui/badge';
-import { Button } from '@web/components/ui/button';
-import { Separator } from '@web/components/ui/separator';
-import { Code, CopyIcon, Wrench } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Code } from 'lucide-react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 function getMessageValue(
   input: string | string[] | number[] | number[][],
@@ -35,9 +39,12 @@ function getMessageValue(
 export function MessagesView({
   logId,
   saRequestData,
+  systemPromptBadge,
 }: {
   logId: string;
   saRequestData: SuperAgentsRequestData;
+  /** Says where the system prompt came from, beside its role label. */
+  systemPromptBadge?: ReactNode;
 }): React.ReactElement {
   const [messages, setMessages] = useState<ChatCompletionMessage[]>([]);
 
@@ -144,6 +151,16 @@ export function MessagesView({
       {messages.map((message, index) => {
         const key = `${logId}-${message.role}-${String(message.content).slice(0, 20)}-${index}`;
 
+        const roleLabel = (
+          <div className="flex flex-row items-center gap-2">
+            <div className="text-sm font-normal">
+              {PrettyChatCompletionMessageRole[message.role]}
+            </div>
+            {ChatCompletionSystemMessageRoles.includes(message.role) &&
+              systemPromptBadge}
+          </div>
+        );
+
         // Handle tool role messages specially
         if (
           message.role === ChatCompletionMessageRole.TOOL &&
@@ -155,28 +172,13 @@ export function MessagesView({
               : JSON.stringify(message.content, null, 2);
 
           return (
-            <div
+            <MessageCard
               key={key}
-              className="flex flex-col h-fit w-full gap-2 border rounded-lg overflow-hidden shrink-0 bg-card"
+              label={<div className="text-sm font-normal">Tool</div>}
+              kind="Response"
+              copyValue={toolContent}
+              preview={previewOf(toolContent)}
             >
-              <div className="flex flex-col items-center border-b">
-                <div className="flex flex-row gap-2 w-full justify-between items-center h-10 px-2">
-                  <div className="text-sm font-normal">Tool</div>
-                  <Separator orientation="vertical" />
-                  <div className="flex flex-row gap-2 w-full justify-between items-center">
-                    <div className="text-sm font-normal">Response</div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(): void => {
-                        navigator.clipboard.writeText(toolContent);
-                      }}
-                    >
-                      <CopyIcon size={16} />
-                    </Button>
-                  </div>
-                </div>
-              </div>
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Code className="h-4 w-4 text-green-600" />
@@ -188,7 +190,7 @@ export function MessagesView({
                   {toolContent}
                 </div>
               </div>
-            </div>
+            </MessageCard>
           );
         }
 
@@ -213,65 +215,17 @@ export function MessagesView({
                     //pass
                   }}
                 >
-                  <div className="text-sm font-normal">
-                    {PrettyChatCompletionMessageRole[message.role]}
-                  </div>
+                  {roleLabel}
                 </GenericViewer>
               )}
-              {message.tool_calls.map((tc) => {
-                const args =
-                  typeof tc.function.arguments === 'string'
-                    ? tc.function.arguments
-                    : JSON.stringify(tc.function.arguments, null, 2);
-
-                return (
-                  <div
-                    key={`${key}-tc-${tc.id}`}
-                    className="flex flex-col h-fit w-full gap-2 border rounded-lg overflow-hidden shrink-0 bg-card"
-                  >
-                    <div className="flex flex-col items-center border-b">
-                      <div className="flex flex-row gap-2 w-full justify-between items-center h-10 px-2">
-                        <div className="text-sm font-normal">Assistant</div>
-                        <Separator orientation="vertical" />
-                        <div className="flex flex-row gap-2 w-full justify-between items-center">
-                          <div className="text-sm font-normal">
-                            Function Call
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(): void => {
-                              navigator.clipboard.writeText(args);
-                            }}
-                          >
-                            <CopyIcon size={16} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Wrench className="h-4 w-4 text-blue-600" />
-                        <Badge
-                          variant="secondary"
-                          className="font-mono text-xs"
-                        >
-                          {tc.function.name}
-                        </Badge>
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {tc.id}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground mb-2">
-                        Arguments:
-                      </div>
-                      <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
-                        {args}
-                      </pre>
-                    </div>
-                  </div>
-                );
-              })}
+              {message.tool_calls.map((tc) => (
+                <FunctionCallCard
+                  key={`${key}-tc-${tc.id}`}
+                  name={tc.function.name}
+                  callId={tc.id}
+                  args={tc.function.arguments}
+                />
+              ))}
             </div>
           );
         }
@@ -291,9 +245,7 @@ export function MessagesView({
               //pass
             }}
           >
-            <div className="text-sm font-normal">
-              {PrettyChatCompletionMessageRole[message.role]}
-            </div>
+            {roleLabel}
           </GenericViewer>
         );
       })}

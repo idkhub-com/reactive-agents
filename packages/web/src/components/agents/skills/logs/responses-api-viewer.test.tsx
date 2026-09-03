@@ -17,12 +17,14 @@ vi.mock('next-themes', () => ({
 interface GenericViewerProps {
   children: React.ReactNode;
   defaultValue: string;
+  variant?: string;
 }
 
-// Mock GenericViewer component
+// Mock GenericViewer component. `variant` is surfaced because it is what
+// gives the agent's own answer its background.
 vi.mock('@web/components/agents/skills/logs/components/generic-viewer', () => ({
-  GenericViewer: ({ children, defaultValue }: GenericViewerProps) => (
-    <div data-testid="generic-viewer">
+  GenericViewer: ({ children, defaultValue, variant }: GenericViewerProps) => (
+    <div data-testid="generic-viewer" data-variant={variant}>
       {children}
       <div data-testid="viewer-content">{defaultValue}</div>
     </div>
@@ -646,6 +648,48 @@ describe('ResponsesAPIViewer - Function Call Rendering', () => {
       expect(
         screen.getByText((content) => content.includes('nested')),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe('the answer this turn produced', () => {
+    it('marks the message and its function calls as the response', () => {
+      const responseBody: Partial<ResponsesResponseBody> = {
+        id: 'resp_123',
+        object: 'response',
+        created_at: 1234567890,
+        model: 'gpt-4',
+        output: [
+          {
+            id: 'msg_1',
+            type: 'message',
+            role: ChatCompletionMessageRole.ASSISTANT,
+            content: [{ type: 'text', text: 'Two.', annotations: [] }],
+          },
+          {
+            type: 'function_call',
+            name: 'calculate',
+            call_id: 'call_1',
+            arguments: '{}',
+          } as ResponsesAPIFunctionCall,
+        ],
+      };
+
+      const { container } = render(
+        <ResponsesAPIViewer
+          logId="test-log"
+          saRequestBody={{ model: 'gpt-4' } as ResponsesRequestBody}
+          saResponseBody={responseBody as ResponsesResponseBody}
+        />,
+      );
+
+      expect(screen.getByTestId('generic-viewer')).toHaveAttribute(
+        'data-variant',
+        'response',
+      );
+      expect(
+        container.querySelector('[class*="bg-emerald"]'),
+        'the function call the agent just made is part of its answer',
+      ).not.toBeNull();
     });
   });
 });
