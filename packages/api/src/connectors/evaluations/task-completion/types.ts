@@ -25,7 +25,6 @@ export type TaskCompletionTemplateData = z.infer<
 export const TaskCompletionTemplateConfig = z.object({
   systemPrompt: z.string(),
   userPrompt: z.string(),
-  outputFormat: z.literal('json'),
 });
 
 export type TaskCompletionTemplateConfig = z.infer<

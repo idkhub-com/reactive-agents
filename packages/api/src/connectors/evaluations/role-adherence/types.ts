@@ -19,7 +19,6 @@ export type RoleAdherenceTemplateData = z.infer<
 export const RoleAdherenceTemplateConfigSchema = z.object({
   systemPrompt: z.string(),
   userPrompt: z.string(),
-  outputFormat: z.literal('json'),
 });
 
 export type RoleAdherenceTemplateConfig = z.infer<

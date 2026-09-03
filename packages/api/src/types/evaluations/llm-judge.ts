@@ -46,7 +46,6 @@ export type EvaluationCriteria = z.infer<typeof EvaluationCriteriaSchema>;
 export const EvaluationInputSchema = z.object({
   text: z.string(),
   evaluationCriteria: EvaluationCriteriaSchema.optional(),
-  outputFormat: z.literal('json').optional(),
   /**
    * Explicit prompts, used verbatim when both are set. Without them the
    * judge re-derives a system/user split from `text` heuristically, and a

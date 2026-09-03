@@ -264,14 +264,6 @@ export function createLLMJudge(
       return criteriaBasedPrompt(input);
     }
 
-    // If outputFormat is explicitly specified (always 'json' now), use structured output
-    if (input.outputFormat === 'json') {
-      const { systemPrompt, userPrompt } = parseTemplatePrompt(input.text);
-      if (systemPrompt && userPrompt) {
-        return { systemPrompt, userPrompt, useStructuredOutput: true };
-      }
-    }
-
     // Template-based evaluation: More robust detection of pre-formatted prompts
     if (isTemplateBasedInput(input.text)) {
       const { systemPrompt, userPrompt } = parseTemplatePrompt(input.text);

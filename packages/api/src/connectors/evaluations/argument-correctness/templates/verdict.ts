@@ -27,7 +27,6 @@ Provide an overall score and reasoning. The score may be computed as (# correct 
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

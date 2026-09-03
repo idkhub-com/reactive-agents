@@ -29,7 +29,6 @@ export type ArgumentCorrectnessTemplateData = z.infer<
 export const ArgumentCorrectnessTemplateConfigSchema = z.object({
   systemPrompt: z.string(),
   userPrompt: z.string(),
-  outputFormat: z.literal('json'),
 });
 export type ArgumentCorrectnessTemplateConfig = z.infer<
   typeof ArgumentCorrectnessTemplateConfigSchema

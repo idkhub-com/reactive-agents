@@ -38,6 +38,5 @@ Judge whether the arguments for each tool are correct given the input.`;
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   } as const;
 }
