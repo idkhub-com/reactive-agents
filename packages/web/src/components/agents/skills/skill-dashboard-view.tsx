@@ -5,6 +5,7 @@ import {
   getSkillEvaluationScoresByTimeBucket,
   resetSkill,
 } from '@web/api/v1/super-agents/skills';
+import { LogTagBadge } from '@web/components/agents/log-cells';
 import { RecentLogsTable } from '@web/components/agents/recent-logs-table';
 import { ManageSkillModelsDialog } from '@web/components/agents/skills/manage-skill-models-dialog';
 import { SkillStatusIndicator } from '@web/components/agents/skills/skill-status-indicator';
@@ -725,9 +726,15 @@ export function SkillDashboardView(): ReactElement {
                     logs={recentLogs}
                     context={{
                       header: 'Partition',
-                      render: (log) =>
-                        clusterStates.find((c) => c.id === log.cluster_id)
-                          ?.name ?? '\u2014',
+                      render: (log) => (
+                        <LogTagBadge
+                          value={
+                            clusterStates.find((c) => c.id === log.cluster_id)
+                              ?.name
+                          }
+                          mono
+                        />
+                      ),
                     }}
                   />
                 </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { PrettyFunctionName } from '@shared/types/api/request/function-name';
 import type { Log } from '@shared/types/data';
 import { Badge } from '@web/components/ui/badge';
 import { CheckCircle2, XCircle } from 'lucide-react';
@@ -128,5 +129,50 @@ export function LogEvalScore({ log }: { log: Log }): ReactElement {
       )}
       <span className="font-mono text-xs">{(score * 100).toFixed(0)}%</span>
     </div>
+  );
+}
+
+/**
+ * What was asked of the model.
+ *
+ * The pretty name rather than the raw one: `chat_complete` is the wire
+ * spelling, not something anyone reads a table by.
+ */
+export function LogFunction({ log }: { log: Log }): ReactElement {
+  return (
+    <>{PrettyFunctionName[log.function_name] || log.function_name || 'N/A'}</>
+  );
+}
+
+/** The model that served it, once one has. */
+export function LogModel({ log }: { log: Log }): ReactElement {
+  return <span className="text-xs">{log.model ?? '—'}</span>;
+}
+
+/**
+ * A name hanging off a log: the skill that served it, or the partition it
+ * landed in.
+ *
+ * Both read as the same kind of thing and so are drawn the same way, on the
+ * logs page and on the cards that summarise it. `mono` is for the generated
+ * partition names, which are read character by character.
+ */
+export function LogTagBadge({
+  value,
+  mono = false,
+  missing = '—',
+}: {
+  value: string | null | undefined;
+  mono?: boolean;
+  missing?: string;
+}): ReactElement {
+  if (!value) {
+    return <span className="text-muted-foreground text-xs">{missing}</span>;
+  }
+
+  return (
+    <Badge variant="outline" className={mono ? 'font-mono text-xs' : 'text-xs'}>
+      {value}
+    </Badge>
   );
 }

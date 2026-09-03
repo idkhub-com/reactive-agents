@@ -1,5 +1,6 @@
 'use client';
 
+import { LogTagBadge } from '@web/components/agents/log-cells';
 import { RecentLogsTable } from '@web/components/agents/recent-logs-table';
 import {
   Card,
@@ -83,9 +84,13 @@ export function AgentRecentLogsCard(): ReactElement | null {
               logs={recentLogs}
               context={{
                 header: 'Skill',
-                render: (log) =>
-                  skills.find((skill) => skill.id === log.skill_id)?.name ??
-                  '\u2014',
+                render: (log) => (
+                  <LogTagBadge
+                    value={
+                      skills.find((skill) => skill.id === log.skill_id)?.name
+                    }
+                  />
+                ),
               }}
             />
           </div>

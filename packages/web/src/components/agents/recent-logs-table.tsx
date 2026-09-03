@@ -1,11 +1,12 @@
 'use client';
 
-import { PrettyFunctionName } from '@shared/types/api/request/function-name';
 import type { Log } from '@shared/types/data';
 import {
   isRunning,
   LogDuration,
   LogEvalScore,
+  LogFunction,
+  LogModel,
   LogStatusBadge,
 } from '@web/components/agents/log-cells';
 import {
@@ -76,17 +77,13 @@ export function RecentLogsTable({
             <TableCell>
               <LogEvalScore log={log} />
             </TableCell>
-            <TableCell className="font-medium">
-              {PrettyFunctionName[log.function_name] ||
-                log.function_name ||
-                'N/A'}
+            <TableCell>
+              <LogFunction log={log} />
             </TableCell>
-            <TableCell className="text-muted-foreground">
-              {log.model ?? '—'}
+            <TableCell>
+              <LogModel log={log} />
             </TableCell>
-            <TableCell className="text-muted-foreground">
-              {context.render(log)}
-            </TableCell>
+            <TableCell>{context.render(log)}</TableCell>
             <TableCell className="text-muted-foreground whitespace-nowrap">
               {formatClockTime(log.start_time)}
             </TableCell>

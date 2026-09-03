@@ -5,6 +5,8 @@ import {
   isRunning,
   LogDuration,
   LogEvalScore,
+  LogFunction,
+  LogModel,
   LogStatusBadge,
 } from '@web/components/agents/log-cells';
 import { Badge } from '@web/components/ui/badge';
@@ -277,12 +279,14 @@ export function LogsTableView({
                         <TableCell>
                           <Badge variant="outline">{log.method}</Badge>
                         </TableCell>
-                        <TableCell>{log.function_name || 'N/A'}</TableCell>
+                        <TableCell>
+                          <LogFunction log={log} />
+                        </TableCell>
                         <TableCell className="max-w-xs truncate">
                           {log.endpoint}
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs">{log.model}</span>
+                          <LogModel log={log} />
                         </TableCell>
                         <TableCell>
                           {log.trace_id ? (
