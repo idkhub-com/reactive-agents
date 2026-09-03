@@ -22,13 +22,25 @@ export const JudgeOverrideParameters = z.object({
    * Completion tokens one attempt at this evaluation may spend, overriding
    * `options.judge.max_tokens`.
    */
-  max_tokens: z.number().int().positive().optional(),
+  max_tokens: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      "Completion tokens one attempt at this evaluation may spend. Unset, the judge model's system setting applies.",
+    ),
   /**
    * How hard the model may think before answering this evaluation,
    * overriding `options.judge.reasoning_effort`. `none` turns thinking off
    * where the global setting leaves it on.
    */
-  reasoning_effort: z.enum(ReasoningEffort).optional(),
+  reasoning_effort: z
+    .enum(ReasoningEffort)
+    .optional()
+    .describe(
+      "How hard the model may think before answering this evaluation. Unset, the judge model's system setting applies. On a thinking model 'none' keeps the token budget for the answer.",
+    ),
 });
 
 export type JudgeOverrideParameters = z.infer<typeof JudgeOverrideParameters>;
