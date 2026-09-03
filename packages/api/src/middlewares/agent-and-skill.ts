@@ -1,3 +1,4 @@
+import { markRequestStarted } from '@api/middlewares/logs';
 import type { AppContext } from '@api/types/hono';
 import { getAgent } from '@api/utils/super-agents/agents';
 import {
@@ -82,6 +83,11 @@ export const agentAndSkillMiddleware = createMiddleware(
 
         c.set('agent', agent);
         c.set('skill', skill);
+
+        // The first point at which a pending row could say which skill's logs
+        // it belongs in, and still early enough to cover the provider call --
+        // which is nearly all of a request's elapsed time.
+        markRequestStarted(c);
       }
     }
     await next();

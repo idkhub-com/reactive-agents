@@ -4,6 +4,7 @@ import { ErrorBoundary } from '@web/components/error-boundary';
 import type { ReactElement, ReactNode } from 'react';
 import { AgentsProvider } from './agents';
 import { AIProvidersProvider } from './ai-providers';
+import { InFlightRequestsProvider } from './in-flight-requests';
 import { LogsProvider } from './logs';
 import { ModelsProvider } from './models';
 import { NavigationProvider } from './navigation';
@@ -49,29 +50,31 @@ export function AppProviders({ children }: AppProvidersProps): ReactElement {
         )}
       >
         <SSEProvider>
-          <NavigationProvider>
-            <AIProvidersProvider>
-              <ModelsProvider>
-                <SystemSettingsProvider>
-                  <AgentsProvider>
-                    <SkillsProvider>
-                      <SkillEventsProvider>
-                        <SkillOptimizationClustersProvider>
-                          <SkillOptimizationArmsProvider>
-                            <SkillOptimizationEvaluationRunsProvider>
-                              <SkillOptimizationEvaluationsProvider>
-                                <LogsProvider>{children}</LogsProvider>
-                              </SkillOptimizationEvaluationsProvider>
-                            </SkillOptimizationEvaluationRunsProvider>
-                          </SkillOptimizationArmsProvider>
-                        </SkillOptimizationClustersProvider>
-                      </SkillEventsProvider>
-                    </SkillsProvider>
-                  </AgentsProvider>
-                </SystemSettingsProvider>
-              </ModelsProvider>
-            </AIProvidersProvider>
-          </NavigationProvider>
+          <InFlightRequestsProvider>
+            <NavigationProvider>
+              <AIProvidersProvider>
+                <ModelsProvider>
+                  <SystemSettingsProvider>
+                    <AgentsProvider>
+                      <SkillsProvider>
+                        <SkillEventsProvider>
+                          <SkillOptimizationClustersProvider>
+                            <SkillOptimizationArmsProvider>
+                              <SkillOptimizationEvaluationRunsProvider>
+                                <SkillOptimizationEvaluationsProvider>
+                                  <LogsProvider>{children}</LogsProvider>
+                                </SkillOptimizationEvaluationsProvider>
+                              </SkillOptimizationEvaluationRunsProvider>
+                            </SkillOptimizationArmsProvider>
+                          </SkillOptimizationClustersProvider>
+                        </SkillEventsProvider>
+                      </SkillsProvider>
+                    </AgentsProvider>
+                  </SystemSettingsProvider>
+                </ModelsProvider>
+              </AIProvidersProvider>
+            </NavigationProvider>
+          </InFlightRequestsProvider>
         </SSEProvider>
       </ErrorBoundary>
     </ReactQueryProvider>

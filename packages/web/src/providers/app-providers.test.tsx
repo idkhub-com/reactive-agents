@@ -14,6 +14,12 @@ vi.mock('@web/providers/sse', () => ({
   ),
 }));
 
+vi.mock('@web/providers/in-flight-requests', () => ({
+  InFlightRequestsProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="in-flight-requests-provider">{children}</div>
+  ),
+}));
+
 vi.mock('@web/providers/navigation', () => ({
   NavigationProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="navigation-provider">{children}</div>

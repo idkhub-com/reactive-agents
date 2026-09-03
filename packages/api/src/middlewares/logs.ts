@@ -13,6 +13,10 @@ import type {
 import type { AppContext, AppEnv } from '@api/types/hono';
 import type { HttpMethod } from '@api/types/http';
 import {
+  trackRequestSettled,
+  trackRequestStarted,
+} from '@api/utils/in-flight-requests';
+import {
   runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@api/utils/realtime-evaluations';
@@ -539,6 +543,55 @@ const shouldLogRequest = (url: URL): boolean => {
   return true;
 };
 
+/**
+ * Announce a request that is about to be sent to a provider, so the dashboard
+ * can show it as a pending row while it runs.
+ *
+ * Called from the agent-and-skill middleware rather than from here, because
+ * this middleware's own pre-handler section runs before either has been
+ * resolved and a pending row has to say which skill's logs it belongs in.
+ * That puts skill routing inside the announced request's dead time -- an
+ * ordinary lookup, though the arbiter can make it a slow one -- which is the
+ * price of knowing the ids.
+ */
+export const markRequestStarted = (c: AppContext): void => {
+  const requestId = c.get('log_request_id');
+  if (!requestId) {
+    return;
+  }
+
+  const url = new URL(stripAgentSkillPath(c.req.url));
+  if (!shouldLogRequest(url)) {
+    return;
+  }
+
+  // Treated as optional here for the same reason the caller treats it so:
+  // nothing about a pending row is worth failing a request over.
+  const saRequestData = c.get('sa_request_data');
+  if (!saRequestData) {
+    return;
+  }
+
+  const requestBody = (saRequestData as { requestBody?: unknown }).requestBody;
+  const model =
+    requestBody &&
+    typeof requestBody === 'object' &&
+    'model' in requestBody &&
+    typeof requestBody.model === 'string'
+      ? requestBody.model
+      : null;
+
+  trackRequestStarted({
+    request_id: requestId,
+    agent_id: c.get('agent').id,
+    skill_id: c.get('skill').id,
+    method: saRequestData.method,
+    endpoint: url.pathname,
+    function_name: saRequestData.functionName,
+    model,
+  });
+};
+
 async function processLogsAndOptimizeSkill(
   processLogsParams: ProcessLogsParams,
 ) {
@@ -648,6 +701,10 @@ export const logsMiddleware = (
     const originalSystemPrompt = extractSystemPrompt(c.get('sa_request_data'));
 
     const startTime = Date.now();
+    // Assigned here so it exists before anything downstream can announce the
+    // request; the announcement itself waits until the skill is known.
+    const requestId = crypto.randomUUID();
+    c.set('log_request_id', requestId);
 
     await next();
 
@@ -656,6 +713,7 @@ export const logsMiddleware = (
     const url = new URL(stripAgentSkillPath(c.req.url));
 
     if (!shouldLogRequest(url)) {
+      trackRequestSettled(requestId);
       return;
     }
 
@@ -663,6 +721,7 @@ export const logsMiddleware = (
 
     // Log produced when calling the AI provider
     if (!aiProviderLog) {
+      trackRequestSettled(requestId);
       return;
     }
 
@@ -676,6 +735,11 @@ export const logsMiddleware = (
       if (streamEndPromise) {
         await streamEndPromise;
       }
+
+      // The response is now complete, so the pending row has served its
+      // purpose. Everything below -- judging, optimization -- can take
+      // minutes, and none of it should keep a duration ticking.
+      trackRequestSettled(requestId);
 
       // For streaming requests, parse accumulated chunks and update the log
       const accumulatedChunks = c.get('accumulated_stream_chunks') as
@@ -773,9 +837,14 @@ export const logsMiddleware = (
       await processLogsAndOptimizeSkill(processLogsParams);
     };
 
+    // Settling again on the way out is a backstop, not the normal path: if
+    // the stream rejects, or logging throws before it gets there, the pending
+    // row would otherwise tick forever. The second call is a no-op.
+    const processed = processLogsAsync().finally(() => {
+      trackRequestSettled(requestId);
+    });
+
     if (getRuntimeKey() === 'workerd') {
-      c.executionCtx.waitUntil(processLogsAsync());
-    } else {
-      processLogsAsync();
+      c.executionCtx.waitUntil(processed);
     }
   });

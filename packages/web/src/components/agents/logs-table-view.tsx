@@ -43,6 +43,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@web/components/ui/tooltip';
+import {
+  type PendingRequest,
+  useInFlightRequests,
+} from '@web/providers/in-flight-requests';
 import { useLogs } from '@web/providers/logs';
 import { getStringHashColor } from '@web/utils/http-method-colors';
 import { formatLogTimestamp } from '@web/utils/time';
@@ -55,7 +59,7 @@ import {
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement, ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * The request-logs page. The caller wires the fetch scope into the logs
@@ -109,6 +113,40 @@ const getThinkingEffort = (log: Log): string | null => {
   return null;
 };
 
+/** How often the counter on a running request is redrawn. */
+const PENDING_TICK_MS = 200;
+
+/**
+ * The duration of a request that has not finished, counting up.
+ *
+ * It owns its own interval so that ticking costs one cell rather than the
+ * whole table: a page of fifty finished rows has no reason to re-render five
+ * times a second because one request is in flight.
+ */
+function PendingDuration({
+  request,
+  elapsedMs,
+}: {
+  request: PendingRequest;
+  elapsedMs: (request: PendingRequest) => number;
+}): ReactElement {
+  const [elapsed, setElapsed] = useState(() => elapsedMs(request));
+
+  useEffect(() => {
+    const interval = setInterval(
+      () => setElapsed(elapsedMs(request)),
+      PENDING_TICK_MS,
+    );
+    return () => clearInterval(interval);
+  }, [request, elapsedMs]);
+
+  return (
+    <span className="font-mono text-xs tabular-nums">
+      {(elapsed / 1000).toFixed(1)}s
+    </span>
+  );
+}
+
 const getStatusBadgeVariant = (status: number) => {
   if (status >= 200 && status < 300) return 'default';
   if (status >= 400 && status < 500) return 'destructive';
@@ -124,11 +162,46 @@ export function LogsTableView({
   extraColumn,
   filters,
 }: LogsTableViewProps): ReactElement {
-  const { logs, isLoading, page, pageSize, totalPages, setPage, setPageSize } =
-    useLogs();
+  const {
+    logs,
+    isLoading,
+    page,
+    pageSize,
+    totalPages,
+    setPage,
+    setPageSize,
+    agentId,
+    skillId,
+    agentWide,
+  } = useLogs();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [goToPageInput, setGoToPageInput] = useState('');
+
+  const { pendingRequests, elapsedMs } = useInFlightRequests(
+    agentId,
+    agentWide ? null : skillId,
+  );
+
+  /**
+   * Requests still running, shown above the finished ones.
+   *
+   * Only on the first page, where the newest rows live -- a pending request
+   * belongs at the top of the list or nowhere -- and never under a status
+   * filter, since it has no status to match yet.
+   */
+  const visiblePendingRequests =
+    page === 1 && statusFilter === 'all'
+      ? pendingRequests.filter((request) => {
+          if (!searchQuery) return true;
+          const searchLower = searchQuery.toLowerCase();
+          return (
+            request.function_name?.toLowerCase().includes(searchLower) ||
+            request.endpoint?.toLowerCase().includes(searchLower) ||
+            request.method?.toLowerCase().includes(searchLower)
+          );
+        })
+      : [];
 
   const filteredLogs = logs.filter((log: Log) => {
     if (statusFilter !== 'all') {
@@ -199,6 +272,8 @@ export function LogsTableView({
                 <CardTitle>Request Logs</CardTitle>
                 <CardDescription>
                   {filteredLogs.length} logs found
+                  {visiblePendingRequests.length > 0 &&
+                    `, ${visiblePendingRequests.length} running`}
                 </CardDescription>
               </div>
             </div>
@@ -216,7 +291,8 @@ export function LogsTableView({
                   </div>
                 ))}
               </div>
-            ) : filteredLogs.length === 0 ? (
+            ) : filteredLogs.length === 0 &&
+              visiblePendingRequests.length === 0 ? (
               <div className="text-center py-12">
                 <h3 className="text-lg font-semibold mb-2">No logs found</h3>
                 <p className="text-muted-foreground">
@@ -244,6 +320,56 @@ export function LogsTableView({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {visiblePendingRequests.map((request) => (
+                    <TableRow
+                      key={request.request_id}
+                      className="bg-muted/30"
+                      data-testid="pending-log-row"
+                    >
+                      <TableCell>
+                        <Badge variant="secondary" className="gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                          running
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground text-xs">—</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{request.method}</Badge>
+                      </TableCell>
+                      <TableCell>{request.function_name || 'N/A'}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {request.endpoint}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs">{request.model ?? '—'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground text-xs">—</span>
+                      </TableCell>
+                      {/* The caller's extra column reads a finished log, which
+                          this is not; it fills in when the row lands. */}
+                      <TableCell>
+                        <span className="text-muted-foreground text-xs">—</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground text-xs">—</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground text-xs">—</span>
+                      </TableCell>
+                      <TableCell>
+                        {formatLogTimestamp(Date.now() - elapsedMs(request))}
+                      </TableCell>
+                      <TableCell>
+                        <PendingDuration
+                          request={request}
+                          elapsedMs={elapsedMs}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
                   {filteredLogs.map((log) => {
                     const temperature = getTemperature(log);
                     const thinkingEffort = getThinkingEffort(log);

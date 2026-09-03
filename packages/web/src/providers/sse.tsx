@@ -3,24 +3,16 @@
 import type { SSEEventData, SSEEventType } from '@shared/types/sse';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStatus } from '@web/hooks/use-auth-status';
-import { useSSE } from '@web/hooks/use-sse';
+import { type SSEEventHandler, useSSE } from '@web/hooks/use-sse';
 import type React from 'react';
 import {
   createContext,
   type ReactElement,
   useContext,
   useEffect,
+  useMemo,
   useRef,
 } from 'react';
-import { agentQueryKeys } from './agents';
-import { aiProvidersQueryKeys } from './ai-providers';
-import { logsQueryKeys } from './logs';
-import { modelQueryKeys } from './models';
-import { armQueryKeys } from './skill-optimization-arms';
-import { clusterQueryKeys } from './skill-optimization-clusters';
-import { skillOptimizationEvaluationRunQueryKeys } from './skill-optimization-evaluation-runs';
-import { evaluationQueryKeys } from './skill-optimization-evaluations';
-import { skillQueryKeys } from './skills';
 
 interface SSEContextType {
   connected: boolean;
@@ -31,6 +23,15 @@ interface SSEContextType {
    * polling instead. Not a failure -- it is the normal state on Workers.
    */
   polling: boolean;
+  /**
+   * Listen for events directly, for the ones that are not a cache
+   * invalidation -- a request starting and finishing is transient state that
+   * belongs to no query. Returns an unsubscribe function.
+   */
+  subscribe: (
+    eventType: SSEEventType | '*',
+    handler: SSEEventHandler,
+  ) => () => void;
 }
 
 const SSEContext = createContext<SSEContextType | undefined>(undefined);
@@ -47,6 +48,26 @@ const INVALIDATION_COALESCE_MS = 400;
 
 /** How often to refetch the live views when there is no stream to listen to. */
 const POLL_INTERVAL_MS = 30 * 1000;
+
+/**
+ * The root of every cache this file can invalidate, spelled out rather than
+ * imported from the providers that own them.
+ *
+ * This module is loaded by anything that listens for events, which is close
+ * to everything; importing nine provider modules to read one constant from
+ * each dragged all of them, and their module-scope side effects, along with
+ * it. `sse-query-keys.test.tsx` checks these against the factories, so the
+ * duplication cannot drift unnoticed.
+ */
+const agentsKey = ['agents'] as const;
+const skillsKey = ['skills'] as const;
+const logsKey = ['logs'] as const;
+const modelsKey = ['models'] as const;
+const aiProvidersKey = ['ai-providers'] as const;
+const evaluationsKey = ['evaluations'] as const;
+const armsKey = ['skillOptimizationArms'] as const;
+const clustersKey = ['skillOptimizationClusters'] as const;
+const evaluationRunsKey = ['skillOptimizationEvaluationRuns'] as const;
 
 /**
  * The `skill-events` provider builds its key inline from its filters rather
@@ -73,81 +94,65 @@ const EVENT_QUERY_KEYS: Record<
   Exclude<SSEEventType, 'ping'>,
   readonly (readonly unknown[])[]
 > = {
-  'agent:created': [agentQueryKeys.all],
-  'agent:updated': [agentQueryKeys.all, agentValidationKey],
-  'agent:deleted': [agentQueryKeys.all],
+  'agent:created': [agentsKey],
+  'agent:updated': [agentsKey, agentValidationKey],
+  'agent:deleted': [agentsKey],
 
   // A skill appearing or changing moves its agent's readiness with it.
   'skill:created': [
-    skillQueryKeys.all,
-    agentQueryKeys.all,
+    skillsKey,
+    agentsKey,
     agentUnreadySkillsKey,
     agentUnreadySkillsDataKey,
     agentValidationKey,
   ],
   'skill:updated': [
-    skillQueryKeys.all,
+    skillsKey,
     agentUnreadySkillsKey,
     agentUnreadySkillsDataKey,
     skillValidationModelsKey,
     skillValidationEvaluationsKey,
   ],
   'skill:deleted': [
-    skillQueryKeys.all,
-    agentQueryKeys.all,
+    skillsKey,
+    agentsKey,
     agentUnreadySkillsKey,
     agentUnreadySkillsDataKey,
   ],
-  'skill:reset': [
-    skillQueryKeys.all,
-    clusterQueryKeys.all,
-    armQueryKeys.all,
-    skillEventsKey,
-  ],
+  'skill:reset': [skillsKey, clustersKey, armsKey, skillEventsKey],
 
-  'model:created': [modelQueryKeys.all, agentValidationKey],
-  'model:updated': [modelQueryKeys.all, agentValidationKey],
-  'model:deleted': [modelQueryKeys.all, agentValidationKey],
+  'model:created': [modelsKey, agentValidationKey],
+  'model:updated': [modelsKey, agentValidationKey],
+  'model:deleted': [modelsKey, agentValidationKey],
 
-  'evaluation:created': [
-    evaluationQueryKeys.all,
-    skillValidationEvaluationsKey,
-  ],
-  'evaluation:updated': [
-    evaluationQueryKeys.all,
-    skillValidationEvaluationsKey,
-  ],
-  'evaluation:deleted': [
-    evaluationQueryKeys.all,
-    skillValidationEvaluationsKey,
-  ],
+  'evaluation:created': [evaluationsKey, skillValidationEvaluationsKey],
+  'evaluation:updated': [evaluationsKey, skillValidationEvaluationsKey],
+  'evaluation:deleted': [evaluationsKey, skillValidationEvaluationsKey],
 
-  'ai-provider:created': [aiProvidersQueryKeys.all],
-  'ai-provider:updated': [aiProvidersQueryKeys.all],
-  'ai-provider:deleted': [aiProvidersQueryKeys.all, modelQueryKeys.all],
+  'ai-provider:created': [aiProvidersKey],
+  'ai-provider:updated': [aiProvidersKey],
+  'ai-provider:deleted': [aiProvidersKey, modelsKey],
 
-  'log:created': [logsQueryKeys.all],
+  'log:created': [logsKey],
+  // These two carry no stored data with them: a request that has started has
+  // changed nothing to refetch, and the one that finishes is announced by the
+  // `log:created` above. The in-flight provider consumes them directly.
+  'log:request-started': [],
+  'log:request-settled': [],
 
-  'skill-optimization:arm-updated': [armQueryKeys.all],
-  'skill-optimization:cluster-updated': [
-    clusterQueryKeys.all,
-    armQueryKeys.all,
-  ],
-  'skill-optimization:evaluation-run-created': [
-    skillOptimizationEvaluationRunQueryKeys.all,
-  ],
-  'skill-optimization:evaluation-run-updated': [
-    skillOptimizationEvaluationRunQueryKeys.all,
-  ],
+  'skill-optimization:arm-updated': [armsKey],
+  'skill-optimization:cluster-updated': [clustersKey, armsKey],
+  'skill-optimization:evaluation-run-created': [evaluationRunsKey],
+  'skill-optimization:evaluation-run-updated': [evaluationRunsKey],
   'skill-optimization:evaluations-regenerated': [
-    evaluationQueryKeys.all,
+    evaluationsKey,
     skillValidationEvaluationsKey,
   ],
   'skill-optimization:event-created': [skillEventsKey],
-  'cluster:reset': [clusterQueryKeys.all, armQueryKeys.all, skillEventsKey],
+  'cluster:reset': [clustersKey, armsKey, skillEventsKey],
 
-  'feedback:created': [feedbackKey, logsQueryKeys.all],
-  'improved-response:created': [feedbackKey, logsQueryKeys.all],
+  'feedback:created': [feedbackKey, logsKey],
+  'improved-response:created': [feedbackKey, logsKey],
 };
 
 /**
@@ -155,13 +160,13 @@ const EVENT_QUERY_KEYS: Record<
  * changes on its own, driven by gateway traffic rather than by a click.
  */
 const POLLED_QUERY_KEYS: readonly (readonly unknown[])[] = [
-  logsQueryKeys.all,
+  logsKey,
   skillEventsKey,
-  armQueryKeys.all,
-  clusterQueryKeys.all,
-  skillOptimizationEvaluationRunQueryKeys.all,
-  skillQueryKeys.all,
-  agentQueryKeys.all,
+  armsKey,
+  clustersKey,
+  evaluationRunsKey,
+  skillsKey,
+  agentsKey,
 ];
 
 /**
@@ -249,12 +254,22 @@ export const SSEProvider = ({
     return () => clearInterval(interval);
   }, [polling, queryClient]);
 
-  const contextValue: SSEContextType = {
-    connected: connectionState.connected,
-    connecting: connectionState.connecting,
-    error: connectionState.error,
-    polling,
-  };
+  const contextValue = useMemo<SSEContextType>(
+    () => ({
+      connected: connectionState.connected,
+      connecting: connectionState.connecting,
+      error: connectionState.error,
+      polling,
+      subscribe,
+    }),
+    [
+      connectionState.connected,
+      connectionState.connecting,
+      connectionState.error,
+      polling,
+      subscribe,
+    ],
+  );
 
   return (
     <SSEContext.Provider value={contextValue}>{children}</SSEContext.Provider>
