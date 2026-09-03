@@ -1,6 +1,10 @@
 import { CACHE_TTL_SECONDS } from '@api/constants';
 import type { AppContext } from '@api/types/hono';
 import type { Client } from '@libsql/client';
+import { FunctionName } from '@shared/types/api/request';
+import { AIProvider } from '@shared/types/constants';
+import { HttpMethod } from '@shared/types/http';
+import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { libsqlCacheStorageConnector } from './cache';
 import {
@@ -8,6 +12,7 @@ import {
   ensureForeignKeys,
   resetLibsqlClients,
 } from './client';
+import { libsqlLogsStorageConnector } from './logs';
 import { fingerprintOf, migrateLibsql, StaleMigrationError } from './migrate';
 import {
   buildInsert,
@@ -719,5 +724,156 @@ describe('row mapping', () => {
     expect(
       buildUpdate('agents', { name: undefined }, { column: 'id', value: 'a' }),
     ).toBeNull();
+  });
+});
+
+describe('the log row a request opens', () => {
+  // Read back through the connector, whose schema demands real UUIDs.
+  const AGENT = '00000000-0000-4000-8000-00000000a9e7';
+  const SKILL = '00000000-0000-4000-8000-0000000005c1';
+  const REQUEST = '00000000-0000-4000-8000-000000000e91';
+
+  /** Parent rows under the ids the connector will read back. */
+  const seedParents = async (client: Client) => {
+    await client.execute({
+      sql: `INSERT INTO agents (id, name, description) VALUES (?, 'agent', 'd')`,
+      args: [AGENT],
+    });
+    await client.execute({
+      sql: `INSERT INTO skills (id, agent_id, name, description)
+            VALUES (?, ?, 'skill', 'd')`,
+      args: [SKILL, AGENT],
+    });
+  };
+
+  /** What the middleware knows when a request arrives, and nothing more. */
+  const startParams = (id: string) => ({
+    id,
+    agent_id: AGENT,
+    skill_id: SKILL,
+    method: HttpMethod.POST,
+    endpoint: '/v1/chat/completions',
+    function_name: FunctionName.CHAT_COMPLETE,
+    start_time: 1000,
+    base_sa_config: {},
+    model: 'gpt-5.6',
+  });
+
+  /** What it knows once the provider has answered. */
+  const createParams = (id: string) => ({
+    id,
+    agent_id: AGENT,
+    skill_id: SKILL,
+    method: HttpMethod.POST,
+    endpoint: '/v1/chat/completions',
+    function_name: FunctionName.CHAT_COMPLETE,
+    status: 200,
+    start_time: 1000,
+    end_time: 2500,
+    duration: 1500,
+    base_sa_config: {},
+    ai_provider: AIProvider.OPENAI,
+    model: 'gpt-5.6-resolved',
+    ai_provider_request_log: {
+      provider: AIProvider.OPENAI,
+      function_name: FunctionName.CHAT_COMPLETE,
+      method: HttpMethod.POST,
+      request_url: 'https://api.openai.com/v1/chat/completions',
+      status: 200,
+      request_body: { model: 'gpt-5.6' },
+      response_body: { ok: true },
+      raw_request_body: '{}',
+      raw_response_body: '{}',
+      cache_mode: CacheMode.DISABLED,
+      cache_status: CacheStatus.MISS,
+    },
+    hook_logs: [],
+    metadata: {},
+    cache_status: CacheStatus.MISS,
+  });
+
+  it('is readable while the request is still running', async () => {
+    const { client, c } = await freshDatabase();
+    await seedParents(client);
+
+    await libsqlLogsStorageConnector.startLog(c, startParams(REQUEST));
+
+    const [log] = await libsqlLogsStorageConnector.getLogs(c, { id: REQUEST });
+    // A NULL end_time is what the dashboard reads as "still running".
+    expect(log.end_time).toBeNull();
+    expect(log.status).toBeNull();
+    expect(log.duration).toBeNull();
+    expect(log.ai_provider_request_log).toBeNull();
+    expect(log.start_time).toBe(1000);
+    expect(log.model).toBe('gpt-5.6');
+  });
+
+  it('is completed by the write at the end, not duplicated', async () => {
+    const { client, c } = await freshDatabase();
+    await seedParents(client);
+
+    await libsqlLogsStorageConnector.startLog(c, startParams(REQUEST));
+    await libsqlLogsStorageConnector.createLog(c, createParams(REQUEST));
+
+    const logs = await libsqlLogsStorageConnector.getLogs(c, {});
+    expect(logs).toHaveLength(1);
+    expect(logs[0].id).toBe(REQUEST);
+    expect(logs[0].status).toBe(200);
+    expect(logs[0].duration).toBe(1500);
+    expect(logs[0].model).toBe('gpt-5.6-resolved');
+  });
+
+  it('completes the row even when the opening write lands second', async () => {
+    // `startLog` is not awaited by the middleware, so the two can race.
+    const { client, c } = await freshDatabase();
+    await seedParents(client);
+
+    await libsqlLogsStorageConnector.createLog(c, createParams(REQUEST));
+    await libsqlLogsStorageConnector.startLog(c, startParams(REQUEST));
+
+    const logs = await libsqlLogsStorageConnector.getLogs(c, {});
+    expect(logs).toHaveLength(1);
+    // The late opening write must not reopen a finished request.
+    expect(logs[0].end_time).toBe(2500);
+    expect(logs[0].status).toBe(200);
+  });
+
+  it('records a request that failed before a provider answered', async () => {
+    const { client, c } = await freshDatabase();
+    await seedParents(client);
+
+    await libsqlLogsStorageConnector.startLog(c, startParams(REQUEST));
+    await libsqlLogsStorageConnector.failLog(c, {
+      id: REQUEST,
+      status: 404,
+      end_time: 1200,
+      duration: 200,
+      error: 'Agent with name nope not found',
+    });
+
+    const [log] = await libsqlLogsStorageConnector.getLogs(c, { id: REQUEST });
+    expect(log.status).toBe(404);
+    expect(log.error).toBe('Agent with name nope not found');
+    expect(log.duration).toBe(200);
+    // Still no provider exchange: there never was one.
+    expect(log.ai_provider_request_log).toBeNull();
+  });
+
+  it('leaves a completed row alone, so the backstop cannot undo a success', async () => {
+    const { client, c } = await freshDatabase();
+    await seedParents(client);
+
+    await libsqlLogsStorageConnector.createLog(c, createParams(REQUEST));
+    await libsqlLogsStorageConnector.failLog(c, {
+      id: REQUEST,
+      status: 500,
+      end_time: 9999,
+      duration: 9999,
+      error: 'should not be recorded',
+    });
+
+    const [log] = await libsqlLogsStorageConnector.getLogs(c, { id: REQUEST });
+    expect(log.status).toBe(200);
+    expect(log.error).toBeNull();
   });
 });

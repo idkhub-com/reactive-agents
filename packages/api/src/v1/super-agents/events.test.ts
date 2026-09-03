@@ -1,8 +1,4 @@
 import type { AppEnv } from '@api/types/hono';
-import {
-  clearInFlightRequests,
-  trackRequestStarted,
-} from '@api/utils/in-flight-requests';
 import { emitSSEEvent, sseEventManager } from '@api/utils/sse-event-manager';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,7 +58,6 @@ describe('SSE Events Endpoint', () => {
 
   beforeEach(() => {
     runtimeKey.value = 'node';
-    clearInFlightRequests();
     // The manager is a singleton; other suites in the same file share it.
     for (const id of sseEventManager.getUserClients('default')) {
       sseEventManager.removeClient(id);
@@ -111,34 +106,6 @@ describe('SSE Events Endpoint', () => {
       const [frame] = await readFrames(body, 1);
       expect(frame?.type).toBe('skill:created');
       expect(frame?.data).toEqual({ resourceId: 'skill-1' });
-    });
-
-    it('replays the requests already running to a client that just connected', async () => {
-      // A dashboard opened in the middle of a slow request has to learn about
-      // it from somewhere: nothing else will announce it again.
-      trackRequestStarted({
-        request_id: 'req-1',
-        agent_id: 'agent-1',
-        skill_id: 'skill-1',
-        method: 'POST',
-        endpoint: '/v1/chat/completions',
-        function_name: 'chatComplete',
-        model: 'gpt-5.6',
-      });
-
-      const response = await app.fetch(new Request('http://localhost/events'));
-      const frames = await readFrames(
-        response.body as ReadableStream<Uint8Array>,
-        2,
-      );
-
-      expect(frames[0]?.type).toBe('ping');
-      expect(frames[1]?.type).toBe('log:request-started');
-      expect(frames[1]?.data).toMatchObject({
-        request_id: 'req-1',
-        agent_id: 'agent-1',
-        skill_id: 'skill-1',
-      });
     });
 
     it('drops the client when the connection goes away', async () => {

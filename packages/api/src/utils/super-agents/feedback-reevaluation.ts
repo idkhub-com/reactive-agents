@@ -3,6 +3,7 @@ import { runEvaluationsForLog } from '@api/utils/realtime-evaluations';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import { error } from '@shared/console-logging';
 import type { Feedback } from '@shared/types/data/feedback';
+import { isCompletedLog } from '@shared/types/data/log';
 import { getRuntimeKey } from 'hono/adapter';
 
 /**
@@ -34,6 +35,12 @@ export async function reevaluateLogFromFeedback(
     { agent_id: log.agent_id, skill_id: log.skill_id },
   );
   if (evaluations.length === 0) {
+    return;
+  }
+
+  // Feedback can only be left on a request that answered, but the row is
+  // fetched by id and the type cannot know that.
+  if (!isCompletedLog(log)) {
     return;
   }
 

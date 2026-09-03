@@ -1,5 +1,4 @@
 import type { AppEnv } from '@api/types/hono';
-import { getInFlightRequests } from '@api/utils/in-flight-requests';
 import { sseEventManager } from '@api/utils/sse-event-manager';
 import { Hono } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
@@ -70,20 +69,6 @@ export const eventsRouter = new Hono<AppEnv>().get('/', (c) => {
       await stream.writeSSE({
         data: JSON.stringify({ type: 'ping', timestamp: Date.now() }),
       });
-
-      // Catch this client up on the requests already running, as the same
-      // event a live arrival sends. Without it a dashboard opened (or
-      // reloaded) during a slow request shows nothing until the next one
-      // starts -- worst exactly when someone is watching to see if it works.
-      for (const request of getInFlightRequests()) {
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: 'log:request-started',
-            timestamp: Date.now(),
-            data: request,
-          }),
-        });
-      }
 
       // Hold the response open. The manager writes to `stream` from wherever
       // an event is emitted, and pings every 30s to keep the connection warm;

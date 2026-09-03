@@ -115,7 +115,9 @@ export function AgentRecentLogsCard(): ReactElement | null {
                         {skillName ?? '—'}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {log.duration.toFixed(0)}ms
+                        {log.duration === null
+                          ? 'running'
+                          : `${log.duration.toFixed(0)}ms`}
                       </TableCell>
                     </TableRow>
                   );

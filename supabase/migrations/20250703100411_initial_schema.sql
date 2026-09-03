@@ -170,17 +170,21 @@ CREATE TABLE IF NOT EXISTS logs (
   method http_method NOT NULL,
   endpoint TEXT NOT NULL,
   function_name TEXT NOT NULL,
-  status INTEGER NOT NULL,
   start_time BIGINT NOT NULL, -- Timestamp (ms) when request started
   first_token_time BIGINT, -- Timestamp (ms) when first token received (for streaming), NULL for non-streaming
-  end_time BIGINT NOT NULL, -- Timestamp (ms) when request completed
-  duration BIGINT NOT NULL, -- Total duration in milliseconds (end_time - start_time)
   base_sa_config JSONB NOT NULL,
+  -- Null while the request is still running. The row is written when the
+  -- request arrives rather than when it finishes, so that work in progress is
+  -- visible and a request that fails before reaching a provider -- or never
+  -- finishes at all -- still leaves a trace. end_time IS NULL means running.
+  status INTEGER,
+  end_time BIGINT, -- Timestamp (ms) when request completed
+  duration BIGINT, -- Total duration in milliseconds (end_time - start_time)
   -- Maybe redundant. Used for indexing.
-  ai_provider TEXT NOT NULL,
-  model TEXT NOT NULL,
+  ai_provider TEXT,
+  model TEXT,
   -- Main data
-  ai_provider_request_log JSONB NOT NULL,
+  ai_provider_request_log JSONB,
   hook_logs JSONB NOT NULL,
   metadata JSONB NOT NULL,
   embedding FLOAT[] DEFAULT NULL,
@@ -189,7 +193,10 @@ CREATE TABLE IF NOT EXISTS logs (
   -- provider, in which an optimized skill has substituted its own prompt.
   original_system_prompt TEXT,
   -- Cache info
-  cache_status cache_status_enum NOT NULL,
+  cache_status cache_status_enum,
+  -- Why it failed, when it failed before a provider answered. A failure the
+  -- provider reported is in ai_provider_request_log instead.
+  error TEXT,
   -- Tracing info
   trace_id TEXT,
   parent_span_id TEXT,

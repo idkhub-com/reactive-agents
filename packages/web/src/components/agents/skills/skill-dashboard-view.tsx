@@ -752,7 +752,9 @@ export function SkillDashboardView(): ReactElement {
                               {cluster?.name ?? '\u2014'}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
-                              {log.duration.toFixed(0)}ms
+                              {log.duration === null
+                                ? 'running'
+                                : `${log.duration.toFixed(0)}ms`}
                             </TableCell>
                           </TableRow>
                         );

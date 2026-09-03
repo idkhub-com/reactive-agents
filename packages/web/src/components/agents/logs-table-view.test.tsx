@@ -1,14 +1,14 @@
+import type { Log } from '@shared/types/data';
 import { act, render, screen } from '@testing-library/react';
 import { LogsTableView } from '@web/components/agents/logs-table-view';
-import type { PendingRequest } from '@web/providers/in-flight-requests';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * The logs table, seen from the angle of requests that have not finished.
  *
- * A log row is only written once its request is done, so a slow request used
- * to look like nothing at all. These cover the pending rows that stand in for
- * one while it runs, and the counter that shows it is still going.
+ * A row is written when a request arrives rather than when it completes, so
+ * the table has to render three states, not one: running, failed, and done.
+ * `end_time === null` is the whole distinction.
  */
 
 const logsState = vi.hoisted(() => ({
@@ -20,41 +20,60 @@ const logsState = vi.hoisted(() => ({
     totalPages: 1,
     setPage: vi.fn(),
     setPageSize: vi.fn(),
-    agentId: 'agent-1' as string | null,
-    skillId: null as string | null,
-    agentWide: true,
   },
 }));
-
-const pending = vi.hoisted(() => ({ value: [] as PendingRequest[] }));
 
 vi.mock('@web/providers/logs', () => ({
   useLogs: () => logsState.value,
 }));
 
-vi.mock('@web/providers/in-flight-requests', () => ({
-  useInFlightRequests: () => ({
-    pendingRequests: pending.value,
-    // Measured the way the provider measures it, from `performance.now()`.
-    elapsedMs: (request: PendingRequest) =>
-      request.elapsed_ms + (performance.now() - request.received_at),
-  }),
-}));
+const aLog = (overrides: Partial<Log> = {}): Log =>
+  ({
+    id: 'log-1',
+    agent_id: 'agent-1',
+    skill_id: 'skill-1',
+    cluster_id: null,
+    method: 'POST',
+    endpoint: '/v1/chat/completions',
+    function_name: 'chatComplete',
+    start_time: Date.now() - 1000,
+    first_token_time: null,
+    base_sa_config: {},
+    status: 200,
+    end_time: Date.now(),
+    duration: 1000,
+    ai_provider: 'openai',
+    model: 'gpt-5.6',
+    ai_provider_request_log: null,
+    hook_logs: [],
+    metadata: {},
+    embedding: null,
+    original_system_prompt: null,
+    cache_status: 'MISS',
+    error: null,
+    trace_id: null,
+    parent_span_id: null,
+    span_id: null,
+    span_name: null,
+    app_id: null,
+    external_user_id: null,
+    external_user_human_name: null,
+    user_metadata: null,
+    ...overrides,
+  }) as unknown as Log;
 
-const aPendingRequest = (
-  overrides: Partial<PendingRequest> = {},
-): PendingRequest => ({
-  request_id: 'req-1',
-  agent_id: 'agent-1',
-  skill_id: 'skill-1',
-  method: 'POST',
-  endpoint: '/v1/chat/completions',
-  function_name: 'chatComplete',
-  model: 'gpt-5.6',
-  elapsed_ms: 0,
-  received_at: performance.now(),
-  ...overrides,
-});
+/** A request that has arrived but not finished. */
+const aRunningLog = (overrides: Partial<Log> = {}): Log =>
+  aLog({
+    id: 'log-running',
+    status: null,
+    end_time: null,
+    duration: null,
+    ai_provider: null,
+    model: null,
+    cache_status: null,
+    ...overrides,
+  });
 
 const renderTable = () =>
   render(
@@ -67,9 +86,8 @@ const renderTable = () =>
     />,
   );
 
-describe('LogsTableView pending rows', () => {
+describe('LogsTableView', () => {
   beforeEach(() => {
-    pending.value = [];
     logsState.value = { ...logsState.value, page: 1, logs: [] };
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
@@ -78,19 +96,21 @@ describe('LogsTableView pending rows', () => {
     vi.useRealTimers();
   });
 
-  it('shows a running request instead of the empty state', () => {
-    pending.value = [aPendingRequest()];
+  it('marks a request that has not finished as running', () => {
+    logsState.value = { ...logsState.value, logs: [aRunningLog()] };
 
     renderTable();
 
-    expect(screen.getByTestId('pending-log-row')).toBeInTheDocument();
+    expect(screen.getByTestId('running-log-row')).toBeInTheDocument();
     expect(screen.getByText('running')).toBeInTheDocument();
-    expect(screen.getByText('/v1/chat/completions')).toBeInTheDocument();
-    expect(screen.queryByText('No logs found')).not.toBeInTheDocument();
+    expect(screen.getByText(/1 running/)).toBeInTheDocument();
   });
 
   it('counts the duration up while the request runs', () => {
-    pending.value = [aPendingRequest({ elapsed_ms: 1000 })];
+    logsState.value = {
+      ...logsState.value,
+      logs: [aRunningLog({ start_time: Date.now() - 1000 })],
+    };
 
     renderTable();
 
@@ -103,23 +123,32 @@ describe('LogsTableView pending rows', () => {
     expect(screen.getByText('3.0s')).toBeInTheDocument();
   });
 
-  it('says how many requests are running', () => {
-    pending.value = [
-      aPendingRequest(),
-      aPendingRequest({ request_id: 'req-2' }),
-    ];
+  it('shows a finished request with its status and duration', () => {
+    logsState.value = { ...logsState.value, logs: [aLog()] };
 
     renderTable();
 
-    expect(screen.getByText(/2 running/)).toBeInTheDocument();
+    expect(screen.queryByTestId('running-log-row')).not.toBeInTheDocument();
+    expect(screen.getByText('200')).toBeInTheDocument();
+    expect(screen.getByText('1000ms')).toBeInTheDocument();
   });
 
-  it('keeps pending rows off later pages, where they do not belong', () => {
-    pending.value = [aPendingRequest()];
-    logsState.value = { ...logsState.value, page: 2 };
+  it('shows a request that failed before a provider answered', () => {
+    logsState.value = {
+      ...logsState.value,
+      logs: [
+        aLog({
+          id: 'log-failed',
+          status: 404,
+          ai_provider: null,
+          model: null,
+          error: 'Agent with name nope not found',
+        }),
+      ],
+    };
 
     renderTable();
 
-    expect(screen.queryByTestId('pending-log-row')).not.toBeInTheDocument();
+    expect(screen.getByText('404')).toBeInTheDocument();
   });
 });

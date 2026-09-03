@@ -4,7 +4,7 @@ import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -55,11 +55,12 @@ import { evaluateLog as evaluateKnowledgeRetention } from '@api/connectors/evalu
 import { evaluateLog as evaluateTaskCompletion } from '@api/connectors/evaluations/task-completion/service/evaluate';
 import { evaluateLog as evaluateTurnRelevancy } from '@api/connectors/evaluations/turn-relevancy/service/evaluate';
 
-const log: Log = {
+const log: CompletedLog = {
   id: 'log-1',
   agent_id: 'agent-1',
   skill_id: 'skill-1',
   cluster_id: null,
+  error: null,
   method: HttpMethod.POST,
   endpoint: '/v1/chat/completions',
   function_name: FunctionName.CHAT_COMPLETE,
@@ -112,7 +113,7 @@ const log: Log = {
     cache_mode: CacheMode.DISABLED,
     cache_status: CacheStatus.MISS,
   },
-} as unknown as Log;
+} as unknown as CompletedLog;
 
 const evaluationOf = (method: string): SkillOptimizationEvaluation =>
   ({

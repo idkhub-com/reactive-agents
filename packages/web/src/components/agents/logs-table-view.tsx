@@ -43,10 +43,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@web/components/ui/tooltip';
-import {
-  type PendingRequest,
-  useInFlightRequests,
-} from '@web/providers/in-flight-requests';
 import { useLogs } from '@web/providers/logs';
 import { getStringHashColor } from '@web/utils/http-method-colors';
 import { formatLogTimestamp } from '@web/utils/time';
@@ -119,35 +115,32 @@ const PENDING_TICK_MS = 200;
 /**
  * The duration of a request that has not finished, counting up.
  *
- * It owns its own interval so that ticking costs one cell rather than the
- * whole table: a page of fifty finished rows has no reason to re-render five
- * times a second because one request is in flight.
+ * Measured from the row's own `start_time`, which the server wrote, so a
+ * reload picks a running request up where it actually is. It owns its own
+ * interval so that ticking costs one cell rather than the whole table: a page
+ * of fifty finished rows has no reason to re-render five times a second
+ * because one request is in flight.
  */
-function PendingDuration({
-  request,
-  elapsedMs,
-}: {
-  request: PendingRequest;
-  elapsedMs: (request: PendingRequest) => number;
-}): ReactElement {
-  const [elapsed, setElapsed] = useState(() => elapsedMs(request));
+function PendingDuration({ startTime }: { startTime: number }): ReactElement {
+  const [elapsed, setElapsed] = useState(() => Date.now() - startTime);
 
   useEffect(() => {
     const interval = setInterval(
-      () => setElapsed(elapsedMs(request)),
+      () => setElapsed(Date.now() - startTime),
       PENDING_TICK_MS,
     );
     return () => clearInterval(interval);
-  }, [request, elapsedMs]);
+  }, [startTime]);
 
   return (
     <span className="font-mono text-xs tabular-nums">
-      {(elapsed / 1000).toFixed(1)}s
+      {(Math.max(elapsed, 0) / 1000).toFixed(1)}s
     </span>
   );
 }
 
-const getStatusBadgeVariant = (status: number) => {
+const getStatusBadgeVariant = (status: number | null) => {
+  if (status === null) return 'secondary';
   if (status >= 200 && status < 300) return 'default';
   if (status >= 400 && status < 500) return 'destructive';
   if (status >= 500) return 'destructive';
@@ -162,49 +155,20 @@ export function LogsTableView({
   extraColumn,
   filters,
 }: LogsTableViewProps): ReactElement {
-  const {
-    logs,
-    isLoading,
-    page,
-    pageSize,
-    totalPages,
-    setPage,
-    setPageSize,
-    agentId,
-    skillId,
-    agentWide,
-  } = useLogs();
+  const { logs, isLoading, page, pageSize, totalPages, setPage, setPageSize } =
+    useLogs();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [goToPageInput, setGoToPageInput] = useState('');
 
-  const { pendingRequests, elapsedMs } = useInFlightRequests(
-    agentId,
-    agentWide ? null : skillId,
-  );
-
-  /**
-   * Requests still running, shown above the finished ones.
-   *
-   * Only on the first page, where the newest rows live -- a pending request
-   * belongs at the top of the list or nowhere -- and never under a status
-   * filter, since it has no status to match yet.
-   */
-  const visiblePendingRequests =
-    page === 1 && statusFilter === 'all'
-      ? pendingRequests.filter((request) => {
-          if (!searchQuery) return true;
-          const searchLower = searchQuery.toLowerCase();
-          return (
-            request.function_name?.toLowerCase().includes(searchLower) ||
-            request.endpoint?.toLowerCase().includes(searchLower) ||
-            request.method?.toLowerCase().includes(searchLower)
-          );
-        })
-      : [];
+  const runningCount = logs.filter((log: Log) => log.end_time === null).length;
 
   const filteredLogs = logs.filter((log: Log) => {
     if (statusFilter !== 'all') {
+      // A request still running has no status to match yet.
+      if (log.status === null) {
+        return false;
+      }
       const rangeStart = Number(statusFilter);
       if (log.status < rangeStart || log.status >= rangeStart + 100) {
         return false;
@@ -272,8 +236,7 @@ export function LogsTableView({
                 <CardTitle>Request Logs</CardTitle>
                 <CardDescription>
                   {filteredLogs.length} logs found
-                  {visiblePendingRequests.length > 0 &&
-                    `, ${visiblePendingRequests.length} running`}
+                  {runningCount > 0 && `, ${runningCount} running`}
                 </CardDescription>
               </div>
             </div>
@@ -291,8 +254,7 @@ export function LogsTableView({
                   </div>
                 ))}
               </div>
-            ) : filteredLogs.length === 0 &&
-              visiblePendingRequests.length === 0 ? (
+            ) : filteredLogs.length === 0 ? (
               <div className="text-center py-12">
                 <h3 className="text-lg font-semibold mb-2">No logs found</h3>
                 <p className="text-muted-foreground">
@@ -320,57 +282,8 @@ export function LogsTableView({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {visiblePendingRequests.map((request) => (
-                    <TableRow
-                      key={request.request_id}
-                      className="bg-muted/30"
-                      data-testid="pending-log-row"
-                    >
-                      <TableCell>
-                        <Badge variant="secondary" className="gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-                          running
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-xs">—</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{request.method}</Badge>
-                      </TableCell>
-                      <TableCell>{request.function_name || 'N/A'}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {request.endpoint}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs">{request.model ?? '—'}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-xs">—</span>
-                      </TableCell>
-                      {/* The caller's extra column reads a finished log, which
-                          this is not; it fills in when the row lands. */}
-                      <TableCell>
-                        <span className="text-muted-foreground text-xs">—</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-xs">—</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-xs">—</span>
-                      </TableCell>
-                      <TableCell>
-                        {formatLogTimestamp(Date.now() - elapsedMs(request))}
-                      </TableCell>
-                      <TableCell>
-                        <PendingDuration
-                          request={request}
-                          elapsedMs={elapsedMs}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
                   {filteredLogs.map((log) => {
+                    const running = log.end_time === null;
                     const temperature = getTemperature(log);
                     const thinkingEffort = getThinkingEffort(log);
                     const evalScore =
@@ -382,13 +295,25 @@ export function LogsTableView({
                     return (
                       <TableRow
                         key={log.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className={
+                          running
+                            ? 'cursor-pointer bg-muted/30 hover:bg-muted/50'
+                            : 'cursor-pointer hover:bg-muted/50'
+                        }
+                        data-testid={running ? 'running-log-row' : undefined}
                         onClick={() => onLogClick(log)}
                       >
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(log.status)}>
-                            {log.status}
-                          </Badge>
+                          {running ? (
+                            <Badge variant="secondary" className="gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                              running
+                            </Badge>
+                          ) : (
+                            <Badge variant={getStatusBadgeVariant(log.status)}>
+                              {log.status ?? '—'}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           {evalScore !== null ? (
@@ -468,7 +393,13 @@ export function LogsTableView({
                           {formatLogTimestamp(log.start_time)}
                         </TableCell>
                         <TableCell>
-                          {log.duration ? `${log.duration}ms` : 'N/A'}
+                          {running ? (
+                            <PendingDuration startTime={log.start_time} />
+                          ) : log.duration ? (
+                            `${log.duration}ms`
+                          ) : (
+                            'N/A'
+                          )}
                         </TableCell>
                       </TableRow>
                     );

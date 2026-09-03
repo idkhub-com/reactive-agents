@@ -4,14 +4,14 @@ import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockStorageConnector } from '../__mocks__/mock-storage-connector';
 
 describe('Latency - evaluateLog', () => {
-  let baseLog: Log;
+  let baseLog: CompletedLog;
   let baseEvaluation: SkillOptimizationEvaluation;
   const mockStorageConnector = createMockStorageConnector();
 
@@ -21,6 +21,7 @@ describe('Latency - evaluateLog', () => {
       agent_id: 'agent-123',
       skill_id: 'skill-123',
       cluster_id: null,
+      error: null,
       method: HttpMethod.POST,
       endpoint: '/v1/chat/completions',
       function_name: FunctionName.CHAT_COMPLETE,
@@ -96,7 +97,7 @@ describe('Latency - evaluateLog', () => {
 
   describe('Streaming responses (with first_token_time)', () => {
     it('should score 1.0 for TTFT at or below target', async () => {
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1200, // 200ms TTFT (below 300ms target)
@@ -120,7 +121,7 @@ describe('Latency - evaluateLog', () => {
     });
 
     it('should score 0.0 for TTFT at or above max', async () => {
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 10000, // 9000ms TTFT (above 8787ms max)
@@ -147,7 +148,7 @@ describe('Latency - evaluateLog', () => {
       // TTFT: 4543.5ms (midpoint)
       // Score: 1.0 - (4543.5 - 300) / 8487 = 1.0 - 4243.5/8487 = ~0.5
       const midpoint = (300 + 8787) / 2; // 4543.5
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1000 + midpoint, // midpoint TTFT
@@ -169,7 +170,7 @@ describe('Latency - evaluateLog', () => {
     });
 
     it('should handle exact target latency', async () => {
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1300, // Exactly 300ms TTFT
@@ -189,7 +190,7 @@ describe('Latency - evaluateLog', () => {
     });
 
     it('should handle exact max latency', async () => {
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1000 + 8787, // Exactly 8787ms TTFT (max latency)
@@ -211,7 +212,7 @@ describe('Latency - evaluateLog', () => {
 
   describe('Non-streaming responses (without first_token_time)', () => {
     it('should use duration as proxy when first_token_time is null', async () => {
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: null,
@@ -235,7 +236,7 @@ describe('Latency - evaluateLog', () => {
     it('should score correctly using duration', async () => {
       // Use midpoint between target (300) and max (8787) for ~0.5 score
       const midpoint = (300 + 8787) / 2; // 4543.5
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: null,
@@ -259,7 +260,7 @@ describe('Latency - evaluateLog', () => {
   describe('Edge cases', () => {
     it('should return neutral score when latency cannot be extracted', async () => {
       // This shouldn't happen in practice, but test defensive coding
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: null,
@@ -324,7 +325,7 @@ describe('Latency - evaluateLog', () => {
         },
       };
 
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1450, // 450ms TTFT
@@ -351,7 +352,7 @@ describe('Latency - evaluateLog', () => {
         },
       };
 
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 2200, // 1200ms TTFT
@@ -375,7 +376,7 @@ describe('Latency - evaluateLog', () => {
         params: {},
       };
 
-      const log: Log = {
+      const log: CompletedLog = {
         ...baseLog,
         start_time: 1000,
         first_token_time: 1250, // 250ms TTFT

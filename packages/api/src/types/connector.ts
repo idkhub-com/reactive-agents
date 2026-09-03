@@ -22,8 +22,11 @@ import type {
   ImprovedResponseUpdateParams,
 } from '@shared/types/data/improved-response';
 import type {
+  CompletedLog,
   Log,
   LogCreateParams,
+  LogFailParams,
+  LogStartParams,
   LogsQueryParams,
 } from '@shared/types/data/log';
 import type {
@@ -402,7 +405,15 @@ export interface UserDataStorageConnector {
 
 export interface LogsStorageConnector {
   getLogs(c: AppContext, queryParams: LogsQueryParams): Promise<Log[]> | Log[];
+  /**
+   * Opens a row for a request that has just arrived, so that work in progress
+   * is visible and a request that never finishes still leaves a trace.
+   * `createLog` or `failLog` closes it under the same id.
+   */
+  startLog(c: AppContext, startParams: LogStartParams): Promise<void> | void;
   createLog(c: AppContext, createParams: LogCreateParams): Promise<Log> | Log;
+  /** Closes an opened row whose request failed before a provider answered. */
+  failLog(c: AppContext, failParams: LogFailParams): Promise<void> | void;
   deleteLog(c: AppContext, id: string): Promise<void> | void;
 }
 
@@ -432,10 +443,14 @@ export interface EvaluateLogOptions {
 
 export interface EvaluationMethodConnector {
   getDetails: () => EvaluationMethodDetails;
+  /**
+   * `CompletedLog` rather than `Log`: there is nothing to evaluate about a
+   * request that has not answered yet, and every caller already excludes one.
+   */
   evaluateLog: (
     c: AppContext,
     evaluation: SkillOptimizationEvaluation,
-    log: Log,
+    log: CompletedLog,
     storageConnector: UserDataStorageConnector,
     options?: EvaluateLogOptions,
   ) => Promise<SkillOptimizationEvaluationResult>;

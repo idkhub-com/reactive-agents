@@ -14,6 +14,7 @@ import type {
   UserDataStorageConnector,
 } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
+import { isCompletedLog } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
 import type {
   SkillOptimizationArmCreateParams,
@@ -73,7 +74,7 @@ export async function handleGenerateArms(
   // If we have enough logs, regenerate evaluations with context before creating arms
   // Only do this for skill-wide regeneration (not cluster-specific)
   if (hasEnoughLogsForContext && !clusterId) {
-    const exampleLogs = logs.slice(0, 5);
+    const exampleLogs = logs.filter(isCompletedLog).slice(0, 5);
     const examples = generateExampleConversations(exampleLogs);
 
     // Get existing evaluations
@@ -185,7 +186,7 @@ export async function handleGenerateArms(
   // Generate system prompt based on whether we have enough context
   let systemPrompt: string;
   if (hasEnoughLogsForContext) {
-    const exampleLogs = logs.slice(0, 5);
+    const exampleLogs = logs.filter(isCompletedLog).slice(0, 5);
     const examples = generateExampleConversations(exampleLogs);
 
     // Get agent description for context

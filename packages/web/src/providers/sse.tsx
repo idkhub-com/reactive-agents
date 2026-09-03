@@ -3,7 +3,7 @@
 import type { SSEEventData, SSEEventType } from '@shared/types/sse';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStatus } from '@web/hooks/use-auth-status';
-import { type SSEEventHandler, useSSE } from '@web/hooks/use-sse';
+import { useSSE } from '@web/hooks/use-sse';
 import type React from 'react';
 import {
   createContext,
@@ -23,15 +23,6 @@ interface SSEContextType {
    * polling instead. Not a failure -- it is the normal state on Workers.
    */
   polling: boolean;
-  /**
-   * Listen for events directly, for the ones that are not a cache
-   * invalidation -- a request starting and finishing is transient state that
-   * belongs to no query. Returns an unsubscribe function.
-   */
-  subscribe: (
-    eventType: SSEEventType | '*',
-    handler: SSEEventHandler,
-  ) => () => void;
 }
 
 const SSEContext = createContext<SSEContextType | undefined>(undefined);
@@ -134,11 +125,12 @@ const EVENT_QUERY_KEYS: Record<
   'ai-provider:deleted': [aiProvidersKey, modelsKey],
 
   'log:created': [logsKey],
-  // These two carry no stored data with them: a request that has started has
-  // changed nothing to refetch, and the one that finishes is announced by the
-  // `log:created` above. The in-flight provider consumes them directly.
-  'log:request-started': [],
-  'log:request-settled': [],
+  // A row is written when a request arrives and again when it finishes, so
+  // both ends of one are a change to the logs list. `log:request-settled`
+  // covers the requests that fail before a provider answers, which never
+  // reach `log:created` at all.
+  'log:request-started': [logsKey],
+  'log:request-settled': [logsKey],
 
   'skill-optimization:arm-updated': [armsKey],
   'skill-optimization:cluster-updated': [clustersKey, armsKey],
@@ -260,14 +252,12 @@ export const SSEProvider = ({
       connecting: connectionState.connecting,
       error: connectionState.error,
       polling,
-      subscribe,
     }),
     [
       connectionState.connected,
       connectionState.connecting,
       connectionState.error,
       polling,
-      subscribe,
     ],
   );
 

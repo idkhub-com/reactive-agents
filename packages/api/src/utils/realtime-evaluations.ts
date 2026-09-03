@@ -6,10 +6,10 @@ import type {
 import type { AppContext } from '@api/types/hono';
 import { error } from '@shared/console-logging';
 import type {
-  Log,
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
+import type { CompletedLog } from '@shared/types/data/log';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
 
 /**
@@ -17,7 +17,7 @@ import type { EvaluationMethodName } from '@shared/types/evaluations';
  */
 export async function runEvaluationsForLog(
   c: AppContext,
-  log: Log,
+  log: CompletedLog,
   skillOptimizationEvaluations: SkillOptimizationEvaluation[],
   evaluationConnectorsMap: Partial<
     Record<EvaluationMethodName, EvaluationMethodConnector>

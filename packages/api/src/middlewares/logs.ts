@@ -13,10 +13,6 @@ import type {
 import type { AppContext, AppEnv } from '@api/types/hono';
 import type { HttpMethod } from '@api/types/http';
 import {
-  trackRequestSettled,
-  trackRequestStarted,
-} from '@api/utils/in-flight-requests';
-import {
   runEvaluationsForLog,
   shouldTriggerRealtimeEvaluation,
 } from '@api/utils/realtime-evaluations';
@@ -33,13 +29,15 @@ import type {
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
 import type { Agent } from '@shared/types/data/agent';
-import type {
-  AIProviderRequestLog,
-  HookLog,
-  LogCreateParams,
-  LogMessage,
-  LogResponseBodyError,
-  LogsClient,
+import {
+  type AIProviderRequestLog,
+  type HookLog,
+  isCompletedLog,
+  type LogCreateParams,
+  type LogMessage,
+  type LogResponseBodyError,
+  type LogStartParams,
+  type LogsClient,
 } from '@shared/types/data/log';
 import type { Skill } from '@shared/types/data/skill';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
@@ -51,6 +49,9 @@ import type { Factory } from 'hono/factory';
 
 let logId = 0;
 const MAX_RESPONSE_LENGTH = 100000;
+
+/** Enough for the gateway's own error bodies, which are a JSON message. */
+const MAX_ERROR_LENGTH = 2000;
 
 /**
  * Bounds the stored response body, replacing an oversized one with a
@@ -438,6 +439,9 @@ async function processLogs({
   }
 
   const createParams: LogCreateParams = {
+    // Completes the row opened when the request arrived, rather than adding
+    // a second one for the same request.
+    id: c.get('log_request_id'),
     agent_id: agent.id,
     skill_id: skill.id,
     cluster_id: pulledArm?.cluster_id,
@@ -498,7 +502,9 @@ async function processLogs({
           }),
         )
           .then((evaluations) => {
-            if (evaluations.length > 0) {
+            // `insertedLog` closes a finished request, so it always is one --
+            // the narrowing is for the type, not for a case that can happen.
+            if (evaluations.length > 0 && isCompletedLog(insertedLog)) {
               return runEvaluationsForLog(
                 c,
                 insertedLog,
@@ -544,6 +550,52 @@ const shouldLogRequest = (url: URL): boolean => {
 };
 
 /**
+ * Closes the row opened at arrival for a request that failed before a
+ * provider answered.
+ *
+ * The status is the one the caller was given, and the message is read off the
+ * response body when the gateway wrote one -- an unknown agent, a skill that
+ * does not exist, a provider that could not be reached. Only a row that is
+ * still open is touched, which is what makes this safe to call as a backstop
+ * on a path that may already have completed the row.
+ */
+const closeFailedRequest = async (
+  c: AppContext,
+  requestId: string,
+  startTime: number,
+  reason?: string,
+  status?: number,
+): Promise<void> => {
+  try {
+    const endTime = Date.now();
+    const responseStatus = status ?? c.res.status;
+
+    let message = reason;
+    if (!message) {
+      // The gateway answers an error as JSON; anything else is not worth
+      // storing, and neither is a body large enough to matter.
+      message = await c.res
+        .clone()
+        .text()
+        .then((body) => body.slice(0, MAX_ERROR_LENGTH))
+        .catch(() => undefined);
+    }
+
+    await c.get('logs_storage_connector').failLog(c, {
+      id: requestId,
+      status: responseStatus,
+      end_time: endTime,
+      duration: endTime - startTime,
+      error: message || `The request failed with status ${responseStatus}.`,
+    });
+
+    emitSSEEvent('log:request-settled', { log_id: requestId });
+  } catch (e) {
+    warn('[Logs] Could not record a failed request:', e);
+  }
+};
+
+/**
  * Announce a request that is about to be sent to a provider, so the dashboard
  * can show it as a pending row while it runs.
  *
@@ -555,41 +607,71 @@ const shouldLogRequest = (url: URL): boolean => {
  * price of knowing the ids.
  */
 export const markRequestStarted = (c: AppContext): void => {
-  const requestId = c.get('log_request_id');
-  if (!requestId) {
-    return;
+  // Nothing about a row that exists to be looked at is worth failing a
+  // request over, and this runs on every request the gateway serves.
+  try {
+    const requestId = c.get('log_request_id');
+    if (!requestId) {
+      return;
+    }
+
+    const url = new URL(stripAgentSkillPath(c.req.url));
+    if (!shouldLogRequest(url)) {
+      return;
+    }
+
+    const saRequestData = c.get('sa_request_data');
+    if (!saRequestData) {
+      return;
+    }
+
+    const requestBody = (saRequestData as { requestBody?: unknown })
+      .requestBody;
+    const model =
+      requestBody &&
+      typeof requestBody === 'object' &&
+      'model' in requestBody &&
+      typeof requestBody.model === 'string'
+        ? requestBody.model
+        : undefined;
+
+    // The pre-processed config, not `sa_config`: that one is injected by a
+    // middleware that runs *after* the skill resolves, so at this point it
+    // does not exist yet. Parsing through `NonPrivateSuperAgentsConfig`
+    // strips the targets, which carry the caller's provider keys.
+    const saConfig = c.get('sa_config') ?? c.get('sa_config_pre_processed');
+    const startParams: LogStartParams = {
+      id: requestId,
+      agent_id: c.get('agent').id,
+      skill_id: c.get('skill').id,
+      method: saRequestData.method,
+      endpoint: url.pathname,
+      function_name: saRequestData.functionName,
+      start_time: c.get('log_start_time') ?? Date.now(),
+      base_sa_config: NonPrivateSuperAgentsConfig.parse(saConfig),
+      model,
+      trace_id: saConfig.trace_id ?? undefined,
+    };
+
+    // Not awaited: a request must not wait on a write that exists so someone
+    // can watch it. The completion write is an upsert, so whichever of the
+    // two lands first, the row ends up right.
+    void c
+      .get('logs_storage_connector')
+      .startLog(c, startParams)
+      ?.then(() => {
+        emitSSEEvent('log:request-started', {
+          log_id: requestId,
+          agent_id: startParams.agent_id,
+          skill_id: startParams.skill_id,
+        });
+      })
+      .catch((e: unknown) => {
+        warn('[Logs] Could not open the row for a request:', e);
+      });
+  } catch (e) {
+    warn('[Logs] Could not open the row for a request:', e);
   }
-
-  const url = new URL(stripAgentSkillPath(c.req.url));
-  if (!shouldLogRequest(url)) {
-    return;
-  }
-
-  // Treated as optional here for the same reason the caller treats it so:
-  // nothing about a pending row is worth failing a request over.
-  const saRequestData = c.get('sa_request_data');
-  if (!saRequestData) {
-    return;
-  }
-
-  const requestBody = (saRequestData as { requestBody?: unknown }).requestBody;
-  const model =
-    requestBody &&
-    typeof requestBody === 'object' &&
-    'model' in requestBody &&
-    typeof requestBody.model === 'string'
-      ? requestBody.model
-      : null;
-
-  trackRequestStarted({
-    request_id: requestId,
-    agent_id: c.get('agent').id,
-    skill_id: c.get('skill').id,
-    method: saRequestData.method,
-    endpoint: url.pathname,
-    function_name: saRequestData.functionName,
-    model,
-  });
 };
 
 async function processLogsAndOptimizeSkill(
@@ -701,10 +783,13 @@ export const logsMiddleware = (
     const originalSystemPrompt = extractSystemPrompt(c.get('sa_request_data'));
 
     const startTime = Date.now();
-    // Assigned here so it exists before anything downstream can announce the
-    // request; the announcement itself waits until the skill is known.
+    // Assigned here so it exists before anything downstream can open the
+    // request's row; opening it waits until the skill is known. It becomes
+    // the log's id, which is what lets the completion write finish this row
+    // rather than adding a second one.
     const requestId = crypto.randomUUID();
     c.set('log_request_id', requestId);
+    c.set('log_start_time', startTime);
 
     await next();
 
@@ -713,7 +798,7 @@ export const logsMiddleware = (
     const url = new URL(stripAgentSkillPath(c.req.url));
 
     if (!shouldLogRequest(url)) {
-      trackRequestSettled(requestId);
+      // No row was opened for it either: this is the same check.
       return;
     }
 
@@ -721,7 +806,11 @@ export const logsMiddleware = (
 
     // Log produced when calling the AI provider
     if (!aiProviderLog) {
-      trackRequestSettled(requestId);
+      // No provider was reached -- an unknown agent or skill, a routing
+      // error, a provider that could not be connected to. Before the row was
+      // opened at arrival this left no trace at all, which made exactly the
+      // failures worth seeing the ones that could not be seen.
+      void closeFailedRequest(c, requestId, startTime);
       return;
     }
 
@@ -735,11 +824,6 @@ export const logsMiddleware = (
       if (streamEndPromise) {
         await streamEndPromise;
       }
-
-      // The response is now complete, so the pending row has served its
-      // purpose. Everything below -- judging, optimization -- can take
-      // minutes, and none of it should keep a duration ticking.
-      trackRequestSettled(requestId);
 
       // For streaming requests, parse accumulated chunks and update the log
       const accumulatedChunks = c.get('accumulated_stream_chunks') as
@@ -807,7 +891,17 @@ export const logsMiddleware = (
               functionName: saRequestData.functionName,
             },
           );
-          return; // Skip saving this log
+          // Recorded as a failure rather than dropped: a response that
+          // arrived empty is a fault worth seeing, and the row is already
+          // open.
+          void closeFailedRequest(
+            c,
+            requestId,
+            startTime,
+            'The provider returned a successful status with an empty body.',
+            c.res.status,
+          );
+          return;
         }
       }
 
@@ -837,11 +931,18 @@ export const logsMiddleware = (
       await processLogsAndOptimizeSkill(processLogsParams);
     };
 
-    // Settling again on the way out is a backstop, not the normal path: if
-    // the stream rejects, or logging throws before it gets there, the pending
-    // row would otherwise tick forever. The second call is a no-op.
-    const processed = processLogsAsync().finally(() => {
-      trackRequestSettled(requestId);
+    // A backstop, not the normal path: if the stream rejects, or logging
+    // throws before the row is completed, it would otherwise stay pending
+    // forever. `closeFailedRequest` only touches a row that is still open,
+    // so a request that was logged successfully is left alone.
+    const processed = processLogsAsync().catch((e: unknown) => {
+      error('[Logs] Could not process the logs for a request:', e);
+      return closeFailedRequest(
+        c,
+        requestId,
+        startTime,
+        e instanceof Error ? e.message : String(e),
+      );
     });
 
     if (getRuntimeKey() === 'workerd') {

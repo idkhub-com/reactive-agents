@@ -29,10 +29,12 @@ type Tone = 'failed' | 'good' | 'poor' | 'unscored';
 
 /**
  * The colour a request is read by: red when it failed, green or amber by
- * its score, none until it has been judged. A weak answer and a failed
- * request are different news, so they are different colours.
+ * its score, none until it has been judged or while it is still running. A
+ * weak answer and a failed request are different news, so they are different
+ * colours.
  */
 function toneOf(log: Log): Tone {
+  if (log.status === null) return 'unscored';
   if (log.status >= 400) return 'failed';
   const score = log.avg_eval_score;
   if (score === null || score === undefined) return 'unscored';
@@ -85,7 +87,7 @@ export function SessionMap({
   onSelect,
 }: SessionMapProps): ReactElement {
   const currentRef = useRef<HTMLButtonElement>(null);
-  const longest = Math.max(1, ...logs.map((log) => log.duration));
+  const longest = Math.max(1, ...logs.map((log) => log.duration ?? 0));
 
   // Keep the request being read in view as the reader steps through
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when the current request changes
@@ -99,7 +101,9 @@ export function SessionMap({
   const last = logs[logs.length - 1];
   const span =
     first && last && !cut
-      ? ` · ${formatDuration(last.start_time + last.duration - first.start_time)}`
+      ? ` · ${formatDuration(
+          last.start_time + (last.duration ?? 0) - first.start_time,
+        )}`
       : '';
   const count = `${logs.length}${cut ? '+' : ''} requests${span}`;
 
@@ -181,8 +185,14 @@ export function SessionMap({
           const score = log.avg_eval_score;
           const label = labelOf(log);
           const time = formatClockTime(log.start_time);
-          const duration = formatDuration(log.duration);
-          const tooltip = [`HTTP ${log.status}`, duration, log.model]
+          const running = log.duration === null;
+          const duration =
+            log.duration === null ? 'running' : formatDuration(log.duration);
+          const tooltip = [
+            running ? 'still running' : `HTTP ${log.status}`,
+            duration,
+            log.model,
+          ]
             .concat(
               score !== null && score !== undefined
                 ? [`scored ${Math.round(score * 100)}%`]
@@ -240,7 +250,7 @@ export function SessionMap({
                     // The longest request reaches the label's reserve; the
                     // rest are to scale, each read off at its own tip
                     style={{
-                      width: `calc((100% - 2.75rem) * ${log.duration / longest})`,
+                      width: `calc((100% - 2.75rem) * ${(log.duration ?? 0) / longest})`,
                     }}
                   />
                   <span className="text-[10px] tabular-nums text-muted-foreground shrink-0">

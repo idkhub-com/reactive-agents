@@ -62,6 +62,8 @@ export interface AppEnv {
      * has finished. Set by the logs middleware before the handler runs.
      */
     log_request_id?: string;
+    /** When the request arrived, shared by the row opened then and its completion. */
+    log_start_time?: number;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     first_token_time?: number;

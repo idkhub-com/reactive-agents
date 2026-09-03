@@ -4,7 +4,7 @@ import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
 import type { SkillOptimizationEvaluation } from '@shared/types/data';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -84,11 +84,12 @@ describe('Conversation Completeness - evaluateLog', () => {
       updated_at: '2024-01-01T00:00:00.000Z',
     };
 
-    const mockLog: Log = {
+    const mockLog: CompletedLog = {
       id: 'log-123',
       agent_id: 'agent-123',
       skill_id: 'skill-123',
       cluster_id: null,
+      error: null,
       method: HttpMethod.POST,
       endpoint: '/v1/chat/completions',
       function_name: FunctionName.CHAT_COMPLETE,
@@ -217,11 +218,12 @@ describe('Conversation Completeness - evaluateLog', () => {
       updated_at: '2024-01-01T00:00:00.000Z',
     };
 
-    const mockLog: Log = {
+    const mockLog: CompletedLog = {
       id: 'log-123',
       agent_id: 'agent-123',
       skill_id: 'skill-123',
       cluster_id: null,
+      error: null,
       method: HttpMethod.POST,
       endpoint: '/v1/chat/completions',
       function_name: FunctionName.CHAT_COMPLETE,
@@ -342,7 +344,7 @@ describe('Conversation Completeness - agentic logs', () => {
     });
   });
 
-  const agenticLog = (base: Log): Log => ({
+  const agenticLog = (base: CompletedLog): CompletedLog => ({
     ...base,
     ai_provider_request_log: {
       ...base.ai_provider_request_log,
@@ -413,11 +415,12 @@ describe('Conversation Completeness - agentic logs', () => {
       created_at: '2024-01-01T00:00:00.000Z',
       updated_at: '2024-01-01T00:00:00.000Z',
     } as SkillOptimizationEvaluation;
-    const base: Log = {
+    const base: CompletedLog = {
       id: 'log-9',
       agent_id: 'agent-9',
       skill_id: 'skill-9',
       cluster_id: null,
+      error: null,
       method: HttpMethod.POST,
       endpoint: '/v1/chat/completions',
       function_name: FunctionName.CHAT_COMPLETE,
@@ -523,11 +526,12 @@ describe('Conversation Completeness - meta-conversation logs', () => {
       updated_at: '2024-01-01T00:00:00.000Z',
     } as SkillOptimizationEvaluation;
 
-    const log: Log = {
+    const log: CompletedLog = {
       id: 'log-title',
       agent_id: 'agent-title',
       skill_id: 'skill-title',
       cluster_id: null,
+      error: null,
       method: HttpMethod.POST,
       endpoint: '/v1/chat/completions',
       function_name: FunctionName.CHAT_COMPLETE,

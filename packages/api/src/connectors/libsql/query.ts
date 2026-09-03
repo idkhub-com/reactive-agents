@@ -137,15 +137,36 @@ export const insertInto = async <T extends z.ZodType>(
   table: string,
   values: Record<string, InValue | undefined>,
   schema: T,
+  /**
+   * Overwrite the existing row when this column already holds the value,
+   * rather than failing -- PostgREST's `resolution=merge-duplicates`.
+   *
+   * Only the columns being written are overwritten, which is what makes it
+   * usable for completing a row opened earlier: the completion write names
+   * every column it knows, and leaves the rest of the row alone.
+   *
+   * `RETURNING` is accurate here because no table used this way has an AFTER
+   * UPDATE trigger; see `updateIn` for why that matters.
+   */
+  upsertOn?: string,
 ): Promise<z.infer<T>> => {
   const entries = Object.entries(values).filter(
     ([, value]) => value !== undefined,
   ) as [string, InValue][];
 
   const columns = entries.map(([column]) => column);
+
+  const overwritten = columns.filter((column) => column !== upsertOn);
+  const conflict =
+    upsertOn && overwritten.length > 0
+      ? ` ON CONFLICT(${upsertOn}) DO UPDATE SET ${overwritten
+          .map((column) => `${column} = excluded.${column}`)
+          .join(', ')}`
+      : '';
+
   const result = await executor.execute({
     sql: `INSERT INTO ${table} (${columns.join(', ')})
-          VALUES (${columns.map(() => '?').join(', ')})
+          VALUES (${columns.map(() => '?').join(', ')})${conflict}
           RETURNING *`,
     args: entries.map(([, value]) => value),
   });

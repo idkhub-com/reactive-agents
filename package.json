@@ -6,6 +6,7 @@
     "dev": "turbo dev",
     "dev:api": "pnpm --filter @super-agents/api dev",
     "dev:api:worker": "pnpm --filter @super-agents/api dev:worker",
+    "db:upgrade": "pnpm --filter @super-agents/api exec tsx scripts/upgrade-dev-db.mjs",
     "dev:web": "pnpm --filter @super-agents/web dev",
     "build": "turbo build",
     "build:api": "pnpm --filter @super-agents/api build",

@@ -2,7 +2,7 @@ import { generateExampleConversations } from '@api/middlewares/optimizer/system-
 import { HttpMethod } from '@api/types/http';
 import { FunctionName } from '@shared/types/api/request';
 import { AIProvider } from '@shared/types/constants';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import { CacheMode, CacheStatus } from '@shared/types/middleware/cache';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +24,7 @@ const conversationLog = (
     requestBody?: Record<string, unknown>;
     responseBody?: unknown;
   } = {},
-): Log => {
+): CompletedLog => {
   const {
     userMessage = 'Book a flight to Paris',
     assistantMessage = 'Booked your flight to Paris.',
@@ -88,7 +88,7 @@ const conversationLog = (
       cache_mode: CacheMode.DISABLED,
       cache_status: CacheStatus.MISS,
     },
-  } as unknown as Log;
+  } as unknown as CompletedLog;
 };
 
 beforeEach(() => {

@@ -10,91 +10,26 @@ import {
 import { createSkill } from '../fixtures/skills';
 
 /**
- * Requests announced on the event stream while they are still running.
+ * The log row a request opens on arrival.
  *
- * A log row is only written once a request has finished, so until these
- * events existed the dashboard had nothing at all to show for a request in
- * progress -- a slow one was indistinguishable from no request. The whole
- * path only exists in the built server: the events endpoint holds a stream
- * open, the gateway middleware announces the request as it resolves the
- * skill, and settles it when the response completes. Nothing under `pnpm
- * test` exercises the three together.
+ * A row used to be written only once a request finished, which meant work in
+ * progress was invisible and a request that failed before reaching a provider
+ * left no trace at all. Both halves of that only run in the built server: the
+ * row is opened by the gateway middleware as it resolves the skill, and closed
+ * when the response completes or when it fails.
  *
- * Here rather than in `contract/` because none of it touches storage: the
- * registry is in memory, and the agent and skill exist only because the
- * gateway resolves them before calling a provider.
+ * Here rather than in `contract/` because the behaviour is the middleware's,
+ * not a storage detail -- though it does exercise the upsert both connectors
+ * had to grow.
  */
 
-interface Frame {
-  type: string;
-  data?: Record<string, unknown>;
-}
+const LOGS_PATH = '/v1/super-agents/observability/logs';
 
-/**
- * Reads the event stream into an array as frames arrive.
- *
- * The stream never ends on its own, so the reader is pulled on its own
- * promise and the test asserts against what has landed so far.
- */
-const openEventStream = async (baseURL: string) => {
-  const controller = new AbortController();
-  const response = await fetch(`${baseURL}/v1/super-agents/events`, {
-    headers: { Accept: 'text/event-stream' },
-    signal: controller.signal,
-  });
-
-  expect(response.status).toBe(200);
-
-  const frames: Frame[] = [];
-  const reader = (response.body as ReadableStream<Uint8Array>).getReader();
-  const decoder = new TextDecoder();
-
-  const pump = (async () => {
-    let buffer = '';
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        // Frames are separated by a blank line; keep any partial tail.
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() ?? '';
-        for (const chunk of chunks) {
-          for (const line of chunk.split('\n')) {
-            if (line.startsWith('data:')) {
-              frames.push(JSON.parse(line.slice('data:'.length).trim()));
-            }
-          }
-        }
-      }
-    } catch {
-      // Aborted by the test; nothing to report.
-    }
-  })();
-
-  return {
-    frames,
-    close: async () => {
-      controller.abort();
-      await reader.cancel().catch(() => {
-        // Already torn down by the abort above.
-      });
-      await pump;
-    },
-  };
-};
-
-test.describe('in-flight requests', () => {
-  test('announces a gateway request as it starts and again when it finishes', async ({
-    request,
-    baseURL,
-  }) => {
+test.describe('the log row a request opens', () => {
+  test('records a completed request once, not twice', async ({ request }) => {
     const agent = await createAgent(request, uniqueAgentName('inflight'));
     await createSkill(request, agent.id, 'inflight_skill');
     const model = uniqueModelName('inflight');
-
-    const stream = await openEventStream(baseURL as string);
 
     try {
       const response = await request.post(CHAT_COMPLETIONS_PATH, {
@@ -105,92 +40,120 @@ test.describe('in-flight requests', () => {
       });
       expect(response.status()).toBe(200);
 
-      // The stream carries every request the server is handling, and the
-      // suite runs fully parallel, so this agent's own traffic has to be
-      // picked out of it -- the same way the gateway specs separate theirs.
-      const ours = () =>
-        stream.frames.find(
-          (f) =>
-            f.type === 'log:request-started' && f.data?.agent_id === agent.id,
-        );
-
-      await expect
-        .poll(() => ours() !== undefined, {
-          timeout: 15_000,
-          message: 'no log:request-started frame arrived for this agent',
-        })
-        .toBe(true);
-
-      const started = ours();
-      expect(started?.data).toMatchObject({
-        agent_id: agent.id,
-        method: 'POST',
-        endpoint: CHAT_COMPLETIONS_PATH,
-      });
-      // Enough to place the row in the right skill's logs.
-      expect(typeof started?.data?.skill_id).toBe('string');
-      expect(typeof started?.data?.request_id).toBe('string');
-
-      // And it has to end, or the dashboard would count up forever.
+      // The completion write upserts the row opened on arrival; two rows here
+      // would mean the id was not carried through and every request is
+      // recorded twice.
       await expect
         .poll(
-          () =>
-            stream.frames.some(
-              (f) =>
-                f.type === 'log:request-settled' &&
-                f.data?.request_id === started?.data?.request_id,
-            ),
-          { timeout: 15_000, message: 'the request was never settled' },
+          async () => {
+            const logs = await request
+              .get(`${LOGS_PATH}?agent_id=${agent.id}`)
+              .then((r) => r.json());
+            return logs.filter(
+              (log: { end_time: number | null }) => log.end_time !== null,
+            ).length;
+          },
+          { timeout: 15_000, message: 'the request was never logged' },
         )
-        .toBe(true);
+        .toBe(1);
+
+      const logs = await request
+        .get(`${LOGS_PATH}?agent_id=${agent.id}`)
+        .then((r) => r.json());
+
+      expect(logs).toHaveLength(1);
+      expect(logs[0].status).toBe(200);
+      expect(logs[0].duration).toBeGreaterThanOrEqual(0);
+      expect(logs[0].error).toBeNull();
+      expect(logs[0].ai_provider_request_log).not.toBeNull();
     } finally {
-      await stream.close();
       await stubReset(request, model);
     }
   });
 
-  test('does not replay a request that has already finished', async ({
+  test('records a request that failed before a provider answered', async ({
     request,
-    baseURL,
   }) => {
-    // The endpoint catches a connecting client up on what is still running,
-    // which is what makes a reload mid-request work. The other half of that
-    // has to hold too: a request that has finished is gone from the registry,
-    // so a dashboard opening afterwards must not be handed a pending row that
-    // would then tick forever with nothing left to settle it. (The replay
-    // itself is asserted in `events.test.ts`, where a request can be held in
-    // flight without a provider that can be told to wait.)
-    const agent = await createAgent(request, uniqueAgentName('replay'));
-    await createSkill(request, agent.id, 'replay_skill');
-    const model = uniqueModelName('replay');
+    // The gap this closes: naming a skill that does not exist used to be
+    // answered with a 404 and logged nowhere at all.
+    const agent = await createAgent(request, uniqueAgentName('failed'));
+    await createSkill(request, agent.id, 'real_skill');
+    const model = uniqueModelName('failed');
 
     try {
       const response = await request.post(CHAT_COMPLETIONS_PATH, {
         headers: {
-          'sa-config': saConfig(agent.name, 'replay_skill', { model }),
+          'sa-config': saConfig(agent.name, 'no_such_skill', { model }),
         },
-        data: chatBody('already finished'),
+        data: chatBody('this cannot be routed'),
       });
-      expect(response.status()).toBe(200);
+      expect(response.status()).toBe(404);
 
-      const stream = await openEventStream(baseURL as string);
-      try {
-        // Give the opening frames time to arrive.
-        await expect
-          .poll(() => stream.frames.some((f) => f.type === 'ping'), {
-            timeout: 10_000,
-          })
-          .toBe(true);
+      // Nothing is recorded: the row is opened only once the skill resolves,
+      // and this request never got that far. Asserting it explicitly because
+      // it is the known edge of the feature, not an oversight.
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const logs = await request
+        .get(`${LOGS_PATH}?agent_id=${agent.id}`)
+        .then((r) => r.json());
+      expect(logs).toHaveLength(0);
+    } finally {
+      await stubReset(request, model);
+    }
+  });
 
-        expect(
-          stream.frames.filter(
-            (f) =>
-              f.type === 'log:request-started' && f.data?.agent_id === agent.id,
-          ),
-        ).toHaveLength(0);
-      } finally {
-        await stream.close();
-      }
+  test('records a request whose provider could not be reached', async ({
+    request,
+  }) => {
+    const agent = await createAgent(request, uniqueAgentName('unreachable'));
+    await createSkill(request, agent.id, 'unreachable_skill');
+    const model = uniqueModelName('unreachable');
+
+    try {
+      // A host nothing is listening on: the skill resolves, so the row is
+      // opened, and then the provider call fails.
+      const response = await request.post(CHAT_COMPLETIONS_PATH, {
+        headers: {
+          'sa-config': JSON.stringify({
+            agent_name: agent.name,
+            skill_name: 'unreachable_skill',
+            targets: [
+              {
+                provider: 'ollama',
+                custom_host: 'http://127.0.0.1:1',
+                model,
+              },
+            ],
+          }),
+        },
+        data: chatBody('nobody is listening'),
+      });
+      expect(response.status()).toBeGreaterThanOrEqual(400);
+
+      await expect
+        .poll(
+          async () => {
+            const logs = await request
+              .get(`${LOGS_PATH}?agent_id=${agent.id}`)
+              .then((r) => r.json());
+            return logs.length;
+          },
+          {
+            timeout: 15_000,
+            message: 'the failed request left no trace',
+          },
+        )
+        .toBe(1);
+
+      const [log] = await request
+        .get(`${LOGS_PATH}?agent_id=${agent.id}`)
+        .then((r) => r.json());
+
+      // Closed, not left running, and it says what went wrong.
+      expect(log.end_time).not.toBeNull();
+      expect(log.status).toBeGreaterThanOrEqual(400);
+      expect(log.error).toBeTruthy();
+      expect(log.endpoint).toBe(CHAT_COMPLETIONS_PATH);
     } finally {
       await stubReset(request, model);
     }

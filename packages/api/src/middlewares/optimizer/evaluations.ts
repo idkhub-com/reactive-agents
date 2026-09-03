@@ -21,6 +21,7 @@ import type {
   SkillOptimizationEvaluationResult,
   SkillOptimizationEvaluationRunCreateParams,
 } from '@shared/types/data';
+import { isCompletedLog } from '@shared/types/data/log';
 import { SkillEventType } from '@shared/types/data/skill-event';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
 
@@ -181,7 +182,9 @@ export async function checkAndRegenerateEvaluationsEarly(
       return;
     }
 
-    const exampleLogs = logs.slice(0, 5); // Use first 5 logs
+    // Only finished requests carry a provider exchange to learn from; a row
+    // still running, or one that failed before a provider answered, has none.
+    const exampleLogs = logs.filter(isCompletedLog).slice(0, 5);
     const examples = generateExampleConversations(exampleLogs);
 
     if (examples.length === 0) {

@@ -59,14 +59,6 @@ vi.mock('@web/providers/logs', () => ({
   }),
 }));
 
-// This view's table shows in-flight requests; they have their own tests.
-vi.mock('@web/providers/in-flight-requests', () => ({
-  useInFlightRequests: () => ({
-    pendingRequests: [],
-    elapsedMs: () => 0,
-  }),
-}));
-
 vi.mock('@web/providers/navigation', () => ({
   useNavigation: () => ({ navigateToLogDetail }),
 }));

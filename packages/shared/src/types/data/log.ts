@@ -52,19 +52,29 @@ export const Log = z.object({
   method: z.enum(HttpMethod),
   endpoint: z.string(),
   function_name: z.enum(FunctionName),
-  status: z.number(),
   start_time: z.number(),
   first_token_time: z.number().nullable(),
-  end_time: z.number(),
-  duration: z.number(),
   base_sa_config: z.record(z.string(), z.unknown()),
 
+  /**
+   * Everything below is null while the request is still running.
+   *
+   * A row is written when the request arrives, not when it finishes, so that
+   * the dashboard can show work in progress and so that a request which fails
+   * before reaching a provider -- or never finishes at all -- still leaves a
+   * trace. `end_time === null` is what "still running" means; use
+   * `isCompletedLog` rather than testing the fields one at a time.
+   */
+  status: z.number().nullable(),
+  end_time: z.number().nullable(),
+  duration: z.number().nullable(),
+
   // Maybe redundant. Used for indexing.
-  ai_provider: z.enum(AIProvider),
-  model: z.string(),
+  ai_provider: z.enum(AIProvider).nullable(),
+  model: z.string().nullable(),
 
   // Main data
-  ai_provider_request_log: AIProviderRequestLog,
+  ai_provider_request_log: AIProviderRequestLog.nullable(),
   hook_logs: z.array(HookLog),
   metadata: z.record(z.string(), z.unknown()),
   embedding: z.array(z.number()).nullable(),
@@ -74,7 +84,15 @@ export const Log = z.object({
   original_system_prompt: z.string().nullable(),
 
   // Cache info
-  cache_status: z.enum(CacheStatus),
+  cache_status: z.enum(CacheStatus).nullable(),
+
+  /**
+   * Why the request failed, when it failed before a provider answered -- an
+   * unknown agent, a routing error, a provider that could not be reached. A
+   * failure the provider itself reported is in `ai_provider_request_log`
+   * alongside its status, and leaves this null.
+   */
+  error: z.string().nullable(),
 
   // Tracing info
   trace_id: z.string().nullable(),
@@ -94,6 +112,38 @@ export const Log = z.object({
 });
 
 export type Log = z.infer<typeof Log>;
+
+/**
+ * A log whose request finished, and which therefore carries everything that
+ * only exists once a provider has answered.
+ *
+ * Most things that read logs -- the optimizer's contrastive examples, the
+ * judge, anything rendering a request and its response -- have no use for a
+ * row that is still running, and their queries already exclude one (by
+ * `status`, or by requiring an embedding). This is how that assumption is
+ * stated in the types rather than assumed.
+ */
+export const CompletedLog = Log.extend({
+  status: z.number(),
+  end_time: z.number(),
+  duration: z.number(),
+  ai_provider: z.enum(AIProvider),
+  model: z.string(),
+  ai_provider_request_log: AIProviderRequestLog,
+  cache_status: z.enum(CacheStatus),
+});
+
+export type CompletedLog = z.infer<typeof CompletedLog>;
+
+/** Whether the request this log describes has finished. */
+export const isCompletedLog = (log: Log): log is CompletedLog =>
+  log.end_time !== null &&
+  log.duration !== null &&
+  log.status !== null &&
+  log.ai_provider !== null &&
+  log.model !== null &&
+  log.ai_provider_request_log !== null &&
+  log.cache_status !== null;
 
 export type LogMessage = {
   data: string;
@@ -142,7 +192,50 @@ export const LogsQueryParams = z.object({
 
 export type LogsQueryParams = z.infer<typeof LogsQueryParams>;
 
+/**
+ * The row written when a request arrives, before anything is known about how
+ * it went. Completed by `LogCreateParams` under the same `id`.
+ */
+export const LogStartParams = z.object({
+  id: z.uuid(),
+  agent_id: z.uuid(),
+  skill_id: z.uuid(),
+  method: z.enum(HttpMethod),
+  endpoint: z.string(),
+  function_name: z.enum(FunctionName),
+  start_time: z.number(),
+  base_sa_config: z.record(z.string(), z.unknown()),
+  /** What the caller asked for; the arm may resolve something else. */
+  model: z.string().optional(),
+  trace_id: z.string().optional(),
+});
+
+export type LogStartParams = z.infer<typeof LogStartParams>;
+
+/**
+ * Closes a row opened at arrival for a request that failed before a provider
+ * answered -- an unknown agent, a routing error, a provider that could not be
+ * reached. There is nothing to record about a call that never happened, so
+ * this carries only the outcome.
+ */
+export const LogFailParams = z.object({
+  id: z.uuid(),
+  status: z.number(),
+  end_time: z.number(),
+  duration: z.number(),
+  error: z.string(),
+});
+
+export type LogFailParams = z.infer<typeof LogFailParams>;
+
 export const LogCreateParams = z.object({
+  /**
+   * The id of the row opened at arrival, so the write completes that row
+   * instead of adding a second one. Absent for a log created outright.
+   */
+  id: z.uuid().optional(),
+  /** Set only when the request failed before a provider answered. */
+  error: z.string().optional(),
   agent_id: z.uuid(),
   skill_id: z.uuid(),
   cluster_id: z.uuid().optional(),

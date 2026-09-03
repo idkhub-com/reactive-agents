@@ -24,14 +24,14 @@ import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 
 export async function evaluateLog(
   c: AppContext,
   evaluation: SkillOptimizationEvaluation,
-  log: Log,
+  log: CompletedLog,
   storageConnector: UserDataStorageConnector,
   options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult> {
