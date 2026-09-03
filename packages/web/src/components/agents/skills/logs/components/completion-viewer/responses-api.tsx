@@ -10,11 +10,8 @@ import {
   PrettyChatCompletionMessageRole,
 } from '@shared/types/api/routes/shared/messages';
 import type { RawSchema } from '@shared/types/api/routes/shared/tools';
+import { FunctionCallCard } from '@web/components/agents/skills/logs/components/function-call-card';
 import { GenericViewer } from '@web/components/agents/skills/logs/components/generic-viewer';
-import { Badge } from '@web/components/ui/badge';
-import { Button } from '@web/components/ui/button';
-import { Separator } from '@web/components/ui/separator';
-import { CopyIcon, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
 
 export function ResponsesAPIViewer({
@@ -96,7 +93,7 @@ export function ResponsesAPIViewer({
             //pass
           }}
           rawSchema={rawSchema as RawSchema | undefined}
-          className="border-green-500"
+          variant="response"
         >
           <div className="text-sm font-normal">
             {
@@ -112,55 +109,15 @@ export function ResponsesAPIViewer({
           </div>
         </GenericViewer>
       )}
-      {functionCalls.map((fc) => {
-        const args =
-          typeof fc.arguments === 'string'
-            ? fc.arguments
-            : JSON.stringify(fc.arguments, null, 2);
-
-        return (
-          <div
-            key={fc.call_id}
-            className="flex flex-col h-fit w-full gap-2 border rounded-lg overflow-hidden shrink-0 bg-card"
-          >
-            <div className="flex flex-col items-center border-b">
-              <div className="flex flex-row gap-2 w-full justify-between items-center h-10 px-2">
-                <div className="text-sm font-normal">Assistant</div>
-                <Separator orientation="vertical" />
-                <div className="flex flex-row gap-2 w-full justify-between items-center">
-                  <div className="text-sm font-normal">Function Call</div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(): void => {
-                      navigator.clipboard.writeText(args);
-                    }}
-                  >
-                    <CopyIcon size={16} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Wrench className="h-4 w-4 text-blue-600" />
-                <Badge variant="secondary" className="font-mono text-xs">
-                  {fc.name}
-                </Badge>
-                <Badge variant="outline" className="font-mono text-xs">
-                  {fc.call_id}
-                </Badge>
-              </div>
-              <div className="text-xs text-muted-foreground mb-2">
-                Arguments:
-              </div>
-              <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
-                {args}
-              </pre>
-            </div>
-          </div>
-        );
-      })}
+      {functionCalls.map((fc) => (
+        <FunctionCallCard
+          key={fc.call_id}
+          name={fc.name}
+          callId={fc.call_id}
+          args={fc.arguments}
+          variant="response"
+        />
+      ))}
     </div>
   );
 }

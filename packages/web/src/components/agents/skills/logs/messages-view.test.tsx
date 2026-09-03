@@ -456,4 +456,79 @@ describe('MessagesView - Responses API Conversion', () => {
       expect(screen.getByText('A beautiful sunset')).toBeInTheDocument();
     });
   });
+
+  describe('system prompt badge', () => {
+    const chatRequest = (
+      messages: { role: string; content: string }[],
+    ): SuperAgentsRequestData =>
+      ({
+        functionName: FunctionName.CHAT_COMPLETE,
+        requestBody: { model: 'gpt-4', messages },
+        responseSchema: z.object({}),
+        requestSchema: z.object({}),
+      }) as unknown as SuperAgentsRequestData;
+
+    it('says where the system prompt came from, beside its role', () => {
+      render(
+        <MessagesView
+          logId="test-log"
+          saRequestData={chatRequest([
+            { role: 'system', content: 'You are a concierge.' },
+            { role: 'user', content: 'book a table' },
+          ])}
+          systemPromptBadge={<span>partition 2 · configuration 7</span>}
+        />,
+      );
+
+      const badge = screen.getByText('partition 2 · configuration 7');
+      expect(badge).toBeInTheDocument();
+      // Beside `System`, not beside the user's turn.
+      expect(badge.parentElement).toHaveTextContent('System');
+    });
+
+    it('marks a developer message, which is a system prompt by another name', () => {
+      render(
+        <MessagesView
+          logId="test-log"
+          saRequestData={chatRequest([
+            { role: 'developer', content: 'You are a concierge.' },
+          ])}
+          systemPromptBadge={<span>as sent by the client</span>}
+        />,
+      );
+
+      expect(
+        screen.getByText('as sent by the client').parentElement,
+      ).toHaveTextContent('Developer');
+    });
+
+    it('leaves the other roles unmarked', () => {
+      render(
+        <MessagesView
+          logId="test-log"
+          saRequestData={chatRequest([
+            { role: 'user', content: 'book a table' },
+            { role: 'assistant', content: 'Done.' },
+          ])}
+          systemPromptBadge={<span>partition 2</span>}
+        />,
+      );
+
+      expect(screen.queryByText('partition 2')).not.toBeInTheDocument();
+    });
+
+    it('renders the messages unchanged when there is nothing to say', () => {
+      render(
+        <MessagesView
+          logId="test-log"
+          saRequestData={chatRequest([
+            { role: 'system', content: 'You are a concierge.' },
+          ])}
+        />,
+      );
+
+      expect(screen.getByText('System')).toBeInTheDocument();
+      expect(screen.getByText('You are a concierge.')).toBeInTheDocument();
+    });
+  });
 });

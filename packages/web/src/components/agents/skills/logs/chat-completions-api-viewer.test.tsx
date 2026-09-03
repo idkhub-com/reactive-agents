@@ -16,12 +16,14 @@ vi.mock('next-themes', () => ({
 interface GenericViewerProps {
   children: React.ReactNode;
   defaultValue: string;
+  variant?: string;
 }
 
-// Mock GenericViewer component
+// Mock GenericViewer component. `variant` is surfaced because it is what
+// gives the agent's own answer its background.
 vi.mock('@web/components/agents/skills/logs/components/generic-viewer', () => ({
-  GenericViewer: ({ children, defaultValue }: GenericViewerProps) => (
-    <div data-testid="generic-viewer">
+  GenericViewer: ({ children, defaultValue, variant }: GenericViewerProps) => (
+    <div data-testid="generic-viewer" data-variant={variant}>
       {children}
       <div data-testid="viewer-content">{defaultValue}</div>
     </div>
@@ -261,5 +263,56 @@ describe('ChatCompletionsAPIViewer - Tool Calls', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('calculate')).toBeInTheDocument();
     expect(screen.getByText('call_help')).toBeInTheDocument();
+  });
+
+  it("marks the answer and its tool calls as this turn's response", () => {
+    const requestBody: ChatCompletionRequestBody = {
+      model: 'gpt-4',
+      messages: [
+        { role: ChatCompletionMessageRole.USER, content: 'what is 1 + 1' },
+      ],
+    };
+    const responseBody: ChatCompletionResponseBody = {
+      id: 'chatcmpl-1',
+      object: 'chat.completion',
+      created: 1,
+      model: 'gpt-4',
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: ChatCompletionMessageRole.ASSISTANT,
+            content: 'Two.',
+            tool_calls: [
+              {
+                id: 'call_1',
+                type: 'function',
+                function: { name: 'calculate', arguments: '{}' },
+              },
+            ],
+          },
+          finish_reason: ChatCompletionFinishReason.TOOL_CALLS,
+        },
+      ],
+    };
+
+    const { container } = render(
+      <ChatCompletionsAPIViewer
+        logId="test-log"
+        saRequestBody={requestBody}
+        saResponseBody={responseBody}
+      />,
+    );
+
+    // What the agent said in this turn, told apart from the conversation
+    // that was sent to it by a background of its own.
+    expect(screen.getByTestId('generic-viewer')).toHaveAttribute(
+      'data-variant',
+      'response',
+    );
+    expect(
+      container.querySelector('[class*="bg-emerald"]'),
+      'the tool call the agent just made is part of its answer',
+    ).not.toBeNull();
   });
 });

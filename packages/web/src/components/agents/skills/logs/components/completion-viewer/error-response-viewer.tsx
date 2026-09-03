@@ -23,7 +23,7 @@ export function ErrorResponseViewer({
         onSelect={(): void => {
           //pass
         }}
-        className="border-green-500"
+        variant="response"
       >
         <div className="text-sm font-normal text-right">Error</div>
       </GenericViewer>

@@ -19,6 +19,7 @@ import { PageHeader } from '@web/components/ui/page-header';
 import { Separator } from '@web/components/ui/separator';
 import { Skeleton } from '@web/components/ui/skeleton';
 import { useLogSession } from '@web/hooks/use-log-session';
+import { usePinnedToBottom } from '@web/hooks/use-pinned-to-bottom';
 import { useSmartBack } from '@web/hooks/use-smart-back';
 import { useAgents } from '@web/providers/agents';
 import { useLogs } from '@web/providers/logs';
@@ -31,6 +32,10 @@ import {
   describeSkillRouting,
   readSkillRouting,
 } from '@web/utils/skill-routing';
+import {
+  describeSystemPromptOrigin,
+  readServedConfiguration,
+} from '@web/utils/system-prompt-origin';
 import { formatLogTimestamp } from '@web/utils/time';
 import {
   AlertTriangle,
@@ -129,6 +134,10 @@ export function LogDetailsView(): ReactElement {
     }
   }, [logSkillId, setSkillId, setClustersSkillId, setEvalSkillId]);
 
+  // A log opens on the agent's answer rather than on the top of a system
+  // prompt that is several screens long.
+  const conversation = usePinnedToBottom(selectedLog?.id);
+
   // Set log ID for evaluation runs provider
   useEffect(() => {
     if (selectedLog) {
@@ -226,6 +235,18 @@ export function LogDetailsView(): ReactElement {
     if (!original || !saRequestData) return null;
     return original === extractSystemPrompt(saRequestData) ? null : original;
   }, [selectedLog?.original_system_prompt, saRequestData]);
+
+  // Where the prompt that reached the provider came from: the configuration
+  // the optimizer pulled, or the client, when the skill substituted nothing.
+  const systemPromptOrigin = useMemo(() => {
+    if (!selectedLog) return null;
+    return describeSystemPromptOrigin({
+      partition: clusterName,
+      configuration: readServedConfiguration(selectedLog.metadata),
+      clientPrompt: selectedLog.original_system_prompt,
+      sentPrompt: saRequestData ? extractSystemPrompt(saRequestData) : null,
+    });
+  }, [selectedLog, clusterName, saRequestData]);
 
   // Use the weighted average score from the database view (logs_with_eval_scores)
   // This ensures consistency with the list view and handles orphaned evaluation runs correctly
@@ -405,7 +426,7 @@ export function LogDetailsView(): ReactElement {
               {clusterName && (
                 <>
                   <HeaderSeparator />
-                  <HeaderItem label="Cluster:">
+                  <HeaderItem label="Partition:">
                     <Badge
                       variant="outline"
                       className={`${HEADER_BADGE} font-mono`}
@@ -614,51 +635,71 @@ export function LogDetailsView(): ReactElement {
                 onSelect={openLog}
               />
             )}
-            <div className="inset-0 flex flex-col flex-1 w-full min-w-0 p-4 gap-4 overflow-hidden overflow-y-auto">
-              {selectedLog && originalSystemPrompt && (
-                <GenericViewer
-                  path={`${selectedLog.id}-original-system-prompt`}
-                  language={'text'}
-                  defaultValue={originalSystemPrompt}
-                  readOnly={true}
-                  onSave={async (): Promise<void> => {
-                    //pass
-                  }}
-                  onSelect={(): void => {
-                    //pass
-                  }}
-                >
-                  <div className="flex flex-row items-center gap-2">
-                    <div className="text-sm font-normal">
-                      Original system prompt
+            <div
+              ref={conversation.ref}
+              className="inset-0 flex flex-1 w-full min-w-0 p-4 overflow-hidden overflow-y-auto"
+            >
+              <div
+                ref={conversation.contentRef}
+                className="flex flex-col w-full min-w-0 gap-4 h-fit"
+              >
+                {selectedLog && originalSystemPrompt && (
+                  <GenericViewer
+                    path={`${selectedLog.id}-original-system-prompt`}
+                    language={'text'}
+                    defaultValue={originalSystemPrompt}
+                    readOnly={true}
+                    defaultCollapsed={true}
+                    onSave={async (): Promise<void> => {
+                      //pass
+                    }}
+                    onSelect={(): void => {
+                      //pass
+                    }}
+                  >
+                    <div className="flex flex-row items-center gap-2">
+                      <div className="text-sm font-normal">
+                        Original system prompt
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="text-xs text-muted-foreground"
+                      >
+                        as sent by the client
+                      </Badge>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="text-xs text-muted-foreground"
-                    >
-                      as sent by the client
-                    </Badge>
-                  </div>
-                </GenericViewer>
-              )}
-              {selectedLog && saRequestData && (
-                <MessagesView
-                  logId={selectedLog.id}
-                  saRequestData={saRequestData}
-                />
-              )}
-              {selectedLog &&
-                saRequestData &&
-                selectedLog.ai_provider_request_log?.response_body &&
-                ('choices' in
-                  selectedLog.ai_provider_request_log.response_body ||
-                  'output' in
-                    selectedLog.ai_provider_request_log.response_body) && (
-                  <CompletionViewer
+                  </GenericViewer>
+                )}
+                {selectedLog && saRequestData && (
+                  <MessagesView
                     logId={selectedLog.id}
                     saRequestData={saRequestData}
+                    systemPromptBadge={
+                      systemPromptOrigin && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs text-muted-foreground"
+                          title={systemPromptOrigin.title}
+                        >
+                          {systemPromptOrigin.label}
+                        </Badge>
+                      )
+                    }
                   />
                 )}
+                {selectedLog &&
+                  saRequestData &&
+                  selectedLog.ai_provider_request_log?.response_body &&
+                  ('choices' in
+                    selectedLog.ai_provider_request_log.response_body ||
+                    'output' in
+                      selectedLog.ai_provider_request_log.response_body) && (
+                    <CompletionViewer
+                      logId={selectedLog.id}
+                      saRequestData={saRequestData}
+                    />
+                  )}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -149,6 +149,7 @@ export const setUpOptimizedSkill = async (
 export interface Arm {
   id: string;
   cluster_id: string;
+  name: string;
   params: { system_prompt: string | null };
 }
 

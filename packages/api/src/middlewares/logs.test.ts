@@ -11,7 +11,7 @@ import type { SkillRoutingDecision } from '@api/utils/super-agents/skill-routing
 import { FunctionName } from '@shared/types/api/request';
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type { SuperAgentsConfig } from '@shared/types/api/request/headers';
-import type { Agent, Skill } from '@shared/types/data';
+import type { Agent, Skill, SkillOptimizationArm } from '@shared/types/data';
 import type { AIProviderRequestLog } from '@shared/types/data/log';
 import { HttpMethod } from '@shared/types/http';
 import { Hono } from 'hono';
@@ -48,6 +48,13 @@ const decision: SkillRoutingDecision = {
   candidates: 2,
 };
 
+/** The configuration the optimizer pulled to serve the request. */
+const pulledArm = {
+  id: 'arm-1',
+  cluster_id: 'cluster-1',
+  name: '7',
+} as SkillOptimizationArm;
+
 /** What the provider was actually sent, arm prompt and all. */
 const aiProviderLog = {
   provider: 'openai',
@@ -72,6 +79,7 @@ const aiProviderLog = {
 describe('logsMiddleware', () => {
   let requestData: SuperAgentsRequestData;
   let logsConnector: { createLog: ReturnType<typeof vi.fn> };
+  let userData: UserDataStorageConnector;
   let app: Hono<AppEnv>;
 
   beforeEach(() => {
@@ -93,7 +101,7 @@ describe('logsMiddleware', () => {
         .fn()
         .mockImplementation(async (_c, params) => ({ ...params, id: 'log-1' })),
     };
-    const userData = {
+    userData = {
       incrementSkillTotalRequests: vi.fn(),
       getSkillOptimizationEvaluations: vi.fn().mockResolvedValue([]),
     } as unknown as UserDataStorageConnector;
@@ -152,6 +160,39 @@ describe('logsMiddleware', () => {
 
     const log = await storedLog();
     expect(log.metadata).toEqual({ skill_routing: decision });
+  });
+
+  it('records which configuration served the request', async () => {
+    app = new Hono<AppEnv>()
+      .use('*', async (c, next) => {
+        c.set('sa_request_data', requestData);
+        c.set('user_data_storage_connector', userData);
+        await next();
+      })
+      .use(
+        '*',
+        logsMiddleware(
+          createFactory<AppEnv>(),
+          () => logsConnector as unknown as LogsStorageConnector,
+        ),
+      )
+      .post('/v1/chat/completions', (c) => {
+        c.set('sa_config', saConfig);
+        c.set('agent', agent);
+        c.set('skill', skill);
+        c.set('ai_provider_log', aiProviderLog);
+        c.set('pulled_arm', pulledArm);
+        return c.json({ ok: true });
+      });
+
+    await app.request('/v1/chat/completions', { method: 'POST' });
+
+    const log = await storedLog();
+    // The row keeps the partition; the arm only survives in the metadata.
+    expect(log.cluster_id).toBe('cluster-1');
+    expect(log.metadata).toEqual({
+      served_configuration: { id: 'arm-1', name: '7' },
+    });
   });
 
   it('leaves the metadata empty when the caller named the skill', async () => {

@@ -25,6 +25,7 @@ import {
   type SuperAgentsConfig,
 } from '@shared/types/api/request/headers';
 import type {
+  ServedConfiguration,
   SkillOptimizationArm,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
@@ -453,8 +454,22 @@ async function processLogs({
     status: status,
     method: method,
     model: (aiProviderLog.request_body.model as string | undefined) || '',
-    // How the skill was chosen, when the caller named only the agent.
-    metadata: skillRouting ? { skill_routing: skillRouting } : {},
+    metadata: {
+      // How the skill was chosen, when the caller named only the agent.
+      ...(skillRouting ? { skill_routing: skillRouting } : {}),
+      // Which of the partition's configurations served the request. The row
+      // keeps `cluster_id`, which names the partition but not the arm, and
+      // the prompt that reached the provider is the arm's template rendered,
+      // so it cannot be matched back to one afterwards.
+      ...(pulledArm
+        ? {
+            served_configuration: {
+              id: pulledArm.id,
+              name: pulledArm.name,
+            } satisfies ServedConfiguration,
+          }
+        : {}),
+    },
     hook_logs: hookLogs,
     function_name: functionName,
     ai_provider_request_log: aiProviderLog,

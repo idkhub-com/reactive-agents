@@ -13,7 +13,7 @@ import {
   STUB_URL,
   stubRequests,
 } from '../fixtures/gateway';
-import { getLogs } from '../fixtures/logs';
+import { getLogs, getLogsByArm, type LoggedRequest } from '../fixtures/logs';
 import {
   getArms,
   getClusters,
@@ -200,6 +200,64 @@ test.describe('optimization loop', () => {
         return logged?.original_system_prompt;
       })
       .toBe('You are a restaurant concierge.');
+  });
+
+  test('records the configuration that served the request, and filters by it', async ({
+    request,
+  }) => {
+    /**
+     * The log row keeps `cluster_id`, which names the partition but not
+     * which of its configurations was pulled, and the prompt that reached
+     * the provider is that configuration's template already rendered -- so
+     * the arm cannot be recovered afterwards. It is recorded on the log
+     * instead, and `arm_id` filters on it: `json_extract` on SQLite, a
+     * `metadata->served_configuration->>id` path on PostgREST. Two
+     * hand-written translations of one filter, so both are checked.
+     */
+    const userMessage = 'which configuration answered this';
+    const response = await request.post(CHAT_COMPLETIONS_PATH, {
+      headers: {
+        'sa-config': optimizedConfig(
+          configured.agentName,
+          configured.skillName,
+        ),
+      },
+      data: chatBody(userMessage),
+    });
+    expect(response.status()).toBe(200);
+
+    const loggedRequest = async (): Promise<LoggedRequest | undefined> =>
+      (await getLogs(request, configured.skillId)).find((log) =>
+        log.ai_provider_request_log?.request_body.messages?.some(
+          (message) => message.content === userMessage,
+        ),
+      );
+
+    await expect
+      .poll(async () => (await loggedRequest())?.metadata.served_configuration)
+      .toBeDefined();
+
+    const logged = await loggedRequest();
+    const served = logged?.metadata.served_configuration as {
+      id: string;
+      name: string;
+    };
+    const arms = await getArms(request, configured.skillId);
+    const pulled = arms.find((arm) => arm.id === served.id);
+    expect(
+      pulled,
+      'the log names a configuration this skill does not have',
+    ).toBeDefined();
+    expect(served.name).toBe(pulled?.name);
+
+    const byArm = await getLogsByArm(request, served.id);
+    expect(byArm.map((log) => log.id)).toContain(logged?.id);
+
+    const byOtherArm = await getLogsByArm(
+      request,
+      '00000000-0000-4000-8000-000000000000',
+    );
+    expect(byOtherArm).toEqual([]);
   });
 
   test('embeds the request through the embedding skill', async ({
