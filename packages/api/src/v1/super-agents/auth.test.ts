@@ -49,16 +49,29 @@ describe('Auth Router', () => {
   });
 
   describe('POST /login', () => {
-    it('accepts any password when ACCESS_PASSWORD is not set', async () => {
+    it('rejects login when ACCESS_PASSWORD is not set', async () => {
       const response = await app.request('/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: 'anything' }),
       });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data).toEqual({ message: 'Password verified' });
+      expect(data).toEqual({
+        error:
+          'Dashboard authentication is disabled because ACCESS_PASSWORD is not configured.',
+      });
+    });
+
+    it('sets no cookie when ACCESS_PASSWORD is not set', async () => {
+      const response = await app.request('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'anything' }),
+      });
+
+      expect(response.headers.get('set-cookie')).toBeNull();
     });
 
     it('rejects wrong password when ACCESS_PASSWORD is set', async () => {

@@ -116,3 +116,54 @@ describe('Auth enforcement on super-agents routes', () => {
     });
   });
 });
+
+/**
+ * The gateway configuration: BEARER_TOKEN guards the API and the dashboard
+ * password is left unset, which AGENTS.md documents as optional.
+ *
+ * `/auth/*` is exempt from the middleware and the middleware trusts the JWT
+ * cookie ahead of the bearer token, so a login endpoint that issued a session
+ * without a password to check would let anyone who can reach the port walk
+ * past BEARER_TOKEN entirely.
+ */
+describe('ACCESS_PASSWORD unset while BEARER_TOKEN guards the API', () => {
+  const gatewayApp = createAuthenticatedApp(superAgentsRouter, {
+    basePath: BASE,
+    bindings: { ACCESS_PASSWORD: undefined },
+  });
+
+  it('still refuses an unauthenticated request', async () => {
+    const response = await gatewayApp.request(`${BASE}/agents`);
+    expect(response.status).toBe(401);
+  });
+
+  it('refuses to mint a session from an arbitrary password', async () => {
+    const response = await gatewayApp.request(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'not-the-bearer-token' }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('leaves the bearer token as the only way in', async () => {
+    const login = await gatewayApp.request(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'not-the-bearer-token' }),
+    });
+    const minted = login.headers.get('set-cookie')?.split(';')[0];
+
+    const withMintedCookie = await gatewayApp.request(`${BASE}/agents`, {
+      headers: minted ? { Cookie: minted } : {},
+    });
+    expect(withMintedCookie.status).toBe(401);
+
+    const withBearer = await gatewayApp.request(`${BASE}/agents`, {
+      headers: createBearerHeader(),
+    });
+    expect(withBearer.status).not.toBe(401);
+  });
+});
