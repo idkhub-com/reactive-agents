@@ -2,6 +2,7 @@ import { getApiUrl, SA_SKILL_REQUEST_PARAMS } from '@api/constants';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import {
+  type ResolvedModelConfig,
   resolveModelById,
   resolveSystemSettingsModel,
 } from '@api/utils/evaluation-model-resolver';
@@ -102,6 +103,36 @@ function arbiterUserMessage(
  * settings because it needs the timeout too: the arbiter is asked under the
  * skill-creation lease, which has to outlast it.
  */
+/**
+ * The agent's own arbiter model, under the system's bounds.
+ *
+ * An agent overrides *which* model arbitrates, not how hard it may think. A
+ * model resolved by id carries no settings of its own, so without this the
+ * system's reasoning effort silently stopped applying to any agent that named
+ * its own model -- while the timeout, resolved separately by
+ * `skillArbiterTimeoutMs`, has always fallen back to the system value. The
+ * two sit in the same position and now behave the same way.
+ */
+async function resolveAgentArbiterModel(
+  c: AppContext,
+  modelId: string,
+  connector: UserDataStorageConnector,
+  settings: SystemSettings,
+): Promise<ResolvedModelConfig | null> {
+  const resolved = await resolveModelById(
+    c,
+    modelId,
+    connector,
+    'MODEL_RESOLVER_SKILL_ARBITER',
+  );
+  return (
+    resolved && {
+      ...resolved,
+      reasoningEffort: settings.options.skill_arbiter.reasoning_effort,
+    }
+  );
+}
+
 export async function arbitrateSkillForRequest(
   c: AppContext,
   connector: UserDataStorageConnector,
@@ -112,11 +143,11 @@ export async function arbitrateSkillForRequest(
 ): Promise<SkillArbiterVerdict> {
   try {
     const modelConfig = agent.skill_arbiter_model_id
-      ? await resolveModelById(
+      ? await resolveAgentArbiterModel(
           c,
           agent.skill_arbiter_model_id,
           connector,
-          'MODEL_RESOLVER_SKILL_ARBITER',
+          settings,
         )
       : await resolveSystemSettingsModel(
           c,
