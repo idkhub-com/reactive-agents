@@ -13,8 +13,6 @@ const StructuredOutputResponse = z.object({
   outcome: z.string(),
 });
 
-type StructuredOutputResponse = z.infer<typeof StructuredOutputResponse>;
-
 // The outcome is scoped to the latest response on purpose: every earlier
 // turn of the conversation arrived as its own request, carries its own log,
 // and is scored by its own evaluation run -- often under a different arm.

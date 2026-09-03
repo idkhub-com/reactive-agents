@@ -1,4 +1,4 @@
-import { createLLMJudge } from '@api/evaluations/llm-judge';
+import { createLLMJudge, withExtraCriteria } from '@api/evaluations/llm-judge';
 import { createMockContext } from '@api/test-utils/mock-context';
 import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
@@ -1073,6 +1073,21 @@ describe('LLM Judge', () => {
       const call = mockParse.mock.calls[0][0];
       expect(call.messages[0].content).toContain('You are a quality evaluator');
       expect(call.messages[0].content).toContain('Check every user intention');
+    });
+  });
+
+  describe('withExtraCriteria', () => {
+    it("appends a caller's description to the template's user prompt", () => {
+      expect(withExtraCriteria('Conversation:\nhi', 'Must cite a source')).toBe(
+        'Conversation:\nhi\n\nAdditional criteria:\nMust cite a source',
+      );
+    });
+
+    it('leaves the prompt alone when there is no description', () => {
+      expect(withExtraCriteria('Conversation:\nhi')).toBe('Conversation:\nhi');
+      expect(withExtraCriteria('Conversation:\nhi', '   ')).toBe(
+        'Conversation:\nhi',
+      );
     });
   });
 });

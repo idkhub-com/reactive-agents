@@ -111,6 +111,21 @@ export function parseJudgeJson(content: string): unknown {
 }
 
 /**
+ * Fold a caller's extra criteria into a template's user prompt. A metric is
+ * described by its own template; a `description` supplied alongside narrows
+ * that judgement rather than replacing it, so it is appended instead of being
+ * handed to the criteria judge, which builds a generic prompt and drops the
+ * template entirely.
+ */
+export function withExtraCriteria(
+  userPrompt: string,
+  description?: string,
+): string {
+  const extra = description?.trim();
+  return extra ? `${userPrompt}\n\nAdditional criteria:\n${extra}` : userPrompt;
+}
+
+/**
  * Zod schema for evaluation results
  */
 const EvaluationResultSchema = z.object({

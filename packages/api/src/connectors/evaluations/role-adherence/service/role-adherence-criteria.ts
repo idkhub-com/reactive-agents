@@ -2,7 +2,7 @@ import { getRoleAdherenceMainTemplate } from '@api/connectors/evaluations/role-a
 import type { RoleAdherenceMetadata } from '@api/connectors/evaluations/role-adherence/types';
 import { RoleAdherenceResultSchema } from '@api/connectors/evaluations/role-adherence/types';
 
-import { createLLMJudge } from '@api/evaluations/llm-judge';
+import { createLLMJudge, withExtraCriteria } from '@api/evaluations/llm-judge';
 import type {
   GenericEvaluationInput,
   GenericEvaluator,
@@ -66,11 +66,17 @@ async function evaluateRoleAdherenceWithJudge(
     include_reason: input.criteria?.include_reason ?? true,
   });
 
+  // The caller's description is extra criteria for this metric, not a
+  // replacement for it: appended to the template rather than handed to the
+  // generic criteria judge, which would drop the template altogether.
+  const userPrompt = withExtraCriteria(
+    tpl.userPrompt,
+    input.criteria?.description,
+  );
   const result = await llmJudge.evaluate({
-    text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
-    evaluationCriteria: input.criteria?.description
-      ? { criteria: [input.criteria.description] }
-      : undefined,
+    text: `${tpl.systemPrompt}\n\n${userPrompt}`,
+    systemPrompt: tpl.systemPrompt,
+    userPrompt,
   });
 
   return parseRoleAdherenceResult(result);
@@ -105,11 +111,14 @@ export function createRoleAdherenceEvaluator(
         include_reason: criteria?.include_reason ?? true,
       });
 
+      const userPrompt = withExtraCriteria(
+        tpl.userPrompt,
+        criteria?.description,
+      );
       const result = await llmJudge.evaluate({
-        text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
-        evaluationCriteria: criteria?.description
-          ? { criteria: [criteria.description] }
-          : undefined,
+        text: `${tpl.systemPrompt}\n\n${userPrompt}`,
+        systemPrompt: tpl.systemPrompt,
+        userPrompt,
       });
 
       const parsed = parseRoleAdherenceResult(result);
