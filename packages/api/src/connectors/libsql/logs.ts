@@ -3,6 +3,8 @@ import type { AppContext } from '@api/types/hono';
 import {
   Log,
   type LogCreateParams,
+  type LogFailParams,
+  type LogStartParams,
   type LogsQueryParams,
 } from '@shared/types/data/log';
 import { v4 as uuidv4 } from 'uuid';
@@ -82,6 +84,29 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
     return parseRows('logs_with_eval_scores', result.rows, z.array(Log));
   },
 
+  startLog: async (
+    c: AppContext,
+    startParams: LogStartParams,
+  ): Promise<void> => {
+    const { base_sa_config, ...rest } = startParams as LogStartParams &
+      Record<string, unknown>;
+
+    await insertInto(
+      getLibsqlClient(c),
+      'logs',
+      {
+        ...asColumns(rest),
+        base_sa_config: toJsonColumn(base_sa_config),
+        // NOT NULL with nothing to put in them yet.
+        hook_logs: toJsonColumn([]),
+        metadata: toJsonColumn({}),
+      },
+      z.array(Log),
+      // A retried request could reuse an id; completing the row beats failing.
+      'id',
+    );
+  },
+
   createLog: async (
     c: AppContext,
     createParams: LogCreateParams,
@@ -93,6 +118,7 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
       metadata,
       embedding,
       user_metadata,
+      id,
       ...rest
     } = createParams as LogCreateParams & Record<string, unknown>;
 
@@ -101,7 +127,10 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
       'logs',
       {
         ...asColumns(rest),
-        id: uuidv4(),
+        // Completes the row opened when the request arrived, when there is
+        // one. `startLog` does not await, so the insert may still be in
+        // flight; the upsert makes the order between them not matter.
+        id: (id as string | undefined) ?? uuidv4(),
         base_sa_config: toJsonColumn(base_sa_config),
         ai_provider_request_log: toJsonColumn(ai_provider_request_log),
         hook_logs: toJsonColumn(hook_logs ?? []),
@@ -112,9 +141,32 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
           user_metadata === undefined ? undefined : toJsonColumn(user_metadata),
       },
       z.array(Log),
+      'id',
     );
 
     return rows[0];
+  },
+
+  failLog: async (c: AppContext, failParams: LogFailParams): Promise<void> => {
+    // An update, not an upsert: a request that failed before its row was
+    // opened has nothing to close, and inventing a row here would record a
+    // failure with none of the request it belongs to.
+    //
+    // `end_time IS NULL` is what makes this safe to call as a backstop on a
+    // path that may already have completed the row: a request that was logged
+    // successfully is left exactly as it is.
+    await getLibsqlClient(c).execute({
+      sql: `UPDATE logs
+            SET status = ?, end_time = ?, duration = ?, error = ?
+            WHERE id = ? AND end_time IS NULL`,
+      args: [
+        failParams.status,
+        failParams.end_time,
+        failParams.duration,
+        failParams.error,
+        failParams.id,
+      ],
+    });
   },
 
   deleteLog: async (c: AppContext, id: string): Promise<void> => {

@@ -241,22 +241,31 @@ const initialSchema: LibsqlMigration = {
       method TEXT NOT NULL CHECK (method IN ('GET', 'POST', 'PUT', 'DELETE', 'PATCH')),
       endpoint TEXT NOT NULL,
       function_name TEXT NOT NULL,
-      status INTEGER NOT NULL,
       start_time INTEGER NOT NULL,
       first_token_time INTEGER,
-      end_time INTEGER NOT NULL,
-      duration INTEGER NOT NULL,
       base_sa_config TEXT NOT NULL,
-      ai_provider TEXT NOT NULL,
-      model TEXT NOT NULL,
-      ai_provider_request_log TEXT NOT NULL,
+      -- Null while the request is still running. The row is written when the
+      -- request arrives rather than when it finishes, so that work in
+      -- progress is visible and a request that fails before reaching a
+      -- provider -- or never finishes at all -- still leaves a trace.
+      -- A NULL end_time is what "still running" means.
+      status INTEGER,
+      end_time INTEGER,
+      duration INTEGER,
+      ai_provider TEXT,
+      model TEXT,
+      ai_provider_request_log TEXT,
       hook_logs TEXT NOT NULL,
       metadata TEXT NOT NULL,
       embedding TEXT DEFAULT NULL,
       original_system_prompt TEXT,
-      cache_status TEXT NOT NULL CHECK (
+      cache_status TEXT CHECK (
+        cache_status IS NULL OR
         cache_status IN ('HIT', 'SEMANTIC_HIT', 'MISS', 'SEMANTIC_MISS', 'REFRESH', 'DISABLED')
       ),
+      -- Why it failed, when it failed before a provider answered. A failure
+      -- the provider reported is in ai_provider_request_log instead.
+      error TEXT,
       trace_id TEXT,
       parent_span_id TEXT,
       span_id TEXT,

@@ -335,6 +335,56 @@ describe('SkillDashboardView', () => {
     });
   });
 
+  it('reads its recent requests the way the logs page does', async () => {
+    // The card and the logs table render through the same cells, so a
+    // request that failed, or one still running, reads the same on both.
+    vi.mocked(useLogs).mockReturnValue({
+      ...vi.mocked(useLogs)(),
+      logs: [
+        {
+          id: 'log-done',
+          cluster_id: 'cluster-1',
+          function_name: 'chat_complete',
+          model: 'glm-5.3',
+          status: 200,
+          start_time: new Date('2026-09-03T10:15:30Z').getTime(),
+          end_time: new Date('2026-09-03T10:15:31Z').getTime(),
+          duration: 900,
+          avg_eval_score: 0.91,
+        },
+        {
+          id: 'log-running',
+          cluster_id: null,
+          function_name: 'chat_complete',
+          model: null,
+          status: null,
+          start_time: Date.now() - 4000,
+          end_time: null,
+          duration: null,
+          avg_eval_score: null,
+        },
+      ],
+    } as unknown as never);
+
+    renderWithProviders(<SkillDashboardView />);
+
+    await waitFor(() => {
+      for (const header of ['Status', 'Eval', 'Model', 'Partition']) {
+        expect(screen.getByText(header)).toBeInTheDocument();
+      }
+    });
+
+    expect(screen.getByText('200')).toBeInTheDocument();
+    expect(screen.getByText('91%')).toBeInTheDocument();
+    expect(screen.getByText('900ms')).toBeInTheDocument();
+
+    // And the one still running says so, counting up rather than showing a
+    // status it has not got.
+    expect(screen.getByTestId('running-log-row')).toBeInTheDocument();
+    expect(screen.getByText('running')).toBeInTheDocument();
+    expect(screen.getByText('4.0s')).toBeInTheDocument();
+  });
+
   it('shows no skill selected message when skill is not available', async () => {
     vi.mocked(useSkills).mockReturnValue({
       selectedSkill: null,

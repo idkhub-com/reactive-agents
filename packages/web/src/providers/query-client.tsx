@@ -19,7 +19,10 @@ export function ReactQueryProvider({
           queries: {
             staleTime: 60 * 1000, // 1 minute
             gcTime: 5 * 60 * 1000, // 5 minutes
-            refetchOnWindowFocus: false,
+            // A dashboard left open in a background tab is looking at
+            // whatever it fetched before it lost focus. Coming back is the
+            // clearest signal there is that someone wants current data.
+            refetchOnWindowFocus: true,
             retry: 1,
           },
           mutations: {

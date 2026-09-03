@@ -30,7 +30,7 @@ import type {
   SkillOptimizationEvaluation,
   SkillOptimizationEvaluationResult,
 } from '@shared/types/data';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 
@@ -79,7 +79,7 @@ async function generateVerdict(
 async function getTaskAndOutcome(
   c: AppContext,
   params: TaskCompletionEvaluationParameters,
-  log: Log,
+  log: CompletedLog,
   connector: UserDataStorageConnector,
 ): Promise<{ task: string; outcome: string; inProgress: boolean }> {
   const saRequestData = produceSuperAgentsRequestData(
@@ -128,7 +128,7 @@ async function getTaskAndOutcome(
 export async function evaluateLog(
   c: AppContext,
   evaluation: SkillOptimizationEvaluation,
-  log: Log,
+  log: CompletedLog,
   storageConnector: UserDataStorageConnector,
   options?: EvaluateLogOptions,
 ): Promise<SkillOptimizationEvaluationResult> {

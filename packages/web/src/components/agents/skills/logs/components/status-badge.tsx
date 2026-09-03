@@ -41,7 +41,8 @@ export function StatusBadge({
     status: Log['status'],
     score: number | null,
   ): string => {
-    const statusPassed = status >= 200 && status < 300;
+    // A request still running has no status yet, and has not passed.
+    const statusPassed = status !== null && status >= 200 && status < 300;
     const scorePassed = score === null || score >= 0.9;
 
     let className: string;
@@ -57,7 +58,8 @@ export function StatusBadge({
     status: Log['status'],
     score: number | null,
   ): string => {
-    const statusPassed = status >= 200 && status < 300;
+    // A request still running has no status yet, and has not passed.
+    const statusPassed = status !== null && status >= 200 && status < 300;
     const scorePassed = score === null || score >= 0.9;
 
     let className: string;
@@ -70,6 +72,10 @@ export function StatusBadge({
   };
 
   const getStatusBackgroundColor = (status: Log['status']): string => {
+    // Still running: no verdict to colour it by yet.
+    if (status === null) {
+      return bgColor('yellow');
+    }
     if (status >= 200 && status < 300) {
       return bgColor('green');
     } else if (status >= 400) {
@@ -80,6 +86,9 @@ export function StatusBadge({
   };
 
   const getStatusTextColor = (status: Log['status']): string => {
+    if (status === null) {
+      return textColor('yellow');
+    }
     if (status >= 200 && status < 300) {
       return textColor('green');
     } else if (status >= 400) {
@@ -147,7 +156,9 @@ export function StatusBadge({
         'truncate font-normal overflow-hidden h-5 p-0 border',
       )}
     >
-      <span className="px-1">{formatDuration(log.duration)}</span>
+      <span className="px-1">
+        {log.duration === null ? 'running' : formatDuration(log.duration)}
+      </span>
       {score !== null && (
         <>
           <Separator

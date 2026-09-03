@@ -17,7 +17,9 @@ import {
   type StreamChatCompletionRequestData,
 } from '@shared/types/api/request';
 import { SuperAgentsResponseBody } from '@shared/types/api/response';
-import type { Log, Skill, SkillOptimizationCluster } from '@shared/types/data';
+import type { Skill, SkillOptimizationCluster } from '@shared/types/data';
+import type { CompletedLog } from '@shared/types/data/log';
+import { isCompletedLog } from '@shared/types/data/log';
 import { SkillEventType } from '@shared/types/data/skill-event';
 import { produceSuperAgentsRequestData } from '@shared/utils/sa-request-data';
 
@@ -287,6 +289,7 @@ async function fetchReflectionExamples(
 
   // Sort by score and take the single best log from all time
   const bestLog = allTimeLogs
+    .filter(isCompletedLog)
     .map((log) => ({
       log,
       score: log.avg_eval_score ?? 0,
@@ -308,6 +311,7 @@ async function fetchReflectionExamples(
 
   // Sort by score and take bottom 5 worst logs
   const worstLogs = recentLogs
+    .filter(isCompletedLog)
     .map((log) => ({
       log,
       score: log.avg_eval_score ?? 0,
@@ -439,7 +443,7 @@ export async function performReflection(
 /**
  * Converts a log into a conversation string with input, output, and request constraints
  */
-export function generateExampleConversations(logs: Log[]): string[] {
+export function generateExampleConversations(logs: CompletedLog[]): string[] {
   return logs
     .map((log) => {
       try {
@@ -489,7 +493,7 @@ export function generateExampleConversations(logs: Log[]): string[] {
 async function generateExampleConversationsWithEvaluations(
   c: AppContext,
   userDataStorageConnector: UserDataStorageConnector,
-  logs: Log[],
+  logs: CompletedLog[],
 ): Promise<string[]> {
   const conversations: string[] = [];
 

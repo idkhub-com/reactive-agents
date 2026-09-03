@@ -56,6 +56,14 @@ export interface AppEnv {
     pulled_arm?: SkillOptimizationArm;
     /** Set when the caller named only the agent and the gateway chose the skill. */
     skill_routing?: SkillRoutingDecision;
+    /**
+     * Identifies this request to the in-flight registry, so the dashboard can
+     * pair the pending row it drew on arrival with the news that the request
+     * has finished. Set by the logs middleware before the handler runs.
+     */
+    log_request_id?: string;
+    /** When the request arrived, shared by the row opened then and its completion. */
+    log_start_time?: number;
     ai_provider_log?: AIProviderRequestLog;
     hook_logs?: HookLog[];
     first_token_time?: number;

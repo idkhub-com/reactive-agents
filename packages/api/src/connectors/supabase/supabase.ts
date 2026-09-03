@@ -31,6 +31,8 @@ import {
 import {
   Log,
   type LogCreateParams,
+  type LogFailParams,
+  type LogStartParams,
   type LogsQueryParams,
 } from '@shared/types/data/log';
 import {
@@ -1471,6 +1473,25 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
     return logs;
   },
 
+  startLog: async (
+    c: AppContext,
+    startParams: LogStartParams,
+  ): Promise<void> => {
+    await insertIntoSupabase(
+      c,
+      'logs',
+      {
+        ...startParams,
+        // NOT NULL with nothing to put in them yet.
+        hook_logs: [],
+        metadata: {},
+      },
+      null,
+      // A retried request could reuse an id; completing the row beats failing.
+      true,
+    );
+  },
+
   createLog: async (
     c: AppContext,
     createParams: LogCreateParams,
@@ -1480,8 +1501,31 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
       'logs',
       createParams,
       z.array(Log),
+      // Completes the row opened when the request arrived, when there is one.
+      // `startLog` does not await, so the insert may still be in flight; the
+      // upsert makes the order between them not matter.
+      true,
     );
     return insertedLog[0];
+  },
+
+  failLog: async (c: AppContext, failParams: LogFailParams): Promise<void> => {
+    const { id, ...rest } = failParams;
+
+    // An update, not an upsert: a request that failed before its row was
+    // opened has nothing to close, and inventing a row here would record a
+    // failure with none of the request it belongs to.
+    //
+    // `end_time=is.null` is what makes this safe to call as a backstop on a
+    // path that may already have completed the row: a request that was logged
+    // successfully is left exactly as it is.
+    await patchInSupabase(
+      c,
+      'logs',
+      { id: `eq.${id}`, end_time: 'is.null' },
+      rest,
+      null,
+    );
   },
 
   deleteLog: async (c: AppContext, id: string) => {

@@ -8,6 +8,7 @@ import { runEvaluationsForLog } from '@api/utils/realtime-evaluations';
 import { emitSSEEvent } from '@api/utils/sse-event-manager';
 import { info } from '@shared/console-logging';
 import type { Skill, SkillOptimizationEvaluation } from '@shared/types/data';
+import { isCompletedLog } from '@shared/types/data/log';
 import type { EvaluationMethodName } from '@shared/types/evaluations';
 
 /** How many skipped requests one pass will judge */
@@ -59,7 +60,9 @@ export async function judgeLogsWithoutRuns(
       order: 'asc',
       limit: BACKLOG_LIMIT,
     })
-  ).filter((log) => log.start_time + log.duration < cutoff);
+  )
+    .filter(isCompletedLog)
+    .filter((log) => log.start_time + log.duration < cutoff);
 
   let judged = 0;
   for (const log of backlog) {

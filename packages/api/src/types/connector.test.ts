@@ -3,7 +3,7 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
-import type { Log } from '@shared/types/data/log';
+import type { CompletedLog } from '@shared/types/data/log';
 import type { SkillOptimizationEvaluation } from '@shared/types/data/skill-optimization-evaluation';
 import {
   type EvaluationMethodDetails,
@@ -84,7 +84,7 @@ describe('Connector Interfaces', () => {
           response_body: { output: 'test output' },
         },
         metadata: { ground_truth: { text: 'expected output' } },
-      } as unknown as Log;
+      } as unknown as CompletedLog;
 
       const result = await connector.evaluateLog(
         mockContext,
@@ -133,7 +133,7 @@ describe('Connector Interfaces', () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        const log = {} as unknown as Log;
+        const log = {} as unknown as CompletedLog;
 
         await connector.evaluateLog(
           mockContext,
@@ -177,7 +177,7 @@ describe('Connector Interfaces', () => {
             request_body: { message: 'test' },
           },
           metadata: {},
-        } as unknown as Log;
+        } as unknown as CompletedLog;
 
         await connector.evaluateLog(
           mockContext,
@@ -211,7 +211,7 @@ describe('Connector Interfaces', () => {
         const result = connector.evaluateLog(
           mockContext,
           evaluation,
-          {} as unknown as Log,
+          {} as unknown as CompletedLog,
           mockStorageConnector,
         );
 

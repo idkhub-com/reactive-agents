@@ -156,6 +156,9 @@ export function LogDetailsView(): ReactElement {
   // Extract temperature from request body
   const temperature = useMemo(() => {
     if (!selectedLog) return null;
+    // Still running, or failed before a provider answered: there is no
+    // exchange to render, and the view says so instead.
+    if (!selectedLog.ai_provider_request_log) return null;
     const requestBody = selectedLog.ai_provider_request_log?.request_body;
     if (
       requestBody &&
@@ -170,6 +173,9 @@ export function LogDetailsView(): ReactElement {
   // Extract thinking effort from request body
   const thinkingEffort = useMemo(() => {
     if (!selectedLog) return null;
+    // Still running, or failed before a provider answered: there is no
+    // exchange to render, and the view says so instead.
+    if (!selectedLog.ai_provider_request_log) return null;
     const requestBody = selectedLog.ai_provider_request_log?.request_body;
     if (requestBody && typeof requestBody === 'object') {
       // Check for thinking.type (Anthropic extended thinking)
@@ -193,6 +199,9 @@ export function LogDetailsView(): ReactElement {
   // the previous log's messages under the new log's header.
   const saRequestData = useMemo((): SuperAgentsRequestData | null => {
     if (!selectedLog) return null;
+    // Still running, or failed before a provider answered: there is no
+    // exchange to render, and the view says so instead.
+    if (!selectedLog.ai_provider_request_log) return null;
     // A log recorded against a route or body shape this build no longer
     // knows how to parse should cost us this one view, not the whole
     // dashboard -- the error boundary above wraps every provider.
@@ -378,9 +387,11 @@ export function LogDetailsView(): ReactElement {
               <HeaderSeparator />
               <HeaderItem label="Model:">
                 <span className="font-mono">
-                  {PrettyAIProvider[selectedLog.ai_provider] ??
-                    selectedLog.ai_provider}
-                  /{selectedLog.model}
+                  {selectedLog.ai_provider
+                    ? (PrettyAIProvider[selectedLog.ai_provider] ??
+                      selectedLog.ai_provider)
+                    : '—'}
+                  /{selectedLog.model ?? '—'}
                 </span>
               </HeaderItem>
               {selectedLog.span_name && (
@@ -638,7 +649,7 @@ export function LogDetailsView(): ReactElement {
               )}
               {selectedLog &&
                 saRequestData &&
-                selectedLog.ai_provider_request_log.response_body &&
+                selectedLog.ai_provider_request_log?.response_body &&
                 ('choices' in
                   selectedLog.ai_provider_request_log.response_body ||
                   'output' in

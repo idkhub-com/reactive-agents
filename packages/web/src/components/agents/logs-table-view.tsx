@@ -1,6 +1,14 @@
 'use client';
 
 import type { Log } from '@shared/types/data';
+import {
+  isRunning,
+  LogDuration,
+  LogEvalScore,
+  LogFunction,
+  LogModel,
+  LogStatusBadge,
+} from '@web/components/agents/log-cells';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {
@@ -46,13 +54,7 @@ import {
 import { useLogs } from '@web/providers/logs';
 import { getStringHashColor } from '@web/utils/http-method-colors';
 import { formatLogTimestamp } from '@web/utils/time';
-import {
-  CalendarIcon,
-  CheckCircle2,
-  InfoIcon,
-  SearchIcon,
-  XCircle,
-} from 'lucide-react';
+import { CalendarIcon, InfoIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
@@ -77,13 +79,21 @@ export interface LogsTableViewProps {
   filters?: ReactNode;
 }
 
-const getTemperature = (log: Log): number | null => {
+/**
+ * The temperature the request was sent with.
+ *
+ * Three answers, not two: a number; `null` when the provider was asked
+ * without one, which is what "not supported" means; and `undefined` while the
+ * request is still running, when there is no provider exchange to read yet.
+ * Collapsing the last two claims the model does not support temperature and
+ * then corrects itself when the request finishes.
+ */
+const getTemperature = (log: Log): number | null | undefined => {
   const requestBody = log.ai_provider_request_log?.request_body;
-  if (
-    requestBody &&
-    typeof requestBody === 'object' &&
-    'temperature' in requestBody
-  ) {
+  if (!requestBody || typeof requestBody !== 'object') {
+    return undefined;
+  }
+  if ('temperature' in requestBody) {
     return requestBody.temperature as number;
   }
   return null;
@@ -109,13 +119,6 @@ const getThinkingEffort = (log: Log): string | null => {
   return null;
 };
 
-const getStatusBadgeVariant = (status: number) => {
-  if (status >= 200 && status < 300) return 'default';
-  if (status >= 400 && status < 500) return 'destructive';
-  if (status >= 500) return 'destructive';
-  return 'secondary';
-};
-
 export function LogsTableView({
   description,
   emptyText,
@@ -130,8 +133,14 @@ export function LogsTableView({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [goToPageInput, setGoToPageInput] = useState('');
 
+  const runningCount = logs.filter((log: Log) => log.end_time === null).length;
+
   const filteredLogs = logs.filter((log: Log) => {
     if (statusFilter !== 'all') {
+      // A request still running has no status to match yet.
+      if (log.status === null) {
+        return false;
+      }
       const rangeStart = Number(statusFilter);
       if (log.status < rangeStart || log.status >= rangeStart + 100) {
         return false;
@@ -199,6 +208,7 @@ export function LogsTableView({
                 <CardTitle>Request Logs</CardTitle>
                 <CardDescription>
                   {filteredLogs.length} logs found
+                  {runningCount > 0 && `, ${runningCount} running`}
                 </CardDescription>
               </div>
             </div>
@@ -245,52 +255,38 @@ export function LogsTableView({
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.map((log) => {
+                    const running = isRunning(log);
                     const temperature = getTemperature(log);
                     const thinkingEffort = getThinkingEffort(log);
-                    const evalScore =
-                      log.avg_eval_score !== null &&
-                      log.avg_eval_score !== undefined
-                        ? log.avg_eval_score
-                        : null;
 
                     return (
                       <TableRow
                         key={log.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className={
+                          running
+                            ? 'cursor-pointer bg-muted/30 hover:bg-muted/50'
+                            : 'cursor-pointer hover:bg-muted/50'
+                        }
+                        data-testid={running ? 'running-log-row' : undefined}
                         onClick={() => onLogClick(log)}
                       >
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(log.status)}>
-                            {log.status}
-                          </Badge>
+                          <LogStatusBadge log={log} />
                         </TableCell>
                         <TableCell>
-                          {evalScore !== null ? (
-                            <div className="flex items-center gap-1">
-                              {evalScore >= 0.7 ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <XCircle className="h-3 w-3 text-red-500" />
-                              )}
-                              <span className="font-mono text-xs">
-                                {(evalScore * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">
-                              —
-                            </span>
-                          )}
+                          <LogEvalScore log={log} />
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{log.method}</Badge>
                         </TableCell>
-                        <TableCell>{log.function_name || 'N/A'}</TableCell>
+                        <TableCell>
+                          <LogFunction log={log} />
+                        </TableCell>
                         <TableCell className="max-w-xs truncate">
                           {log.endpoint}
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs">{log.model}</span>
+                          <LogModel log={log} />
                         </TableCell>
                         <TableCell>
                           {log.trace_id ? (
@@ -308,9 +304,13 @@ export function LogsTableView({
                         </TableCell>
                         <TableCell>{extraColumn.render(log)}</TableCell>
                         <TableCell>
-                          {temperature !== null ? (
+                          {typeof temperature === 'number' ? (
                             <span className="font-mono text-xs">
                               {temperature.toFixed(2)}
+                            </span>
+                          ) : temperature === undefined ? (
+                            <span className="text-muted-foreground text-xs">
+                              —
                             </span>
                           ) : (
                             <TooltipProvider>
@@ -342,7 +342,7 @@ export function LogsTableView({
                           {formatLogTimestamp(log.start_time)}
                         </TableCell>
                         <TableCell>
-                          {log.duration ? `${log.duration}ms` : 'N/A'}
+                          <LogDuration log={log} />
                         </TableCell>
                       </TableRow>
                     );

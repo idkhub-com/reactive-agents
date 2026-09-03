@@ -2,8 +2,8 @@
 
 import type { Log } from '@shared/types/data';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { LogTagBadge } from '@web/components/agents/log-cells';
 import { LogsTableView } from '@web/components/agents/logs-table-view';
-import { Badge } from '@web/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -81,31 +81,14 @@ export function AgentLogsView(): ReactElement {
   const getSkillName = (log: Log): string | null =>
     skills.find((skill) => skill.id === log.skill_id)?.name ?? null;
 
-  const renderSkill = (log: Log) => {
-    const skillName = getSkillName(log);
-    if (!skillName) {
-      return <span className="text-muted-foreground text-xs">—</span>;
-    }
-    return (
-      <Badge variant="outline" className="text-xs">
-        {skillName}
-      </Badge>
-    );
-  };
+  const renderSkill = (log: Log) => <LogTagBadge value={getSkillName(log)} />;
 
   const renderPartition = (log: Log) => {
     if (!log.cluster_id) {
-      return <span className="text-muted-foreground text-xs">—</span>;
+      return <LogTagBadge value={null} />;
     }
     const cluster = clusters.find((c) => c.id === log.cluster_id);
-    if (!cluster) {
-      return <span className="text-muted-foreground text-xs">Not found</span>;
-    }
-    return (
-      <Badge variant="outline" className="font-mono text-xs">
-        {cluster.name}
-      </Badge>
-    );
+    return <LogTagBadge value={cluster?.name} mono missing="Not found" />;
   };
 
   const selectSkill = (value: string): void => {
