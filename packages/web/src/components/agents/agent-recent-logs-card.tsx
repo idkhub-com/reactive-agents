@@ -1,6 +1,6 @@
 'use client';
 
-import { PrettyFunctionName } from '@shared/types/api/request/function-name';
+import { RecentLogsTable } from '@web/components/agents/recent-logs-table';
 import {
   Card,
   CardContent,
@@ -9,14 +9,6 @@ import {
   CardTitle,
 } from '@web/components/ui/card';
 import { Skeleton } from '@web/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@web/components/ui/table';
 import { usePermissiveNavigate } from '@web/hooks/use-permissive-navigate';
 import { useAgents } from '@web/providers/agents';
 import { useLogs } from '@web/providers/logs';
@@ -87,43 +79,15 @@ export function AgentRecentLogsCard(): ReactElement | null {
           <p className="p-6 text-sm text-muted-foreground">No logs available</p>
         ) : (
           <div className="m-4 border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Function</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Skill</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentLogs.slice(0, 5).map((log) => {
-                  const skillName = skills.find(
-                    (skill) => skill.id === log.skill_id,
-                  )?.name;
-                  return (
-                    <TableRow key={log.id} className="hover:bg-transparent">
-                      <TableCell className="font-medium">
-                        {PrettyFunctionName[log.function_name] ||
-                          log.function_name ||
-                          'N/A'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {log.model}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {skillName ?? '—'}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {log.duration === null
-                          ? 'running'
-                          : `${log.duration.toFixed(0)}ms`}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <RecentLogsTable
+              logs={recentLogs}
+              context={{
+                header: 'Skill',
+                render: (log) =>
+                  skills.find((skill) => skill.id === log.skill_id)?.name ??
+                  '\u2014',
+              }}
+            />
           </div>
         )}
       </CardContent>

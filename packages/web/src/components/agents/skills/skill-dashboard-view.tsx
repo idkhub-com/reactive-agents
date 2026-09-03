@@ -1,11 +1,11 @@
 'use client';
 
-import { PrettyFunctionName } from '@shared/types/api/request/function-name';
 import { useQuery } from '@tanstack/react-query';
 import {
   getSkillEvaluationScoresByTimeBucket,
   resetSkill,
 } from '@web/api/v1/super-agents/skills';
+import { RecentLogsTable } from '@web/components/agents/recent-logs-table';
 import { ManageSkillModelsDialog } from '@web/components/agents/skills/manage-skill-models-dialog';
 import { SkillStatusIndicator } from '@web/components/agents/skills/skill-status-indicator';
 import { SkillWarmingUpIndicator } from '@web/components/agents/skills/skill-warming-up-indicator';
@@ -721,46 +721,15 @@ export function SkillDashboardView(): ReactElement {
                 </p>
               ) : (
                 <div className="m-4 border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead>Function</TableHead>
-                        <TableHead>Model</TableHead>
-                        <TableHead>Partition</TableHead>
-                        <TableHead className="text-right">Duration</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentLogs.slice(0, 5).map((log) => {
-                        const cluster = clusterStates.find(
-                          (c) => c.id === log.cluster_id,
-                        );
-                        return (
-                          <TableRow
-                            key={log.id}
-                            className="hover:bg-transparent"
-                          >
-                            <TableCell className="font-medium">
-                              {PrettyFunctionName[log.function_name] ||
-                                log.function_name ||
-                                'N/A'}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {log.model}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {cluster?.name ?? '\u2014'}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {log.duration === null
-                                ? 'running'
-                                : `${log.duration.toFixed(0)}ms`}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <RecentLogsTable
+                    logs={recentLogs}
+                    context={{
+                      header: 'Partition',
+                      render: (log) =>
+                        clusterStates.find((c) => c.id === log.cluster_id)
+                          ?.name ?? '\u2014',
+                    }}
+                  />
                 </div>
               )}
             </CardContent>

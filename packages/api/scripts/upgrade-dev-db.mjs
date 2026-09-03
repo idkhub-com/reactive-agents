@@ -16,9 +16,19 @@
  * requests that fail before reaching one.
  *
  * SQLite cannot relax NOT NULL with ALTER, so the table is rebuilt: a new
- * table, the rows copied across, then swapped. That is the whole risk here,
- * and it runs in one transaction -- either the new table is in place with
- * every row, or nothing changed.
+ * table, the rows copied across, then swapped.
+ *
+ * The danger in that is `DROP TABLE logs`, because three tables reference
+ * `logs(id)` ON DELETE CASCADE -- evaluation runs, feedbacks and improved
+ * responses. Foreign keys have to be off for the drop, and `PRAGMA
+ * foreign_keys` is a **no-op inside a transaction**, so it cannot be the
+ * first statement of the batch: it has to be set on the connection first, and
+ * the transaction opened by hand afterwards. Getting that wrong silently
+ * deletes every evaluation score in the database, which is exactly what an
+ * earlier version of this script did.
+ *
+ * The child rows are counted before and after as a guard, and the whole thing
+ * rolls back if they do not match.
  *
  *   pnpm db:upgrade [-- path-to-db]
  *
@@ -97,6 +107,18 @@ const main = async () => {
   const { rows } = await client.execute('SELECT COUNT(*) AS n FROM logs');
   console.log(`Rebuilding \`logs\` (${rows[0].n} rows)...`);
 
+  // Everything that would be taken with `logs` if the drop cascaded.
+  const dependents = [
+    'skill_optimization_evaluation_runs',
+    'feedbacks',
+    'improved_responses',
+  ];
+  const before = {};
+  for (const table of dependents) {
+    const result = await client.execute(`SELECT COUNT(*) AS n FROM ${table}`);
+    before[table] = Number(result.rows[0].n);
+  }
+
   // The current shape, from `libsqlMigrations`. Kept here rather than
   // imported because this script has to run against the built tree too.
   const create = `CREATE TABLE logs_upgraded (
@@ -143,22 +165,24 @@ const main = async () => {
     .filter((name) => name !== 'error');
   const columnList = carried.join(', ');
 
-  await client.batch(
-    [
-      'PRAGMA foreign_keys = OFF',
-      'DROP VIEW IF EXISTS logs_with_eval_scores',
-      create,
-      `INSERT INTO logs_upgraded (${columnList}) SELECT ${columnList} FROM logs`,
-      'DROP TABLE logs',
-      'ALTER TABLE logs_upgraded RENAME TO logs',
-      'CREATE INDEX IF NOT EXISTS idx_logs_agent_id ON logs(agent_id)',
-      'CREATE INDEX IF NOT EXISTS idx_logs_skill_id ON logs(skill_id)',
-      'CREATE INDEX IF NOT EXISTS idx_logs_start_time ON logs(start_time)',
-      'CREATE INDEX IF NOT EXISTS idx_logs_end_time ON logs(end_time)',
-      'CREATE INDEX IF NOT EXISTS idx_logs_app_id ON logs(app_id)',
-      'CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status)',
-      'CREATE INDEX IF NOT EXISTS idx_logs_cache_status ON logs(cache_status)',
-      `CREATE VIEW IF NOT EXISTS logs_with_eval_scores AS
+  // Off *before* the transaction opens: inside one it does nothing, and the
+  // drop below would then cascade through every table referencing logs(id).
+  await client.execute('PRAGMA foreign_keys = OFF');
+
+  const statements = [
+    'DROP VIEW IF EXISTS logs_with_eval_scores',
+    create,
+    `INSERT INTO logs_upgraded (${columnList}) SELECT ${columnList} FROM logs`,
+    'DROP TABLE logs',
+    'ALTER TABLE logs_upgraded RENAME TO logs',
+    'CREATE INDEX IF NOT EXISTS idx_logs_agent_id ON logs(agent_id)',
+    'CREATE INDEX IF NOT EXISTS idx_logs_skill_id ON logs(skill_id)',
+    'CREATE INDEX IF NOT EXISTS idx_logs_start_time ON logs(start_time)',
+    'CREATE INDEX IF NOT EXISTS idx_logs_end_time ON logs(end_time)',
+    'CREATE INDEX IF NOT EXISTS idx_logs_app_id ON logs(app_id)',
+    'CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status)',
+    'CREATE INDEX IF NOT EXISTS idx_logs_cache_status ON logs(cache_status)',
+    `CREATE VIEW IF NOT EXISTS logs_with_eval_scores AS
         SELECT
           l.*,
           (
@@ -177,11 +201,40 @@ const main = async () => {
             WHERE er.log_id = l.id
           ) AS eval_run_count
         FROM logs l`,
-    ],
-    'write',
-  );
+  ];
 
-  await client.execute('PRAGMA foreign_keys = ON');
+  try {
+    await client.execute('BEGIN');
+    for (const sql of statements) {
+      await client.execute(sql);
+    }
+
+    // The guard: if the drop took anything with it, none of this is kept.
+    for (const table of dependents) {
+      const result = await client.execute(`SELECT COUNT(*) AS n FROM ${table}`);
+      const now = Number(result.rows[0].n);
+      if (now !== before[table]) {
+        throw new Error(
+          `${table} went from ${before[table]} rows to ${now}: the drop cascaded. Rolling back.`,
+        );
+      }
+    }
+
+    const violations = await client.execute('PRAGMA foreign_key_check');
+    if (violations.rows.length > 0) {
+      throw new Error(
+        `${violations.rows.length} foreign key violations after the rebuild. Rolling back.`,
+      );
+    }
+
+    await client.execute('COMMIT');
+  } catch (e) {
+    await client.execute('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    await client.execute('PRAGMA foreign_keys = ON');
+  }
+
   console.log('Rebuilt `logs`.');
 
   await refreshFingerprints();

@@ -1,6 +1,12 @@
 'use client';
 
 import type { Log } from '@shared/types/data';
+import {
+  isRunning,
+  LogDuration,
+  LogEvalScore,
+  LogStatusBadge,
+} from '@web/components/agents/log-cells';
 import { Badge } from '@web/components/ui/badge';
 import { Button } from '@web/components/ui/button';
 import {
@@ -46,16 +52,10 @@ import {
 import { useLogs } from '@web/providers/logs';
 import { getStringHashColor } from '@web/utils/http-method-colors';
 import { formatLogTimestamp } from '@web/utils/time';
-import {
-  CalendarIcon,
-  CheckCircle2,
-  InfoIcon,
-  SearchIcon,
-  XCircle,
-} from 'lucide-react';
+import { CalendarIcon, InfoIcon, SearchIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ReactElement, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * The request-logs page. The caller wires the fetch scope into the logs
@@ -77,13 +77,21 @@ export interface LogsTableViewProps {
   filters?: ReactNode;
 }
 
-const getTemperature = (log: Log): number | null => {
+/**
+ * The temperature the request was sent with.
+ *
+ * Three answers, not two: a number; `null` when the provider was asked
+ * without one, which is what "not supported" means; and `undefined` while the
+ * request is still running, when there is no provider exchange to read yet.
+ * Collapsing the last two claims the model does not support temperature and
+ * then corrects itself when the request finishes.
+ */
+const getTemperature = (log: Log): number | null | undefined => {
   const requestBody = log.ai_provider_request_log?.request_body;
-  if (
-    requestBody &&
-    typeof requestBody === 'object' &&
-    'temperature' in requestBody
-  ) {
+  if (!requestBody || typeof requestBody !== 'object') {
+    return undefined;
+  }
+  if ('temperature' in requestBody) {
     return requestBody.temperature as number;
   }
   return null;
@@ -107,44 +115,6 @@ const getThinkingEffort = (log: Log): string | null => {
     }
   }
   return null;
-};
-
-/** How often the counter on a running request is redrawn. */
-const PENDING_TICK_MS = 200;
-
-/**
- * The duration of a request that has not finished, counting up.
- *
- * Measured from the row's own `start_time`, which the server wrote, so a
- * reload picks a running request up where it actually is. It owns its own
- * interval so that ticking costs one cell rather than the whole table: a page
- * of fifty finished rows has no reason to re-render five times a second
- * because one request is in flight.
- */
-function PendingDuration({ startTime }: { startTime: number }): ReactElement {
-  const [elapsed, setElapsed] = useState(() => Date.now() - startTime);
-
-  useEffect(() => {
-    const interval = setInterval(
-      () => setElapsed(Date.now() - startTime),
-      PENDING_TICK_MS,
-    );
-    return () => clearInterval(interval);
-  }, [startTime]);
-
-  return (
-    <span className="font-mono text-xs tabular-nums">
-      {(Math.max(elapsed, 0) / 1000).toFixed(1)}s
-    </span>
-  );
-}
-
-const getStatusBadgeVariant = (status: number | null) => {
-  if (status === null) return 'secondary';
-  if (status >= 200 && status < 300) return 'default';
-  if (status >= 400 && status < 500) return 'destructive';
-  if (status >= 500) return 'destructive';
-  return 'secondary';
 };
 
 export function LogsTableView({
@@ -283,14 +253,9 @@ export function LogsTableView({
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.map((log) => {
-                    const running = log.end_time === null;
+                    const running = isRunning(log);
                     const temperature = getTemperature(log);
                     const thinkingEffort = getThinkingEffort(log);
-                    const evalScore =
-                      log.avg_eval_score !== null &&
-                      log.avg_eval_score !== undefined
-                        ? log.avg_eval_score
-                        : null;
 
                     return (
                       <TableRow
@@ -304,34 +269,10 @@ export function LogsTableView({
                         onClick={() => onLogClick(log)}
                       >
                         <TableCell>
-                          {running ? (
-                            <Badge variant="secondary" className="gap-1.5">
-                              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-                              running
-                            </Badge>
-                          ) : (
-                            <Badge variant={getStatusBadgeVariant(log.status)}>
-                              {log.status ?? '—'}
-                            </Badge>
-                          )}
+                          <LogStatusBadge log={log} />
                         </TableCell>
                         <TableCell>
-                          {evalScore !== null ? (
-                            <div className="flex items-center gap-1">
-                              {evalScore >= 0.7 ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <XCircle className="h-3 w-3 text-red-500" />
-                              )}
-                              <span className="font-mono text-xs">
-                                {(evalScore * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">
-                              —
-                            </span>
-                          )}
+                          <LogEvalScore log={log} />
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{log.method}</Badge>
@@ -359,9 +300,13 @@ export function LogsTableView({
                         </TableCell>
                         <TableCell>{extraColumn.render(log)}</TableCell>
                         <TableCell>
-                          {temperature !== null ? (
+                          {typeof temperature === 'number' ? (
                             <span className="font-mono text-xs">
                               {temperature.toFixed(2)}
+                            </span>
+                          ) : temperature === undefined ? (
+                            <span className="text-muted-foreground text-xs">
+                              —
                             </span>
                           ) : (
                             <TooltipProvider>
@@ -393,13 +338,7 @@ export function LogsTableView({
                           {formatLogTimestamp(log.start_time)}
                         </TableCell>
                         <TableCell>
-                          {running ? (
-                            <PendingDuration startTime={log.start_time} />
-                          ) : log.duration ? (
-                            `${log.duration}ms`
-                          ) : (
-                            'N/A'
-                          )}
+                          <LogDuration log={log} />
                         </TableCell>
                       </TableRow>
                     );

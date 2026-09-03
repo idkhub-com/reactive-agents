@@ -133,6 +133,19 @@ describe('LogsTableView', () => {
     expect(screen.getByText('1000ms')).toBeInTheDocument();
   });
 
+  it('does not claim a model lacks temperature while the request is running', () => {
+    // A running row has no provider exchange to read a temperature from.
+    // Saying "not supported" there asserts something unknown, and it visibly
+    // corrected itself to the real value when the request finished.
+    logsState.value = { ...logsState.value, logs: [aRunningLog()] };
+
+    renderTable();
+
+    expect(
+      screen.queryByText(/Temperature not supported/),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows a request that failed before a provider answered', () => {
     logsState.value = {
       ...logsState.value,
