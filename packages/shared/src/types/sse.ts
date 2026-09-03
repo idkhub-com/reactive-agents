@@ -83,4 +83,11 @@ export interface SSEConnectionOptions {
    * Ping interval in milliseconds to keep connection alive (default: 30000)
    */
   pingInterval?: number;
+
+  /**
+   * Whether to open the connection at all (default: true). False keeps the
+   * hook mounted without a stream, which is what an unauthenticated dashboard
+   * wants: the endpoint would only answer 401.
+   */
+  enabled?: boolean;
 }

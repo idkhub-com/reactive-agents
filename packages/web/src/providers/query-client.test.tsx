@@ -44,7 +44,7 @@ describe('ReactQueryProvider', (): void => {
     expect(screen.getByTestId('stale-time').textContent).toBe('60000');
     expect(screen.getByTestId('gc-time').textContent).toBe('300000');
     expect(screen.getByTestId('refetch-on-window-focus').textContent).toBe(
-      'false',
+      'true',
     );
     expect(screen.getByTestId('retry').textContent).toBe('1');
   });

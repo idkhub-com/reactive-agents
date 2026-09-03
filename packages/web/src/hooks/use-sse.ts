@@ -22,6 +22,13 @@ export interface SSEConnectionState {
   connecting: boolean;
   error: Error | null;
   reconnectAttempts: number;
+  /**
+   * True once the endpoint has refused us `maxReconnectAttempts` times in a
+   * row without a single successful open. The server is not going to start
+   * streaming on its own -- it is a runtime without SSE support, or it is
+   * down -- so the caller should fall back to polling instead of waiting.
+   */
+  degraded: boolean;
 }
 
 /**
@@ -37,6 +44,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
     reconnectDelay = 8787,
     maxReconnectAttempts = 5,
     pingInterval = 30000,
+    enabled = true,
   } = options;
 
   const [connectionState, setConnectionState] = useState<SSEConnectionState>({
@@ -44,6 +52,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
     connecting: false,
     error: null,
     reconnectAttempts: 0,
+    degraded: false,
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -52,24 +61,31 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
     Map<SSEEventType | '*', Set<SSEEventHandler>>
   >(new Map());
   const lastPingRef = useRef<number>(Date.now());
+  /**
+   * Attempts live in a ref rather than in state so that `connect` keeps a
+   * stable identity. Reading them from state made every failed attempt
+   * produce a new `connect`, which the mount effect below then treated as a
+   * reason to tear the connection down and build it again.
+   */
+  const reconnectAttemptsRef = useRef(0);
 
   /**
    * Subscribe to specific event type
    */
-  const subscribe = (
-    eventType: SSEEventType | '*',
-    handler: SSEEventHandler,
-  ): (() => void) => {
-    if (!eventHandlersRef.current.has(eventType)) {
-      eventHandlersRef.current.set(eventType, new Set());
-    }
-    eventHandlersRef.current.get(eventType)?.add(handler);
+  const subscribe = useCallback(
+    (eventType: SSEEventType | '*', handler: SSEEventHandler): (() => void) => {
+      if (!eventHandlersRef.current.has(eventType)) {
+        eventHandlersRef.current.set(eventType, new Set());
+      }
+      eventHandlersRef.current.get(eventType)?.add(handler);
 
-    // Return unsubscribe function
-    return () => {
-      eventHandlersRef.current.get(eventType)?.delete(handler);
-    };
-  };
+      // Return unsubscribe function
+      return () => {
+        eventHandlersRef.current.get(eventType)?.delete(handler);
+      };
+    },
+    [],
+  );
 
   /**
    * Connect to SSE endpoint
@@ -77,6 +93,10 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
   const connect = useCallback(() => {
     if (eventSourceRef.current) {
       return; // Already connected or connecting
+    }
+
+    if (typeof EventSource === 'undefined') {
+      return; // No EventSource (SSR, or a test environment without one)
     }
 
     setConnectionState((prev) => ({ ...prev, connecting: true, error: null }));
@@ -88,11 +108,13 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
 
       eventSource.onopen = () => {
         info('[SSE Client] Connection established');
+        reconnectAttemptsRef.current = 0;
         setConnectionState({
           connected: true,
           connecting: false,
           error: null,
           reconnectAttempts: 0,
+          degraded: false,
         });
         lastPingRef.current = Date.now();
       };
@@ -112,8 +134,11 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
             return;
           }
 
-          // Log received event
-          info('[SSE Client] Received event:', data.type);
+          // Only in development: a busy gateway emits a `log:created` per
+          // request, which in production would be a console line per request.
+          if (process.env.NODE_ENV === 'development') {
+            info('[SSE Client] Received event:', data.type);
+          }
 
           // Call specific event handlers
           const specificHandlers = eventHandlersRef.current.get(data.type);
@@ -143,23 +168,24 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
         }
       };
 
-      eventSource.onerror = (error) => {
-        console.error('[SSE Client] Connection error:', error);
-
+      eventSource.onerror = () => {
         eventSource.close();
         eventSourceRef.current = null;
 
-        const currentAttempts = connectionState.reconnectAttempts + 1;
+        const currentAttempts = reconnectAttemptsRef.current + 1;
+        reconnectAttemptsRef.current = currentAttempts;
+        const givingUp = currentAttempts >= maxReconnectAttempts;
 
         setConnectionState({
           connected: false,
           connecting: false,
           error: new Error('SSE connection failed'),
           reconnectAttempts: currentAttempts,
+          degraded: givingUp,
         });
 
         // Attempt to reconnect if under max attempts
-        if (currentAttempts < maxReconnectAttempts) {
+        if (!givingUp) {
           info(
             `[SSE Client] Reconnecting in ${reconnectDelay}ms (attempt ${currentAttempts}/${maxReconnectAttempts})`,
           );
@@ -167,7 +193,11 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
             connect();
           }, reconnectDelay);
         } else {
-          console.error('[SSE Client] Max reconnection attempts reached');
+          // Not an error worth shouting about: the endpoint answers 501 on
+          // runtimes that cannot hold a stream open, and the caller polls.
+          info(
+            '[SSE Client] Giving up on the event stream; falling back to polling',
+          );
         }
       };
 
@@ -180,12 +210,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
         error: error as Error,
       }));
     }
-  }, [
-    url,
-    connectionState.reconnectAttempts,
-    maxReconnectAttempts,
-    reconnectDelay,
-  ]);
+  }, [url, maxReconnectAttempts, reconnectDelay]);
 
   /**
    * Disconnect from SSE endpoint
@@ -206,6 +231,7 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
       connecting: false,
       error: null,
       reconnectAttempts: 0,
+      degraded: false,
     });
 
     info('[SSE Client] Disconnected');
@@ -215,16 +241,18 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
    * Check for stale connection (no ping received within interval)
    */
   useEffect(() => {
+    if (!connectionState.connected) {
+      return;
+    }
+
     const checkInterval = setInterval(() => {
-      if (connectionState.connected) {
-        const timeSinceLastPing = Date.now() - lastPingRef.current;
-        if (timeSinceLastPing > pingInterval * 2) {
-          console.warn(
-            '[SSE Client] Connection appears stale, reconnecting...',
-          );
-          disconnect();
-          connect();
-        }
+      const timeSinceLastPing = Date.now() - lastPingRef.current;
+      if (timeSinceLastPing > pingInterval * 2) {
+        console.warn('[SSE Client] Connection appears stale, reconnecting...');
+        // Reconnecting counts as a fresh start, not as a failed attempt.
+        reconnectAttemptsRef.current = 0;
+        disconnect();
+        connect();
       }
     }, pingInterval);
 
@@ -235,12 +263,17 @@ export function useSSE(url: string, options: SSEConnectionOptions = {}) {
    * Auto-connect on mount, disconnect on unmount
    */
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    reconnectAttemptsRef.current = 0;
     connect();
 
     return () => {
       disconnect();
     };
-  }, [connect, disconnect]);
+  }, [enabled, connect, disconnect]);
 
   return {
     connectionState,
