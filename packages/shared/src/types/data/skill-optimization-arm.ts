@@ -107,3 +107,19 @@ export const SkillOptimizationArmUpdateParams = z
 export type SkillOptimizationArmUpdateParams = z.infer<
   typeof SkillOptimizationArmUpdateParams
 >;
+
+/**
+ * The configuration whose system prompt and parameters served a request,
+ * recorded on the log as `metadata.served_configuration`: the log row keeps
+ * the partition it belongs to, but not which of that partition's
+ * configurations was pulled.
+ *
+ * The name is stored beside the id so a log reads without loading the arms
+ * it was written against, and so it still names the configuration if that
+ * arm is later deleted with its partition.
+ */
+export const ServedConfiguration = z.object({
+  id: z.uuid(),
+  name: z.string(),
+});
+export type ServedConfiguration = z.infer<typeof ServedConfiguration>;
