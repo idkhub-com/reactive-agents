@@ -29,6 +29,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@web/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@web/components/ui/select';
 import { Skeleton } from '@web/components/ui/skeleton';
 import {
   Tooltip,
@@ -48,11 +55,12 @@ import { cn } from '@web/utils/ui/utils';
 import {
   CheckIcon,
   ChevronsUpDownIcon,
+  Eraser,
   Loader2,
   RotateCcw,
   SaveIcon,
 } from 'lucide-react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface ModelOption {
@@ -60,6 +68,96 @@ interface ModelOption {
   name: string;
   provider: AIProvider;
   modelType: 'text' | 'embed';
+}
+
+/** The select value standing for "no value at all"; an item cannot be empty. */
+export const UNSET = '__unset__';
+export const UNSET_LABEL = 'Not set';
+
+/**
+ * The parameters a select's new value produces.
+ *
+ * Choosing the unset item *removes* the parameter rather than storing a
+ * value, which is what an optional parameter's absence means: the evaluation
+ * goes back to following the setting behind it. Pure and exported because a
+ * Radix select cannot be opened under jsdom, so this is where the behaviour
+ * is checked.
+ */
+export function paramsAfterSelect(
+  params: Record<string, unknown>,
+  key: string,
+  next: string,
+): Record<string, unknown> {
+  if (next === UNSET) {
+    const { [key]: _cleared, ...rest } = params;
+    return rest;
+  }
+  return { ...params, [key]: next };
+}
+
+/**
+ * The lowest value the input should accept.
+ *
+ * JSON Schema's exclusive bound has no HTML equivalent, and handing it to
+ * `min` straight would accept the one value it excludes -- `max_tokens: 0`
+ * for a positive integer, which the API then refuses. For an integer the
+ * next one up is exact; for a float it is the closest an input can express.
+ */
+function minimumFor(
+  property: SchemaProperty | undefined,
+  type: string | undefined,
+): number | undefined {
+  if (property?.minimum !== undefined) return property.minimum;
+  if (property?.exclusiveMinimum === undefined) return undefined;
+  return type === 'integer'
+    ? property.exclusiveMinimum + 1
+    : property.exclusiveMinimum;
+}
+
+/** The shape this form reads out of a method's JSON schema. */
+interface SchemaProperty {
+  type?: string;
+  enum?: unknown[];
+  description?: string;
+  default?: unknown;
+  minimum?: number;
+  exclusiveMinimum?: number;
+  maximum?: number;
+}
+
+/** A ghost icon button with a tooltip, the shape every param control repeats. */
+function IconButton({
+  label,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled: boolean;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={label}
+            className="h-8 w-8"
+          >
+            {children}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{label}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function EvaluationEditView(): ReactElement {
@@ -293,184 +391,221 @@ export function EvaluationEditView(): ReactElement {
     [evaluationMethod?.parameterSchema, params],
   );
 
-  const renderParamInput = (key: string, value: unknown) => {
-    const showReset = hasDefault(key) && isDifferentFromDefault(key, value);
+  /** The JSON-schema property behind a parameter, when the method has one. */
+  const propertyOf = (key: string): SchemaProperty | undefined => {
+    // biome-ignore lint/suspicious/noExplicitAny: JSON schema type is dynamic
+    const properties = (evaluationMethod?.parameterSchema as any)?.properties;
+    return properties?.[key];
+  };
 
-    // Determine the type of input based on the value
-    if (typeof value === 'boolean') {
+  /**
+   * A parameter the evaluation may simply not have.
+   *
+   * Zod lists a defaulted field as required, because the parsed value always
+   * has it; what is left out is genuinely optional. Those are the parameters
+   * whose absence means something -- the judge's token budget and reasoning
+   * effort fall back to system settings when the evaluation says nothing --
+   * so the form has to be able to express "not set" rather than only a value.
+   */
+  const isOptional = (key: string): boolean => {
+    // biome-ignore lint/suspicious/noExplicitAny: JSON schema type is dynamic
+    const required = (evaluationMethod?.parameterSchema as any)?.required;
+    return Array.isArray(required) ? !required.includes(key) : false;
+  };
+
+  /** Removes a parameter, which is how an optional one goes back to unset. */
+  const handleClearParam = (key: string) => {
+    setParams((prev) => {
+      const { [key]: _cleared, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  /**
+   * The label, its description, and whichever of the two buttons applies.
+   *
+   * A function rather than a component: `key` is React's own prop, so a
+   * component taking the parameter name under that name would never receive
+   * it, and one declared inside this render would remount on every keystroke.
+   */
+  const paramLabel = (key: string): ReactElement => {
+    const property = propertyOf(key);
+    const unset = !(key in params);
+    const showReset =
+      hasDefault(key) && isDifferentFromDefault(key, params[key]);
+    const showClear = !unset && isOptional(key);
+
+    return (
+      <div className="space-y-1">
+        <div className="inline-flex items-center gap-2 h-8">
+          <Label htmlFor={key} className="capitalize">
+            {key.replace(/_/g, ' ')}
+          </Label>
+          {showReset && (
+            <IconButton
+              label="Reset to default"
+              onClick={() => handleResetToDefault(key)}
+              disabled={isSaving}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </IconButton>
+          )}
+          {showClear && (
+            <IconButton
+              label="Clear, leaving it unset"
+              onClick={() => handleClearParam(key)}
+              disabled={isSaving}
+            >
+              <Eraser className="h-4 w-4" />
+            </IconButton>
+          )}
+        </div>
+        {property?.description && (
+          <p className="text-sm text-muted-foreground">
+            {property.description}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  /**
+   * One parameter's control, chosen from the schema rather than from the
+   * value.
+   *
+   * The value cannot decide it: an unset optional parameter has no value at
+   * all, and a form that switched on `typeof` could only render what the
+   * evaluation already had -- which is why a parameter nobody had set was
+   * invisible, and unsettable. The schema knows the type either way, and
+   * knows an enum is a choice rather than free text.
+   */
+  const renderParamInput = (key: string) => {
+    const property = propertyOf(key);
+    const value = params[key];
+    const unset = !(key in params);
+    const type =
+      property?.type ??
+      (typeof value === 'boolean'
+        ? 'boolean'
+        : typeof value === 'number'
+          ? 'number'
+          : typeof value === 'string'
+            ? 'string'
+            : undefined);
+
+    if (property?.enum) {
       return (
-        <div key={key} className="flex items-center gap-2 h-8">
+        <div key={key} className="space-y-2">
+          {paramLabel(key)}
+          <Select
+            value={unset ? UNSET : String(value)}
+            onValueChange={(next) =>
+              setParams((prev) => paramsAfterSelect(prev, key, next))
+            }
+            disabled={isSaving}
+          >
+            <SelectTrigger id={key} className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {isOptional(key) && (
+                <SelectItem value={UNSET}>{UNSET_LABEL}</SelectItem>
+              )}
+              {property.enum.map((option) => (
+                <SelectItem key={String(option)} value={String(option)}>
+                  {String(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    if (type === 'boolean') {
+      return (
+        <div key={key} className="flex items-start gap-2">
           <Checkbox
             id={key}
-            checked={value}
+            className="mt-2"
+            checked={value === true}
             onCheckedChange={(checked: boolean) =>
               handleParamChange(key, checked)
             }
             disabled={isSaving}
           />
-          <Label htmlFor={key} className="capitalize">
-            {key.replace(/_/g, ' ')}
-          </Label>
-          {showReset && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleResetToDefault(key)}
-                    disabled={isSaving}
-                    className="h-8 w-8"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Reset to default</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+          {paramLabel(key)}
         </div>
       );
     }
 
-    if (typeof value === 'number') {
-      // Extract min/max from schema
-      let min: number | undefined;
-      let max: number | undefined;
-      if (evaluationMethod?.parameterSchema) {
-        // biome-ignore lint/suspicious/noExplicitAny: JSON schema type is dynamic
-        const properties = (evaluationMethod.parameterSchema as any)
-          ?.properties;
-        if (properties?.[key]) {
-          min = properties[key].minimum;
-          max = properties[key].maximum;
-        }
-      }
-
+    if (type === 'number' || type === 'integer') {
       return (
         <div key={key} className="space-y-2">
-          <div className="inline-flex items-center gap-2 h-8">
-            <Label htmlFor={key} className="capitalize">
-              {key.replace(/_/g, ' ')}
-            </Label>
-            {showReset && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleResetToDefault(key)}
-                      disabled={isSaving}
-                      className="h-8 w-8"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Reset to default</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
+          {paramLabel(key)}
           <Input
             id={key}
             type="number"
-            value={value}
+            value={unset ? '' : String(value)}
+            placeholder={isOptional(key) ? UNSET_LABEL : undefined}
             onChange={(e) => {
+              // An emptied field is the parameter going back to unset, not a
+              // zero: the two mean different things to an optional setting.
+              if (e.target.value === '') {
+                handleClearParam(key);
+                return;
+              }
               const numValue = Number.parseFloat(e.target.value);
               if (!Number.isNaN(numValue)) {
                 handleParamChange(key, numValue);
               }
             }}
             disabled={isSaving}
-            step="any"
-            min={min}
-            max={max}
-            className="w-32"
+            step={type === 'integer' ? 1 : 'any'}
+            min={minimumFor(property, type)}
+            max={property?.maximum}
+            className="w-40"
           />
         </div>
       );
     }
 
-    if (typeof value === 'string') {
+    if (type === 'string') {
       return (
         <div key={key} className="space-y-2">
-          <div className="inline-flex items-center gap-2 h-8">
-            <Label htmlFor={key} className="capitalize flex-1">
-              {key.replace(/_/g, ' ')}
-            </Label>
-            {showReset && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleResetToDefault(key)}
-                      disabled={isSaving}
-                      className="h-8 w-8"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Reset to default</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
+          {paramLabel(key)}
           <Input
             id={key}
             type="text"
-            value={value}
-            onChange={(e) => handleParamChange(key, e.target.value)}
+            value={unset ? '' : String(value)}
+            placeholder={isOptional(key) ? UNSET_LABEL : undefined}
+            onChange={(e) =>
+              e.target.value === '' && isOptional(key)
+                ? handleClearParam(key)
+                : handleParamChange(key, e.target.value)
+            }
             disabled={isSaving}
           />
         </div>
       );
     }
 
-    // For complex types, show as JSON
+    // Anything structural: edited as JSON, as it always was.
     return (
       <div key={key} className="space-y-2">
-        <div className="flex items-center gap-2 h-8">
-          <Label htmlFor={key} className="capitalize">
-            {key.replace(/_/g, ' ')}
-          </Label>
-          {showReset && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleResetToDefault(key)}
-                    disabled={isSaving}
-                    className="h-8 w-8"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Reset to default</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        {paramLabel(key)}
         <Input
           id={key}
           type="text"
-          value={JSON.stringify(value)}
+          value={unset ? '' : JSON.stringify(value)}
+          placeholder={isOptional(key) ? UNSET_LABEL : undefined}
           onChange={(e) => {
+            if (e.target.value === '' && isOptional(key)) {
+              handleClearParam(key);
+              return;
+            }
             try {
-              const parsed = JSON.parse(e.target.value);
-              handleParamChange(key, parsed);
+              handleParamChange(key, JSON.parse(e.target.value));
             } catch {
               // Invalid JSON, ignore
             }
@@ -725,15 +860,13 @@ export function EvaluationEditView(): ReactElement {
                   ?.properties;
                 const schemaKeys = properties ? Object.keys(properties) : [];
 
-                // If we have schema keys, use that order; otherwise use params keys
+                // Every parameter the method declares, whether or not this
+                // evaluation has one: an optional parameter is unsettable if
+                // the form only shows what is already stored.
                 const orderedKeys =
-                  schemaKeys.length > 0
-                    ? schemaKeys.filter((key) => key in params)
-                    : Object.keys(params);
+                  schemaKeys.length > 0 ? schemaKeys : Object.keys(params);
 
-                return orderedKeys.map((key) =>
-                  renderParamInput(key, params[key]),
-                );
+                return orderedKeys.map((key) => renderParamInput(key));
               })()}
             </CardContent>
           </Card>
