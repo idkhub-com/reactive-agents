@@ -48,6 +48,31 @@ import {
  */
 test.describe.configure({ mode: 'serial' });
 
+/**
+ * The request the *caller* made, out of everything recorded for a model.
+ *
+ * Not simply the last one: the internal skills -- judging, task extraction,
+ * describing a new skill -- resolve their model from system settings, which
+ * are global to the server, so any traffic anywhere in the suite can append to
+ * this recording between the call under test and the assertion. Identifying
+ * the request by the message the caller sent is stable regardless.
+ */
+const servedRequestFor = (
+  forwarded: Record<string, unknown>[],
+  userMessage: string,
+): { messages: { role: string; content: string }[] } => {
+  const match = [...forwarded]
+    .reverse()
+    .find((entry) =>
+      (entry as { messages?: { content?: unknown }[] }).messages?.some(
+        (message) => message.content === userMessage,
+      ),
+    );
+
+  expect(match, `no forwarded request carried "${userMessage}"`).toBeDefined();
+  return match as { messages: { role: string; content: string }[] };
+};
+
 test.describe('optimization loop', () => {
   let configured: OptimizedSkill;
 
@@ -122,9 +147,7 @@ test.describe('optimization loop', () => {
     expect(body.choices[0].message.content).toBe('echo: plan a trip to Lisbon');
 
     const forwarded = await stubRequests(request, configured.textModel);
-    const served = forwarded[forwarded.length - 1] as {
-      messages: { role: string; content: string }[];
-    };
+    const served = servedRequestFor(forwarded, 'plan a trip to Lisbon');
     expect(served.messages[0]).toEqual({
       role: 'system',
       content: STUB_SYSTEM_PROMPT,
@@ -160,9 +183,7 @@ test.describe('optimization loop', () => {
     expect(response.status()).toBe(200);
 
     const forwarded = await stubRequests(request, configured.textModel);
-    const served = forwarded[forwarded.length - 1] as {
-      messages: { role: string; content: string }[];
-    };
+    const served = servedRequestFor(forwarded, userMessage);
     expect(served.messages[0]).toEqual({
       role: 'system',
       content: STUB_SYSTEM_PROMPT,
@@ -172,7 +193,7 @@ test.describe('optimization loop', () => {
       .poll(async () => {
         const logs = await getLogs(request, configured.skillId);
         const logged = logs.find((log) =>
-          log.ai_provider_request_log.request_body.messages?.some(
+          log.ai_provider_request_log?.request_body.messages?.some(
             (message) => message.content === userMessage,
           ),
         );
@@ -231,8 +252,9 @@ const decisionFor = async (
   content: string,
 ): Promise<string | undefined> => {
   const logs = await getLogs(request, skillId);
+  // A row still running has no provider exchange to match against yet.
   const log = logs.find((entry) =>
-    entry.ai_provider_request_log.request_body.messages?.some(
+    entry.ai_provider_request_log?.request_body.messages?.some(
       (message) => message.content === content,
     ),
   );
@@ -513,9 +535,7 @@ test.describe('skill creation', () => {
     expect(await getSkills(request, { agent_id: agent.id })).toHaveLength(1);
 
     const forwarded = await stubRequests(request, stub.textModel);
-    const served = forwarded[forwarded.length - 1] as {
-      messages: { role: string; content: string }[];
-    };
+    const served = servedRequestFor(forwarded, 'a table for four');
     expect(served.messages[0]).toEqual({
       role: 'system',
       content: conciergePrompt,
@@ -704,7 +724,7 @@ test.describe('feedback re-evaluation', () => {
       .poll(async () => {
         const logs = await getLogs(request, configured.skillId);
         const logged = logs.find((log) =>
-          log.ai_provider_request_log.request_body.messages?.some(
+          log.ai_provider_request_log?.request_body.messages?.some(
             (message) => message.content === userMessage,
           ),
         );

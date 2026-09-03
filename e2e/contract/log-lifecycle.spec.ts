@@ -18,9 +18,11 @@ import { createSkill } from '../fixtures/skills';
  * row is opened by the gateway middleware as it resolves the skill, and closed
  * when the response completes or when it fails.
  *
- * Here rather than in `contract/` because the behaviour is the middleware's,
- * not a storage detail -- though it does exercise the upsert both connectors
- * had to grow.
+ * In `contract/` because the upsert underneath is hand-written per backend --
+ * `ON CONFLICT ... DO UPDATE` on SQLite, `resolution=merge-duplicates` on
+ * PostgREST -- and so is the conditional update that closes a failed row
+ * without touching one that already completed. Two implementations of the
+ * same promise is exactly what this directory exists to check.
  */
 
 const LOGS_PATH = '/v1/super-agents/observability/logs';
