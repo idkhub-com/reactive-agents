@@ -125,6 +125,22 @@ export async function generateEvaluationCreateParams(
   connector: UserDataStorageConnector,
   examples?: string[],
 ): Promise<SkillOptimizationEvaluationCreateParams> {
+  const schema = evaluationConnector.getAIParameterSchema;
+
+  // A method with nothing for a model to fill in needs no model at all: its
+  // parameters are the schema's defaults. Resolving one first meant a
+  // deployment that had configured no generation model could not add even
+  // these -- and every method but task_completion is one of them.
+  if (!schema || !hasGeneratableParameters(schema)) {
+    return {
+      agent_id: skill.agent_id,
+      skill_id: skill.id,
+      evaluation_method: method,
+      params: {}, // Use default parameters from schema
+      weight: 1.0,
+    };
+  }
+
   // Resolve evaluation generation model from system settings
   const modelConfig = await resolveSystemSettingsModel(
     c,
@@ -165,21 +181,6 @@ export async function generateEvaluationCreateParams(
     agent_name: 'super-agents',
     skill_name: 'create-evaluations',
   };
-
-  const schema = evaluationConnector.getAIParameterSchema;
-
-  // If the evaluation method doesn't use AI for parameter generation,
-  // use default parameters from the parameter schema
-  if (!schema || !hasGeneratableParameters(schema)) {
-    const params: SkillOptimizationEvaluationCreateParams = {
-      agent_id: skill.agent_id,
-      skill_id: skill.id,
-      evaluation_method: method,
-      params: {}, // Use default parameters from schema
-      weight: 1.0,
-    };
-    return params;
-  }
 
   const jsonSchema = z.toJSONSchema(schema);
 

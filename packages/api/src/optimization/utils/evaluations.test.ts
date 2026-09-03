@@ -158,6 +158,26 @@ describe('generateEvaluationCreateParams', () => {
     expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
   });
 
+  it('adds a method with no AI parameters before any model is configured', async () => {
+    // Nothing for a model to fill in means nothing to ask, so the settings
+    // are not even consulted: a fresh deployment, which has none configured,
+    // can still add these. Left unstubbed on purpose -- what matters is that
+    // the resolver is never reached.
+    const params = await generateEvaluationCreateParams(
+      mockContext,
+      skill,
+      connectorFor(EvaluationMethodName.TURN_RELEVANCY),
+      EvaluationMethodName.TURN_RELEVANCY,
+      'an agent that maintains a website',
+      storageConnector,
+    );
+
+    expect(params.evaluation_method).toBe(EvaluationMethodName.TURN_RELEVANCY);
+    expect(params.params).toEqual({});
+    expect(mockParse).not.toHaveBeenCalled();
+    expect(resolveSystemSettingsModel).not.toHaveBeenCalled();
+  });
+
   it('does not call the model for a method with no AI parameters', async () => {
     /**
      * Every method but task_completion declares an empty AI schema. Asking a

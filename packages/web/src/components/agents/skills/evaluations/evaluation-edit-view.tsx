@@ -71,8 +71,48 @@ interface ModelOption {
 }
 
 /** The select value standing for "no value at all"; an item cannot be empty. */
-const UNSET = '__unset__';
-const UNSET_LABEL = 'Not set';
+export const UNSET = '__unset__';
+export const UNSET_LABEL = 'Not set';
+
+/**
+ * The parameters a select's new value produces.
+ *
+ * Choosing the unset item *removes* the parameter rather than storing a
+ * value, which is what an optional parameter's absence means: the evaluation
+ * goes back to following the setting behind it. Pure and exported because a
+ * Radix select cannot be opened under jsdom, so this is where the behaviour
+ * is checked.
+ */
+export function paramsAfterSelect(
+  params: Record<string, unknown>,
+  key: string,
+  next: string,
+): Record<string, unknown> {
+  if (next === UNSET) {
+    const { [key]: _cleared, ...rest } = params;
+    return rest;
+  }
+  return { ...params, [key]: next };
+}
+
+/**
+ * The lowest value the input should accept.
+ *
+ * JSON Schema's exclusive bound has no HTML equivalent, and handing it to
+ * `min` straight would accept the one value it excludes -- `max_tokens: 0`
+ * for a positive integer, which the API then refuses. For an integer the
+ * next one up is exact; for a float it is the closest an input can express.
+ */
+function minimumFor(
+  property: SchemaProperty | undefined,
+  type: string | undefined,
+): number | undefined {
+  if (property?.minimum !== undefined) return property.minimum;
+  if (property?.exclusiveMinimum === undefined) return undefined;
+  return type === 'integer'
+    ? property.exclusiveMinimum + 1
+    : property.exclusiveMinimum;
+}
 
 /** The shape this form reads out of a method's JSON schema. */
 interface SchemaProperty {
@@ -460,9 +500,7 @@ export function EvaluationEditView(): ReactElement {
           <Select
             value={unset ? UNSET : String(value)}
             onValueChange={(next) =>
-              next === UNSET
-                ? handleClearParam(key)
-                : handleParamChange(key, next)
+              setParams((prev) => paramsAfterSelect(prev, key, next))
             }
             disabled={isSaving}
           >
@@ -524,7 +562,7 @@ export function EvaluationEditView(): ReactElement {
             }}
             disabled={isSaving}
             step={type === 'integer' ? 1 : 'any'}
-            min={property?.minimum ?? property?.exclusiveMinimum}
+            min={minimumFor(property, type)}
             max={property?.maximum}
             className="w-40"
           />

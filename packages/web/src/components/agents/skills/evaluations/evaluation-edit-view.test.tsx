@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { EvaluationEditView } from '@web/components/agents/skills/evaluations/evaluation-edit-view';
+import {
+  EvaluationEditView,
+  paramsAfterSelect,
+  UNSET,
+} from '@web/components/agents/skills/evaluations/evaluation-edit-view';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -31,10 +35,12 @@ const { mockUpdateEvaluation, mockToast, parameterSchema } = vi.hoisted(() => ({
         enum: ['none', 'low', 'high'],
         description: 'How hard the model may think first.',
       },
+      instructions: { type: 'string' },
+      assistant_role: { type: 'string', default: 'the assistant' },
     },
     // Zod lists a defaulted field as required: what is missing here is what
     // is genuinely optional.
-    required: ['threshold', 'temperature'],
+    required: ['threshold', 'temperature', 'assistant_role'],
   },
 }));
 
@@ -45,7 +51,7 @@ const evaluation = {
   weight: 1,
   model_id: null,
   // What an evaluation created before these parameters existed looks like.
-  params: { threshold: 0.7, temperature: 0.1 },
+  params: { threshold: 0.7, temperature: 0.1, assistant_role: 'the reviewer' },
 };
 
 vi.mock('@web/api/v1/super-agents/skills', () => ({
@@ -200,5 +206,70 @@ describe('EvaluationEditView parameters', () => {
     expect(
       screen.queryByRole('button', { name: /clear, leaving it unset/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('clears an optional string emptied out, and keeps a required one', async () => {
+    // The two look identical on screen and mean opposite things: an optional
+    // parameter emptied is gone, a required one is the empty string it says.
+    render(<EvaluationEditView />);
+
+    const optional = await screen.findByLabelText('instructions');
+    fireEvent.change(optional, { target: { value: 'be strict' } });
+    fireEvent.change(optional, { target: { value: '' } });
+
+    fireEvent.change(screen.getByLabelText('assistant role'), {
+      target: { value: '' },
+    });
+    save();
+
+    await waitFor(() => expect(mockUpdateEvaluation).toHaveBeenCalled());
+    expect(savedParams()).not.toHaveProperty('instructions');
+    expect(savedParams()).toHaveProperty('assistant_role', '');
+  });
+
+  it('accepts no less than an exclusive minimum allows', async () => {
+    // `max_tokens` is a positive integer, which the schema says as
+    // `exclusiveMinimum: 0`. Handed to `min` unchanged it would accept the
+    // one value it excludes.
+    render(<EvaluationEditView />);
+
+    expect(await screen.findByLabelText('max tokens')).toHaveAttribute(
+      'min',
+      '1',
+    );
+  });
+});
+
+describe('paramsAfterSelect', () => {
+  // A Radix select cannot be opened under jsdom, so its behaviour is checked
+  // here rather than through the rendered control.
+  const params = { threshold: 0.7, reasoning_effort: 'low' };
+
+  it('stores the value chosen', () => {
+    expect(paramsAfterSelect(params, 'reasoning_effort', 'none')).toEqual({
+      threshold: 0.7,
+      reasoning_effort: 'none',
+    });
+  });
+
+  it('removes the parameter when the unset item is chosen', () => {
+    const next = paramsAfterSelect(params, 'reasoning_effort', UNSET);
+
+    // Removed, not set to a value: absence is what sends the evaluation back
+    // to the setting behind it.
+    expect(next).not.toHaveProperty('reasoning_effort');
+    expect(next).toEqual({ threshold: 0.7 });
+  });
+
+  it('sets a parameter that was not there before', () => {
+    expect(
+      paramsAfterSelect({ threshold: 0.7 }, 'reasoning_effort', 'high'),
+    ).toEqual({ threshold: 0.7, reasoning_effort: 'high' });
+  });
+
+  it('leaves the parameters it was given alone', () => {
+    const before = { ...params };
+    paramsAfterSelect(params, 'reasoning_effort', UNSET);
+    expect(params).toEqual(before);
   });
 });
