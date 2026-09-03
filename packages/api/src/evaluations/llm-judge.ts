@@ -12,6 +12,7 @@ import {
 } from '@api/types/evaluations/llm-judge';
 import type { AppContext } from '@api/types/hono';
 import { error, warn } from '@shared/console-logging';
+import type { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import {
   type AIProvider,
   AIProvider as AIProviderEnum,
@@ -26,9 +27,44 @@ const LLM_JUDGE_MAX_RETRIES = 3;
 const LLM_JUDGE_RETRY_DELAY_BASE = 1000; // 1 second base delay
 
 /**
+ * The judge answered nothing readable.
+ *
+ * A clean stop with an empty answer is transient: a self-hosted model can
+ * stop having emitted only reasoning, then answer the identical request
+ * properly on the retry. A `length` stop is not. The model spent its whole
+ * completion budget before it wrote the answer, and the same request under
+ * the same budget does the same thing again, so retrying it only triples the
+ * cost of finding out. What fixes it is a setting: a bigger budget, or less
+ * reasoning.
+ */
+export class JudgeEmptyCompletionError extends Error {
+  constructor(
+    public readonly finishReason: string | null,
+    public readonly completionTokens: number,
+  ) {
+    super(
+      finishReason === 'length'
+        ? `The judge spent its whole completion budget before answering (${completionTokens} completion tokens, finish_reason: length): raise the judge token budget, or lower its reasoning effort`
+        : `The judge returned an empty completion (finish_reason: ${
+            finishReason ?? 'none'
+          }, ${completionTokens} completion tokens)`,
+    );
+    this.name = 'JudgeEmptyCompletionError';
+  }
+
+  /** Whether the identical request might answer next time. */
+  get retryable(): boolean {
+    return this.finishReason !== 'length';
+  }
+}
+
+/**
  * Check if an error is retryable for LLM judge requests
  */
 function isRetryableLLMJudgeError(error: unknown): boolean {
+  if (error instanceof JudgeEmptyCompletionError) {
+    return error.retryable;
+  }
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     return (
@@ -42,11 +78,8 @@ function isRetryableLLMJudgeError(error: unknown): boolean {
       message.includes('gateway') ||
       message.includes('service unavailable') ||
       // A judge that answered garbage may answer properly the second time.
-      message.includes('valid json') ||
-      // And one that answered nothing at all is the clearer case of the same
-      // thing: a self-hosted model can stop cleanly having emitted only
-      // reasoning, then answer the identical request properly on the retry.
-      message.includes('empty completion')
+      // (An empty answer is decided above, by how the completion stopped.)
+      message.includes('valid json')
     );
   }
   return false;
@@ -160,6 +193,11 @@ export interface LLMJudgeModelConfig {
    * it answers, and one that runs out returns nothing at all.
    */
   maxTokens?: number;
+  /**
+   * How hard a reasoning model may think first, from
+   * `options.judge.reasoning_effort`. Null or absent sends nothing.
+   */
+  reasoningEffort?: ReasoningEffort | null;
 }
 
 export function createLLMJudge(
@@ -171,10 +209,13 @@ export function createLLMJudge(
   const judgeConfig = {
     model: modelConfig?.model || config.model || 'gpt-5-mini',
     temperature: config.temperature || 0.1,
-    // The resolved model carries both settings; `config` stays as the
-    // override for a caller that resolves no model of its own.
+    // The resolved model carries what system settings say; an evaluation's
+    // own parameters win over that, being the more specific answer. Absent
+    // from both, the shared default applies.
     max_tokens:
-      modelConfig?.maxTokens ?? config.max_tokens ?? DEFAULT_JUDGE_MAX_TOKENS,
+      config.max_tokens ?? modelConfig?.maxTokens ?? DEFAULT_JUDGE_MAX_TOKENS,
+    reasoning_effort:
+      config.reasoning_effort ?? modelConfig?.reasoningEffort ?? null,
     timeout: modelConfig?.timeoutMs ?? config.timeout ?? 30000,
   };
 
@@ -324,6 +365,10 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           // evaluation's configured parameters had no effect on judging.
           temperature: judgeConfig.temperature,
           max_tokens: judgeConfig.max_tokens,
+          // Only when set: a model that takes no such parameter is left alone.
+          ...(judgeConfig.reasoning_effort
+            ? { reasoning_effort: judgeConfig.reasoning_effort }
+            : {}),
           messages: [
             { role: 'system', content: prompt.systemPrompt },
             { role: 'user', content: prompt.userPrompt },
@@ -347,11 +392,10 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           // Distinct from the parse failure below, and carrying what tells
           // the two apart in a log: a model that burned completion tokens and
           // stopped cleanly did answer, it just answered nowhere we can read.
-          const { completion_tokens } = response.usage ?? {};
-          throw new Error(
-            `The judge returned an empty completion (finish_reason: ${
-              choice.finish_reason ?? 'none'
-            }, ${completion_tokens ?? 0} completion tokens)`,
+          // One that stopped on length never got to answer at all.
+          throw new JudgeEmptyCompletionError(
+            choice.finish_reason ?? null,
+            response.usage?.completion_tokens ?? 0,
           );
         }
         // The SDK's `.parse()` throws on anything but strict JSON, and a
@@ -406,6 +450,16 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
       });
 
       if (
+        lastError instanceof JudgeEmptyCompletionError &&
+        !lastError.retryable
+      ) {
+        return getFallbackResult(
+          'budget_exhausted',
+          lastError.message,
+          retryInfo,
+        );
+      }
+      if (
         lastError.message.includes('fetch') ||
         lastError.message.includes('network')
       ) {
@@ -458,6 +512,7 @@ function getFallbackResult(
     | 'no_api_key'
     | 'network_error'
     | 'parse_error'
+    | 'budget_exhausted'
     | 'timeout_error'
     | 'api_error'
     | 'unknown_error',
@@ -471,6 +526,8 @@ function getFallbackResult(
     no_api_key: 'Evaluation skipped - OpenAI API key not configured',
     network_error: 'Evaluation failed - network connection error',
     parse_error: 'Evaluation failed - response parsing error',
+    budget_exhausted:
+      'Evaluation failed - the judge spent its whole token budget before answering',
     timeout_error: 'Evaluation failed - request timeout',
     api_error: 'Evaluation failed - OpenAI API error',
     unknown_error: 'Evaluation failed - unknown error occurred',

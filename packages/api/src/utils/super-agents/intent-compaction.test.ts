@@ -5,6 +5,7 @@ import {
   clearCompactedPrompts,
   compactSystemPrompt,
 } from '@api/utils/super-agents/intent-compaction';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
 import { SYSTEM_PROMPT_BUDGET } from '@shared/utils/request-intent';
 import OpenAI from 'openai';
@@ -64,6 +65,30 @@ describe('compactSystemPrompt', () => {
     expect(JSON.stringify(mockCreate.mock.calls[0])).toContain(
       'You are a coding CLI.',
     );
+  });
+
+  it('sends the compaction reasoning effort the settings chose', async () => {
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValue({
+      model: 'reflect-model',
+      provider: AIProvider.OPENAI,
+      apiKey: 'key',
+      timeoutMs: 90_000,
+      reasoningEffort: ReasoningEffort.NONE,
+    } as never);
+
+    await compactSystemPrompt(createMockContext(), connector, longPrompt);
+
+    // Summarising is transcription rather than deliberation, and a request
+    // carrying the prompt waits for it.
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      reasoning_effort: 'none',
+    });
+  });
+
+  it('sends none when the role leaves the model to its default', async () => {
+    await compactSystemPrompt(createMockContext(), connector, longPrompt);
+
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
   });
 
   it('waits as long as the configured compaction timeout allows', async () => {

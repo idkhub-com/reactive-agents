@@ -1,3 +1,4 @@
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { z } from 'zod';
 
 /**
@@ -6,7 +7,13 @@ import { z } from 'zod';
 export const LLMJudgeConfigSchema = z.object({
   model: z.string().optional().default('gpt-4o-mini'),
   temperature: z.number().min(0).max(2).optional().default(0.1),
-  max_tokens: z.number().positive().optional().default(1000),
+  /**
+   * What an evaluation wants instead of the resolved model's settings. Left
+   * out, the settings apply; given, they win over them -- an evaluation's own
+   * parameters are the more specific answer.
+   */
+  max_tokens: z.number().int().positive().optional(),
+  reasoning_effort: z.enum(ReasoningEffort).nullish(),
   timeout: z.number().positive().optional().default(30000),
 });
 

@@ -1,13 +1,17 @@
 'use client';
 
+import type { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { type AIProvider, PrettyAIProvider } from '@shared/types/constants';
 import {
   INTERNAL_ROLES,
   type InternalRole,
   MAX_JUDGE_MAX_TOKENS,
   MIN_JUDGE_MAX_TOKENS,
+  type SystemSettings,
   type SystemSettingsOptionsUpdate,
   type SystemSettingsUpdateParams,
+  TEXT_ROLES,
+  type TextRole,
 } from '@shared/types/data/system-settings';
 import {
   BoundedNumberField,
@@ -18,6 +22,7 @@ import {
   type ModelOption,
   ModelSelector,
 } from '@web/components/settings/model-selector';
+import { ReasoningEffortField } from '@web/components/settings/reasoning-effort-field';
 import {
   TimeoutField,
   timeoutProblem,
@@ -53,7 +58,7 @@ type ModelField =
   | 'skill_arbiter_model_id'
   | 'intent_compaction_model_id';
 
-interface FormValues extends Record<ModelField, string | null> {
+export interface FormValues extends Record<ModelField, string | null> {
   /**
    * Edited in seconds, keyed by the role whose `options.<role>.timeout_ms`
    * each one saves to, so adding a role adds a field here without touching
@@ -62,6 +67,11 @@ interface FormValues extends Record<ModelField, string | null> {
   timeouts: Record<InternalRole, number>;
   /** `options.judge.max_tokens`: completion tokens one judging call may spend. */
   judge_max_tokens: number;
+  /**
+   * `options.<role>.reasoning_effort`, keyed by role like the timeouts. Null
+   * leaves that role's model to its own default.
+   */
+  reasoningEfforts: Record<TextRole, ReasoningEffort | null>;
   developer_mode: boolean;
 }
 
@@ -72,14 +82,44 @@ const blankTimeouts = (): Record<InternalRole, number> =>
     number
   >;
 
+/** Every effort at the model's own default, before settings arrive. */
+const blankReasoningEfforts = (): Record<TextRole, ReasoningEffort | null> =>
+  Object.fromEntries(TEXT_ROLES.map((role) => [role, null])) as Record<
+    TextRole,
+    ReasoningEffort | null
+  >;
+
+/** What each role is called where a field has to name it. */
+const ROLE_LABELS: Record<InternalRole, string> = {
+  system_prompt_reflection: 'Reflection',
+  evaluation_generation: 'Evaluation Generation',
+  embedding: 'Embedding',
+  judge: 'Judge',
+  skill_arbiter: 'Arbiter',
+  intent_compaction: 'Compaction',
+};
+
 /** How each role's timeout reads in the dashboard. */
-const TIMEOUT_LABELS: Record<InternalRole, string> = {
-  system_prompt_reflection: 'Reflection Timeout',
-  evaluation_generation: 'Evaluation Generation Timeout',
-  embedding: 'Embedding Timeout',
-  judge: 'Judge Timeout',
-  skill_arbiter: 'Arbiter Timeout',
-  intent_compaction: 'Compaction Timeout',
+const TIMEOUT_LABELS = Object.fromEntries(
+  INTERNAL_ROLES.map((role) => [role, `${ROLE_LABELS[role]} Timeout`]),
+) as Record<InternalRole, string>;
+
+/** And its reasoning effort, where it has one. */
+const REASONING_LABELS = Object.fromEntries(
+  TEXT_ROLES.map((role) => [role, `${ROLE_LABELS[role]} Reasoning Effort`]),
+) as Record<TextRole, string>;
+
+const REASONING_DESCRIPTIONS: Record<TextRole, string> = {
+  system_prompt_reflection:
+    'How hard this model may think before writing a system prompt or naming a skill. Writing a prompt is the one internal call where thinking tends to pay for itself.',
+  evaluation_generation:
+    "How hard this model may think before writing a skill's evaluations. It runs in the background, so thinking costs time rather than a caller's wait.",
+  judge:
+    "How hard the judge may think before it answers. Its answer is a score and a sentence, so on a thinking model 'none' or 'low' keeps the token budget for the answer rather than the reasoning.",
+  skill_arbiter:
+    "The arbiter only has to name a skill or none, and a request waits for the answer, so 'none' or 'low' serves it best.",
+  intent_compaction:
+    'Compaction summarises a long system prompt, which is more transcription than deliberation. A request carrying an uncompacted prompt waits for it.',
 };
 
 const TIMEOUT_DESCRIPTIONS: Record<InternalRole, string> = {
@@ -96,6 +136,40 @@ const TIMEOUT_DESCRIPTIONS: Record<InternalRole, string> = {
   intent_compaction:
     'Seconds one compaction attempt may take; a timed-out attempt is retried once. These prompts run to thousands of tokens, so allow more than the arbiter gets — when compaction keeps timing out, every request carrying that prompt pays the wait and then routes on a truncated one.',
 };
+
+/**
+ * The options a save sends: only what differs from the stored settings, one
+ * object per role, so the server merges rather than overwrites. Exported for
+ * the tests, since the reasoning-effort select cannot be driven in jsdom.
+ */
+export function buildOptionsPatch(
+  formValues: FormValues,
+  settings: SystemSettings | null,
+): SystemSettingsOptionsUpdate {
+  const options: SystemSettingsOptionsUpdate = {};
+  for (const role of INTERNAL_ROLES) {
+    const ms = formValues.timeouts[role] * 1000;
+    if (ms !== settings?.options[role].timeout_ms) {
+      options[role] = { timeout_ms: ms };
+    }
+  }
+  if (formValues.judge_max_tokens !== settings?.options.judge.max_tokens) {
+    options.judge = {
+      ...options.judge,
+      max_tokens: formValues.judge_max_tokens,
+    };
+  }
+  for (const role of TEXT_ROLES) {
+    const effort = formValues.reasoningEfforts[role];
+    if (effort !== settings?.options[role].reasoning_effort) {
+      options[role] = { ...options[role], reasoning_effort: effort };
+    }
+  }
+  if (formValues.developer_mode !== settings?.options.developer_mode) {
+    options.developer_mode = formValues.developer_mode;
+  }
+  return options;
+}
 
 const JUDGE_MAX_TOKENS_LABEL = 'Judge Token Budget';
 const JUDGE_MAX_TOKENS_DESCRIPTION =
@@ -127,6 +201,7 @@ export function SystemSettingsView(): ReactElement {
     intent_compaction_model_id: null,
     timeouts: blankTimeouts(),
     judge_max_tokens: MIN_JUDGE_MAX_TOKENS,
+    reasoningEfforts: blankReasoningEfforts(),
     developer_mode: false,
   });
 
@@ -156,6 +231,12 @@ export function SystemSettingsView(): ReactElement {
           ]),
         ) as Record<InternalRole, number>,
         judge_max_tokens: settings.options.judge.max_tokens,
+        reasoningEfforts: Object.fromEntries(
+          TEXT_ROLES.map((role) => [
+            role,
+            settings.options[role].reasoning_effort,
+          ]),
+        ) as Record<TextRole, ReasoningEffort | null>,
         developer_mode: settings.options.developer_mode,
       });
       setIsDirty(false);
@@ -208,6 +289,17 @@ export function SystemSettingsView(): ReactElement {
 
   const handleJudgeMaxTokensChange = (tokens: number) => {
     setFormValues((prev) => ({ ...prev, judge_max_tokens: tokens }));
+    setIsDirty(true);
+  };
+
+  const handleReasoningEffortChange = (
+    role: TextRole,
+    effort: ReasoningEffort | null,
+  ) => {
+    setFormValues((prev) => ({
+      ...prev,
+      reasoningEfforts: { ...prev.reasoningEfforts, [role]: effort },
+    }));
     setIsDirty(true);
   };
 
@@ -313,22 +405,7 @@ export function SystemSettingsView(): ReactElement {
       }
       // The options patch carries only what changed; the server merges it
       // over what is stored.
-      const options: SystemSettingsOptionsUpdate = {};
-      for (const role of INTERNAL_ROLES) {
-        const ms = formValues.timeouts[role] * 1000;
-        if (ms !== settings?.options[role].timeout_ms) {
-          options[role] = { timeout_ms: ms };
-        }
-      }
-      if (formValues.judge_max_tokens !== settings?.options.judge.max_tokens) {
-        options.judge = {
-          ...options.judge,
-          max_tokens: formValues.judge_max_tokens,
-        };
-      }
-      if (formValues.developer_mode !== settings?.options.developer_mode) {
-        options.developer_mode = formValues.developer_mode;
-      }
+      const options = buildOptionsPatch(formValues, settings);
       if (Object.keys(options).length > 0) {
         updateParams.options = options;
       }
@@ -360,6 +437,17 @@ export function SystemSettingsView(): ReactElement {
 
   const isAnyLoading = isLoading || isLoadingModels;
   const hasNoModels = !isAnyLoading && models.length === 0;
+
+  /** One role's reasoning effort, beside its timeout. */
+  const reasoningControl = (role: TextRole): ReactElement => (
+    <ReasoningEffortField
+      label={REASONING_LABELS[role]}
+      description={REASONING_DESCRIPTIONS[role]}
+      value={formValues.reasoningEfforts[role]}
+      onChange={(effort) => handleReasoningEffortChange(role, effort)}
+      isLoading={isAnyLoading}
+    />
+  );
 
   /** One role's timeout, on the line beneath its model. */
   const timeoutControl = (role: InternalRole): ReactElement => (
@@ -424,7 +512,12 @@ export function SystemSettingsView(): ReactElement {
               }
               modelOptions={textModelOptions}
               isLoading={isAnyLoading}
-              controls={timeoutControl('system_prompt_reflection')}
+              controls={
+                <>
+                  {timeoutControl('system_prompt_reflection')}
+                  {reasoningControl('system_prompt_reflection')}
+                </>
+              }
             />
 
             <ModelSelector
@@ -437,7 +530,12 @@ export function SystemSettingsView(): ReactElement {
               }
               modelOptions={textModelOptions}
               isLoading={isAnyLoading}
-              controls={timeoutControl('evaluation_generation')}
+              controls={
+                <>
+                  {timeoutControl('evaluation_generation')}
+                  {reasoningControl('evaluation_generation')}
+                </>
+              }
             />
 
             <ModelSelector
@@ -474,6 +572,7 @@ export function SystemSettingsView(): ReactElement {
                     isLoading={isAnyLoading}
                     layout="inline"
                   />
+                  {reasoningControl('judge')}
                 </>
               }
             />
@@ -507,7 +606,12 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
               required={false}
               emptyOption="Same as System Prompt Reflection"
-              controls={timeoutControl('skill_arbiter')}
+              controls={
+                <>
+                  {timeoutControl('skill_arbiter')}
+                  {reasoningControl('skill_arbiter')}
+                </>
+              }
             />
 
             <ModelSelector
@@ -522,7 +626,12 @@ export function SystemSettingsView(): ReactElement {
               isLoading={isAnyLoading}
               required={false}
               emptyOption="Same as System Prompt Reflection"
-              controls={timeoutControl('intent_compaction')}
+              controls={
+                <>
+                  {timeoutControl('intent_compaction')}
+                  {reasoningControl('intent_compaction')}
+                </>
+              }
             />
           </CardContent>
         </Card>

@@ -6,7 +6,9 @@ import {
   resolveJudgeModelConfig,
   resolveSystemSettingsModel,
 } from '@api/utils/evaluation-model-resolver';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import type { Model, SkillOptimizationEvaluation } from '@shared/types/data';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { EvaluationMethodName } from '@shared/types/evaluations';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -62,15 +64,9 @@ describe('Evaluation Model Resolver', () => {
     evaluation_generation_model_id: 'model-1111-2222-3333-444455556666',
     skill_arbiter_model_id: null,
     intent_compaction_model_id: null,
-    options: {
-      system_prompt_reflection: { timeout_ms: 120_000 },
-      evaluation_generation: { timeout_ms: 120_000 },
-      embedding: { timeout_ms: 30_000 },
-      judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-      skill_arbiter: { timeout_ms: 15_000 },
+    options: SystemSettingsOptions.parse({
       intent_compaction: { timeout_ms: 15_000 },
-      developer_mode: false,
-    },
+    }),
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };
@@ -100,6 +96,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
         timeoutMs: 60_000,
+        reasoningEffort: null,
       });
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
@@ -127,6 +124,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
         timeoutMs: 30_000,
+        reasoningEffort: null,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.embedding_model_id,
@@ -153,6 +151,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
         timeoutMs: 120_000,
+        reasoningEffort: null,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.system_prompt_reflection_model_id,
@@ -179,6 +178,7 @@ describe('Evaluation Model Resolver', () => {
         provider: 'openai',
         apiKey: 'sk-test-api-key',
         timeoutMs: 120_000,
+        reasoningEffort: null,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: mockSystemSettings.evaluation_generation_model_id,
@@ -282,6 +282,7 @@ describe('Evaluation Model Resolver', () => {
         apiKey: undefined,
         customHost: 'http://localhost:11434',
         timeoutMs: 120_000,
+        reasoningEffort: null,
       });
     });
 
@@ -427,6 +428,7 @@ describe('Evaluation Model Resolver', () => {
         apiKey: 'sk-test-api-key',
         timeoutMs: 60_000,
         maxTokens: 4_000,
+        reasoningEffort: null,
       });
       expect(mockConnector.getModels).toHaveBeenCalledWith(mockContext, {
         id: 'custom-model-1111-2222-333344445555',
@@ -457,6 +459,7 @@ describe('Evaluation Model Resolver', () => {
         apiKey: 'sk-test-api-key',
         timeoutMs: 60_000,
         maxTokens: 4_000,
+        reasoningEffort: null,
       });
       expect(mockConnector.getSystemSettings).toHaveBeenCalled();
     });
@@ -494,13 +497,74 @@ describe('Evaluation Model Resolver', () => {
     });
   });
 
+  describe('reasoning effort', () => {
+    beforeEach(() => {
+      vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
+      vi.mocked(mockConnector.getAIProviderAPIKeys).mockResolvedValue([
+        mockProvider,
+      ]);
+    });
+
+    it('carries each text role’s own effort, not one shared value', async () => {
+      // The roles ask for different work, so they are set independently and
+      // a caller must get the one belonging to the role it resolved.
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
+        ...mockSystemSettings,
+        options: SystemSettingsOptions.parse({
+          judge: { reasoning_effort: ReasoningEffort.NONE },
+          system_prompt_reflection: { reasoning_effort: ReasoningEffort.HIGH },
+          skill_arbiter: { reasoning_effort: ReasoningEffort.LOW },
+        }),
+      });
+
+      for (const [role, expected] of [
+        ['judge', 'none'],
+        ['system_prompt_reflection', 'high'],
+        ['skill_arbiter', 'low'],
+        // Never set, so the model is left at its own default.
+        ['intent_compaction', null],
+      ] as const) {
+        const resolved = await resolveSystemSettingsModel(
+          mockContext,
+          role,
+          mockConnector,
+        );
+        expect(resolved?.reasoningEffort).toBe(expected);
+      }
+    });
+
+    it('resolves the embedding model without one', async () => {
+      vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
+        ...mockSystemSettings,
+        options: SystemSettingsOptions.parse({
+          judge: { reasoning_effort: ReasoningEffort.HIGH },
+        }),
+      });
+      vi.mocked(mockConnector.getModels).mockResolvedValue([mockEmbedModel]);
+
+      const resolved = await resolveSystemSettingsModel(
+        mockContext,
+        'embedding',
+        mockConnector,
+      );
+
+      // An embedding has nothing to think about; the judge's setting is not
+      // borrowed for it.
+      expect(resolved?.reasoningEffort).toBeNull();
+    });
+  });
+
   describe('resolveJudgeModelConfig', () => {
-    it('resolves the judge with its timeout and token budget', async () => {
+    it('resolves the judge with its timeout, budget and effort', async () => {
       vi.mocked(mockConnector.getSystemSettings).mockResolvedValue({
         ...mockSystemSettings,
         options: {
           ...mockSystemSettings.options,
-          judge: { timeout_ms: 90_000, max_tokens: 16_000 },
+          judge: {
+            timeout_ms: 90_000,
+            max_tokens: 16_000,
+            reasoning_effort: ReasoningEffort.LOW,
+          },
         },
       });
       vi.mocked(mockConnector.getModels).mockResolvedValue([mockModel]);
@@ -516,6 +580,7 @@ describe('Evaluation Model Resolver', () => {
         apiKey: 'sk-test-api-key',
         timeoutMs: 90_000,
         maxTokens: 16_000,
+        reasoningEffort: 'low',
       });
     });
 

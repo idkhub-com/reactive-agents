@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AppContext } from '@api/types/hono';
 import type { Client } from '@libsql/client';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createLibsqlClient, resetLibsqlClients } from './client';
 import { libsqlLogsStorageConnector } from './logs';
@@ -933,6 +934,7 @@ describe('system settings', () => {
     expect(settings.options.judge).toEqual({
       timeout_ms: 60_000,
       max_tokens: 4_000,
+      reasoning_effort: null,
     });
   });
 
@@ -964,9 +966,20 @@ describe('system settings', () => {
     expect(updated.options.judge).toEqual({
       timeout_ms: 90_000,
       max_tokens: 16_000,
+      reasoning_effort: null,
     });
     expect(updated.options.developer_mode).toBe(true);
     expect(updated.options.embedding.timeout_ms).toBe(30_000);
+
+    // Null is a value here -- it clears the effort -- not an omission.
+    await store.updateSystemSettings(c, {
+      options: { judge: { reasoning_effort: ReasoningEffort.NONE } },
+    });
+    const cleared = await store.updateSystemSettings(c, {
+      options: { judge: { reasoning_effort: null } },
+    });
+    expect(cleared.options.judge.reasoning_effort).toBeNull();
+    expect(cleared.options.judge.max_tokens).toBe(16_000);
   });
 });
 

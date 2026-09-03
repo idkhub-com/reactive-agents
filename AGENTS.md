@@ -307,6 +307,29 @@ Adding a setting is a change to that schema and the settings form, not to
 either backend's schema. A PATCH sends the fields it changes; the connectors
 merge them over the stored options (`mergeSystemSettingsOptions`).
 
+Every role served by a text model -- all of them but embedding, which is one
+forward pass with nothing to think about -- carries a nullable
+`reasoning_effort` beside its timeout, and the judge additionally carries its
+completion budget (`max_tokens`). `resolveSystemSettingsModel` returns a
+role's effort alongside its model and timeout, so every internal call sends
+it; null sends nothing and leaves the model at its own default, and the
+gateway drops the parameter for models that reject it. The roles are set
+independently because they ask for different work: writing a system prompt
+can be worth the thinking, while naming a skill or scoring a turn is an
+answer someone is waiting for.
+
+The judge's two settings work together. A thinking model spends the budget
+reasoning before it writes a word, and one that runs out stops on `length`
+with an empty answer -- reported as `budget_exhausted` and *not* retried,
+since the identical request under the identical budget fails the identical
+way. Raising the budget or lowering the effort is what fixes it.
+
+A single evaluation may override the judge's budget and effort through its
+own `params` (`connectors/evaluations/judge-overrides.ts`), which win over
+system settings as the more specific answer. Both are optional with no
+default, and that is load-bearing: absent means inherit, so an evaluation
+with no opinion keeps following the settings as they change.
+
 Core data models:
 - `Agent` - AI agent configurations
 - `Dataset`/`Log` - Training/evaluation data with many-to-many relationships

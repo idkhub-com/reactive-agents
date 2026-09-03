@@ -1,3 +1,4 @@
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { z } from 'zod';
 
 /**
@@ -73,8 +74,31 @@ export const INTERNAL_ROLES = [
 ] as const;
 export type InternalRole = (typeof INTERNAL_ROLES)[number];
 
+/**
+ * The roles served by a text model, which is every role but embedding.
+ *
+ * Only these carry a reasoning effort: an embedding is one forward pass with
+ * nothing to think about, and its slot takes an embed model anyway.
+ */
+export const TEXT_ROLES = INTERNAL_ROLES.filter(
+  (role): role is Exclude<InternalRole, 'embedding'> => role !== 'embedding',
+);
+export type TextRole = (typeof TEXT_ROLES)[number];
+
 const timeout = (defaultMs: number) =>
   z.number().int().positive().default(defaultMs);
+
+/**
+ * How hard a reasoning model may think before it answers.
+ *
+ * Null sends nothing and leaves the model to its own default, which is where
+ * every role starts. It is per role because the roles ask for different work:
+ * the judge answers a score and a sentence and the arbiter names a skill,
+ * while reflection writes a system prompt and may be worth the thinking. A
+ * model that takes no such parameter is unaffected -- the gateway drops it
+ * from the request.
+ */
+const reasoningEffort = () => z.enum(ReasoningEffort).nullable().default(null);
 const timeoutUpdate = () =>
   z
     .number()
@@ -106,11 +130,15 @@ export const SystemSettingsOptions = z.object({
   system_prompt_reflection: z
     .object({
       timeout_ms: timeout(DEFAULT_SYSTEM_PROMPT_REFLECTION_TIMEOUT_MS),
+      reasoning_effort: reasoningEffort(),
     })
     .prefault({}),
   /** How long one attempt at generating a skill's evaluations may take. */
   evaluation_generation: z
-    .object({ timeout_ms: timeout(DEFAULT_EVALUATION_GENERATION_TIMEOUT_MS) })
+    .object({
+      timeout_ms: timeout(DEFAULT_EVALUATION_GENERATION_TIMEOUT_MS),
+      reasoning_effort: reasoningEffort(),
+    })
     .prefault({}),
   /**
    * How long one embedding call may take. On the request path -- routing
@@ -123,17 +151,28 @@ export const SystemSettingsOptions = z.object({
     .object({
       /** How long one judging attempt may take, task extraction included. */
       timeout_ms: timeout(DEFAULT_JUDGE_TIMEOUT_MS),
-      /** How many completion tokens one judging attempt may spend. */
+      /**
+       * How many completion tokens one judging attempt may spend. A thinking
+       * model spends these before it writes a word, and one that runs out
+       * answers nothing at all -- which is why this sits beside the effort.
+       */
       max_tokens: z.number().int().positive().default(DEFAULT_JUDGE_MAX_TOKENS),
+      reasoning_effort: reasoningEffort(),
     })
     .prefault({}),
   /** How long one arbiter attempt may take, in milliseconds. */
   skill_arbiter: z
-    .object({ timeout_ms: timeout(DEFAULT_SKILL_ARBITER_TIMEOUT_MS) })
+    .object({
+      timeout_ms: timeout(DEFAULT_SKILL_ARBITER_TIMEOUT_MS),
+      reasoning_effort: reasoningEffort(),
+    })
     .prefault({}),
   /** How long one compaction attempt may take, in milliseconds. */
   intent_compaction: z
-    .object({ timeout_ms: timeout(DEFAULT_INTENT_COMPACTION_TIMEOUT_MS) })
+    .object({
+      timeout_ms: timeout(DEFAULT_INTENT_COMPACTION_TIMEOUT_MS),
+      reasoning_effort: reasoningEffort(),
+    })
     .prefault({}),
   /** Shows the `super-agents` internal agent and its skills in the dashboard. */
   developer_mode: z.boolean().default(false),
@@ -167,16 +206,24 @@ export type SystemSettings = z.infer<typeof SystemSettings>;
  * one, so a caller sends only the fields it changes. Strict throughout, so a
  * misspelled field is refused rather than stored and ignored.
  */
+/** Null clears a reasoning effort: back to the model's own default. */
+const reasoningEffortUpdate = () =>
+  z.enum(ReasoningEffort).nullable().optional();
+
+/** A text role's patch: its timeout, its reasoning effort, or both. */
+const textRoleUpdate = () =>
+  z
+    .object({
+      timeout_ms: timeoutUpdate(),
+      reasoning_effort: reasoningEffortUpdate(),
+    })
+    .strict()
+    .optional();
+
 export const SystemSettingsOptionsUpdate = z
   .object({
-    system_prompt_reflection: z
-      .object({ timeout_ms: timeoutUpdate() })
-      .strict()
-      .optional(),
-    evaluation_generation: z
-      .object({ timeout_ms: timeoutUpdate() })
-      .strict()
-      .optional(),
+    system_prompt_reflection: textRoleUpdate(),
+    evaluation_generation: textRoleUpdate(),
     embedding: z.object({ timeout_ms: timeoutUpdate() }).strict().optional(),
     judge: z
       .object({
@@ -187,17 +234,12 @@ export const SystemSettingsOptionsUpdate = z
           .min(MIN_JUDGE_MAX_TOKENS)
           .max(MAX_JUDGE_MAX_TOKENS)
           .optional(),
+        reasoning_effort: reasoningEffortUpdate(),
       })
       .strict()
       .optional(),
-    skill_arbiter: z
-      .object({ timeout_ms: timeoutUpdate() })
-      .strict()
-      .optional(),
-    intent_compaction: z
-      .object({ timeout_ms: timeoutUpdate() })
-      .strict()
-      .optional(),
+    skill_arbiter: textRoleUpdate(),
+    intent_compaction: textRoleUpdate(),
     developer_mode: z.boolean().optional(),
   })
   .strict();

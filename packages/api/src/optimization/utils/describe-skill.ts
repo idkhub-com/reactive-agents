@@ -173,6 +173,11 @@ export async function describeSkillForRequest(
       })
       .chat.completions.parse({
         ...SA_SKILL_REQUEST_PARAMS,
+        // Only when the role's setting names one: a model that takes no such
+        // parameter is left at its own default.
+        ...(modelConfig.reasoningEffort
+          ? { reasoning_effort: modelConfig.reasoningEffort }
+          : {}),
         model: modelConfig.model,
         messages: [
           { role: 'system', content: DESCRIBER_SYSTEM_PROMPT },

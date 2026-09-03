@@ -1,5 +1,6 @@
 import { getArgumentCorrectnessTemplate } from '@api/connectors/evaluations/argument-correctness/templates/main';
 import { ArgumentCorrectnessEvaluationParameters } from '@api/connectors/evaluations/argument-correctness/types';
+import { judgeOverrides } from '@api/connectors/evaluations/judge-overrides';
 import type { ToolUsage } from '@api/connectors/evaluations/tool-correctness/types';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
@@ -96,6 +97,7 @@ export async function evaluateLog(
     c,
     {
       temperature: params.temperature,
+      ...judgeOverrides(params),
     },
     modelConfig ?? undefined,
   );

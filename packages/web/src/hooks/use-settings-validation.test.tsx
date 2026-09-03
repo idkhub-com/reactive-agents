@@ -1,3 +1,4 @@
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useSettingsValidation } from '@web/hooks/use-settings-validation';
@@ -31,15 +32,9 @@ describe('useSettingsValidation', () => {
     judge_model_id: 'model-4444-5555-6666-777788889999',
     skill_arbiter_model_id: null,
     intent_compaction_model_id: null,
-    options: {
-      system_prompt_reflection: { timeout_ms: 120_000 },
-      evaluation_generation: { timeout_ms: 120_000 },
-      embedding: { timeout_ms: 30_000 },
-      judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-      skill_arbiter: { timeout_ms: 15_000 },
+    options: SystemSettingsOptions.parse({
       intent_compaction: { timeout_ms: 15_000 },
-      developer_mode: false,
-    },
+    }),
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };

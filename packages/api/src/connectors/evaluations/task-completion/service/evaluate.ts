@@ -1,3 +1,4 @@
+import { judgeOverrides } from '@api/connectors/evaluations/judge-overrides';
 import { extractTaskAndOutcome } from '@api/connectors/evaluations/task-completion/service/task-and-outcome';
 import getTaskCompletionVerdictTemplate from '@api/connectors/evaluations/task-completion/templates/verdict';
 import { TaskCompletionEvaluationParameters } from '@api/connectors/evaluations/task-completion/types';
@@ -143,6 +144,7 @@ export async function evaluateLog(
       c,
       {
         temperature: params.temperature,
+        ...judgeOverrides(params),
       },
       modelConfig ?? undefined,
     );

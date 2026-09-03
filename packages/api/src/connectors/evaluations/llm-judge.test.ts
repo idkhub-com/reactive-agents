@@ -1,5 +1,6 @@
 import { createLLMJudge } from '@api/evaluations/llm-judge';
 import { createMockContext } from '@api/test-utils/mock-context';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
 import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -153,6 +154,120 @@ describe('LLM Judge', () => {
 
     expect(mockParse).toHaveBeenCalledTimes(2);
     expect(result.score).toBe(0.8);
+  });
+
+  it("lets an evaluation's own parameters win over the settings", async () => {
+    // System settings say how the judge runs by default; an evaluation that
+    // states a budget or an effort is the more specific answer, so it wins.
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { content: '{"score":0.7,"reasoning":"ok"}' } }],
+    });
+    const fromSettings = {
+      ...mockModelConfig,
+      maxTokens: 4_000,
+      reasoningEffort: ReasoningEffort.HIGH,
+    };
+
+    await createLLMJudge(
+      mockContext,
+      { max_tokens: 16_000, reasoning_effort: ReasoningEffort.NONE },
+      fromSettings,
+    ).evaluate({ text: 'anything' } as never);
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      max_tokens: 16_000,
+      reasoning_effort: 'none',
+    });
+  });
+
+  it('follows the settings for an evaluation that states neither', async () => {
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { content: '{"score":0.7,"reasoning":"ok"}' } }],
+    });
+
+    await createLLMJudge(
+      mockContext,
+      { temperature: 0.42 },
+      {
+        ...mockModelConfig,
+        maxTokens: 8_000,
+        reasoningEffort: ReasoningEffort.LOW,
+      },
+    ).evaluate({ text: 'anything' } as never);
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      max_tokens: 8_000,
+      reasoning_effort: 'low',
+      temperature: 0.42,
+    });
+  });
+
+  it('takes one from the evaluation and the other from the settings', async () => {
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { content: '{"score":0.7,"reasoning":"ok"}' } }],
+    });
+
+    await createLLMJudge(
+      mockContext,
+      { max_tokens: 512 },
+      {
+        ...mockModelConfig,
+        maxTokens: 4_000,
+        reasoningEffort: ReasoningEffort.LOW,
+      },
+    ).evaluate({ text: 'anything' } as never);
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      max_tokens: 512,
+      reasoning_effort: 'low',
+    });
+  });
+
+  it('does not retry a length stop: the same budget fails the same way', async () => {
+    // glm-5.3-flash on a transcript-sized prompt spent all 4000 completion
+    // tokens reasoning and stopped on length with nothing in `content`.
+    // Retrying sends the identical request under the identical budget.
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ finish_reason: 'length', message: { content: '' } }],
+      usage: { completion_tokens: 4000 },
+    });
+
+    const evaluatePromise = llmJudge.evaluate({ text: 'anything' } as never);
+    await vi.advanceTimersByTimeAsync(8787);
+    const result = await evaluatePromise;
+
+    expect(mockParse).toHaveBeenCalledTimes(1);
+    expect(result.metadata?.fallback).toBe(true);
+    expect(result.metadata?.errorType).toBe('budget_exhausted');
+    // The log names the two settings that fix it.
+    expect(result.metadata?.errorDetails).toContain('token budget');
+    expect(result.metadata?.errorDetails).toContain('reasoning effort');
+    expect(result.metadata?.errorDetails).toContain('4000');
+  });
+
+  it('sends the reasoning effort the settings chose, and nothing when unset', async () => {
+    mockParse.mockReset();
+    mockParse.mockResolvedValue({
+      choices: [{ message: { content: '{"score":0.7,"reasoning":"ok"}' } }],
+    });
+
+    await createLLMJudge(mockContext, {}, mockModelConfig).evaluate({
+      text: 'anything',
+    } as never);
+    expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
+
+    await createLLMJudge(
+      mockContext,
+      {},
+      { ...mockModelConfig, reasoningEffort: ReasoningEffort.NONE },
+    ).evaluate({ text: 'anything' } as never);
+    expect(mockParse.mock.calls[1][0]).toMatchObject({
+      reasoning_effort: 'none',
+    });
   });
 
   it('says what an empty completion actually was', async () => {

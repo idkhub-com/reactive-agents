@@ -1,3 +1,4 @@
+import { JudgeOverrideParameters } from '@api/connectors/evaluations/judge-overrides';
 import { z } from 'zod';
 
 export const TurnRelevancyResultSchema = z.object({
@@ -55,6 +56,10 @@ export const TurnRelevancyEvaluationParameters =
     async_mode: z.boolean().default(true),
     verbose_mode: z.boolean().default(false),
     batch_size: z.number().int().positive().default(10),
+    // What this evaluation wants instead of the judge's system settings.
+    // Absent means inherit, so an evaluation with no opinion follows the
+    // settings as they change.
+    ...JudgeOverrideParameters.shape,
     conversation_history: z.string().optional(),
     current_turn: z.string().optional(),
     instructions: z.string().optional(),
