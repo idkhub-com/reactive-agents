@@ -10,6 +10,7 @@ import {
 import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
 import type { Agent, Skill } from '@shared/types/data';
 import { SkillEventType } from '@shared/types/data/skill-event';
@@ -128,6 +129,32 @@ describe('describeSkillForRequest', () => {
     };
     expect(request.messages[1].content).toContain('book_table');
     expect(request.messages[1].content).toContain('translate');
+  });
+
+  it("sends the naming call's reasoning effort", async () => {
+    // Naming happens on the request path, so the setting is what keeps the
+    // model from thinking its way past the caller's patience.
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValue({
+      model: 'gpt-5-mini',
+      provider: AIProvider.OPENAI,
+      apiKey: 'sk-test',
+      reasoningEffort: ReasoningEffort.NONE,
+    });
+    modelSays({ name: 'concierge', description: 'Books tables.' });
+
+    await describeSkillForRequest(c, connector, agent, intent, []);
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      reasoning_effort: 'none',
+    });
+  });
+
+  it('sends none when the role leaves the model to its default', async () => {
+    modelSays({ name: 'concierge', description: 'Books tables.' });
+
+    await describeSkillForRequest(c, connector, agent, intent, []);
+
+    expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
   });
 
   it('names the skill from the request when no model is configured', async () => {

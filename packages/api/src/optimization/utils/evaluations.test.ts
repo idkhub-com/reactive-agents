@@ -4,6 +4,8 @@ import type {
   EvaluationMethodConnector,
   UserDataStorageConnector,
 } from '@api/types/connector';
+import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
 import type { Skill } from '@shared/types/data';
 import { EvaluationMethodName } from '@shared/types/evaluations';
@@ -109,6 +111,51 @@ describe('generateEvaluationCreateParams', () => {
     expect(mockParse.mock.calls[0][0]).toMatchObject({
       prompt_cache_options: { mode: 'explicit' },
     });
+  });
+
+  it("sends the evaluation-generation role's reasoning effort", async () => {
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValueOnce({
+      model: 'glm-5.3-flash:cloud',
+      provider: AIProvider.OLLAMA,
+      apiKey: '',
+      customHost: 'http://localhost:11434',
+      reasoningEffort: ReasoningEffort.LOW,
+    });
+    mockParse.mockResolvedValue(parsedAs({ task: 'Review the diff' }));
+
+    await generateEvaluationCreateParams(
+      mockContext,
+      skill,
+      connectorFor(
+        EvaluationMethodName.TASK_COMPLETION,
+        z.object({ task: z.string() }),
+      ),
+      EvaluationMethodName.TASK_COMPLETION,
+      'an agent that maintains a website',
+      storageConnector,
+    );
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      reasoning_effort: 'low',
+    });
+  });
+
+  it('sends none when the role leaves the model to its default', async () => {
+    mockParse.mockResolvedValue(parsedAs({ task: 'Review the diff' }));
+
+    await generateEvaluationCreateParams(
+      mockContext,
+      skill,
+      connectorFor(
+        EvaluationMethodName.TASK_COMPLETION,
+        z.object({ task: z.string() }),
+      ),
+      EvaluationMethodName.TASK_COMPLETION,
+      'an agent that maintains a website',
+      storageConnector,
+    );
+
+    expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
   });
 
   it('does not call the model for a method with no AI parameters', async () => {

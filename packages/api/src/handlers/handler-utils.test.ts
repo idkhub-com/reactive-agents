@@ -400,6 +400,93 @@ describe('tryPost Error Handling', () => {
       }
       warn.mockRestore();
     });
+
+    /**
+     * The reasoning effort a role's settings choose is only useful if it
+     * survives the gateway. Two halves to that, and both are load-bearing:
+     * a provider with no capability table is assumed to accept everything,
+     * which is the only reason the setting reaches a self-hosted model at
+     * all; and a model whose table rejects the parameter must lose it, since
+     * OpenAI answers an unsupported `reasoning_effort` with a 400 for the
+     * whole request rather than ignoring the field.
+     */
+    it('forwards reasoning_effort to a provider with no capability table', async () => {
+      // Ollama registers none, and its OpenAI-compatible endpoint maps the
+      // parameter onto thinking -- `none` is how thinking is turned off.
+      mockSuperAgentsTarget.configuration.ai_provider = AIProvider.OLLAMA;
+      mockSuperAgentsTarget.configuration.model = 'glm-5.3-flash:cloud';
+      (providerConfigs as Record<string, AIProviderConfig | undefined>)[
+        AIProvider.OLLAMA
+      ] = {
+        api: {
+          getBaseURL: vi.fn().mockResolvedValue('http://localhost:11434'),
+          getEndpoint: vi.fn().mockReturnValue('/v1/chat/completions'),
+          headers: vi.fn().mockResolvedValue({}),
+        },
+      } as unknown as AIProviderConfig;
+      vi.mocked(inputHookHandler).mockResolvedValue({
+        errorResponse: undefined,
+        transformedSuperAgentsBody: undefined,
+      });
+      vi.mocked(transformToProviderRequest).mockImplementation(() => {
+        throw new Error('stop here');
+      });
+      mockSuperAgentsRequestData.requestBody = {
+        model: 'glm-5.3-flash:cloud',
+        messages: [{ role: ChatCompletionMessageRole.USER, content: 'Hello' }],
+        reasoning_effort: 'none',
+      } as never;
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      const sent = vi.mocked(transformToProviderRequest).mock.calls[0][2]
+        .requestBody as Record<string, unknown>;
+      expect(sent.reasoning_effort).toBe('none');
+    });
+
+    it.each([
+      ['gpt-5.1', true],
+      // GPT-4o takes no reasoning_effort, and says so with a 400.
+      ['gpt-4o', false],
+    ])('forwards reasoning_effort to %s: %s', async (model, forwarded) => {
+      reachTheTransform();
+      registerProviderCapabilities(openAIModelCapabilities);
+      mockSuperAgentsTarget.configuration.model = model;
+      mockSuperAgentsRequestData.requestBody = {
+        model,
+        messages: [{ role: ChatCompletionMessageRole.USER, content: 'Hello' }],
+        reasoning_effort: 'low',
+      } as never;
+      const warn = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
+
+      await tryPost(
+        mockContext,
+        mockSuperAgentsConfig,
+        mockSuperAgentsTarget,
+        mockSuperAgentsRequestData,
+        0,
+      );
+
+      const sent = vi.mocked(transformToProviderRequest).mock.calls[0][2]
+        .requestBody as Record<string, unknown>;
+      if (forwarded) {
+        expect(sent.reasoning_effort).toBe('low');
+      } else {
+        expect(sent).not.toHaveProperty('reasoning_effort');
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining('Dropped reasoning_effort'),
+        );
+      }
+      warn.mockRestore();
+    });
   });
 
   describe('the JSON instructions added for `response_format`', () => {
