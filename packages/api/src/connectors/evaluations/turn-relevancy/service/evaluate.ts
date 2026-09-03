@@ -1,3 +1,4 @@
+import { judgeOverrides } from '@api/connectors/evaluations/judge-overrides';
 import { getTurnRelevancyTemplate } from '@api/connectors/evaluations/turn-relevancy/templates/main';
 import { TurnRelevancyEvaluationParameters } from '@api/connectors/evaluations/turn-relevancy/types';
 import { humanVerdictNote } from '@api/evaluations/human-verdict';
@@ -112,6 +113,7 @@ export async function evaluateLog(
     c,
     {
       temperature: params.temperature,
+      ...judgeOverrides(params),
     },
     modelConfig ?? undefined,
   );

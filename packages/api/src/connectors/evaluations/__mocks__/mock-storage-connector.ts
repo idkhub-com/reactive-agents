@@ -1,4 +1,5 @@
 import type { UserDataStorageConnector } from '@api/types/connector';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { vi } from 'vitest';
 
 /**
@@ -16,15 +17,9 @@ export function createMockStorageConnector(): UserDataStorageConnector {
       embedding_model_id: 'embed-123',
       skill_arbiter_model_id: null,
       intent_compaction_model_id: null,
-      options: {
-        system_prompt_reflection: { timeout_ms: 120_000 },
-        evaluation_generation: { timeout_ms: 120_000 },
-        embedding: { timeout_ms: 30_000 },
-        judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-        skill_arbiter: { timeout_ms: 15_000 },
+      options: SystemSettingsOptions.parse({
         intent_compaction: { timeout_ms: 15_000 },
-        developer_mode: false,
-      },
+      }),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }),

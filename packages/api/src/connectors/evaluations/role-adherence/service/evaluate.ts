@@ -1,3 +1,4 @@
+import { judgeOverrides } from '@api/connectors/evaluations/judge-overrides';
 import { getRoleAdherenceMainTemplate } from '@api/connectors/evaluations/role-adherence/templates/main';
 import { RoleAdherenceEvaluationParameters } from '@api/connectors/evaluations/role-adherence/types';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
@@ -62,6 +63,7 @@ export async function evaluateLog(
     c,
     {
       temperature: params.temperature,
+      ...judgeOverrides(params),
     },
     modelConfig ?? undefined,
   );

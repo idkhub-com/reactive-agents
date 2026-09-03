@@ -16,6 +16,7 @@ import {
 import { FunctionName } from '@shared/types/api/request';
 import type { SuperAgentsRequestData } from '@shared/types/api/request/body';
 import type { Agent, Skill, SkillRouting } from '@shared/types/data';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 vi.mock('@api/utils/embeddings', async (importOriginal) => ({
@@ -133,15 +134,9 @@ const routingConnector = (): RoutingConnector => {
       embedding_model_id: MODEL_ID,
       skill_arbiter_model_id: null,
       intent_compaction_model_id: null,
-      options: {
-        system_prompt_reflection: { timeout_ms: 120_000 },
-        evaluation_generation: { timeout_ms: 120_000 },
-        embedding: { timeout_ms: 30_000 },
-        judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-        skill_arbiter: { timeout_ms: 15_000 },
+      options: SystemSettingsOptions.parse({
         intent_compaction: { timeout_ms: 15_000 },
-        developer_mode: false,
-      },
+      }),
     }),
     claimSkillCreationLease: vi.fn().mockResolvedValue(true),
     releaseSkillCreationLease: vi.fn(),
@@ -557,7 +552,7 @@ describe('routeRequestToSkill', () => {
         // The system settings, read once and handed on.
         expect.objectContaining({
           options: expect.objectContaining({
-            skill_arbiter: { timeout_ms: 15_000 },
+            skill_arbiter: { timeout_ms: 15_000, reasoning_effort: null },
           }),
         }),
       );

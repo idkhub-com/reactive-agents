@@ -1,5 +1,9 @@
 import type { AppEnv } from '@api/types/hono';
 import { systemSettingsRouter } from '@api/v1/super-agents/system-settings';
+import {
+  SystemSettingsOptions,
+  TEXT_ROLES,
+} from '@shared/types/data/system-settings';
 import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,15 +36,9 @@ describe('System Settings API', () => {
     judge_model_id: 'model-4444-5555-6666-777788889999',
     skill_arbiter_model_id: null,
     intent_compaction_model_id: null,
-    options: {
-      system_prompt_reflection: { timeout_ms: 120_000 },
-      evaluation_generation: { timeout_ms: 120_000 },
-      embedding: { timeout_ms: 30_000 },
-      judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-      skill_arbiter: { timeout_ms: 15_000 },
+    options: SystemSettingsOptions.parse({
       intent_compaction: { timeout_ms: 15_000 },
-      developer_mode: false,
-    },
+    }),
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
   };
@@ -247,6 +245,39 @@ describe('System Settings API', () => {
         json: { options: { judge: { max_tokens: 16_000 } } },
       });
       expect(ok.status).toBe(200);
+    });
+
+    it('should accept a reasoning effort on every text role, or null to clear it', async () => {
+      for (const role of TEXT_ROLES) {
+        for (const reasoning_effort of ['none', 'low', 'high', null]) {
+          mockUserDataStorageConnector.updateSystemSettings.mockResolvedValue({
+            ...mockSettings,
+            options: {
+              ...mockSettings.options,
+              [role]: { ...mockSettings.options[role], reasoning_effort },
+            },
+          });
+          const res = await client.index.$patch({
+            json: { options: { [role]: { reasoning_effort } } } as never,
+          });
+          expect(res.status).toBe(200);
+        }
+      }
+    });
+
+    it('should return 400 for a reasoning effort it cannot honour', async () => {
+      for (const json of [
+        // Not one of the enum's values.
+        { options: { judge: { reasoning_effort: 'ultra' } } },
+        // Embedding has no effort: one forward pass, nothing to think about.
+        { options: { embedding: { reasoning_effort: 'low' } } },
+      ]) {
+        const res = await client.index.$patch({ json: json as never });
+        expect(res.status).toBe(400);
+      }
+      expect(
+        mockUserDataStorageConnector.updateSystemSettings,
+      ).not.toHaveBeenCalled();
     });
 
     it('should return 400 for an unknown option (strict validation)', async () => {

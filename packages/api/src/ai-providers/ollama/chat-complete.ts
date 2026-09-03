@@ -75,6 +75,12 @@ export const ollamaChatCompleteConfig: AIProviderFunctionConfig = {
   tools: {
     param: 'tools',
   },
+  // Ollama's OpenAI-compatible endpoint maps this onto thinking, `none`
+  // included, which is the only way to keep a thinking model from spending
+  // a request's whole completion budget on reasoning it never shows.
+  reasoning_effort: {
+    param: 'reasoning_effort',
+  },
 };
 
 export const ollamaChatCompleteResponseTransform: ResponseTransformFunction = (

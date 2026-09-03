@@ -3,6 +3,7 @@ import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
 import { warn } from '@shared/console-logging';
+import type { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import type { Skill } from '@shared/types/data';
 import OpenAI from 'openai';
 import type { ParsedChatCompletion } from 'openai/resources/chat/completions.mjs';
@@ -117,7 +118,12 @@ async function createSystemPromptClient(
     skill_name: skillName,
   };
 
-  return { client, saConfig, model: modelConfig.model };
+  return {
+    client,
+    saConfig,
+    model: modelConfig.model,
+    reasoningEffort: modelConfig.reasoningEffort,
+  };
 }
 
 /**
@@ -129,6 +135,7 @@ async function callSystemPromptAPI(
   model: string,
   systemPrompt: string,
   userMessage: string,
+  reasoningEffort?: ReasoningEffort | null,
 ): Promise<string> {
   const response: ParsedChatCompletion<StructuredOutputResponse> = await client
     .withOptions({
@@ -138,6 +145,9 @@ async function callSystemPromptAPI(
     })
     .chat.completions.parse({
       ...SA_SKILL_REQUEST_PARAMS,
+      // Only when the role's setting names one: a model that takes no such
+      // parameter is left at its own default.
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
       model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -254,11 +264,8 @@ export async function generateSeedSystemPromptForSkill(
   skill: Skill,
   connector: UserDataStorageConnector,
 ) {
-  const { client, saConfig, model } = await createSystemPromptClient(
-    c,
-    'system-prompt-seeding',
-    connector,
-  );
+  const { client, saConfig, model, reasoningEffort } =
+    await createSystemPromptClient(c, 'system-prompt-seeding', connector);
 
   const systemPrompt = getSeederSystemPrompt();
   const userMessage = getSeederFirstMessage(skill.description);
@@ -269,6 +276,7 @@ export async function generateSeedSystemPromptForSkill(
     model,
     systemPrompt,
     userMessage,
+    reasoningEffort,
   );
 }
 
@@ -282,11 +290,12 @@ export async function generateSeedSystemPromptWithContext(
   allowedTemplateVariables?: string[],
   seedSystemPrompt?: string | null,
 ) {
-  const { client, saConfig, model } = await createSystemPromptClient(
-    c,
-    'system-prompt-seeding-with-context',
-    connector,
-  );
+  const { client, saConfig, model, reasoningEffort } =
+    await createSystemPromptClient(
+      c,
+      'system-prompt-seeding-with-context',
+      connector,
+    );
 
   const systemPrompt = getSeederSystemPrompt();
   const userMessage = getSeederWithContextFirstMessage(
@@ -304,6 +313,7 @@ export async function generateSeedSystemPromptWithContext(
     model,
     systemPrompt,
     userMessage,
+    reasoningEffort,
   );
 }
 
@@ -380,11 +390,8 @@ export async function generateReflectiveSystemPromptForSkill(
   allowedTemplateVariables: string[],
   connector: UserDataStorageConnector,
 ) {
-  const { client, saConfig, model } = await createSystemPromptClient(
-    c,
-    'system-prompt-reflection',
-    connector,
-  );
+  const { client, saConfig, model, reasoningEffort } =
+    await createSystemPromptClient(c, 'system-prompt-reflection', connector);
 
   const systemPrompt = getReflectorSystemPrompt();
   const userMessage = getReflectorFirstMessage(
@@ -402,5 +409,6 @@ export async function generateReflectiveSystemPromptForSkill(
     model,
     systemPrompt,
     userMessage,
+    reasoningEffort,
   );
 }

@@ -4,6 +4,7 @@ import { createMockContext } from '@api/test-utils/mock-context';
 import type { AppEnv } from '@api/types/hono';
 import { modelsRouter } from '@api/v1/super-agents/models';
 import type { Model } from '@shared/types/data/model';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { Hono } from 'hono';
 import { createFactory } from 'hono/factory';
 import { sign } from 'hono/jwt';
@@ -303,15 +304,9 @@ describe('Models API Status Codes', () => {
       judge_model_id: null,
       skill_arbiter_model_id: null,
       intent_compaction_model_id: null,
-      options: {
-        system_prompt_reflection: { timeout_ms: 120_000 },
-        evaluation_generation: { timeout_ms: 120_000 },
-        embedding: { timeout_ms: 30_000 },
-        judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-        skill_arbiter: { timeout_ms: 15_000 },
+      options: SystemSettingsOptions.parse({
         intent_compaction: { timeout_ms: 15_000 },
-        developer_mode: false,
-      },
+      }),
       created_at: '2023-01-01T00:00:00.000Z',
       updated_at: '2023-01-01T00:00:00.000Z',
     };

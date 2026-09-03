@@ -1,3 +1,4 @@
+import { JudgeOverrideParameters } from '@api/connectors/evaluations/judge-overrides';
 import { z } from 'zod';
 import { ToolUsageSchema } from '../tool-correctness/types';
 
@@ -69,6 +70,10 @@ export const TaskCompletionEvaluationParameters =
     verbose_mode: z.boolean().default(false),
     temperature: z.number().min(0).max(1).default(0.1),
     batch_size: z.number().positive().default(10),
+    // What this evaluation wants instead of the judge's system settings.
+    // Absent means inherit, so an evaluation with no opinion follows the
+    // settings as they change.
+    ...JudgeOverrideParameters.shape,
   });
 
 export type TaskCompletionEvaluationParameters = z.infer<

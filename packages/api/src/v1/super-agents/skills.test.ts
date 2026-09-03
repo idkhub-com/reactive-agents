@@ -2,6 +2,7 @@ import { BaseArmsParams } from '@api/optimization/base-arms';
 import { generateSeedSystemPromptForSkill } from '@api/optimization/utils/system-prompt';
 import type { AppEnv } from '@api/types/hono';
 import { skillsRouter } from '@api/v1/super-agents/skills';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { Hono } from 'hono';
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -152,15 +153,9 @@ describe('Skills API Status Codes', () => {
       evaluation_generation_model_id: null,
       skill_arbiter_model_id: null,
       intent_compaction_model_id: null,
-      options: {
-        system_prompt_reflection: { timeout_ms: 120_000 },
-        evaluation_generation: { timeout_ms: 120_000 },
-        embedding: { timeout_ms: 30_000 },
-        judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-        skill_arbiter: { timeout_ms: 15_000 },
+      options: SystemSettingsOptions.parse({
         intent_compaction: { timeout_ms: 15_000 },
-        developer_mode: false,
-      },
+      }),
     });
   });
 

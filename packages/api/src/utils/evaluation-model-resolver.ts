@@ -3,6 +3,7 @@ import type { LLMJudgeModelConfig } from '@api/evaluations/llm-judge';
 import type { UserDataStorageConnector } from '@api/types/connector';
 import type { AppContext } from '@api/types/hono';
 import { warn } from '@shared/console-logging';
+import type { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import type { AIProvider } from '@shared/types/constants';
 import type {
   Model,
@@ -41,6 +42,13 @@ export interface ResolvedModelConfig {
    * only from a model resolved by id alone, which has no setting of its own.
    */
   timeoutMs?: number;
+  /**
+   * How hard this role's model may think before it answers, from the effort
+   * that sits beside it in system settings. Null or absent sends nothing and
+   * leaves the model to its own default. Rides along for the same reason the
+   * timeout does: a caller that resolves a model needs the bounds on it.
+   */
+  reasoningEffort?: ReasoningEffort | null;
 }
 
 /**
@@ -126,9 +134,14 @@ export async function resolveSystemSettingsModel(
 
   let modelId: string | null = null;
   let configured = `${modelType}_model_id`;
-  // Each model setting has a timeout beside it, and the two are resolved
-  // together so a caller cannot take one without the other.
-  const timeoutMs = systemSettings.options[modelType].timeout_ms;
+  // Each model setting has its bounds beside it, and they are resolved
+  // together so a caller cannot take one without the others.
+  const roleOptions = systemSettings.options[modelType];
+  const timeoutMs = roleOptions.timeout_ms;
+  // Every role but embedding has an effort; an embedding has nothing to think
+  // about, so its options object carries none.
+  const reasoningEffort =
+    'reasoning_effort' in roleOptions ? roleOptions.reasoning_effort : null;
 
   switch (modelType) {
     case 'judge':
@@ -169,13 +182,13 @@ export async function resolveSystemSettingsModel(
   }
 
   const resolved = await resolveModelById(c, modelId, connector, logPrefix);
-  return resolved && { ...resolved, timeoutMs };
+  return resolved && { ...resolved, timeoutMs, reasoningEffort };
 }
 
 /**
- * Resolves the judge with everything a judging call needs from settings:
- * the model, its timeout, and the completion budget that lets a reasoning
- * model finish its answer.
+ * Resolves the judge with everything a judging call needs from settings: the
+ * model, its timeout and reasoning effort, and the completion budget that
+ * lets a thinking model finish its answer.
  */
 export async function resolveJudgeModelConfig(
   c: AppContext,
@@ -189,6 +202,8 @@ export async function resolveJudgeModelConfig(
     connector,
     systemSettings,
   );
+  // The effort arrives with the model, like every role's; only the budget is
+  // the judge's own.
   return (
     resolved && {
       ...resolved,
@@ -232,6 +247,7 @@ export async function resolveEvaluationModelConfig(
       ...resolved,
       timeoutMs: options.judge.timeout_ms,
       maxTokens: options.judge.max_tokens,
+      reasoningEffort: options.judge.reasoning_effort,
     };
   }
 

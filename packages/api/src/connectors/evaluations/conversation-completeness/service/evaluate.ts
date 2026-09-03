@@ -2,6 +2,7 @@ import type {
   ConversationCompletenessEvaluationParameters,
   ConversationCompletenessResult,
 } from '@api/connectors/evaluations/conversation-completeness/types';
+import { judgeOverrides } from '@api/connectors/evaluations/judge-overrides';
 import { humanVerdictNote } from '@api/evaluations/human-verdict';
 import {
   createLLMJudge,
@@ -51,6 +52,7 @@ export async function evaluateConversationCompleteness(
     c,
     {
       temperature: params.temperature,
+      ...judgeOverrides(params),
     },
     modelConfig ?? undefined,
   );

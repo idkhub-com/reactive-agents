@@ -99,7 +99,15 @@ export async function extractTaskAndOutcome(
     .chat.completions.create({
       ...SA_SKILL_REQUEST_PARAMS,
       model: modelConfig.model,
-      max_tokens: modelConfig.maxTokens,
+      // Extraction is part of the task-completion evaluation, so it runs
+      // under the same overrides the scoring call does.
+      max_tokens: params.max_tokens ?? modelConfig.maxTokens,
+      ...((params.reasoning_effort ?? modelConfig.reasoningEffort)
+        ? {
+            reasoning_effort:
+              params.reasoning_effort ?? modelConfig.reasoningEffort,
+          }
+        : {}),
       messages: [
         { role: 'system', content: systemPrompt },
         {

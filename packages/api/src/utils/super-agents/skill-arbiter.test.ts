@@ -5,8 +5,10 @@ import {
   resolveSystemSettingsModel,
 } from '@api/utils/evaluation-model-resolver';
 import { arbitrateSkillForRequest } from '@api/utils/super-agents/skill-arbiter';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
 import type { Agent, Skill, SystemSettings } from '@shared/types/data';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import type { RequestIntent } from '@shared/utils/request-intent';
 import OpenAI from 'openai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,15 +66,10 @@ const settings = {
   skill_arbiter_model_id: null,
   intent_compaction_model_id: null,
   system_prompt_reflection_model_id: 'reflection-model',
-  options: {
-    system_prompt_reflection: { timeout_ms: 120_000 },
-    evaluation_generation: { timeout_ms: 120_000 },
-    embedding: { timeout_ms: 30_000 },
-    judge: { timeout_ms: 60_000, max_tokens: 4_000 },
+  options: SystemSettingsOptions.parse({
     skill_arbiter: { timeout_ms: 42_000 },
     intent_compaction: { timeout_ms: 15_000 },
-    developer_mode: false,
-  },
+  }),
 } as SystemSettings;
 
 const answer = (skillName: string | null) => ({
@@ -149,6 +146,54 @@ describe('arbitrateSkillForRequest', () => {
       timeout: 7_000,
     });
     expect(mockParse.mock.calls[0][0]).toMatchObject({ model: 'agent-model' });
+  });
+
+  it('sends the arbiter reasoning effort the settings chose', async () => {
+    // A request waits for this answer, so the setting exists to keep the
+    // model from thinking its way past the timeout.
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValue({
+      model: 'arbiter-model',
+      provider: AIProvider.OPENAI,
+      apiKey: 'k',
+      timeoutMs: 42_000,
+      reasoningEffort: ReasoningEffort.NONE,
+    });
+    mockParse.mockResolvedValue(answer(null));
+
+    await arbitrateSkillForRequest(
+      createMockContext(),
+      connector,
+      agent,
+      skills,
+      intent,
+      settings,
+    );
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      reasoning_effort: 'none',
+    });
+  });
+
+  it('sends none when the role leaves the model to its default', async () => {
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValue({
+      model: 'arbiter-model',
+      provider: AIProvider.OPENAI,
+      apiKey: 'k',
+      timeoutMs: 42_000,
+      reasoningEffort: null,
+    });
+    mockParse.mockResolvedValue(answer(null));
+
+    await arbitrateSkillForRequest(
+      createMockContext(),
+      connector,
+      agent,
+      skills,
+      intent,
+      settings,
+    );
+
+    expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
   });
 
   it('maps a named skill to an existing verdict', async () => {

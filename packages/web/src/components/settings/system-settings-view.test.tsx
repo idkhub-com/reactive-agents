@@ -1,6 +1,12 @@
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import type { SystemSettings } from '@shared/types/data/system-settings';
+import { SystemSettingsOptions } from '@shared/types/data/system-settings';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { SystemSettingsView } from '@web/components/settings/system-settings-view';
+import {
+  buildOptionsPatch,
+  type FormValues,
+  SystemSettingsView,
+} from '@web/components/settings/system-settings-view';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -22,15 +28,9 @@ const settings: SystemSettings = {
   judge_model_id: null,
   skill_arbiter_model_id: null,
   intent_compaction_model_id: null,
-  options: {
-    system_prompt_reflection: { timeout_ms: 120_000 },
-    evaluation_generation: { timeout_ms: 120_000 },
-    embedding: { timeout_ms: 30_000 },
-    judge: { timeout_ms: 60_000, max_tokens: 4_000 },
-    skill_arbiter: { timeout_ms: 15_000 },
+  options: SystemSettingsOptions.parse({
     intent_compaction: { timeout_ms: 15_000 },
-    developer_mode: false,
-  },
+  }),
   created_at: '2023-01-01T00:00:00Z',
   updated_at: '2023-01-01T00:00:00Z',
 };
@@ -240,5 +240,129 @@ describe('SystemSettingsView', () => {
       );
     });
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('gives every text model a reasoning effort, at the model default', () => {
+    render(<SystemSettingsView />);
+
+    for (const label of [
+      'Reflection Reasoning Effort',
+      'Evaluation Generation Reasoning Effort',
+      'Judge Reasoning Effort',
+      'Arbiter Reasoning Effort',
+      'Compaction Reasoning Effort',
+    ]) {
+      expect(screen.getByLabelText(label)).toHaveTextContent('Model default');
+    }
+  });
+
+  it('offers no reasoning effort for the embedding model', () => {
+    render(<SystemSettingsView />);
+
+    expect(screen.getByLabelText('Embedding Timeout')).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Embedding Reasoning Effort'),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('buildOptionsPatch', () => {
+  // What the form holds when nothing has been touched: the stored settings.
+  const untouched: FormValues = {
+    system_prompt_reflection_model_id: null,
+    evaluation_generation_model_id: null,
+    embedding_model_id: null,
+    judge_model_id: null,
+    skill_arbiter_model_id: null,
+    intent_compaction_model_id: null,
+    timeouts: {
+      system_prompt_reflection: 120,
+      evaluation_generation: 120,
+      embedding: 30,
+      judge: 60,
+      skill_arbiter: 15,
+      intent_compaction: 15,
+    },
+    reasoningEfforts: {
+      system_prompt_reflection: null,
+      evaluation_generation: null,
+      judge: null,
+      skill_arbiter: null,
+      intent_compaction: null,
+    },
+    judge_max_tokens: 4_000,
+    developer_mode: false,
+  };
+
+  it('sends nothing when nothing changed', () => {
+    expect(buildOptionsPatch(untouched, settings)).toEqual({});
+  });
+
+  it('sends a chosen reasoning effort for any role, and null to clear one', () => {
+    expect(
+      buildOptionsPatch(
+        {
+          ...untouched,
+          reasoningEfforts: {
+            ...untouched.reasoningEfforts,
+            skill_arbiter: ReasoningEffort.NONE,
+            system_prompt_reflection: ReasoningEffort.HIGH,
+          },
+        },
+        settings,
+      ),
+    ).toEqual({
+      skill_arbiter: { reasoning_effort: 'none' },
+      system_prompt_reflection: { reasoning_effort: 'high' },
+    });
+
+    const stored = {
+      ...settings,
+      options: {
+        ...settings.options,
+        judge: {
+          ...settings.options.judge,
+          reasoning_effort: ReasoningEffort.LOW,
+        },
+      },
+    };
+    expect(buildOptionsPatch(untouched, stored)).toEqual({
+      judge: { reasoning_effort: null },
+    });
+  });
+
+  it("folds every changed field of one role into that role's object", () => {
+    expect(
+      buildOptionsPatch(
+        {
+          ...untouched,
+          timeouts: { ...untouched.timeouts, judge: 90 },
+          judge_max_tokens: 16_000,
+          reasoningEfforts: {
+            ...untouched.reasoningEfforts,
+            judge: ReasoningEffort.LOW,
+          },
+          developer_mode: true,
+        },
+        settings,
+      ),
+    ).toEqual({
+      judge: {
+        timeout_ms: 90_000,
+        max_tokens: 16_000,
+        reasoning_effort: 'low',
+      },
+      developer_mode: true,
+    });
+  });
+
+  it('never sends an effort for the embedding role', () => {
+    // It has none to send: an embedding is one forward pass.
+    const patch = buildOptionsPatch(
+      { ...untouched, timeouts: { ...untouched.timeouts, embedding: 45 } },
+      settings,
+    );
+
+    expect(patch.embedding).toEqual({ timeout_ms: 45_000 });
   });
 });

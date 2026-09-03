@@ -1,3 +1,4 @@
+import { JudgeOverrideParameters } from '@api/connectors/evaluations/judge-overrides';
 import z from 'zod';
 
 export interface ConversationCompletenessResult {
@@ -31,6 +32,10 @@ export const ConversationCompletenessEvaluationParameters =
     async_mode: z.boolean().default(false),
     verbose_mode: z.boolean().default(false),
     batch_size: z.number().int().positive().default(10),
+    // What this evaluation wants instead of the judge's system settings.
+    // Absent means inherit, so an evaluation with no opinion follows the
+    // settings as they change.
+    ...JudgeOverrideParameters.shape,
   });
 
 export type ConversationCompletenessEvaluationParameters = z.infer<

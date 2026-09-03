@@ -221,6 +221,12 @@ describe('Ollama Provider Tests', () => {
       expect(config.stream).toBeDefined();
     });
 
+    it('forwards reasoning_effort, the switch that turns thinking off', () => {
+      expect(ollamaChatCompleteConfig.reasoning_effort).toEqual({
+        param: 'reasoning_effort',
+      });
+    });
+
     it('should have correct temperature limits', () => {
       const config = ollamaChatCompleteConfig;
       expect(config.temperature).toHaveProperty('min', 0);

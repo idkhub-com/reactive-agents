@@ -1,3 +1,4 @@
+import { judgeOverrides } from '@api/connectors/evaluations/judge-overrides';
 import type { KnowledgeRetentionEvaluationParameters } from '@api/connectors/evaluations/knowledge-retention/types';
 import { humanVerdictNote } from '@api/evaluations/human-verdict';
 import { createLLMJudge } from '@api/evaluations/llm-judge';
@@ -47,6 +48,7 @@ export async function evaluateLog(
     c,
     {
       temperature: params.temperature,
+      ...judgeOverrides(params),
     },
     modelConfig ?? undefined,
   );

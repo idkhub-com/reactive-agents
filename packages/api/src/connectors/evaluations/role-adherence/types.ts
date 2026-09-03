@@ -1,3 +1,4 @@
+import { JudgeOverrideParameters } from '@api/connectors/evaluations/judge-overrides';
 import { z } from 'zod';
 
 // Template data for role adherence evaluation
@@ -91,6 +92,10 @@ export const RoleAdherenceEvaluationParameters =
     verbose_mode: z.boolean().default(false),
     temperature: z.number().min(0).max(2).default(0.1),
     batch_size: z.number().positive().default(1000),
+    // What this evaluation wants instead of the judge's system settings.
+    // Absent means inherit, so an evaluation with no opinion follows the
+    // settings as they change.
+    ...JudgeOverrideParameters.shape,
     role_definition: z.string().optional(),
     assistant_output: z.string().optional(),
     instructions: z.string().optional(),

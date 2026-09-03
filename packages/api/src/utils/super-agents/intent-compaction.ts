@@ -64,6 +64,11 @@ async function compactOnce(
     })
     .chat.completions.create({
       ...SA_SKILL_REQUEST_PARAMS,
+      // Only when the role's setting names one: a model that takes no such
+      // parameter is left at its own default.
+      ...(modelConfig.reasoningEffort
+        ? { reasoning_effort: modelConfig.reasoningEffort }
+        : {}),
       model: modelConfig.model,
       // Deterministic, so the summary -- and with it the identity embedding
       // -- stays put across restarts instead of drifting per process.
