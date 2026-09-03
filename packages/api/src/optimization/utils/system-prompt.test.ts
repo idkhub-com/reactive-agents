@@ -1,6 +1,8 @@
 import { generateSeedSystemPromptWithContext } from '@api/optimization/utils/system-prompt';
 import { createMockContext } from '@api/test-utils/mock-context';
 import type { UserDataStorageConnector } from '@api/types/connector';
+import { resolveSystemSettingsModel } from '@api/utils/evaluation-model-resolver';
+import { ReasoningEffort } from '@shared/types/api/routes/shared/thinking';
 import { AIProvider } from '@shared/types/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,5 +76,42 @@ describe('generateSeedSystemPromptWithContext', () => {
     );
 
     expect(askedWith()).not.toContain("developer's own system prompt");
+  });
+
+  it("sends the reflection role's reasoning effort", async () => {
+    // Writing a prompt is the internal call where thinking tends to pay for
+    // itself, so this role's setting has to reach the request. It travels
+    // separately from the model here -- the client is built in one function
+    // and the request in another -- which is where it would go missing.
+    vi.mocked(resolveSystemSettingsModel).mockResolvedValueOnce({
+      model: 'gpt-5-mini',
+      provider: AIProvider.OPENAI,
+      apiKey: 'sk-test',
+      reasoningEffort: ReasoningEffort.HIGH,
+    });
+
+    await generateSeedSystemPromptWithContext(
+      c,
+      'An agent for restaurants.',
+      'Books tables.',
+      [],
+      connector,
+    );
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      reasoning_effort: 'high',
+    });
+  });
+
+  it('sends none when the role leaves the model to its default', async () => {
+    await generateSeedSystemPromptWithContext(
+      c,
+      'An agent for restaurants.',
+      'Books tables.',
+      [],
+      connector,
+    );
+
+    expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
   });
 });
