@@ -37,7 +37,6 @@ For each tool call, decide if the arguments are correct and explain briefly.`;
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

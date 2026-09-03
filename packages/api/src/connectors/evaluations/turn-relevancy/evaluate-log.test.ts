@@ -269,10 +269,10 @@ describe('Turn Relevancy - evaluateLog', () => {
       },
     };
 
-    // The judge concludes the turn is irrelevant. Under the old
-    // `outputFormat: 'json'` call this came back as a "structured" result
-    // scored a flat 1.0, with the judge's verdict buried in metadata --
-    // every successful turn-relevancy run scored 1.0.
+    // The judge concludes the turn is irrelevant. Before the call passed
+    // explicit prompts this came back as a "structured" result scored a
+    // flat 1.0, with the judge's verdict buried in metadata -- every
+    // successful turn-relevancy run scored 1.0.
     mockParse.mockResolvedValueOnce({
       choices: [
         {

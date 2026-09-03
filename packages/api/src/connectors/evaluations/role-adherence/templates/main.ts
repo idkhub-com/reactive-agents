@@ -60,7 +60,6 @@ ${jsonStructure}`;
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

@@ -43,7 +43,6 @@ Please evaluate how well the outcome fulfills the task requirements and provide 
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

@@ -76,7 +76,6 @@ Remember: Return ONLY a JSON object with "task" and "outcome" fields. No other f
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

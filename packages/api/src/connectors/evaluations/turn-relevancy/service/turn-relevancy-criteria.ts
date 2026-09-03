@@ -3,7 +3,7 @@ import {
   type TurnRelevancyMetadata,
   TurnRelevancyResultSchema,
 } from '@api/connectors/evaluations/turn-relevancy/types';
-import { createLLMJudge } from '@api/evaluations/llm-judge';
+import { createLLMJudge, withExtraCriteria } from '@api/evaluations/llm-judge';
 import type {
   GenericEvaluationInput,
   GenericEvaluator,
@@ -64,11 +64,17 @@ async function evaluateTurnRelevancyWithJudge(
     include_reason: input.criteria?.include_reason ?? true,
   });
 
+  // The caller's description is extra criteria for this metric, not a
+  // replacement for it: appended to the template rather than handed to the
+  // generic criteria judge, which would drop the template altogether.
+  const userPrompt = withExtraCriteria(
+    tpl.userPrompt,
+    input.criteria?.description,
+  );
   const result = await llmJudge.evaluate({
-    text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
-    evaluationCriteria: input.criteria?.description
-      ? { criteria: [input.criteria.description] }
-      : undefined,
+    text: `${tpl.systemPrompt}\n\n${userPrompt}`,
+    systemPrompt: tpl.systemPrompt,
+    userPrompt,
   });
 
   return parseTurnRelevancyResult(result);
@@ -104,11 +110,14 @@ export function createTurnRelevancyEvaluator(
         include_reason: criteria?.include_reason ?? true,
       });
 
+      const userPrompt = withExtraCriteria(
+        tpl.userPrompt,
+        criteria?.description,
+      );
       const result = await llmJudge.evaluate({
-        text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
-        evaluationCriteria: criteria?.description
-          ? { criteria: [criteria.description] }
-          : undefined,
+        text: `${tpl.systemPrompt}\n\n${userPrompt}`,
+        systemPrompt: tpl.systemPrompt,
+        userPrompt,
       });
 
       const parsed = parseTurnRelevancyResult(result);

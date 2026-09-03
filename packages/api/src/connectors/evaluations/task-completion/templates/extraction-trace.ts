@@ -30,7 +30,6 @@ Extract the TASK and OUTCOME from this trace.`;
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

@@ -90,11 +90,11 @@ export async function evaluateLog(
 
   const evaluationText = `Analyze the following conversation for knowledge retention quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation, judged against what its role requires it to carry forward. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference.${verdictSection} Provide a score between 0 and 1 with detailed reasoning for your analysis.`;
 
-  // Explicit criteria pin the scored judge path. The old `outputFormat:
-  // 'json'` call had the judge re-split this text at its first blank line --
-  // which lives inside the conversation once it has two messages -- and the
-  // "structured" result that came back scored 1.0 no matter what the judge
-  // actually answered.
+  // Explicit criteria pin the scored judge path. Without them the judge
+  // re-splits this text at its first blank line -- which lives inside the
+  // conversation once it has two messages -- and can read what comes back
+  // as an extraction, which scores 1.0 no matter what the judge actually
+  // answered.
   const result = await llmJudge.evaluate({
     text: evaluationText,
     evaluationCriteria: {

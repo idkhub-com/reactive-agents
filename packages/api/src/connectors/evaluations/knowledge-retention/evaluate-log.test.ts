@@ -336,7 +336,7 @@ describe('Knowledge Retention - evaluateLog', () => {
 
   it('records the real score on a multi-message conversation, and shows the judge the role', async () => {
     // A conversation with two user messages renders with a blank line in it,
-    // and the old `outputFormat: 'json'` call had the judge re-split the
+    // and before the call passed explicit criteria the judge re-split the
     // text there: the "structured" result that came back scored a flat 1.0
     // no matter what the judge concluded. This is the title-generator log
     // that surfaced it -- judge said 0.25, the run recorded 1.0.

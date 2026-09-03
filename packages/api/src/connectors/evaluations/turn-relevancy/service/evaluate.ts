@@ -135,10 +135,11 @@ export async function evaluateLog(
     include_reason: params.include_reason ?? true,
   });
 
-  // Explicit prompts, and no `outputFormat: 'json'`: that flag made the
-  // judge treat the reply as an extraction and report a flat 1.0 with the
-  // real score buried in metadata -- every successful turn-relevancy run
-  // scored 1.0 regardless of what the judge concluded.
+  // Explicit prompts, so the judge scores rather than extracts. Left to
+  // re-split `text` on its own the judge can read the reply as an
+  // extraction and report a flat 1.0 with the real score buried in
+  // metadata -- which is what made every successful turn-relevancy run
+  // score 1.0 regardless of what the judge concluded.
   const judgeResult = await llmJudge.evaluate({
     text: `${tpl.systemPrompt}\n\n${tpl.userPrompt}`,
     systemPrompt: tpl.systemPrompt,

@@ -81,7 +81,6 @@ Please evaluate how well the output fulfills the task requirements.`;
   return {
     systemPrompt,
     userPrompt,
-    outputFormat: 'json',
   };
 }
 

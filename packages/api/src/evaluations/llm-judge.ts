@@ -111,60 +111,18 @@ export function parseJudgeJson(content: string): unknown {
 }
 
 /**
- * Check if input text appears to be a pre-formatted template prompt
+ * Fold a caller's extra criteria into a template's user prompt. A metric is
+ * described by its own template; a `description` supplied alongside narrows
+ * that judgement rather than replacing it, so it is appended instead of being
+ * handed to the criteria judge, which builds a generic prompt and drops the
+ * template entirely.
  */
-function isTemplateBasedInput(text: string): boolean {
-  // Generic template detection criteria:
-  const templateIndicators = [
-    text.includes('You are an expert evaluator'),
-    text.includes('You are a quality evaluator'),
-    text.includes('Provide your evaluation as a JSON object'),
-    text.includes('Return your response as a JSON object'),
-    text.includes('You are') &&
-      text.includes('evaluate') &&
-      text.includes('\n\n'),
-  ];
-
-  // Must have at least one strong indicator AND contain double newlines (separator)
-  return (
-    templateIndicators.some((indicator) => indicator) && text.includes('\n\n')
-  );
-}
-
-/**
- * Parse a template-based prompt into system and user components
- */
-function parseTemplatePrompt(text: string): {
-  systemPrompt: string;
-  userPrompt: string;
-} {
-  // Split on first occurrence of double newline
-  const doubleLnIndex = text.indexOf('\n\n');
-  if (doubleLnIndex === -1) {
-    return { systemPrompt: '', userPrompt: text };
-  }
-
-  const systemPrompt = text.substring(0, doubleLnIndex).trim();
-  const userPrompt = text.substring(doubleLnIndex + 2).trim();
-
-  // Validate that we have meaningful content in both parts
-  if (systemPrompt.length < 10 || userPrompt.length < 10) {
-    return { systemPrompt: '', userPrompt: text };
-  }
-
-  return { systemPrompt, userPrompt };
-}
-
-/**
- * Check if the prompt expects structured JSON output
- */
-function expectsStructuredOutput(systemPrompt: string): boolean {
-  return (
-    systemPrompt.includes('JSON object') ||
-    systemPrompt.includes('JSON structure') ||
-    systemPrompt.includes('Return your response as') ||
-    systemPrompt.includes('as a JSON object')
-  );
+export function withExtraCriteria(
+  userPrompt: string,
+  description?: string,
+): string {
+  const extra = description?.trim();
+  return extra ? `${userPrompt}\n\nAdditional criteria:\n${extra}` : userPrompt;
 }
 
 /**
@@ -244,51 +202,26 @@ export function createLLMJudge(
   function generateEvaluationPrompt(input: EvaluationInput): {
     systemPrompt: string;
     userPrompt: string;
-    useStructuredOutput: boolean;
   } {
-    // Explicit prompts are used verbatim -- no re-splitting. Only a call
-    // declared as an extraction gets the metadata-only result; a scoring
-    // call gets the score the judge actually answered.
+    // A caller that built its own prompts has them used verbatim. Everything
+    // else is scored by the criteria judge. The judge used to re-derive a
+    // system/user split from `text` instead, guessing at blank lines and
+    // prompt wording -- a template whose opening paragraph mentioned JSON
+    // was read as an extraction and scored a flat 1.0 whatever it answered.
     if (input.systemPrompt !== undefined && input.userPrompt !== undefined) {
       return {
         systemPrompt: input.systemPrompt,
         userPrompt: input.userPrompt,
-        useStructuredOutput: input.structured === true,
       };
-    }
-
-    // Explicit criteria mean the criteria-based judge. This must win over
-    // the template heuristics below: they match on phrases and blank lines,
-    // and conversation content can contain both.
-    if (input.evaluationCriteria) {
-      return criteriaBasedPrompt(input);
-    }
-
-    // If outputFormat is explicitly specified (always 'json' now), use structured output
-    if (input.outputFormat === 'json') {
-      const { systemPrompt, userPrompt } = parseTemplatePrompt(input.text);
-      if (systemPrompt && userPrompt) {
-        return { systemPrompt, userPrompt, useStructuredOutput: true };
-      }
-    }
-
-    // Template-based evaluation: More robust detection of pre-formatted prompts
-    if (isTemplateBasedInput(input.text)) {
-      const { systemPrompt, userPrompt } = parseTemplatePrompt(input.text);
-      if (systemPrompt && userPrompt) {
-        const useStructuredOutput = expectsStructuredOutput(systemPrompt);
-        return { systemPrompt, userPrompt, useStructuredOutput };
-      }
     }
 
     return criteriaBasedPrompt(input);
   }
 
-  /** The generic criteria judge: scored output, no template heuristics. */
+  /** The generic criteria judge. */
   function criteriaBasedPrompt(input: EvaluationInput): {
     systemPrompt: string;
     userPrompt: string;
-    useStructuredOutput: boolean;
   } {
     const criteria =
       input.evaluationCriteria?.criteria || evaluationCriteria.general;
@@ -311,7 +244,7 @@ ${input.text}
 
 Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
 
-    return { systemPrompt, userPrompt, useStructuredOutput: false };
+    return { systemPrompt, userPrompt };
   }
 
   /**
@@ -408,16 +341,6 @@ Provide a score between 0 and 1 with detailed reasoning for your evaluation.`;
           throw new Error('No parsed response from AI provider');
         }
 
-        // For structured output (like task/outcome extraction), return as metadata
-        if (prompt.useStructuredOutput) {
-          return {
-            score: 1.0, // Default score for successful extraction
-            reasoning: 'Structured data extracted successfully',
-            metadata: parsed as Record<string, unknown>,
-          };
-        }
-
-        // For regular evaluation, validate and return
         return LLMJudgeResult.parse(parsed);
       } catch (err) {
         lastError = err;
