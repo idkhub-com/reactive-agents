@@ -148,6 +148,60 @@ describe('arbitrateSkillForRequest', () => {
     expect(mockParse.mock.calls[0][0]).toMatchObject({ model: 'agent-model' });
   });
 
+  it("keeps the system's reasoning effort for an agent's own model", async () => {
+    // An agent overrides *which* model arbitrates, not how hard it may think.
+    // A model resolved by id carries no settings of its own, so the effort has
+    // to be handed to it -- as the timeout in the same position always was.
+    vi.mocked(resolveModelById).mockResolvedValue({
+      model: 'agent-model',
+      provider: AIProvider.OPENAI,
+      apiKey: 'key',
+    });
+    mockParse.mockResolvedValue(answer(null));
+
+    await arbitrateSkillForRequest(
+      createMockContext(),
+      connector,
+      { ...agent, skill_arbiter_model_id: 'agent-arbiter-model' },
+      skills,
+      intent,
+      {
+        ...settings,
+        options: SystemSettingsOptions.parse({
+          skill_arbiter: {
+            timeout_ms: 42_000,
+            reasoning_effort: ReasoningEffort.NONE,
+          },
+        }),
+      } as SystemSettings,
+    );
+
+    expect(mockParse.mock.calls[0][0]).toMatchObject({
+      model: 'agent-model',
+      reasoning_effort: 'none',
+    });
+  });
+
+  it("sends none for an agent's own model when the system sets none", async () => {
+    vi.mocked(resolveModelById).mockResolvedValue({
+      model: 'agent-model',
+      provider: AIProvider.OPENAI,
+      apiKey: 'key',
+    });
+    mockParse.mockResolvedValue(answer(null));
+
+    await arbitrateSkillForRequest(
+      createMockContext(),
+      connector,
+      { ...agent, skill_arbiter_model_id: 'agent-arbiter-model' },
+      skills,
+      intent,
+      settings,
+    );
+
+    expect(mockParse.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
+  });
+
   it('sends the arbiter reasoning effort the settings chose', async () => {
     // A request waits for this answer, so the setting exists to keep the
     // model from thinking its way past the timeout.

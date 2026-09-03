@@ -202,9 +202,12 @@ skill starts as a pass-through. `max_auto_created_skills` caps this per agent.
 The arbiter's model and per-attempt timeout are system settings
 (`skill_arbiter_model_id`, the reflection model when unset, and
 `options.skill_arbiter.timeout_ms`), which an agent overrides with its own
-`skill_arbiter_model_id` and `skill_arbiter_timeout_ms` columns; the arbiter
-is asked under the skill-creation lease, so the lease stretches by twice the
-timeout to cover it.
+`skill_arbiter_model_id` and `skill_arbiter_timeout_ms` columns; an agent that
+names its own model still arbitrates under the system's
+`options.skill_arbiter.reasoning_effort`, since it overrides which model
+answers rather than how hard it may think. The arbiter is asked under the
+skill-creation lease, so the lease stretches by twice the timeout to cover
+it.
 Creating happens under the agent's `skill_creation_leases` row
 (`withSkillCreationLease`), after a second look at the skills, so concurrent
 first requests produce one skill rather than one each. Intent embeddings are
