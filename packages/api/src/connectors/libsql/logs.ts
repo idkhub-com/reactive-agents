@@ -36,7 +36,15 @@ export const libsqlLogsStorageConnector: LogsStorageConnector = {
     eq('agent_id', queryParams.agent_id);
     eq('skill_id', queryParams.skill_id);
     eq('cluster_id', queryParams.cluster_id);
-    eq('arm_id', queryParams.arm_id);
+    // The arm is not a column. The row keeps `cluster_id`, which names the
+    // partition but not which of its configurations was pulled, so the
+    // gateway records that on the log as `metadata.served_configuration`.
+    if (queryParams.arm_id !== undefined) {
+      conditions.push(
+        "json_extract(metadata, '$.served_configuration.id') = ?",
+      );
+      args.push(queryParams.arm_id);
+    }
     eq('app_id', queryParams.app_id);
     eq('trace_id', queryParams.trace_id);
     eq('id', queryParams.id);

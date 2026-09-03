@@ -811,6 +811,29 @@ describe('logs', () => {
     expect(fetchedBare.original_system_prompt).toBeNull();
   });
 
+  it('filters by the configuration that served the request', async () => {
+    const { c } = await freshDatabase();
+    const agent = await seedAgent(c);
+    const skill = await seedSkill(c, agent.id);
+    const armId = '11111111-1111-4111-8111-111111111111';
+
+    // No `arm_id` column: the arm is matched inside the metadata, where the
+    // gateway records it.
+    const served = await logs.createLog(c, {
+      ...logParams(agent.id, skill.id),
+      metadata: { served_configuration: { id: armId, name: '7' } },
+    } as Parameters<typeof logs.createLog>[1]);
+    await logs.createLog(c, logParams(agent.id, skill.id));
+
+    const matched = await logs.getLogs(c, { arm_id: armId });
+    expect(matched.map((l) => l.id)).toEqual([served.id]);
+
+    const other = await logs.getLogs(c, {
+      arm_id: '22222222-2222-4222-8222-222222222222',
+    });
+    expect(other).toEqual([]);
+  });
+
   it('orders newest first and honours the time range', async () => {
     const { c } = await freshDatabase();
     const agent = await seedAgent(c);

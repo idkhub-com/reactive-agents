@@ -161,6 +161,8 @@ export const LogsQueryParams = z.object({
   agent_id: z.uuid().optional(),
   skill_id: z.uuid().optional(),
   cluster_id: z.uuid().optional(),
+  /** Matched against `metadata.served_configuration`, since the row keeps
+   * the partition an arm belongs to but not the arm itself. */
   arm_id: z.uuid().optional(),
   app_id: z.uuid().optional(),
   /** The trace -- for a client that names its session, the session. */

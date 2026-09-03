@@ -1408,7 +1408,10 @@ export const supabaseLogsStorageConnector: LogsStorageConnector = {
       postgRESTQuery.cluster_id = `eq.${queryParams.cluster_id}`;
     }
     if (queryParams.arm_id) {
-      postgRESTQuery.arm_id = `eq.${queryParams.arm_id}`;
+      // As in the libSQL connector: the arm is not a column, it is recorded
+      // on the log as `metadata.served_configuration`.
+      postgRESTQuery['metadata->served_configuration->>id'] =
+        `eq.${queryParams.arm_id}`;
     }
     if (queryParams.app_id) {
       postgRESTQuery.app_id = `eq.${queryParams.app_id}`;

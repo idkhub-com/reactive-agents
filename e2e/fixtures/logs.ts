@@ -34,3 +34,19 @@ export const getLogs = async (
   });
   return response.json() as Promise<LoggedRequest[]>;
 };
+
+/**
+ * The logs a configuration served. There is no `arm_id` column: both
+ * connectors reach into `metadata.served_configuration`, SQLite with
+ * `json_extract` and PostgREST with a `->>` path, which is why this is
+ * exercised on both backends.
+ */
+export const getLogsByArm = async (
+  request: APIRequestContext,
+  armId: string,
+): Promise<LoggedRequest[]> => {
+  const response = await request.get(LOGS_PATH, {
+    params: { arm_id: armId },
+  });
+  return response.json() as Promise<LoggedRequest[]>;
+};
