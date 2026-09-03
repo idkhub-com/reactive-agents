@@ -422,9 +422,12 @@ export interface HooksConnector {
  * was triggered by thumbs up/down feedback on the log: the LLM judges fold
  * the verified verdict into their prompts and re-derive what makes the
  * response good or bad; connectors that compute rather than judge ignore it.
+ * `humanVerdictReason` is the note the reviewer typed alongside the thumb,
+ * when they typed one -- the only place in the prompt that says *why*.
  */
 export interface EvaluateLogOptions {
   humanVerdict?: 'good' | 'bad';
+  humanVerdictReason?: string;
 }
 
 export interface EvaluationMethodConnector {

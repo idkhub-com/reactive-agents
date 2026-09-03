@@ -28,8 +28,8 @@ const log = {
   cluster_id: 'cluster-1',
 } as unknown as Log;
 
-const feedbackOf = (score: number): Feedback =>
-  ({ id: 'feedback-1', log_id: 'log-1', score }) as Feedback;
+const feedbackOf = (score: number, feedback?: string | null): Feedback =>
+  ({ id: 'feedback-1', log_id: 'log-1', score, feedback }) as Feedback;
 
 const evaluations = [{ id: 'eval-1', evaluation_method: 'task_completion' }];
 const newResults = [{ evaluation_id: 'eval-1', score: 0.2 }];
@@ -103,6 +103,29 @@ describe('reevaluateLogFromFeedback', () => {
 
     expect(vi.mocked(runEvaluationsForLog).mock.calls[0][5]).toEqual({
       humanVerdict: 'good',
+    });
+  });
+
+  it("carries the reviewer's typed reason to the judges", async () => {
+    await reevaluateLogFromFeedback(
+      context,
+      feedbackOf(0, 'It invented the citation.'),
+    );
+
+    expect(vi.mocked(runEvaluationsForLog).mock.calls[0][5]).toEqual({
+      humanVerdict: 'bad',
+      humanVerdictReason: 'It invented the citation.',
+    });
+  });
+
+  it('sends no reason when the thumb came without one', async () => {
+    // The column is nullable and both backends answer NULL for a bare
+    // thumb; the judges must see an absent reason, not the string "null".
+    await reevaluateLogFromFeedback(context, feedbackOf(0, null));
+
+    expect(vi.mocked(runEvaluationsForLog).mock.calls[0][5]).toEqual({
+      humanVerdict: 'bad',
+      humanVerdictReason: undefined,
     });
   });
 

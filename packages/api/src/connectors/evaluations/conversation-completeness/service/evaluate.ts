@@ -96,7 +96,7 @@ export async function evaluateConversationCompleteness(
   // A run triggered by thumbs up/down carries the human's verdict: the
   // judge re-derives what makes the response good or bad with it anchored.
   const verdictSection = options?.humanVerdict
-    ? ` ${humanVerdictNote(options.humanVerdict)}`
+    ? ` ${humanVerdictNote(options.humanVerdict, options.humanVerdictReason)}`
     : '';
 
   // Create a simple evaluation prompt that won't trigger template-based evaluation

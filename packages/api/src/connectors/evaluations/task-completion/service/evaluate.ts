@@ -43,11 +43,13 @@ async function generateVerdict(
     outcome,
     inProgress,
     humanVerdict,
+    humanVerdictReason,
   }: {
     task: string;
     outcome: string;
     inProgress: boolean;
     humanVerdict?: 'good' | 'bad';
+    humanVerdictReason?: string;
   },
   llm_judge: LLMJudge,
 ): Promise<{ verdict: number; reason: string }> {
@@ -55,7 +57,9 @@ async function generateVerdict(
     task,
     outcome,
     inProgress,
-    humanVerdictNote: humanVerdict ? humanVerdictNote(humanVerdict) : undefined,
+    humanVerdictNote: humanVerdict
+      ? humanVerdictNote(humanVerdict, humanVerdictReason)
+      : undefined,
   });
   // Explicit prompts: the heuristic re-split of the joined text only kept
   // returning real scores because the template's JSON instruction happened
@@ -158,7 +162,13 @@ export async function evaluateLog(
 
     // Step 2: Generate verdict
     const { verdict, reason } = await generateVerdict(
-      { task, outcome, inProgress, humanVerdict: options?.humanVerdict },
+      {
+        task,
+        outcome,
+        inProgress,
+        humanVerdict: options?.humanVerdict,
+        humanVerdictReason: options?.humanVerdictReason,
+      },
       llmJudge,
     );
     const verdict_llm_output = JSON.stringify({ verdict, reason });

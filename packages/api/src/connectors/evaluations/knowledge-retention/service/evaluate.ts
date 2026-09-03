@@ -85,7 +85,7 @@ export async function evaluateLog(
 
   // A feedback-triggered run carries the human's verdict as an anchor.
   const verdictSection = options?.humanVerdict
-    ? ` ${humanVerdictNote(options.humanVerdict)}`
+    ? ` ${humanVerdictNote(options.humanVerdict, options.humanVerdictReason)}`
     : '';
 
   const evaluationText = `Analyze the following conversation for knowledge retention quality. ${roleSection}CONVERSATION: ${input} ASSISTANT RESPONSE: ${output} Consider how well the assistant retains and recalls information provided by the user throughout the conversation, judged against what its role requires it to carry forward. Look for: Knowledge retention vs. knowledge attrition patterns, consistency in recalling previously mentioned information, ability to maintain context across multiple turns, and specific instances where information was retained or lost. For single-turn conversations, assess if the assistant would be able to retain the information for future reference.${verdictSection} Provide a score between 0 and 1 with detailed reasoning for your analysis.`;

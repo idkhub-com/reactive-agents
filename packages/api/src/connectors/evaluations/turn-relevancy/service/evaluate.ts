@@ -128,7 +128,7 @@ export async function evaluateLog(
     current_turn,
     assistant_role,
     human_verdict_note: options?.humanVerdict
-      ? humanVerdictNote(options.humanVerdict)
+      ? humanVerdictNote(options.humanVerdict, options.humanVerdictReason)
       : undefined,
     strict_mode: params.strict_mode || false,
     verbose_mode: params.verbose_mode ?? true,
