@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * The thumbs on a log: one verdict per log, the other thumb replaces it,
- * the same thumb withdraws it. The server does the special part (re-running
- * the evaluations); what matters here is the score each press sends.
+ * and the thumb already holding the verdict re-opens its note to edit or
+ * withdraw. A thumb opens a composer instead of writing, so the optional
+ * reason rides along on the same write -- the server re-runs every judge on
+ * each one. What matters here is the score and reason each save sends.
  */
 
 const getFeedback = vi.fn();
@@ -41,12 +43,13 @@ describe('LogFeedback', () => {
     vi.clearAllMocks();
   });
 
-  it('sends a thumbs down as score 0', async () => {
+  it('sends a thumbs down as score 0 with no reason typed', async () => {
     getFeedback.mockResolvedValue([]);
     createFeedback.mockResolvedValue({ id: 'feedback-1', score: 0 });
 
     renderFeedback();
     fireEvent.click(screen.getByLabelText('Bad output'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(createFeedback).toHaveBeenCalledWith({
@@ -58,6 +61,54 @@ describe('LogFeedback', () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Marked as a bad output' }),
     );
+  });
+
+  it('sends the typed reason alongside the verdict', async () => {
+    getFeedback.mockResolvedValue([]);
+    createFeedback.mockResolvedValue({
+      id: 'feedback-1',
+      score: 0,
+      feedback: 'It invented the citation.',
+    });
+
+    renderFeedback();
+    fireEvent.click(screen.getByLabelText('Bad output'));
+    fireEvent.change(await screen.findByLabelText('Reason for this verdict'), {
+      target: { value: '  It invented the citation.  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(createFeedback).toHaveBeenCalledWith({
+        log_id: 'log-1',
+        score: 0,
+        feedback: 'It invented the citation.',
+      });
+    });
+  });
+
+  it('opens the current verdict prefilled with its saved reason', async () => {
+    getFeedback.mockResolvedValue([
+      {
+        id: 'feedback-1',
+        log_id: 'log-1',
+        score: 1,
+        feedback: 'Nailed the tone.',
+      },
+    ]);
+    createFeedback.mockResolvedValue({ id: 'feedback-2', score: 1 });
+
+    renderFeedback();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Good output')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+    fireEvent.click(screen.getByLabelText('Good output'));
+
+    const textarea = await screen.findByLabelText('Reason for this verdict');
+    expect(textarea).toHaveValue('Nailed the tone.');
   });
 
   it('replaces the opposite verdict', async () => {
@@ -75,6 +126,7 @@ describe('LogFeedback', () => {
       );
     });
     fireEvent.click(screen.getByLabelText('Good output'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(createFeedback).toHaveBeenCalledWith({
@@ -85,7 +137,7 @@ describe('LogFeedback', () => {
     expect(deleteFeedback).toHaveBeenCalledWith('feedback-1');
   });
 
-  it('withdraws the verdict when the same thumb is pressed again', async () => {
+  it('withdraws the verdict from the composer', async () => {
     getFeedback.mockResolvedValue([
       { id: 'feedback-1', log_id: 'log-1', score: 1 },
     ]);
@@ -98,6 +150,7 @@ describe('LogFeedback', () => {
       );
     });
     fireEvent.click(screen.getByLabelText('Good output'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
 
     await waitFor(() => {
       expect(deleteFeedback).toHaveBeenCalledWith('feedback-1');

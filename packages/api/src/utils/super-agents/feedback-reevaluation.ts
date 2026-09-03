@@ -44,7 +44,7 @@ export async function reevaluateLogFromFeedback(
     evaluations,
     evaluationConnectorsMap,
     userDataConnector,
-    { humanVerdict },
+    { humanVerdict, humanVerdictReason: feedback.feedback ?? undefined },
   );
   if (results.length === 0) {
     error(
