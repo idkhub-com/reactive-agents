@@ -102,7 +102,7 @@ const chunkedPackages: Record<string, string[]> = {
   // TanStack libraries
   tanstack: ['@tanstack/react-query', '@tanstack/react-router'],
   // Date utilities
-  dates: ['date-fns', 'date-fns-tz', 'react-day-picker'],
+  dates: ['date-fns', 'react-day-picker'],
   // Form libraries
   forms: ['react-hook-form', '@hookform/resolvers'],
   // Icon library
