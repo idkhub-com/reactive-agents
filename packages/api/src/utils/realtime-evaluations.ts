@@ -34,7 +34,7 @@ export async function runEvaluationsForLog(
     async (evaluation) => {
       try {
         const connector = evaluationConnectorsMap[evaluation.evaluation_method];
-        if (!connector || !connector.evaluateLog) {
+        if (!connector?.evaluateLog) {
           error(
             `[REALTIME_EVAL] No connector found for evaluation method: ${evaluation.evaluation_method}`,
           );

@@ -131,11 +131,6 @@ const mockUserDataStorageConnector = {
   updateSystemSettings: vi.fn(),
 } as UserDataStorageConnector;
 
-// Mock for crypto.randomUUID
-vi.stubGlobal('crypto', {
-  randomUUID: vi.fn().mockReturnValue('123e4567-e89b-12d3-a456-426614174000'),
-});
-
 // Mock environment constants for authentication tests
 vi.mock('@api/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@api/constants')>();

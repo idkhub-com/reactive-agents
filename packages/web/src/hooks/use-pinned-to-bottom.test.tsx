@@ -121,19 +121,17 @@ describe('usePinnedToBottom', () => {
     expect(scrolledTo).toEqual([1000]);
   });
 
-  it.each([
-    'wheel',
-    'touchMove',
-    'pointerDown',
-    'keyDown',
-  ] as const)('lets go once the reader takes over with %s', (interaction) => {
-    render(<Pane logId="log-1" />);
-    fireEvent[interaction](screen.getByTestId('pane'));
+  it.each(['wheel', 'touchMove', 'pointerDown', 'keyDown'] as const)(
+    'lets go once the reader takes over with %s',
+    (interaction) => {
+      render(<Pane logId="log-1" />);
+      fireEvent[interaction](screen.getByTestId('pane'));
 
-    grow(4000);
+      grow(4000);
 
-    expect(scrolledTo).toEqual([1000]);
-  });
+      expect(scrolledTo).toEqual([1000]);
+    },
+  );
 
   it('re-arms when another log is opened', () => {
     const { rerender } = render(<Pane logId="log-1" />);

@@ -20,9 +20,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockCreate = vi.fn();
 
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    withOptions: () => ({ chat: { completions: { create: mockCreate } } }),
-  })),
+  default: vi.fn(
+    class {
+      withOptions = () => ({ chat: { completions: { create: mockCreate } } });
+    },
+  ),
 }));
 
 vi.mock('@api/constants', async (importOriginal) => ({

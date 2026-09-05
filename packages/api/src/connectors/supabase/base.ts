@@ -70,8 +70,7 @@ export const insertIntoSupabase = async <
   upsert: boolean | 'ignore' = false,
 ): Promise<
   // If schema is not provided, return void
-  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
-> => {
+  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void> => {
   const postgrestUrl = getPostgrestUrl(c);
   const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
   const supabaseSecretKey = getSupabaseSecretKey(c);
@@ -142,8 +141,8 @@ export const updateInSupabase = async <
   schema: OutputSchema | null,
 ): Promise<
   // If schema is not provided, return void
-  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
-> => patchInSupabase(c, table, { id: `eq.${id}` }, data, schema);
+  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void> =>
+  patchInSupabase(c, table, { id: `eq.${id}` }, data, schema);
 
 /**
  * PATCH the rows matching `params` (PostgREST filters, e.g. `{ id: 'eq.1' }`)
@@ -162,8 +161,7 @@ export const patchInSupabase = async <
   schema: OutputSchema | null,
 ): Promise<
   // If schema is not provided, return void
-  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void
-> => {
+  OutputSchema extends z.ZodType ? z.infer<OutputSchema> : void> => {
   const postgrestUrl = getPostgrestUrl(c);
   const postgrestServiceRoleKey = getPostgrestServiceRoleKey(c);
   const supabaseSecretKey = getSupabaseSecretKey(c);

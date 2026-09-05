@@ -1,5 +1,6 @@
 import {
   AUTH_COOKIE_MAX_AGE,
+  AUTH_JWT_ALG,
   getAccessPassword,
   getAuthJwtSecret,
 } from '@api/constants';
@@ -55,6 +56,7 @@ export const loginRouter = new Hono<AppEnv>()
           exp: Math.floor(Date.now() / 1000) + AUTH_COOKIE_MAX_AGE,
         },
         jwtSecret,
+        AUTH_JWT_ALG,
       );
 
       setCookie(c, AUTH_COOKIE_NAME, jwt, authCookieSetOptions(c));

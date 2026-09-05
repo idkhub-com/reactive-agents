@@ -11,11 +11,13 @@ vi.mock('uuid', () => ({
   v4: vi.fn().mockReturnValue('123e4567-e89b-12d3-a456-426614174000'),
 }));
 
-// Mock Date to have predictable timestamps
-const mockDate = new Date('2023-01-01T00:00:00.000Z');
+// Freeze the clock so the schemas' generated timestamps are predictable.
+// Vitest 5 constructs a mock implementation, so a spy on `Date` returning an
+// arrow function is no longer callable with `new`; faking the system time is
+// both the supported way to do this and less to keep in sync.
 const mockISOString = '2023-01-01T00:00:00.000Z';
-vi.spyOn(global.Date.prototype, 'toISOString').mockReturnValue(mockISOString);
-vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
+vi.useFakeTimers();
+vi.setSystemTime(new Date(mockISOString));
 
 describe('Skill Data Transforms and Validation', () => {
   const testAgentId = '550e8400-e29b-41d4-a716-446655440000';

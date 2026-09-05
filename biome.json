@@ -45,7 +45,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {},
       "complexity": {
         "noExtraBooleanCast": "error",
@@ -148,7 +148,8 @@
       "!**/tsconfig.json",
       "!**/*.md",
       "!**/.wrangler/**/*",
-      "!**/.wrangler-build/**/*"
+      "!**/.wrangler-build/**/*",
+      "!.github/assets/**"
     ]
   },
   "javascript": {
@@ -260,7 +261,10 @@
       }
     },
     {
-      "includes": ["**/types/cloudflare-env.d.ts"],
+      "includes": [
+        "**/types/cloudflare-env.d.ts",
+        "**/worker-configuration.d.ts"
+      ],
       "linter": {
         "enabled": false,
         "rules": {
@@ -281,7 +285,8 @@
       },
       "formatter": {
         "enabled": false
-      }
+      },
+      "assist": { "actions": { "source": { "organizeImports": "off" } } }
     },
     {
       "includes": ["**/routeTree.gen.ts"],

@@ -147,6 +147,15 @@ In practice:
 
 `pnpm verify:worker` bundles and boots the Worker, and runs in CI.
 
+**The Workers runtime types are generated, not a dependency.**
+`packages/api/worker-configuration.d.ts` comes from `wrangler types`, run in
+`packages/api`, and is committed. It replaces `@cloudflare/workers-types`,
+which Wrangler now supersedes and which cannot be used here anyway: from v5 it
+declares `Buffer`, `process` and `global` itself, and those collide with
+`@types/node`, which the Node entrypoint needs. The generated file omits them
+because `wrangler.toml` sets `nodejs_compat_v2`. Regenerate it after changing
+`wrangler.toml`.
+
 ### Request Flow
 ```
 Development:  Browser (:3000) → Vite proxy → API (a free port)

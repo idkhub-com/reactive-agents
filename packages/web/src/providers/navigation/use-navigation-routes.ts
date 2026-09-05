@@ -9,7 +9,7 @@ type PermissiveNavigateOptions = {
   params?: Record<string, string>;
 };
 
-type NavigateFn = (opts: PermissiveNavigateOptions) => void;
+export type NavigateFn = (opts: PermissiveNavigateOptions) => void;
 
 export function useNavigationRoutes(navigate: NavigateFn) {
   const navigateToSkillDashboard = useCallback(

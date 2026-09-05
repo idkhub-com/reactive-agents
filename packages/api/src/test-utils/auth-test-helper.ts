@@ -88,4 +88,4 @@ export function createBearerHeader(token: string = TEST_BEARER_TOKEN): {
   return { Authorization: `Bearer ${token}` };
 }
 
-export { TEST_JWT_SECRET, TEST_BEARER_TOKEN, TEST_ACCESS_PASSWORD };
+export { TEST_ACCESS_PASSWORD, TEST_BEARER_TOKEN, TEST_JWT_SECRET };

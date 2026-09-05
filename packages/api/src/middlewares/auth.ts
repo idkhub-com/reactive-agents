@@ -1,4 +1,5 @@
 import {
+  AUTH_JWT_ALG,
   getAccessPassword,
   getAuthJwtSecret,
   getBearerToken,
@@ -45,7 +46,11 @@ export const authenticatedMiddleware = (
     // Check JWT cookie first (set by login flow)
     const accessTokenCookie = getCookie(c, AUTH_COOKIE_NAME);
     if (accessTokenCookie) {
-      await jwt({ cookie: AUTH_COOKIE_NAME, secret: jwtSecret })(c, next);
+      await jwt({
+        cookie: AUTH_COOKIE_NAME,
+        secret: jwtSecret,
+        alg: AUTH_JWT_ALG,
+      })(c, next);
       return;
     }
 

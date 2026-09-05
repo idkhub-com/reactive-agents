@@ -9,67 +9,60 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as MainRouteImport } from './routes/_main'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MainRouteImport } from './routes/_main'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MainSettingsRouteImport } from './routes/_main/settings'
-import { Route as MainAiProvidersIndexRouteImport } from './routes/_main/ai-providers.index'
 import { Route as MainAgentsIndexRouteImport } from './routes/_main/agents.index'
-import { Route as MainAiProvidersCreateRouteImport } from './routes/_main/ai-providers.create'
-import { Route as MainAgentsCreateRouteImport } from './routes/_main/agents.create'
 import { Route as MainAgentsAgentNameRouteImport } from './routes/_main/agents.$agentName'
+import { Route as MainAgentsCreateRouteImport } from './routes/_main/agents.create'
+import { Route as MainAiProvidersIndexRouteImport } from './routes/_main/ai-providers.index'
+import { Route as MainAiProvidersCreateRouteImport } from './routes/_main/ai-providers.create'
 import { Route as MainAgentsAgentNameIndexRouteImport } from './routes/_main/agents.$agentName.index'
-import { Route as MainAiProvidersIdEditRouteImport } from './routes/_main/ai-providers.$id.edit'
-import { Route as MainAiProvidersIdAddModelsRouteImport } from './routes/_main/ai-providers.$id.add-models'
-import { Route as MainAgentsAgentNameLogsRouteImport } from './routes/_main/agents.$agentName.logs'
 import { Route as MainAgentsAgentNameEditRouteImport } from './routes/_main/agents.$agentName.edit'
+import { Route as MainAgentsAgentNameLogsRouteImport } from './routes/_main/agents.$agentName.logs'
+import { Route as MainAiProvidersIdAddModelsRouteImport } from './routes/_main/ai-providers.$id.add-models'
+import { Route as MainAiProvidersIdEditRouteImport } from './routes/_main/ai-providers.$id.edit'
 import { Route as MainAgentsAgentNameLogsIndexRouteImport } from './routes/_main/agents.$agentName.logs.index'
-import { Route as MainAgentsAgentNameSkillsCreateRouteImport } from './routes/_main/agents.$agentName.skills.create'
-import { Route as MainAgentsAgentNameSkillsSkillNameRouteImport } from './routes/_main/agents.$agentName.skills.$skillName'
 import { Route as MainAgentsAgentNameLogsLogIdRouteImport } from './routes/_main/agents.$agentName.logs.$logId'
+import { Route as MainAgentsAgentNameSkillsSkillNameRouteImport } from './routes/_main/agents.$agentName.skills.$skillName'
+import { Route as MainAgentsAgentNameSkillsCreateRouteImport } from './routes/_main/agents.$agentName.skills.create'
 import { Route as MainAgentsAgentNameSkillsSkillNameIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.index'
-import { Route as MainAgentsAgentNameSkillsSkillNameSetupRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.setup'
-import { Route as MainAgentsAgentNameSkillsSkillNameLogsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs'
-import { Route as MainAgentsAgentNameSkillsSkillNameEventsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.events'
-import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations'
 import { Route as MainAgentsAgentNameSkillsSkillNameEditRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.edit'
-import { Route as MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs.index'
-import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations.index'
+import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations'
+import { Route as MainAgentsAgentNameSkillsSkillNameEventsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.events'
+import { Route as MainAgentsAgentNameSkillsSkillNameLogsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs'
+import { Route as MainAgentsAgentNameSkillsSkillNameSetupRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.setup'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.index'
-import { Route as MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs.$logId'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId'
-import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations.$evaluationId.edit'
+import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations.index'
+import { Route as MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs.index'
+import { Route as MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.logs.$logId'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId.configurations'
+import { Route as MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.evaluations.$evaluationId.edit'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsIndexRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId.configurations.index'
 import { Route as MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsArmIdRouteImport } from './routes/_main/agents.$agentName.skills.$skillName.clusters.$clusterId.configurations.$armId'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
-const MainRoute = MainRouteImport.update({
-  id: '/_main',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MainRoute = MainRouteImport.update({
+  id: '/_main',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
 const MainSettingsRoute = MainSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => MainRoute,
 } as any).lazy(() =>
   import('./routes/_main/settings.lazy').then((d) => d.Route),
-)
-const MainAiProvidersIndexRoute = MainAiProvidersIndexRouteImport.update({
-  id: '/ai-providers/',
-  path: '/ai-providers/',
-  getParentRoute: () => MainRoute,
-} as any).lazy(() =>
-  import('./routes/_main/ai-providers.index.lazy').then((d) => d.Route),
 )
 const MainAgentsIndexRoute = MainAgentsIndexRouteImport.update({
   id: '/agents/',
@@ -78,13 +71,11 @@ const MainAgentsIndexRoute = MainAgentsIndexRouteImport.update({
 } as any).lazy(() =>
   import('./routes/_main/agents.index.lazy').then((d) => d.Route),
 )
-const MainAiProvidersCreateRoute = MainAiProvidersCreateRouteImport.update({
-  id: '/ai-providers/create',
-  path: '/ai-providers/create',
+const MainAgentsAgentNameRoute = MainAgentsAgentNameRouteImport.update({
+  id: '/agents/$agentName',
+  path: '/agents/$agentName',
   getParentRoute: () => MainRoute,
-} as any).lazy(() =>
-  import('./routes/_main/ai-providers.create.lazy').then((d) => d.Route),
-)
+} as any)
 const MainAgentsCreateRoute = MainAgentsCreateRouteImport.update({
   id: '/agents/create',
   path: '/agents/create',
@@ -92,11 +83,20 @@ const MainAgentsCreateRoute = MainAgentsCreateRouteImport.update({
 } as any).lazy(() =>
   import('./routes/_main/agents.create.lazy').then((d) => d.Route),
 )
-const MainAgentsAgentNameRoute = MainAgentsAgentNameRouteImport.update({
-  id: '/agents/$agentName',
-  path: '/agents/$agentName',
+const MainAiProvidersIndexRoute = MainAiProvidersIndexRouteImport.update({
+  id: '/ai-providers/',
+  path: '/ai-providers/',
   getParentRoute: () => MainRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_main/ai-providers.index.lazy').then((d) => d.Route),
+)
+const MainAiProvidersCreateRoute = MainAiProvidersCreateRouteImport.update({
+  id: '/ai-providers/create',
+  path: '/ai-providers/create',
+  getParentRoute: () => MainRoute,
+} as any).lazy(() =>
+  import('./routes/_main/ai-providers.create.lazy').then((d) => d.Route),
+)
 const MainAgentsAgentNameIndexRoute =
   MainAgentsAgentNameIndexRouteImport.update({
     id: '/',
@@ -105,13 +105,18 @@ const MainAgentsAgentNameIndexRoute =
   } as any).lazy(() =>
     import('./routes/_main/agents.$agentName.index.lazy').then((d) => d.Route),
   )
-const MainAiProvidersIdEditRoute = MainAiProvidersIdEditRouteImport.update({
-  id: '/ai-providers/$id/edit',
-  path: '/ai-providers/$id/edit',
-  getParentRoute: () => MainRoute,
+const MainAgentsAgentNameEditRoute = MainAgentsAgentNameEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => MainAgentsAgentNameRoute,
 } as any).lazy(() =>
-  import('./routes/_main/ai-providers.$id.edit.lazy').then((d) => d.Route),
+  import('./routes/_main/agents.$agentName.edit.lazy').then((d) => d.Route),
 )
+const MainAgentsAgentNameLogsRoute = MainAgentsAgentNameLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => MainAgentsAgentNameRoute,
+} as any)
 const MainAiProvidersIdAddModelsRoute =
   MainAiProvidersIdAddModelsRouteImport.update({
     id: '/ai-providers/$id/add-models',
@@ -122,17 +127,12 @@ const MainAiProvidersIdAddModelsRoute =
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameLogsRoute = MainAgentsAgentNameLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => MainAgentsAgentNameRoute,
-} as any)
-const MainAgentsAgentNameEditRoute = MainAgentsAgentNameEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => MainAgentsAgentNameRoute,
+const MainAiProvidersIdEditRoute = MainAiProvidersIdEditRouteImport.update({
+  id: '/ai-providers/$id/edit',
+  path: '/ai-providers/$id/edit',
+  getParentRoute: () => MainRoute,
 } as any).lazy(() =>
-  import('./routes/_main/agents.$agentName.edit.lazy').then((d) => d.Route),
+  import('./routes/_main/ai-providers.$id.edit.lazy').then((d) => d.Route),
 )
 const MainAgentsAgentNameLogsIndexRoute =
   MainAgentsAgentNameLogsIndexRouteImport.update({
@@ -144,13 +144,13 @@ const MainAgentsAgentNameLogsIndexRoute =
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameSkillsCreateRoute =
-  MainAgentsAgentNameSkillsCreateRouteImport.update({
-    id: '/skills/create',
-    path: '/skills/create',
-    getParentRoute: () => MainAgentsAgentNameRoute,
+const MainAgentsAgentNameLogsLogIdRoute =
+  MainAgentsAgentNameLogsLogIdRouteImport.update({
+    id: '/$logId',
+    path: '/$logId',
+    getParentRoute: () => MainAgentsAgentNameLogsRoute,
   } as any).lazy(() =>
-    import('./routes/_main/agents.$agentName.skills.create.lazy').then(
+    import('./routes/_main/agents.$agentName.logs.$logId.lazy').then(
       (d) => d.Route,
     ),
   )
@@ -160,13 +160,13 @@ const MainAgentsAgentNameSkillsSkillNameRoute =
     path: '/skills/$skillName',
     getParentRoute: () => MainAgentsAgentNameRoute,
   } as any)
-const MainAgentsAgentNameLogsLogIdRoute =
-  MainAgentsAgentNameLogsLogIdRouteImport.update({
-    id: '/$logId',
-    path: '/$logId',
-    getParentRoute: () => MainAgentsAgentNameLogsRoute,
+const MainAgentsAgentNameSkillsCreateRoute =
+  MainAgentsAgentNameSkillsCreateRouteImport.update({
+    id: '/skills/create',
+    path: '/skills/create',
+    getParentRoute: () => MainAgentsAgentNameRoute,
   } as any).lazy(() =>
-    import('./routes/_main/agents.$agentName.logs.$logId.lazy').then(
+    import('./routes/_main/agents.$agentName.skills.create.lazy').then(
       (d) => d.Route,
     ),
   )
@@ -180,20 +180,20 @@ const MainAgentsAgentNameSkillsSkillNameIndexRoute =
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameSkillsSkillNameSetupRoute =
-  MainAgentsAgentNameSkillsSkillNameSetupRouteImport.update({
-    id: '/setup',
-    path: '/setup',
+const MainAgentsAgentNameSkillsSkillNameEditRoute =
+  MainAgentsAgentNameSkillsSkillNameEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
     getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
   } as any).lazy(() =>
-    import('./routes/_main/agents.$agentName.skills.$skillName.setup.lazy').then(
+    import('./routes/_main/agents.$agentName.skills.$skillName.edit.lazy').then(
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameSkillsSkillNameLogsRoute =
-  MainAgentsAgentNameSkillsSkillNameLogsRouteImport.update({
-    id: '/logs',
-    path: '/logs',
+const MainAgentsAgentNameSkillsSkillNameEvaluationsRoute =
+  MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport.update({
+    id: '/evaluations',
+    path: '/evaluations',
     getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
   } as any)
 const MainAgentsAgentNameSkillsSkillNameEventsRoute =
@@ -206,27 +206,33 @@ const MainAgentsAgentNameSkillsSkillNameEventsRoute =
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameSkillsSkillNameEvaluationsRoute =
-  MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport.update({
-    id: '/evaluations',
-    path: '/evaluations',
+const MainAgentsAgentNameSkillsSkillNameLogsRoute =
+  MainAgentsAgentNameSkillsSkillNameLogsRouteImport.update({
+    id: '/logs',
+    path: '/logs',
     getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
   } as any)
-const MainAgentsAgentNameSkillsSkillNameEditRoute =
-  MainAgentsAgentNameSkillsSkillNameEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
+const MainAgentsAgentNameSkillsSkillNameSetupRoute =
+  MainAgentsAgentNameSkillsSkillNameSetupRouteImport.update({
+    id: '/setup',
+    path: '/setup',
     getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
   } as any).lazy(() =>
-    import('./routes/_main/agents.$agentName.skills.$skillName.edit.lazy').then(
+    import('./routes/_main/agents.$agentName.skills.$skillName.setup.lazy').then(
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameSkillsSkillNameLogsIndexRoute =
-  MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameLogsRoute,
+const MainAgentsAgentNameSkillsSkillNameClustersIndexRoute =
+  MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport.update({
+    id: '/clusters/',
+    path: '/clusters/',
+    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
+  } as any)
+const MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute =
+  MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteImport.update({
+    id: '/clusters/$clusterId',
+    path: '/clusters/$clusterId',
+    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
   } as any)
 const MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute =
   MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport.update({
@@ -238,11 +244,11 @@ const MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute =
       (d) => d.Route,
     ),
   )
-const MainAgentsAgentNameSkillsSkillNameClustersIndexRoute =
-  MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport.update({
-    id: '/clusters/',
-    path: '/clusters/',
-    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
+const MainAgentsAgentNameSkillsSkillNameLogsIndexRoute =
+  MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameLogsRoute,
   } as any)
 const MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute =
   MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport.update({
@@ -250,12 +256,15 @@ const MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute =
     path: '/$logId',
     getParentRoute: () => MainAgentsAgentNameSkillsSkillNameLogsRoute,
   } as any)
-const MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute =
-  MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteImport.update({
-    id: '/clusters/$clusterId',
-    path: '/clusters/$clusterId',
-    getParentRoute: () => MainAgentsAgentNameSkillsSkillNameRoute,
-  } as any)
+const MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRoute =
+  MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteImport.update(
+    {
+      id: '/configurations',
+      path: '/configurations',
+      getParentRoute: () =>
+        MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute,
+    } as any,
+  )
 const MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRoute =
   MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRouteImport.update(
     {
@@ -267,15 +276,6 @@ const MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRoute =
     import('./routes/_main/agents.$agentName.skills.$skillName.evaluations.$evaluationId.edit.lazy').then(
       (d) => d.Route,
     ),
-  )
-const MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRoute =
-  MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteImport.update(
-    {
-      id: '/configurations',
-      path: '/configurations',
-      getParentRoute: () =>
-        MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute,
-    } as any,
   )
 const MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsIndexRoute =
   MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsIndexRouteImport.update(
@@ -311,8 +311,8 @@ export interface FileRoutesByFullPath {
   '/agents/$agentName': typeof MainAgentsAgentNameRouteWithChildren
   '/agents/create': typeof MainAgentsCreateRoute
   '/ai-providers/create': typeof MainAiProvidersCreateRoute
-  '/agents': typeof MainAgentsIndexRoute
-  '/ai-providers': typeof MainAiProvidersIndexRoute
+  '/agents/': typeof MainAgentsIndexRoute
+  '/ai-providers/': typeof MainAiProvidersIndexRoute
   '/agents/$agentName/edit': typeof MainAgentsAgentNameEditRoute
   '/agents/$agentName/logs': typeof MainAgentsAgentNameLogsRouteWithChildren
   '/ai-providers/$id/add-models': typeof MainAiProvidersIdAddModelsRoute
@@ -330,7 +330,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentName/skills/$skillName/': typeof MainAgentsAgentNameSkillsSkillNameIndexRoute
   '/agents/$agentName/skills/$skillName/clusters/$clusterId': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteWithChildren
   '/agents/$agentName/skills/$skillName/logs/$logId': typeof MainAgentsAgentNameSkillsSkillNameLogsLogIdRoute
-  '/agents/$agentName/skills/$skillName/clusters': typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRoute
+  '/agents/$agentName/skills/$skillName/clusters/': typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRoute
   '/agents/$agentName/skills/$skillName/evaluations/': typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRoute
   '/agents/$agentName/skills/$skillName/logs/': typeof MainAgentsAgentNameSkillsSkillNameLogsIndexRoute
   '/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations': typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteWithChildren
@@ -411,8 +411,8 @@ export interface FileRouteTypes {
     | '/agents/$agentName'
     | '/agents/create'
     | '/ai-providers/create'
-    | '/agents'
-    | '/ai-providers'
+    | '/agents/'
+    | '/ai-providers/'
     | '/agents/$agentName/edit'
     | '/agents/$agentName/logs'
     | '/ai-providers/$id/add-models'
@@ -430,7 +430,7 @@ export interface FileRouteTypes {
     | '/agents/$agentName/skills/$skillName/'
     | '/agents/$agentName/skills/$skillName/clusters/$clusterId'
     | '/agents/$agentName/skills/$skillName/logs/$logId'
-    | '/agents/$agentName/skills/$skillName/clusters'
+    | '/agents/$agentName/skills/$skillName/clusters/'
     | '/agents/$agentName/skills/$skillName/evaluations/'
     | '/agents/$agentName/skills/$skillName/logs/'
     | '/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations'
@@ -510,25 +510,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_main': {
-      id: '/_main'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof MainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_main': {
+      id: '/_main'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_main/settings': {
@@ -538,32 +538,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainSettingsRouteImport
       parentRoute: typeof MainRoute
     }
-    '/_main/ai-providers/': {
-      id: '/_main/ai-providers/'
-      path: '/ai-providers'
-      fullPath: '/ai-providers'
-      preLoaderRoute: typeof MainAiProvidersIndexRouteImport
-      parentRoute: typeof MainRoute
-    }
     '/_main/agents/': {
       id: '/_main/agents/'
       path: '/agents'
-      fullPath: '/agents'
+      fullPath: '/agents/'
       preLoaderRoute: typeof MainAgentsIndexRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/ai-providers/create': {
-      id: '/_main/ai-providers/create'
-      path: '/ai-providers/create'
-      fullPath: '/ai-providers/create'
-      preLoaderRoute: typeof MainAiProvidersCreateRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/agents/create': {
-      id: '/_main/agents/create'
-      path: '/agents/create'
-      fullPath: '/agents/create'
-      preLoaderRoute: typeof MainAgentsCreateRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/agents/$agentName': {
@@ -573,32 +552,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAgentsAgentNameRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/agents/create': {
+      id: '/_main/agents/create'
+      path: '/agents/create'
+      fullPath: '/agents/create'
+      preLoaderRoute: typeof MainAgentsCreateRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/ai-providers/': {
+      id: '/_main/ai-providers/'
+      path: '/ai-providers'
+      fullPath: '/ai-providers/'
+      preLoaderRoute: typeof MainAiProvidersIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/ai-providers/create': {
+      id: '/_main/ai-providers/create'
+      path: '/ai-providers/create'
+      fullPath: '/ai-providers/create'
+      preLoaderRoute: typeof MainAiProvidersCreateRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/agents/$agentName/': {
       id: '/_main/agents/$agentName/'
       path: '/'
       fullPath: '/agents/$agentName/'
       preLoaderRoute: typeof MainAgentsAgentNameIndexRouteImport
-      parentRoute: typeof MainAgentsAgentNameRoute
-    }
-    '/_main/ai-providers/$id/edit': {
-      id: '/_main/ai-providers/$id/edit'
-      path: '/ai-providers/$id/edit'
-      fullPath: '/ai-providers/$id/edit'
-      preLoaderRoute: typeof MainAiProvidersIdEditRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/ai-providers/$id/add-models': {
-      id: '/_main/ai-providers/$id/add-models'
-      path: '/ai-providers/$id/add-models'
-      fullPath: '/ai-providers/$id/add-models'
-      preLoaderRoute: typeof MainAiProvidersIdAddModelsRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/agents/$agentName/logs': {
-      id: '/_main/agents/$agentName/logs'
-      path: '/logs'
-      fullPath: '/agents/$agentName/logs'
-      preLoaderRoute: typeof MainAgentsAgentNameLogsRouteImport
       parentRoute: typeof MainAgentsAgentNameRoute
     }
     '/_main/agents/$agentName/edit': {
@@ -608,26 +587,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAgentsAgentNameEditRouteImport
       parentRoute: typeof MainAgentsAgentNameRoute
     }
+    '/_main/agents/$agentName/logs': {
+      id: '/_main/agents/$agentName/logs'
+      path: '/logs'
+      fullPath: '/agents/$agentName/logs'
+      preLoaderRoute: typeof MainAgentsAgentNameLogsRouteImport
+      parentRoute: typeof MainAgentsAgentNameRoute
+    }
+    '/_main/ai-providers/$id/add-models': {
+      id: '/_main/ai-providers/$id/add-models'
+      path: '/ai-providers/$id/add-models'
+      fullPath: '/ai-providers/$id/add-models'
+      preLoaderRoute: typeof MainAiProvidersIdAddModelsRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/ai-providers/$id/edit': {
+      id: '/_main/ai-providers/$id/edit'
+      path: '/ai-providers/$id/edit'
+      fullPath: '/ai-providers/$id/edit'
+      preLoaderRoute: typeof MainAiProvidersIdEditRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/agents/$agentName/logs/': {
       id: '/_main/agents/$agentName/logs/'
       path: '/'
       fullPath: '/agents/$agentName/logs/'
       preLoaderRoute: typeof MainAgentsAgentNameLogsIndexRouteImport
       parentRoute: typeof MainAgentsAgentNameLogsRoute
-    }
-    '/_main/agents/$agentName/skills/create': {
-      id: '/_main/agents/$agentName/skills/create'
-      path: '/skills/create'
-      fullPath: '/agents/$agentName/skills/create'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsCreateRouteImport
-      parentRoute: typeof MainAgentsAgentNameRoute
-    }
-    '/_main/agents/$agentName/skills/$skillName': {
-      id: '/_main/agents/$agentName/skills/$skillName'
-      path: '/skills/$skillName'
-      fullPath: '/agents/$agentName/skills/$skillName'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameRouteImport
-      parentRoute: typeof MainAgentsAgentNameRoute
     }
     '/_main/agents/$agentName/logs/$logId': {
       id: '/_main/agents/$agentName/logs/$logId'
@@ -636,39 +622,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAgentsAgentNameLogsLogIdRouteImport
       parentRoute: typeof MainAgentsAgentNameLogsRoute
     }
+    '/_main/agents/$agentName/skills/$skillName': {
+      id: '/_main/agents/$agentName/skills/$skillName'
+      path: '/skills/$skillName'
+      fullPath: '/agents/$agentName/skills/$skillName'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameRouteImport
+      parentRoute: typeof MainAgentsAgentNameRoute
+    }
+    '/_main/agents/$agentName/skills/create': {
+      id: '/_main/agents/$agentName/skills/create'
+      path: '/skills/create'
+      fullPath: '/agents/$agentName/skills/create'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsCreateRouteImport
+      parentRoute: typeof MainAgentsAgentNameRoute
+    }
     '/_main/agents/$agentName/skills/$skillName/': {
       id: '/_main/agents/$agentName/skills/$skillName/'
       path: '/'
       fullPath: '/agents/$agentName/skills/$skillName/'
       preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameIndexRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
-    }
-    '/_main/agents/$agentName/skills/$skillName/setup': {
-      id: '/_main/agents/$agentName/skills/$skillName/setup'
-      path: '/setup'
-      fullPath: '/agents/$agentName/skills/$skillName/setup'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameSetupRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
-    }
-    '/_main/agents/$agentName/skills/$skillName/logs': {
-      id: '/_main/agents/$agentName/skills/$skillName/logs'
-      path: '/logs'
-      fullPath: '/agents/$agentName/skills/$skillName/logs'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
-    }
-    '/_main/agents/$agentName/skills/$skillName/events': {
-      id: '/_main/agents/$agentName/skills/$skillName/events'
-      path: '/events'
-      fullPath: '/agents/$agentName/skills/$skillName/events'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEventsRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
-    }
-    '/_main/agents/$agentName/skills/$skillName/evaluations': {
-      id: '/_main/agents/$agentName/skills/$skillName/evaluations'
-      path: '/evaluations'
-      fullPath: '/agents/$agentName/skills/$skillName/evaluations'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
     }
     '/_main/agents/$agentName/skills/$skillName/edit': {
@@ -678,33 +650,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEditRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
     }
-    '/_main/agents/$agentName/skills/$skillName/logs/': {
-      id: '/_main/agents/$agentName/skills/$skillName/logs/'
-      path: '/'
-      fullPath: '/agents/$agentName/skills/$skillName/logs/'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsRoute
+    '/_main/agents/$agentName/skills/$skillName/evaluations': {
+      id: '/_main/agents/$agentName/skills/$skillName/evaluations'
+      path: '/evaluations'
+      fullPath: '/agents/$agentName/skills/$skillName/evaluations'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
     }
-    '/_main/agents/$agentName/skills/$skillName/evaluations/': {
-      id: '/_main/agents/$agentName/skills/$skillName/evaluations/'
-      path: '/'
-      fullPath: '/agents/$agentName/skills/$skillName/evaluations/'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsRoute
+    '/_main/agents/$agentName/skills/$skillName/events': {
+      id: '/_main/agents/$agentName/skills/$skillName/events'
+      path: '/events'
+      fullPath: '/agents/$agentName/skills/$skillName/events'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEventsRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
+    }
+    '/_main/agents/$agentName/skills/$skillName/logs': {
+      id: '/_main/agents/$agentName/skills/$skillName/logs'
+      path: '/logs'
+      fullPath: '/agents/$agentName/skills/$skillName/logs'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
+    }
+    '/_main/agents/$agentName/skills/$skillName/setup': {
+      id: '/_main/agents/$agentName/skills/$skillName/setup'
+      path: '/setup'
+      fullPath: '/agents/$agentName/skills/$skillName/setup'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameSetupRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
     }
     '/_main/agents/$agentName/skills/$skillName/clusters/': {
       id: '/_main/agents/$agentName/skills/$skillName/clusters/'
       path: '/clusters'
-      fullPath: '/agents/$agentName/skills/$skillName/clusters'
+      fullPath: '/agents/$agentName/skills/$skillName/clusters/'
       preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersIndexRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
-    }
-    '/_main/agents/$agentName/skills/$skillName/logs/$logId': {
-      id: '/_main/agents/$agentName/skills/$skillName/logs/$logId'
-      path: '/$logId'
-      fullPath: '/agents/$agentName/skills/$skillName/logs/$logId'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport
-      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsRoute
     }
     '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId': {
       id: '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId'
@@ -713,12 +692,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameRoute
     }
-    '/_main/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit': {
-      id: '/_main/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit'
-      path: '/$evaluationId/edit'
-      fullPath: '/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit'
-      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRouteImport
+    '/_main/agents/$agentName/skills/$skillName/evaluations/': {
+      id: '/_main/agents/$agentName/skills/$skillName/evaluations/'
+      path: '/'
+      fullPath: '/agents/$agentName/skills/$skillName/evaluations/'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsIndexRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsRoute
+    }
+    '/_main/agents/$agentName/skills/$skillName/logs/': {
+      id: '/_main/agents/$agentName/skills/$skillName/logs/'
+      path: '/'
+      fullPath: '/agents/$agentName/skills/$skillName/logs/'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsIndexRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsRoute
+    }
+    '/_main/agents/$agentName/skills/$skillName/logs/$logId': {
+      id: '/_main/agents/$agentName/skills/$skillName/logs/$logId'
+      path: '/$logId'
+      fullPath: '/agents/$agentName/skills/$skillName/logs/$logId'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsLogIdRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameLogsRoute
     }
     '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations': {
       id: '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations'
@@ -726,6 +719,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations'
       preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdConfigurationsRouteImport
       parentRoute: typeof MainAgentsAgentNameSkillsSkillNameClustersClusterIdRoute
+    }
+    '/_main/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit': {
+      id: '/_main/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit'
+      path: '/$evaluationId/edit'
+      fullPath: '/agents/$agentName/skills/$skillName/evaluations/$evaluationId/edit'
+      preLoaderRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsEvaluationIdEditRouteImport
+      parentRoute: typeof MainAgentsAgentNameSkillsSkillNameEvaluationsRoute
     }
     '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations/': {
       id: '/_main/agents/$agentName/skills/$skillName/clusters/$clusterId/configurations/'

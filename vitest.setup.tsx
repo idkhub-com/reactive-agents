@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 
 // Use vi.hoisted to ensure mock state is available before vi.mock runs
 const hoisted = vi.hoisted(() => {

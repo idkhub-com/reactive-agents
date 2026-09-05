@@ -347,8 +347,7 @@ export function EvaluationEditView(): ReactElement {
 
     // biome-ignore lint/suspicious/noExplicitAny: JSON schema type is dynamic
     const properties = (evaluationMethod.parameterSchema as any)?.properties;
-    if (!properties || !properties[key] || !('default' in properties[key]))
-      return;
+    if (!properties?.[key] || !('default' in properties[key])) return;
 
     // Reset to default value
     setParams((prev) => ({
@@ -363,7 +362,7 @@ export function EvaluationEditView(): ReactElement {
 
     // biome-ignore lint/suspicious/noExplicitAny: JSON schema type is dynamic
     const properties = (evaluationMethod.parameterSchema as any)?.properties;
-    if (!properties || !properties[key]) return false;
+    if (!properties?.[key]) return false;
 
     return 'default' in properties[key];
   };
@@ -376,8 +375,7 @@ export function EvaluationEditView(): ReactElement {
 
       // biome-ignore lint/suspicious/noExplicitAny: JSON schema type is dynamic
       const properties = (evaluationMethod.parameterSchema as any)?.properties;
-      if (!properties || !properties[key] || !('default' in properties[key]))
-        return false;
+      if (!properties?.[key] || !('default' in properties[key])) return false;
 
       const defaultValue = properties[key].default;
 

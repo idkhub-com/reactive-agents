@@ -62,7 +62,7 @@ export function MonacoEditor({
           }
 
           const prevSchemas =
-            monaco.languages.json.jsonDefaults.diagnosticsOptions.schemas;
+            monaco.json.jsonDefaults.diagnosticsOptions.schemas;
 
           const cleanSchemas = prevSchemas?.filter(
             (schema) => !schema.fileMatch?.includes(path),
@@ -82,7 +82,7 @@ export function MonacoEditor({
 
           const newSchemas = [...(cleanSchemas ?? []), newSchema];
 
-          monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+          monaco.json.jsonDefaults.setDiagnosticsOptions({
             validate: true,
             schemas: newSchemas,
           });

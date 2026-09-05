@@ -84,7 +84,7 @@ export function DateTimePicker({
             mode="single"
             selected={selectedDate}
             onSelect={handleDateSelect}
-            initialFocus
+            autoFocus
           />
         </PopoverContent>
       </Popover>

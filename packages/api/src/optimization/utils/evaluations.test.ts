@@ -15,9 +15,11 @@ import { z } from 'zod';
 const mockParse = vi.fn();
 
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    withOptions: () => ({ chat: { completions: { parse: mockParse } } }),
-  })),
+  default: vi.fn(
+    class {
+      withOptions = () => ({ chat: { completions: { parse: mockParse } } });
+    },
+  ),
 }));
 
 vi.mock('@api/constants', async (importOriginal) => ({

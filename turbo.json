@@ -1,6 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  // Read by the test and e2e runners, which Turborepo does not launch but
+  // whose environment it still filters. Pass-through rather than `globalEnv`:
+  // none of them belong in a task's cache key -- `test` is uncached, and they
+  // have no bearing on what `build` or `typecheck` produce.
+  "globalPassThroughEnv": [
+    "INCLUDE_IN_DEPTH",
+    "TEST_WORKER_INDEX",
+    "E2E_AUTH_PORT",
+    "E2E_LIBSQL_PORT",
+    "E2E_POSTGREST_KEY",
+    "E2E_POSTGREST_URL",
+    "E2E_STUB_PORT",
+    "E2E_STUB_URL",
+    "E2E_SUPABASE_PORT"
+  ],
   "tasks": {
     "lint": {},
     "lint:fix": {

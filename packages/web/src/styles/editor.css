@@ -212,13 +212,6 @@ ul[data-type="taskList"] li > label input[type="checkbox"] {
   }
 }
 
-ul[data-type="taskList"] li[data-checked="true"] > div > p {
-  color: var(--novel-stone-400);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-  text-decoration-style: solid;
-}
-
 /* Overwrite tippy-box original max-width */
 
 .tippy-box {
@@ -337,6 +330,20 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
   @apply overflow-hidden rounded-r-md border-l-4 border-stone-400 bg-stone-100 px-4 italic;
 }
 
+/*
+ * Belongs with the task list styles above, but has to come after the scoped
+ * paragraph rules `.result-preview .ProseMirror p` and `.editor .ProseMirror p`
+ * so that the file reads in the same order the cascade resolves. It is more
+ * specific than either, and so wins wherever they overlap; declared earlier,
+ * that would only be true by specificity and not visible from reading down.
+ */
+ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  color: var(--novel-stone-400);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-style: solid;
+}
+
 .editor .collaboration-cursor__caret {
   @apply relative! ml-[-1px]! mr-[-1px]! break-words! border-l! border-r!;
 }
@@ -441,8 +448,8 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
   padding: 0.125rem 0.25rem;
   font-weight: 600;
   font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   font-size: 0.875em;
   line-height: 1;
 }
@@ -455,8 +462,8 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
   padding: 0.125rem 0.25rem;
   font-weight: 600;
   font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   font-size: 0.875em;
   line-height: 1;
 }
@@ -469,8 +476,8 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
   padding: 0.125rem 0.25rem;
   font-style: italic;
   font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   font-size: 0.875em;
   line-height: 1;
 }
