@@ -1,7 +1,6 @@
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig, type Plugin, type ProxyOptions } from 'vite';
-import tsConfigPaths from 'vite-tsconfig-paths';
 import { readApiPort, waitForApiPort } from '../../scripts/dev-api-port.mjs';
 
 /** Stands in for the API's address until the first request resolves it. */
@@ -192,16 +191,16 @@ export default defineConfig({
       },
     },
   },
+  /**
+   * `@web`, `@shared` and `@api` come from the tsconfigs rather than being
+   * repeated here. Vite 8 resolves them natively, which replaces
+   * `vite-tsconfig-paths` -- and it picks the nearest tsconfig to each
+   * importing file, so a file under `packages/shared` is resolved by that
+   * package's own paths instead of the fixed project list the plugin took.
+   */
+  resolve: { tsconfigPaths: true },
   plugins: [
     apiEntrypointNotice(),
-    tsConfigPaths({
-      root: '../..',
-      projects: [
-        './packages/web/tsconfig.json',
-        './packages/shared/tsconfig.json',
-        './packages/api/tsconfig.json',
-      ],
-    }),
     TanStackRouterVite({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
