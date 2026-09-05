@@ -101,8 +101,6 @@ const chunkedPackages: Record<string, string[]> = {
   react: ['react', 'react-dom'],
   // TanStack libraries
   tanstack: ['@tanstack/react-query', '@tanstack/react-router'],
-  // Markdown and content rendering
-  markdown: ['react-markdown'],
   // Date utilities
   dates: ['date-fns', 'date-fns-tz', 'react-day-picker'],
   // Form libraries
