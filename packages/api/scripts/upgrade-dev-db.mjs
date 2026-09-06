@@ -58,7 +58,11 @@ if (!existsSync(dbPath)) {
   process.exit(1);
 }
 
-const client = createClient({ url: `file:${dbPath}` });
+// One connection, not a pool. `@libsql/client` 0.18 hands each `execute` a
+// connection from a pool of twenty, and this script depends on statements
+// sharing one: `PRAGMA foreign_keys = OFF` is per connection, and a `BEGIN`
+// issued on one connection is not a transaction any other can `COMMIT`.
+const client = createClient({ url: `file:${dbPath}`, concurrency: 1 });
 
 /** Columns the current code expects on `logs`, in the order it creates them. */
 const NULLABLE_NOW = [
@@ -167,6 +171,9 @@ const main = async () => {
 
   // Off *before* the transaction opens: inside one it does nothing, and the
   // drop below would then cascade through every table referencing logs(id).
+  // It sticks because the pool has a single connection, which the transaction
+  // below then borrows -- a pragma is a property of the connection, not of the
+  // statement that set it.
   await client.execute('PRAGMA foreign_keys = OFF');
 
   const statements = [
@@ -203,15 +210,19 @@ const main = async () => {
         FROM logs l`,
   ];
 
+  // Driven through `transaction()` rather than a bare `BEGIN`: `execute`
+  // returns its connection to the pool afterwards, and a connection handed
+  // back mid-transaction is rolled back on the way, so a `BEGIN` sent that way
+  // is undone before the next statement runs.
+  const tx = await client.transaction('write');
   try {
-    await client.execute('BEGIN');
     for (const sql of statements) {
-      await client.execute(sql);
+      await tx.execute(sql);
     }
 
     // The guard: if the drop took anything with it, none of this is kept.
     for (const table of dependents) {
-      const result = await client.execute(`SELECT COUNT(*) AS n FROM ${table}`);
+      const result = await tx.execute(`SELECT COUNT(*) AS n FROM ${table}`);
       const now = Number(result.rows[0].n);
       if (now !== before[table]) {
         throw new Error(
@@ -220,16 +231,16 @@ const main = async () => {
       }
     }
 
-    const violations = await client.execute('PRAGMA foreign_key_check');
+    const violations = await tx.execute('PRAGMA foreign_key_check');
     if (violations.rows.length > 0) {
       throw new Error(
         `${violations.rows.length} foreign key violations after the rebuild. Rolling back.`,
       );
     }
 
-    await client.execute('COMMIT');
+    await tx.commit();
   } catch (e) {
-    await client.execute('ROLLBACK').catch(() => {});
+    await tx.rollback().catch(() => {});
     throw e;
   } finally {
     await client.execute('PRAGMA foreign_keys = ON');

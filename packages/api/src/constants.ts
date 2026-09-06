@@ -21,6 +21,16 @@ export const getApiUrl = (c: AppContext) =>
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 1 week in seconds
 
 /**
+ * Algorithm for the dashboard session JWT.
+ *
+ * `sign` defaults to this, but `verify` and the `jwt` middleware require it to
+ * be named since Hono 4.13: a verifier that accepts whatever `alg` the token
+ * header claims is the classic algorithm-confusion hole. All three sites read
+ * it from here so they cannot drift apart.
+ */
+export const AUTH_JWT_ALG = 'HS256' as const;
+
+/**
  * Supabase URL for local development.
  *
  * Using default Supabase URL for local development.

@@ -1,4 +1,8 @@
-import { getAccessPassword, getAuthJwtSecret } from '@api/constants';
+import {
+  AUTH_JWT_ALG,
+  getAccessPassword,
+  getAuthJwtSecret,
+} from '@api/constants';
 import type { AppEnv } from '@api/types/hono';
 import { AUTH_COOKIE_NAME } from '@api/utils/auth-cookie';
 import { Hono } from 'hono';
@@ -26,7 +30,7 @@ export const statusRouter = new Hono<AppEnv>()
 
     const jwtSecret = getAuthJwtSecret(c);
     try {
-      await verify(accessToken, jwtSecret);
+      await verify(accessToken, jwtSecret, AUTH_JWT_ALG);
       return c.json({ authRequired: true, authenticated: true });
     } catch {
       return c.json({ authRequired: true, authenticated: false });

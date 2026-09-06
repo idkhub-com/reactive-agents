@@ -21,10 +21,12 @@ const mockWithOptions = vi.fn().mockReturnValue({
 });
 
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    chat: { completions: { parse: mockParse, create: mockParse } },
-    withOptions: mockWithOptions,
-  })),
+  default: vi.fn(
+    class {
+      chat = { completions: { parse: mockParse, create: mockParse } };
+      withOptions = mockWithOptions;
+    },
+  ),
 }));
 
 vi.mock('@api/constants', async (importOriginal) => {

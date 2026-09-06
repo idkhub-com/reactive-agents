@@ -21,9 +21,11 @@ vi.stubGlobal('crypto', {
 // Mock TextEncoder
 vi.stubGlobal(
   'TextEncoder',
-  vi.fn().mockImplementation(() => ({
-    encode: vi.fn().mockReturnValue(new Uint8Array([97, 98, 99, 100])),
-  })),
+  vi.fn(
+    class {
+      encode = vi.fn().mockReturnValue(new Uint8Array([97, 98, 99, 100]));
+    },
+  ),
 );
 
 // Mock Uint8Array for hash generation

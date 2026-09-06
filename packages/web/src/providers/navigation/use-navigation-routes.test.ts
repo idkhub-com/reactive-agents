@@ -1,12 +1,15 @@
 import { renderHook } from '@testing-library/react';
-import { useNavigationRoutes } from '@web/providers/navigation/use-navigation-routes';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  type NavigateFn,
+  useNavigationRoutes,
+} from '@web/providers/navigation/use-navigation-routes';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 describe('useNavigationRoutes', () => {
-  let mockNavigate: ReturnType<typeof vi.fn>;
+  let mockNavigate: Mock<NavigateFn>;
 
   beforeEach(() => {
-    mockNavigate = vi.fn();
+    mockNavigate = vi.fn<NavigateFn>();
   });
 
   it('returns all navigation functions', () => {

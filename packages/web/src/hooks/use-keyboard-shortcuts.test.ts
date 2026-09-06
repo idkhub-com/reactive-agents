@@ -5,7 +5,15 @@ import {
   useModifierKey,
   useOperatingSystem,
 } from '@web/hooks/use-keyboard-shortcuts';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from 'vitest';
 
 // Mock window.navigator
 const mockNavigator = (userAgent: string) => {
@@ -156,12 +164,12 @@ describe('isModifierPressed', () => {
 });
 
 describe('useKeyboardShortcuts', () => {
-  let mockCallback: ReturnType<typeof vi.fn>;
+  let mockCallback: Mock<(key: string) => void>;
   let addEventListenerSpy: ReturnType<typeof vi.spyOn>;
   let removeEventListenerSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    mockCallback = vi.fn();
+    mockCallback = vi.fn<(key: string) => void>();
     addEventListenerSpy = vi.spyOn(document, 'addEventListener');
     removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 

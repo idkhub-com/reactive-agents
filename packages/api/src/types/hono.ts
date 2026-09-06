@@ -27,6 +27,7 @@ import type {
 } from '@shared/types/middleware/cache';
 import type { Hook, HookType } from '@shared/types/middleware/hooks';
 import type { Context, Hono } from 'hono';
+import type { JWTPayload } from 'hono/utils/jwt/types';
 
 export interface AppEnv {
   Bindings: {
@@ -47,6 +48,12 @@ export interface AppEnv {
     WEB_APP_URL?: string;
   };
   Variables: {
+    /**
+     * Set by the `jwt` middleware when the dashboard session cookie
+     * authenticated the request; absent for a bearer-token caller. Hono types
+     * its own ambient entry as `unknown`, so the shape is named here.
+     */
+    jwtPayload?: JWTPayload & { sub?: string };
     sa_config: SuperAgentsConfig;
     sa_config_pre_processed: SuperAgentsConfigPreProcessed;
     sa_request_data: SuperAgentsRequestData;

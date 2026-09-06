@@ -20,12 +20,21 @@ export type Feedback = z.infer<typeof Feedback>;
 // Input schema for creating feedback
 export const FeedbackCreateParams = z
   .object({
-    id: z.undefined().transform(() => uuidv4()),
+    id: z
+      .undefined()
+      .optional()
+      .transform(() => uuidv4()),
     log_id: z.uuid(),
     score: z.number().min(0).max(1),
     feedback: z.string().optional(),
-    created_at: z.undefined().transform(() => new Date().toISOString()),
-    updated_at: z.undefined().transform(() => new Date().toISOString()),
+    created_at: z
+      .undefined()
+      .optional()
+      .transform(() => new Date().toISOString()),
+    updated_at: z
+      .undefined()
+      .optional()
+      .transform(() => new Date().toISOString()),
   })
   .strict();
 

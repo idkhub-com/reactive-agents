@@ -49,11 +49,12 @@ const EXPECTED_ROUTE_IDS = [
 describe('Route Registry', () => {
   const collectedIds = collectRouteIds(routeTree);
 
-  it.each(
-    EXPECTED_ROUTE_IDS,
-  )('route tree contains expected route: %s', (routeId) => {
-    expect(collectedIds.has(routeId)).toBe(true);
-  });
+  it.each(EXPECTED_ROUTE_IDS)(
+    'route tree contains expected route: %s',
+    (routeId) => {
+      expect(collectedIds.has(routeId)).toBe(true);
+    },
+  );
 
   it('route tree does not contain unexpected routes', () => {
     const expectedSet = new Set(EXPECTED_ROUTE_IDS);

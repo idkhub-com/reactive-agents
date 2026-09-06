@@ -34,15 +34,17 @@ const mockWithOptions = vi.fn().mockReturnValue({
 
 vi.mock('openai', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          parse: mockParse,
-          create: mockParse,
-        },
+    default: vi.fn(
+      class {
+        chat = {
+          completions: {
+            parse: mockParse,
+            create: mockParse,
+          },
+        };
+        withOptions = mockWithOptions;
       },
-      withOptions: mockWithOptions,
-    })),
+    ),
   };
 });
 
@@ -62,7 +64,7 @@ describe('Task Completion - evaluateLog', () => {
 
   beforeEach(() => {
     mockFetch = vi.fn();
-    global.fetch = mockFetch;
+    global.fetch = mockFetch as unknown as typeof fetch;
     vi.clearAllMocks();
 
     // Setup default successful mock for OpenAI parse

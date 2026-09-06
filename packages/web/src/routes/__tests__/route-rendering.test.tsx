@@ -253,14 +253,15 @@ describe('Route Rendering', () => {
     setupAuthMocks({ authRequired: false, authenticated: true });
   });
 
-  it.each(
-    ROUTE_TABLE,
-  )('renders %s at %s', async (_description, path, expectedTestId) => {
-    renderRoute(path);
-    await waitFor(() => {
-      expect(screen.getByTestId(expectedTestId)).toBeInTheDocument();
-    });
-  });
+  it.each(ROUTE_TABLE)(
+    'renders %s at %s',
+    async (_description, path, expectedTestId) => {
+      renderRoute(path);
+      await waitFor(() => {
+        expect(screen.getByTestId(expectedTestId)).toBeInTheDocument();
+      });
+    },
+  );
 
   it('renders login page at /login', async () => {
     // Login page should render when auth is required but user is not authenticated

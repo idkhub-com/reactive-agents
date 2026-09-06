@@ -1,7 +1,6 @@
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig, type Plugin, type ProxyOptions } from 'vite';
-import tsConfigPaths from 'vite-tsconfig-paths';
 import { readApiPort, waitForApiPort } from '../../scripts/dev-api-port.mjs';
 
 /** Stands in for the API's address until the first request resolves it. */
@@ -39,6 +38,97 @@ const apiEntrypointNotice = (): Plugin => ({
  * target can be pointed at the API's runtime port.
  */
 let liveProxyOptions: ProxyOptions | undefined;
+
+/**
+ * Which third-party packages travel together in a chunk.
+ *
+ * Vite 8 bundles with Rolldown, whose `output.advancedChunks.groups`
+ * replaces Rollup's `manualChunks` map: a group names a chunk and a `test`
+ * that decides which module ids land in it. The lists stay the source of
+ * truth and `chunkGroups` below turns each into that test, anchored on the
+ * `node_modules` path segment so `react` cannot also swallow `react-dom`,
+ * `react-markdown` and every other package that merely starts with it.
+ */
+const chunkedPackages: Record<string, string[]> = {
+  // Monaco editor is very large, keep it separate
+  monaco: ['monaco-editor', '@monaco-editor/react'],
+  // Chart.js and related
+  charts: ['chart.js', 'react-chartjs-2', 'chartjs-plugin-annotation'],
+  // TipTap rich text editor
+  tiptap: [
+    '@tiptap/core',
+    '@tiptap/react',
+    '@tiptap/starter-kit',
+    '@tiptap/extension-color',
+    '@tiptap/extension-highlight',
+    '@tiptap/extension-horizontal-rule',
+    '@tiptap/extension-task-item',
+    '@tiptap/extension-task-list',
+    '@tiptap/extension-text-align',
+    '@tiptap/extension-text-style',
+    'tiptap-markdown',
+  ],
+  // Radix UI components
+  radix: [
+    '@radix-ui/react-alert-dialog',
+    '@radix-ui/react-avatar',
+    '@radix-ui/react-checkbox',
+    '@radix-ui/react-collapsible',
+    '@radix-ui/react-context-menu',
+    '@radix-ui/react-dialog',
+    '@radix-ui/react-dropdown-menu',
+    '@radix-ui/react-icons',
+    '@radix-ui/react-label',
+    '@radix-ui/react-menubar',
+    '@radix-ui/react-navigation-menu',
+    '@radix-ui/react-popover',
+    '@radix-ui/react-radio-group',
+    '@radix-ui/react-select',
+    '@radix-ui/react-separator',
+    '@radix-ui/react-slider',
+    '@radix-ui/react-slot',
+    '@radix-ui/react-switch',
+    '@radix-ui/react-tabs',
+    '@radix-ui/react-toast',
+    '@radix-ui/react-toggle',
+    '@radix-ui/react-toggle-group',
+    '@radix-ui/react-tooltip',
+  ],
+  // Animation libraries
+  animation: ['framer-motion'],
+  // React core
+  react: ['react', 'react-dom'],
+  // TanStack libraries
+  tanstack: ['@tanstack/react-query', '@tanstack/react-router'],
+  // Date utilities
+  dates: ['date-fns', 'react-day-picker'],
+  // Form libraries
+  forms: ['react-hook-form', '@hookform/resolvers'],
+  // Icon library
+  icons: ['lucide-react'],
+  // DiceBear avatars
+  dicebear: ['@dicebear/core', '@dicebear/collection'],
+  // Command menu
+  cmdk: ['cmdk'],
+  // Schema validation
+  zod: ['zod'],
+  // Utilities
+  utils: ['clsx', 'class-variance-authority', 'tailwind-merge'],
+};
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** `@scope/name` has to match a path separator, which differs on Windows. */
+const packagePattern = (name: string): string =>
+  escapeRegExp(name).replace(/\//g, '[\\\\/]');
+
+const chunkGroups = Object.entries(chunkedPackages).map(([name, packages]) => ({
+  name,
+  test: new RegExp(
+    `node_modules[\\\\/](?:${packages.map(packagePattern).join('|')})[\\\\/]`,
+  ),
+}));
 
 export default defineConfig({
   server: {
@@ -95,89 +185,22 @@ export default defineConfig({
      */
     assetsInlineLimit: (filePath: string) =>
       /\.(woff2?|ttf|otf|eot)$/.test(filePath) ? false : undefined,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          // Monaco editor is very large, keep it separate
-          monaco: ['monaco-editor', '@monaco-editor/react'],
-          // Chart.js and related
-          charts: ['chart.js', 'react-chartjs-2', 'chartjs-plugin-annotation'],
-          // TipTap rich text editor
-          tiptap: [
-            '@tiptap/core',
-            '@tiptap/react',
-            '@tiptap/starter-kit',
-            '@tiptap/extension-color',
-            '@tiptap/extension-highlight',
-            '@tiptap/extension-horizontal-rule',
-            '@tiptap/extension-task-item',
-            '@tiptap/extension-task-list',
-            '@tiptap/extension-text-align',
-            '@tiptap/extension-text-style',
-            'tiptap-markdown',
-          ],
-          // Radix UI components
-          radix: [
-            '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-collapsible',
-            '@radix-ui/react-context-menu',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-icons',
-            '@radix-ui/react-label',
-            '@radix-ui/react-menubar',
-            '@radix-ui/react-navigation-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-radio-group',
-            '@radix-ui/react-select',
-            '@radix-ui/react-separator',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-slot',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-toggle',
-            '@radix-ui/react-toggle-group',
-            '@radix-ui/react-tooltip',
-          ],
-          // Animation libraries
-          animation: ['framer-motion'],
-          // React core
-          react: ['react', 'react-dom'],
-          // TanStack libraries
-          tanstack: ['@tanstack/react-query', '@tanstack/react-router'],
-          // Markdown and content rendering
-          markdown: ['react-markdown'],
-          // Date utilities
-          dates: ['date-fns', 'date-fns-tz', 'react-day-picker'],
-          // Form libraries
-          forms: ['react-hook-form', '@hookform/resolvers'],
-          // Icon library
-          icons: ['lucide-react'],
-          // DiceBear avatars
-          dicebear: ['@dicebear/core', '@dicebear/collection'],
-          // Command menu
-          cmdk: ['cmdk'],
-          // Schema validation
-          zod: ['zod'],
-          // Utilities
-          utils: ['clsx', 'class-variance-authority', 'tailwind-merge'],
-        },
+        advancedChunks: { groups: chunkGroups },
       },
     },
   },
+  /**
+   * `@web`, `@shared` and `@api` come from the tsconfigs rather than being
+   * repeated here. Vite 8 resolves them natively, which replaces
+   * `vite-tsconfig-paths` -- and it picks the nearest tsconfig to each
+   * importing file, so a file under `packages/shared` is resolved by that
+   * package's own paths instead of the fixed project list the plugin took.
+   */
+  resolve: { tsconfigPaths: true },
   plugins: [
     apiEntrypointNotice(),
-    tsConfigPaths({
-      root: '../..',
-      projects: [
-        './packages/web/tsconfig.json',
-        './packages/shared/tsconfig.json',
-        './packages/api/tsconfig.json',
-      ],
-    }),
     TanStackRouterVite({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',

@@ -31,33 +31,36 @@ const PROTECTED_ENDPOINTS: [string, string][] = [
 ];
 
 describe('Auth enforcement on super-agents routes', () => {
-  it.each(
-    PROTECTED_ENDPOINTS,
-  )('%s %s returns 401 without auth', async (method, path) => {
-    const response = await app.request(path, { method });
-    expect(response.status).toBe(401);
-  });
+  it.each(PROTECTED_ENDPOINTS)(
+    '%s %s returns 401 without auth',
+    async (method, path) => {
+      const response = await app.request(path, { method });
+      expect(response.status).toBe(401);
+    },
+  );
 
-  it.each(
-    PROTECTED_ENDPOINTS,
-  )('%s %s returns non-401 with bearer token', async (method, path) => {
-    const response = await app.request(path, {
-      method,
-      headers: createBearerHeader(),
-    });
-    expect(response.status).not.toBe(401);
-  });
+  it.each(PROTECTED_ENDPOINTS)(
+    '%s %s returns non-401 with bearer token',
+    async (method, path) => {
+      const response = await app.request(path, {
+        method,
+        headers: createBearerHeader(),
+      });
+      expect(response.status).not.toBe(401);
+    },
+  );
 
-  it.each(
-    PROTECTED_ENDPOINTS,
-  )('%s %s returns non-401 with JWT cookie', async (method, path) => {
-    const cookie = await createAuthCookie();
-    const response = await app.request(path, {
-      method,
-      headers: { Cookie: cookie },
-    });
-    expect(response.status).not.toBe(401);
-  });
+  it.each(PROTECTED_ENDPOINTS)(
+    '%s %s returns non-401 with JWT cookie',
+    async (method, path) => {
+      const cookie = await createAuthCookie();
+      const response = await app.request(path, {
+        method,
+        headers: { Cookie: cookie },
+      });
+      expect(response.status).not.toBe(401);
+    },
+  );
 
   describe('Bearer token format validation', () => {
     const endpoint = `${BASE}/agents`;
